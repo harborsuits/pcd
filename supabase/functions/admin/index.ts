@@ -23,7 +23,12 @@ Deno.serve(async (req) => {
   const adminIdx = pathParts.lastIndexOf("admin");
   const subPath = adminIdx >= 0 ? pathParts.slice(adminIdx + 1).join("/") : "";
 
-  console.log(`Admin endpoint called: ${subPath}`);
+  console.log(`Admin endpoint called: ${subPath}, method: ${req.method}`);
+
+  // Route: GET /admin/inbox
+  if (subPath === "inbox" && req.method === "GET") {
+    return handleInbox(req);
+  }
 
   // Route: POST /admin/messages/reply
   if (subPath === "messages/reply" && req.method === "POST") {
@@ -36,27 +41,137 @@ Deno.serve(async (req) => {
   );
 });
 
-async function handleMessagesReply(req: Request): Promise<Response> {
-  try {
-    // Validate admin key
-    const adminKey = req.headers.get("x-admin-key");
-    const expectedKey = Deno.env.get("ADMIN_KEY");
+// Validate admin key helper
+function validateAdminKey(req: Request): Response | null {
+  const adminKey = req.headers.get("x-admin-key");
+  const expectedKey = Deno.env.get("ADMIN_KEY");
 
-    if (!expectedKey) {
-      console.error("ADMIN_KEY not configured");
+  if (!expectedKey) {
+    console.error("ADMIN_KEY not configured");
+    return new Response(
+      JSON.stringify({ error: "Server configuration error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  if (!adminKey || adminKey !== expectedKey) {
+    console.log("Invalid or missing admin key");
+    return new Response(
+      JSON.stringify({ error: "Unauthorized" }),
+      { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  return null; // Valid
+}
+
+// GET /admin/inbox - List projects with last message and unread count
+async function handleInbox(req: Request): Promise<Response> {
+  const authError = validateAdminKey(req);
+  if (authError) return authError;
+
+  try {
+    console.log("Fetching admin inbox...");
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Fetch all active projects
+    const { data: projects, error: projectsError } = await supabase
+      .from("projects")
+      .select("id, project_token, business_name, status, updated_at")
+      .is("deleted_at", null)
+      .order("updated_at", { ascending: false });
+
+    if (projectsError) {
+      console.error("Projects query error:", projectsError);
       return new Response(
-        JSON.stringify({ error: "Server configuration error" }),
+        JSON.stringify({ error: "Database error" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    if (!adminKey || adminKey !== expectedKey) {
-      console.log("Invalid or missing admin key");
+    if (!projects || projects.length === 0) {
       return new Response(
-        JSON.stringify({ error: "Unauthorized" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify([]),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    // Get all project IDs for batch queries
+    const projectIds = projects.map(p => p.id);
+
+    // Batch fetch latest messages for all projects
+    const { data: latestMessages } = await supabase
+      .from("messages")
+      .select("project_id, content, sender_type, created_at")
+      .in("project_id", projectIds)
+      .order("created_at", { ascending: false });
+
+    // Batch fetch unread counts (client messages with no read_at)
+    const { data: unreadData } = await supabase
+      .from("messages")
+      .select("project_id")
+      .in("project_id", projectIds)
+      .eq("sender_type", "client")
+      .is("read_at", null);
+
+    // Build maps for efficient lookup
+    const lastMessageMap = new Map<string, { content: string; sender_type: string; created_at: string }>();
+    for (const msg of latestMessages || []) {
+      if (!lastMessageMap.has(msg.project_id)) {
+        lastMessageMap.set(msg.project_id, {
+          content: msg.content,
+          sender_type: msg.sender_type,
+          created_at: msg.created_at,
+        });
+      }
+    }
+
+    const unreadCountMap = new Map<string, number>();
+    for (const msg of unreadData || []) {
+      unreadCountMap.set(msg.project_id, (unreadCountMap.get(msg.project_id) || 0) + 1);
+    }
+
+    // Build response
+    const inbox = projects.map(p => ({
+      project_token: p.project_token,
+      business_name: p.business_name,
+      status: p.status,
+      last_message: lastMessageMap.get(p.id) || null,
+      unread_count: unreadCountMap.get(p.id) || 0,
+    }));
+
+    // Sort by last_message.created_at desc, nulls last
+    inbox.sort((a, b) => {
+      if (!a.last_message && !b.last_message) return 0;
+      if (!a.last_message) return 1;
+      if (!b.last_message) return -1;
+      return new Date(b.last_message.created_at).getTime() - new Date(a.last_message.created_at).getTime();
+    });
+
+    console.log(`Inbox fetched: ${inbox.length} projects`);
+
+    return new Response(
+      JSON.stringify(inbox),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+
+  } catch (error) {
+    console.error("Inbox error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+}
+
+async function handleMessagesReply(req: Request): Promise<Response> {
+  const authError = validateAdminKey(req);
+  if (authError) return authError;
+
+  try {
 
     // Parse request body
     let body: { project_token?: string; content?: string };
