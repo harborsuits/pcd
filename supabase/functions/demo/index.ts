@@ -5,6 +5,11 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Token validation: alphanumeric + hyphens, 12-128 chars
+function isValidToken(token: string): boolean {
+  return /^[a-zA-Z0-9\-_]{12,128}$/.test(token);
+}
+
 Deno.serve(async (req) => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
@@ -23,11 +28,21 @@ Deno.serve(async (req) => {
     const url = new URL(req.url);
     const pathParts = url.pathname.split("/").filter(Boolean);
     const token = pathParts[pathParts.length - 1];
+    const slugParam = url.searchParams.get("slug");
 
     if (!token || token === "demo") {
       console.log("Missing token in request");
       return new Response(
         JSON.stringify({ error: "Token required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Token sanity check
+    if (!isValidToken(token)) {
+      console.log("Invalid token format");
+      return new Response(
+        JSON.stringify({ error: "Invalid token" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -39,13 +54,19 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Fetch project by token (exclude soft-deleted)
-    const { data: project, error: projectError } = await supabase
+    // Build project query
+    let projectQuery = supabase
       .from("projects")
       .select("id, business_name, business_slug, status, project_token")
       .eq("project_token", token)
-      .is("deleted_at", null)
-      .maybeSingle();
+      .is("deleted_at", null);
+
+    // Optional slug enforcement
+    if (slugParam) {
+      projectQuery = projectQuery.eq("business_slug", slugParam);
+    }
+
+    const { data: project, error: projectError } = await projectQuery.maybeSingle();
 
     if (projectError) {
       console.error("Project query error:", projectError);
