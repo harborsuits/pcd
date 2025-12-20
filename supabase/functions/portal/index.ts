@@ -1,9 +1,30 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+// Allowed origins for widget embedding
+const ALLOWED_ORIGINS = [
+  /^https?:\/\/.*\.lovable\.app$/,
+  /^https?:\/\/.*\.lovableproject\.com$/,
+  /^https?:\/\/.*\.squarespace\.com$/,
+  /^https?:\/\/.*\.sqsp\.com$/,
+  /^https?:\/\/localhost(:\d+)?$/,
+  /^https?:\/\/127\.0\.0\.1(:\d+)?$/,
+  /^https?:\/\/.*\.pleasantcove\.design$/,
+];
+
+function isAllowedOrigin(origin: string | null): boolean {
+  if (!origin) return true;
+  return ALLOWED_ORIGINS.some(pattern => pattern.test(origin));
+}
+
+function getCorsHeaders(req: Request): Record<string, string> {
+  const origin = req.headers.get("origin");
+  const allowedOrigin = origin && isAllowedOrigin(origin) ? origin : "*";
+  return {
+    "Access-Control-Allow-Origin": allowedOrigin,
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+  };
+}
 
 // Token validation: alphanumeric + hyphens/underscores, 12-128 chars
 function isValidToken(token: string): boolean {
@@ -11,6 +32,8 @@ function isValidToken(token: string): boolean {
 }
 
 Deno.serve(async (req) => {
+  const corsHeaders = getCorsHeaders(req);
+
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });

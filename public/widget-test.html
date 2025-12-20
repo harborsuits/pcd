@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Widget Test Page</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 40px;
+      color: white;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    h1 {
+      font-size: 2.5rem;
+      margin-bottom: 1rem;
+    }
+    p {
+      font-size: 1.125rem;
+      line-height: 1.6;
+      opacity: 0.9;
+      margin-bottom: 1.5rem;
+    }
+    .card {
+      background: rgba(255,255,255,0.1);
+      backdrop-filter: blur(10px);
+      border-radius: 16px;
+      padding: 24px;
+      margin-top: 2rem;
+    }
+    .card h2 {
+      font-size: 1.25rem;
+      margin-bottom: 0.5rem;
+    }
+    code {
+      display: block;
+      background: rgba(0,0,0,0.3);
+      border-radius: 8px;
+      padding: 16px;
+      font-size: 0.875rem;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+    .note {
+      background: rgba(255,255,255,0.2);
+      padding: 12px 16px;
+      border-radius: 8px;
+      margin-top: 1rem;
+      font-size: 0.875rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎨 Pleasant Cove Widget Test</h1>
+    <p>
+      This page demonstrates the embeddable chat widget. Look for the floating 
+      chat button in the bottom-right corner. Click it to open the messaging panel.
+    </p>
+    
+    <div class="card">
+      <h2>Embed Code</h2>
+      <code>&lt;script
+  src="https://ararrbvhzaudfaxjwdrc.functions.supabase.co/functions/v1/widget"
+  data-project-token="test-acme-plumbing-2024"
+  data-theme="light"
+  data-position="bottom-right"
+  data-accent="#6366f1"
+  defer
+&gt;&lt;/script&gt;</code>
+    </div>
+
+    <div class="card">
+      <h2>Configuration Options</h2>
+      <p style="margin-bottom: 0.5rem;">
+        <strong>data-project-token</strong> — Required. The unique token for this project.
+      </p>
+      <p style="margin-bottom: 0.5rem;">
+        <strong>data-theme</strong> — "light" or "dark" (default: light)
+      </p>
+      <p style="margin-bottom: 0.5rem;">
+        <strong>data-position</strong> — "bottom-right", "bottom-left", "top-right", "top-left"
+      </p>
+      <p style="margin-bottom: 0;">
+        <strong>data-accent</strong> — Hex color for button and accent (default: #111827)
+      </p>
+    </div>
+
+    <div class="note">
+      💡 The widget polls for new messages every 8 seconds while the panel is open.
+      Messages you send will appear in the admin dashboard instantly.
+    </div>
+  </div>
+
+  <!-- Pleasant Cove Chat Widget -->
+  <script
+    src="https://ararrbvhzaudfaxjwdrc.functions.supabase.co/functions/v1/widget"
+    data-project-token="test-acme-plumbing-2024"
+    data-theme="light"
+    data-position="bottom-right"
+    data-accent="#6366f1"
+    defer
+  ></script>
+</body>
+</html>
