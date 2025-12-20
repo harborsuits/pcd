@@ -16,38 +16,61 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  if (req.method !== "POST") {
+  // Extract token and action from URL path
+  const url = new URL(req.url);
+  const pathParts = url.pathname.split("/").filter(Boolean);
+  const messagesIdx = pathParts.lastIndexOf("messages");
+  
+  // Get token and optional action (e.g., "mark-read")
+  const token = messagesIdx >= 0 && messagesIdx < pathParts.length - 1
+    ? pathParts[messagesIdx + 1]
+    : null;
+  const action = messagesIdx >= 0 && messagesIdx < pathParts.length - 2
+    ? pathParts[messagesIdx + 2]
+    : null;
+
+  if (!token) {
+    console.log("Missing token in request");
     return new Response(
-      JSON.stringify({ error: "Method not allowed" }),
-      { status: 405, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      JSON.stringify({ error: "Token required" }),
+      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 
+  if (!isValidToken(token)) {
+    console.log("Invalid token format");
+    return new Response(
+      JSON.stringify({ error: "Invalid token" }),
+      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  // Route: POST /messages/:token/mark-read - Mark admin messages as read for portal
+  if (action === "mark-read" && req.method === "POST") {
+    return handlePortalMarkRead(token);
+  }
+
+  // Route: POST /messages/:token - Send a client message
+  if (req.method === "POST" && !action) {
+    return handleSendMessage(req, token);
+  }
+
+  return new Response(
+    JSON.stringify({ error: "Method not allowed" }),
+    { status: 405, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+  );
+});
+
+// Get Supabase client helper
+function getSupabaseClient() {
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  return createClient(supabaseUrl, supabaseServiceKey);
+}
+
+// POST /messages/:token - Send a client message
+async function handleSendMessage(req: Request, token: string): Promise<Response> {
   try {
-    // Extract token from URL path
-    const url = new URL(req.url);
-    const pathParts = url.pathname.split("/").filter(Boolean);
-    const messagesIdx = pathParts.lastIndexOf("messages");
-    const token = messagesIdx >= 0 && messagesIdx < pathParts.length - 1
-      ? pathParts[messagesIdx + 1]
-      : null;
-
-    if (!token) {
-      console.log("Missing token in request");
-      return new Response(
-        JSON.stringify({ error: "Token required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    if (!isValidToken(token)) {
-      console.log("Invalid token format");
-      return new Response(
-        JSON.stringify({ error: "Invalid token" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
     // Parse request body
     let body: { content?: string };
     try {
@@ -76,10 +99,7 @@ Deno.serve(async (req) => {
 
     console.log(`Client message for token: ${token.slice(0, 8)}...`);
 
-    // Initialize Supabase client
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const supabase = getSupabaseClient();
 
     // Resolve project by token
     const { data: project, error: projectError } = await supabase
@@ -146,4 +166,68 @@ Deno.serve(async (req) => {
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
-});
+}
+
+// POST /messages/:token/mark-read - Mark admin messages as read (portal side)
+async function handlePortalMarkRead(token: string): Promise<Response> {
+  try {
+    console.log(`Portal marking admin messages as read for token: ${token.slice(0, 8)}...`);
+
+    const supabase = getSupabaseClient();
+
+    // Resolve project by token
+    const { data: project, error: projectError } = await supabase
+      .from("projects")
+      .select("id")
+      .eq("project_token", token)
+      .is("deleted_at", null)
+      .maybeSingle();
+
+    if (projectError) {
+      console.error("Project query error:", projectError);
+      return new Response(
+        JSON.stringify({ error: "Database error" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (!project) {
+      return new Response(
+        JSON.stringify({ error: "Portal not found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Update all unread admin messages
+    const { data: updated, error: updateError } = await supabase
+      .from("messages")
+      .update({ read_at: new Date().toISOString() })
+      .eq("project_id", project.id)
+      .eq("sender_type", "admin")
+      .is("read_at", null)
+      .select("id");
+
+    if (updateError) {
+      console.error("Mark read error:", updateError);
+      return new Response(
+        JSON.stringify({ error: "Failed to mark messages as read" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const markedCount = updated?.length || 0;
+    console.log(`Portal marked ${markedCount} admin messages as read`);
+
+    return new Response(
+      JSON.stringify({ ok: true, marked_count: markedCount }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+
+  } catch (error) {
+    console.error("Portal mark read error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+}
