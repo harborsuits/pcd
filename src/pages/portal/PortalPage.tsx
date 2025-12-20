@@ -1,5 +1,5 @@
 import { useParams, Link } from "react-router-dom";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -44,6 +44,11 @@ interface PortalData {
   };
 }
 
+// Deduplication helper - creates a unique key for a message
+function getMessageKey(msg: PortalMessage): string {
+  return `${msg.created_at}|${msg.sender_type}|${msg.content}`;
+}
+
 export default function PortalPage() {
   const { token } = useParams<{ token: string }>();
   const [data, setData] = useState<PortalData | null>(null);
@@ -53,6 +58,12 @@ export default function PortalPage() {
   const [messageContent, setMessageContent] = useState("");
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Scroll to bottom when new messages arrive
+  const scrollToBottom = useCallback(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, []);
 
   useEffect(() => {
     console.log("✅ PortalPage mounted, token:", token?.slice(0, 8) + "...");
@@ -60,6 +71,71 @@ export default function PortalPage() {
       fetchPortalData(token);
     }
   }, [token]);
+
+  // Real-time subscription for new messages
+  useEffect(() => {
+    if (!token || !data) return;
+
+    console.log("📡 Setting up realtime subscription for portal:", token.slice(0, 8) + "...");
+
+    const channel = supabase
+      .channel(`portal-messages-${token}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "messages",
+          filter: `project_token=eq.${token}`,
+        },
+        (payload) => {
+          console.log("📨 New message received:", payload);
+          const newMsg = payload.new as {
+            content: string;
+            sender_type: string;
+            created_at: string;
+            read_at: string | null;
+          };
+
+          setData((prev) => {
+            if (!prev) return prev;
+
+            // Deduplicate by checking if message already exists
+            const newKey = getMessageKey(newMsg);
+            const exists = prev.messages.some((m) => getMessageKey(m) === newKey);
+            if (exists) {
+              console.log("⚠️ Duplicate message ignored");
+              return prev;
+            }
+
+            console.log("✅ Adding new message to state");
+            return {
+              ...prev,
+              messages: [
+                {
+                  content: newMsg.content,
+                  sender_type: newMsg.sender_type,
+                  created_at: newMsg.created_at,
+                  read_at: newMsg.read_at,
+                },
+                ...prev.messages,
+              ],
+            };
+          });
+
+          // Auto-scroll to bottom for new messages
+          setTimeout(scrollToBottom, 100);
+        }
+      )
+      .subscribe((status) => {
+        console.log("📡 Portal subscription status:", status);
+      });
+
+    return () => {
+      console.log("🔌 Cleaning up portal realtime subscription");
+      supabase.removeChannel(channel);
+    };
+  }, [token, data?.business.name, scrollToBottom]);
 
   async function fetchPortalData(portalToken: string, messagesBefore?: string) {
     try {
@@ -275,6 +351,7 @@ export default function PortalPage() {
                 <p className="text-muted-foreground text-center py-4">No messages yet</p>
               ) : (
                 <div className="space-y-4">
+                  <div ref={messagesEndRef} />
                   {data.messages.map((msg, idx) => (
                     <div
                       key={idx}

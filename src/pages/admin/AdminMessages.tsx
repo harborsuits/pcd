@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2, Send, Search, MessageSquare } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -30,6 +31,11 @@ interface Message {
   read_at: string | null;
 }
 
+// Deduplication helper
+function getMessageKey(msg: Message): string {
+  return `${msg.created_at}|${msg.sender_type}|${msg.content}`;
+}
+
 export default function AdminMessages() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
@@ -42,6 +48,12 @@ export default function AdminMessages() {
   const [sending, setSending] = useState(false);
   const [adminKey, setAdminKey] = useState("");
   const [showKeyInput, setShowKeyInput] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Scroll to bottom
+  const scrollToBottom = useCallback(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, []);
 
   useEffect(() => {
     if (adminKey) {
@@ -56,6 +68,89 @@ export default function AdminMessages() {
       fetchMessages(selectedProject.project_token);
     }
   }, [selectedProject, adminKey]);
+
+  // Real-time subscription for inbox updates (all messages)
+  useEffect(() => {
+    if (!adminKey) return;
+
+    console.log("📡 Setting up admin inbox realtime subscription");
+
+    const channel = supabase
+      .channel("admin-inbox-messages")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "messages",
+        },
+        (payload) => {
+          console.log("📨 New message in inbox:", payload);
+          const newMsg = payload.new as {
+            project_token: string;
+            content: string;
+            sender_type: string;
+            created_at: string;
+            read_at: string | null;
+          };
+
+          // Update projects list (last message + unread count)
+          setProjects((prevProjects) => {
+            return prevProjects.map((p) => {
+              if (p.project_token === newMsg.project_token) {
+                return {
+                  ...p,
+                  last_message: {
+                    content: newMsg.content,
+                    sender_type: newMsg.sender_type,
+                    created_at: newMsg.created_at,
+                  },
+                  // Increment unread only for client messages
+                  unread_count:
+                    newMsg.sender_type === "client"
+                      ? p.unread_count + 1
+                      : p.unread_count,
+                };
+              }
+              return p;
+            });
+          });
+
+          // If this message is for the selected thread, add it
+          if (selectedProject?.project_token === newMsg.project_token) {
+            setMessages((prevMessages) => {
+              const newKey = getMessageKey(newMsg);
+              const exists = prevMessages.some((m) => getMessageKey(m) === newKey);
+              if (exists) {
+                console.log("⚠️ Duplicate message ignored in thread");
+                return prevMessages;
+              }
+
+              console.log("✅ Adding new message to thread");
+              return [
+                {
+                  content: newMsg.content,
+                  sender_type: newMsg.sender_type,
+                  created_at: newMsg.created_at,
+                  read_at: newMsg.read_at,
+                },
+                ...prevMessages,
+              ];
+            });
+
+            setTimeout(scrollToBottom, 100);
+          }
+        }
+      )
+      .subscribe((status) => {
+        console.log("📡 Admin inbox subscription status:", status);
+      });
+
+    return () => {
+      console.log("🔌 Cleaning up admin inbox realtime subscription");
+      supabase.removeChannel(channel);
+    };
+  }, [adminKey, selectedProject?.project_token, scrollToBottom]);
 
   async function fetchProjects() {
     if (!adminKey) return;
@@ -414,6 +509,7 @@ export default function AdminMessages() {
                     <p className="text-center text-muted-foreground py-8">No messages yet</p>
                   ) : (
                     <div className="space-y-4">
+                      <div ref={messagesEndRef} />
                       {messages.map((msg, idx) => (
                         <div
                           key={idx}
