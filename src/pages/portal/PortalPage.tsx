@@ -4,7 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, FileText, MessageSquare, CreditCard, AlertCircle } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Loader2, FileText, MessageSquare, CreditCard, AlertCircle, Send } from "lucide-react";
 
 interface PortalMessage {
   content: string;
@@ -49,6 +50,9 @@ export default function PortalPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [messageContent, setMessageContent] = useState("");
+  const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
 
   useEffect(() => {
     console.log("✅ PortalPage mounted, token:", token?.slice(0, 8) + "...");
@@ -114,6 +118,59 @@ export default function PortalPage() {
     fetchPortalData(token, oldestMessage.created_at);
   }
 
+  async function handleSendMessage() {
+    if (!token || !messageContent.trim()) return;
+
+    setSending(true);
+    setSendError(null);
+
+    try {
+      const { data: response, error: sendErr } = await supabase.functions.invoke(
+        `messages/${token}`,
+        {
+          method: "POST",
+          body: { content: messageContent.trim() },
+        }
+      );
+
+      if (sendErr) {
+        console.error("Send message error:", sendErr);
+        setSendError("Failed to send message");
+        return;
+      }
+
+      if (response?.error) {
+        console.error("Send message API error:", response.error);
+        setSendError(response.error);
+        return;
+      }
+
+      // Optimistically add message to the top of the list (newest first)
+      if (response?.message) {
+        setData((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            messages: [
+              {
+                ...response.message,
+                read_at: null,
+              },
+              ...prev.messages,
+            ],
+          };
+        });
+      }
+
+      setMessageContent("");
+    } catch (err) {
+      console.error("Send message exception:", err);
+      setSendError("Failed to send message");
+    } finally {
+      setSending(false);
+    }
+  }
+
   function formatDate(dateStr: string) {
     return new Date(dateStr).toLocaleDateString("en-US", {
       month: "short",
@@ -177,6 +234,33 @@ export default function PortalPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
+              {/* Message Composer */}
+              <div className="mb-6 space-y-2">
+                <Textarea
+                  placeholder="Type your message..."
+                  value={messageContent}
+                  onChange={(e) => setMessageContent(e.target.value)}
+                  disabled={sending}
+                  className="min-h-[80px]"
+                />
+                {sendError && (
+                  <p className="text-sm text-destructive">{sendError}</p>
+                )}
+                <Button
+                  onClick={handleSendMessage}
+                  disabled={sending || !messageContent.trim()}
+                  className="w-full sm:w-auto"
+                >
+                  {sending ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  ) : (
+                    <Send className="h-4 w-4 mr-2" />
+                  )}
+                  Send Message
+                </Button>
+              </div>
+
+              {/* Messages List */}
               {data.messages.length === 0 ? (
                 <p className="text-muted-foreground text-center py-4">No messages yet</p>
               ) : (
