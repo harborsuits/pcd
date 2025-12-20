@@ -5,3 +5,9 @@ verify_jwt = false
 
 [functions.portal]
 verify_jwt = false
+
+[functions.messages]
+verify_jwt = false
+
+[functions.admin-messages]
+verify_jwt = false
