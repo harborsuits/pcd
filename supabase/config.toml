@@ -20,3 +20,6 @@ verify_jwt = false
 
 [functions.files]
 verify_jwt = false
+
+[functions.leads]
+verify_jwt = false
