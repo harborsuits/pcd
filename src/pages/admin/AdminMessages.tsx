@@ -69,88 +69,96 @@ export default function AdminMessages() {
     }
   }, [selectedProject, adminKey]);
 
-  // Real-time subscription for inbox updates (all messages)
+  // Real-time subscription for SELECTED THREAD ONLY (security: no global subscription)
   useEffect(() => {
-    if (!adminKey) return;
+    if (!adminKey || !selectedProject) return;
 
-    console.log("📡 Setting up admin inbox realtime subscription");
+    const token = selectedProject.project_token;
+    console.log("📡 Setting up realtime for thread:", token.slice(0, 8) + "...");
 
     const channel = supabase
-      .channel("admin-inbox-messages")
+      .channel(`admin-thread-${token}`)
       .on(
         "postgres_changes",
         {
           event: "INSERT",
           schema: "public",
           table: "messages",
+          filter: `project_token=eq.${token}`,
         },
         (payload) => {
-          console.log("📨 New message in inbox:", payload);
+          console.log("📨 New message in thread:", payload);
           const newMsg = payload.new as {
-            project_token: string;
             content: string;
             sender_type: string;
             created_at: string;
             read_at: string | null;
           };
 
-          // Update projects list (last message + unread count)
-          setProjects((prevProjects) => {
-            return prevProjects.map((p) => {
-              if (p.project_token === newMsg.project_token) {
-                return {
-                  ...p,
-                  last_message: {
-                    content: newMsg.content,
-                    sender_type: newMsg.sender_type,
-                    created_at: newMsg.created_at,
-                  },
-                  // Increment unread only for client messages
-                  unread_count:
-                    newMsg.sender_type === "client"
-                      ? p.unread_count + 1
-                      : p.unread_count,
-                };
-              }
-              return p;
-            });
+          setMessages((prevMessages) => {
+            const newKey = getMessageKey(newMsg);
+            const exists = prevMessages.some((m) => getMessageKey(m) === newKey);
+            if (exists) {
+              console.log("⚠️ Duplicate message ignored");
+              return prevMessages;
+            }
+
+            console.log("✅ Adding new message to thread");
+            return [
+              {
+                content: newMsg.content,
+                sender_type: newMsg.sender_type,
+                created_at: newMsg.created_at,
+                read_at: newMsg.read_at,
+              },
+              ...prevMessages,
+            ];
           });
 
-          // If this message is for the selected thread, add it
-          if (selectedProject?.project_token === newMsg.project_token) {
-            setMessages((prevMessages) => {
-              const newKey = getMessageKey(newMsg);
-              const exists = prevMessages.some((m) => getMessageKey(m) === newKey);
-              if (exists) {
-                console.log("⚠️ Duplicate message ignored in thread");
-                return prevMessages;
-              }
+          // Also update the project in the list
+          setProjects((prevProjects) =>
+            prevProjects.map((p) =>
+              p.project_token === token
+                ? {
+                    ...p,
+                    last_message: {
+                      content: newMsg.content,
+                      sender_type: newMsg.sender_type,
+                      created_at: newMsg.created_at,
+                    },
+                    unread_count:
+                      newMsg.sender_type === "client"
+                        ? p.unread_count + 1
+                        : p.unread_count,
+                  }
+                : p
+            )
+          );
 
-              console.log("✅ Adding new message to thread");
-              return [
-                {
-                  content: newMsg.content,
-                  sender_type: newMsg.sender_type,
-                  created_at: newMsg.created_at,
-                  read_at: newMsg.read_at,
-                },
-                ...prevMessages,
-              ];
-            });
-
-            setTimeout(scrollToBottom, 100);
-          }
+          setTimeout(scrollToBottom, 100);
         }
       )
       .subscribe((status) => {
-        console.log("📡 Admin inbox subscription status:", status);
+        console.log("📡 Thread subscription status:", status);
       });
 
     return () => {
-      console.log("🔌 Cleaning up admin inbox realtime subscription");
+      console.log("🔌 Cleaning up thread subscription");
       supabase.removeChannel(channel);
     };
   }, [adminKey, selectedProject?.project_token, scrollToBottom]);
+
+  // Poll inbox every 15s to catch messages for OTHER projects (secure endpoint)
+  useEffect(() => {
+    if (!adminKey) return;
+
+    const interval = setInterval(() => {
+      console.log("🔄 Polling inbox...");
+      fetchProjects();
+    }, 15000);
+
+    return () => clearInterval(interval);
+  }, [adminKey]);
 
   async function fetchProjects() {
     if (!adminKey) return;
