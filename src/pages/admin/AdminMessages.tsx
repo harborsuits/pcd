@@ -59,6 +59,7 @@ export default function AdminMessages() {
   const [activeTab, setActiveTab] = useState<"messages" | "notes">("messages");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const originalTitle = useRef(document.title);
+  const markReadInFlight = useRef<Record<string, boolean>>({});
 
   // Scroll to bottom (messages are oldest→newest, so we scroll to end)
   const scrollToBottom = useCallback(() => {
@@ -127,8 +128,9 @@ export default function AdminMessages() {
                 title: "New message from Client",
                 description: newMsg.content.slice(0, 50) + (newMsg.content.length > 50 ? "..." : ""),
               });
-              // Flash tab title
-              document.title = "(1) New message — Pleasant Cove";
+              // Flash tab title with business name
+              const businessName = selectedProject?.business_name || "Admin";
+              document.title = `(1) New message — ${businessName}`;
               setTimeout(() => {
                 document.title = originalTitle.current;
               }, 5000);
@@ -235,8 +237,8 @@ export default function AdminMessages() {
               title: `New message from ${project.business_name}`,
               description: project.last_message?.content?.slice(0, 50) || "New message",
             });
-            // Flash tab title
-            document.title = `(${project.unread_count}) New message — Pleasant Cove`;
+            // Flash tab title with business name
+            document.title = `(${project.unread_count}) New message — ${project.business_name}`;
             setTimeout(() => {
               document.title = originalTitle.current;
             }, 5000);
@@ -325,6 +327,10 @@ export default function AdminMessages() {
   }
 
   async function markMessagesAsRead(projectToken: string) {
+    // Throttle: skip if already in flight for this token
+    if (markReadInFlight.current[projectToken]) return;
+    markReadInFlight.current[projectToken] = true;
+
     try {
       const response = await fetch(
         `${SUPABASE_URL}/functions/v1/admin/messages/mark-read`,
@@ -356,6 +362,8 @@ export default function AdminMessages() {
       }
     } catch (err) {
       console.error("Error marking messages as read:", err);
+    } finally {
+      markReadInFlight.current[projectToken] = false;
     }
   }
 
