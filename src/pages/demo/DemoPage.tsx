@@ -20,6 +20,8 @@ export default function DemoPage() {
   const [data, setData] = useState<DemoData | null>(null);
   const [errorMessage, setErrorMessage] = useState<string>("");
 
+  console.log("✅ DemoPage mounted", { token, slug, href: window.location.href });
+
   useEffect(() => {
     if (!token) {
       setState("not-found");
