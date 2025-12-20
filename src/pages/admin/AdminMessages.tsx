@@ -5,7 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2, Send, Search, MessageSquare } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Loader2, Send, Search, MessageSquare, StickyNote, Trash2, Edit2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -31,6 +32,13 @@ interface Message {
   read_at: string | null;
 }
 
+interface Note {
+  id: string;
+  content: string;
+  created_at: string;
+  updated_at: string;
+}
+
 // Deduplication helper
 function getMessageKey(msg: Message): string {
   return `${msg.created_at}|${msg.sender_type}|${msg.content}`;
@@ -40,15 +48,21 @@ export default function AdminMessages() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
+  const [notes, setNotes] = useState<Note[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMessages, setLoadingMessages] = useState(false);
+  const [loadingNotes, setLoadingNotes] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [replyContent, setReplyContent] = useState("");
+  const [noteContent, setNoteContent] = useState("");
+  const [editingNote, setEditingNote] = useState<Note | null>(null);
   const [sending, setSending] = useState(false);
+  const [savingNote, setSavingNote] = useState(false);
   const [adminKey, setAdminKey] = useState("");
-  const [showKeyInput, setShowKeyInput] = useState(false);
+  const [activeTab, setActiveTab] = useState<"messages" | "notes">("messages");
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const originalTitle = useRef(document.title);
 
   // Scroll to bottom
   const scrollToBottom = useCallback(() => {
@@ -66,10 +80,12 @@ export default function AdminMessages() {
   useEffect(() => {
     if (selectedProject && adminKey) {
       fetchMessages(selectedProject.project_token);
+      fetchNotes(selectedProject.project_token);
+      markMessagesAsRead(selectedProject.project_token);
     }
   }, [selectedProject, adminKey]);
 
-  // Real-time subscription for SELECTED THREAD ONLY (security: no global subscription)
+  // Real-time subscription for SELECTED THREAD ONLY
   useEffect(() => {
     if (!adminKey || !selectedProject) return;
 
@@ -104,6 +120,23 @@ export default function AdminMessages() {
             }
 
             console.log("✅ Adding new message to thread");
+            
+            // Show toast for client messages
+            if (newMsg.sender_type === "client") {
+              toast({
+                title: "New message from Client",
+                description: newMsg.content.slice(0, 50) + (newMsg.content.length > 50 ? "..." : ""),
+              });
+              // Flash tab title
+              document.title = "(1) New message — Pleasant Cove";
+              setTimeout(() => {
+                document.title = originalTitle.current;
+              }, 5000);
+              
+              // Mark as read immediately since we're viewing
+              markMessagesAsRead(token);
+            }
+
             return [
               {
                 content: newMsg.content,
@@ -115,7 +148,7 @@ export default function AdminMessages() {
             ];
           });
 
-          // Also update the project in the list
+          // Update the project in the list
           setProjects((prevProjects) =>
             prevProjects.map((p) =>
               p.project_token === token
@@ -126,10 +159,8 @@ export default function AdminMessages() {
                       sender_type: newMsg.sender_type,
                       created_at: newMsg.created_at,
                     },
-                    unread_count:
-                      newMsg.sender_type === "client"
-                        ? p.unread_count + 1
-                        : p.unread_count,
+                    // Don't increment unread since we're viewing
+                    unread_count: 0,
                   }
                 : p
             )
@@ -148,7 +179,7 @@ export default function AdminMessages() {
     };
   }, [adminKey, selectedProject?.project_token, scrollToBottom]);
 
-  // Poll inbox every 15s to catch messages for OTHER projects (secure endpoint)
+  // Poll inbox every 15s to catch messages for OTHER projects
   useEffect(() => {
     if (!adminKey) return;
 
@@ -190,6 +221,25 @@ export default function AdminMessages() {
         }
         console.error("Inbox fetch error:", data.error);
         return;
+      }
+
+      // Check for new messages in other projects and show notification
+      const currentSelectedToken = selectedProject?.project_token;
+      for (const project of data) {
+        if (project.project_token !== currentSelectedToken && project.unread_count > 0) {
+          const existingProject = projects.find(p => p.project_token === project.project_token);
+          if (existingProject && project.unread_count > existingProject.unread_count) {
+            toast({
+              title: `New message from ${project.business_name}`,
+              description: project.last_message?.content?.slice(0, 50) || "New message",
+            });
+            // Flash tab title
+            document.title = `(${project.unread_count}) New message — Pleasant Cove`;
+            setTimeout(() => {
+              document.title = originalTitle.current;
+            }, 5000);
+          }
+        }
       }
 
       setProjects(data);
@@ -236,11 +286,77 @@ export default function AdminMessages() {
     }
   }
 
+  async function fetchNotes(projectToken: string) {
+    try {
+      setLoadingNotes(true);
+
+      const response = await fetch(
+        `${SUPABASE_URL}/functions/v1/admin/notes/${projectToken}`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            "apikey": SUPABASE_ANON_KEY,
+            "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+            "x-admin-key": adminKey,
+          },
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok || data.error) {
+        console.error("Notes fetch error:", data.error);
+        return;
+      }
+
+      setNotes(data.notes || []);
+    } catch (err) {
+      console.error("Error fetching notes:", err);
+    } finally {
+      setLoadingNotes(false);
+    }
+  }
+
+  async function markMessagesAsRead(projectToken: string) {
+    try {
+      const response = await fetch(
+        `${SUPABASE_URL}/functions/v1/admin/messages/mark-read`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "apikey": SUPABASE_ANON_KEY,
+            "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+            "x-admin-key": adminKey,
+          },
+          body: JSON.stringify({ project_token: projectToken }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (response.ok && data.marked_count > 0) {
+        console.log(`Marked ${data.marked_count} messages as read`);
+        // Update local state
+        setProjects((prev) =>
+          prev.map((p) =>
+            p.project_token === projectToken ? { ...p, unread_count: 0 } : p
+          )
+        );
+        setSelectedProject((prev) =>
+          prev?.project_token === projectToken ? { ...prev, unread_count: 0 } : prev
+        );
+      }
+    } catch (err) {
+      console.error("Error marking messages as read:", err);
+    }
+  }
+
   async function handleSendReply() {
     if (!selectedProject || !replyContent.trim()) return;
 
     if (!adminKey) {
-      setShowKeyInput(true);
       toast({
         title: "Admin key required",
         description: "Please enter your admin key to send messages.",
@@ -311,11 +427,116 @@ export default function AdminMessages() {
     }
   }
 
+  async function handleSaveNote() {
+    if (!selectedProject || !noteContent.trim()) return;
+
+    setSavingNote(true);
+
+    try {
+      const isEditing = !!editingNote;
+      const url = isEditing
+        ? `${SUPABASE_URL}/functions/v1/admin/notes/${selectedProject.project_token}/${editingNote.id}`
+        : `${SUPABASE_URL}/functions/v1/admin/notes/${selectedProject.project_token}`;
+
+      const response = await fetch(url, {
+        method: isEditing ? "PATCH" : "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": SUPABASE_ANON_KEY,
+          "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+          "x-admin-key": adminKey,
+        },
+        body: JSON.stringify({ content: noteContent.trim() }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        toast({
+          title: "Failed to save note",
+          description: data.error || "Unknown error",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (isEditing) {
+        setNotes((prev) =>
+          prev.map((n) => (n.id === editingNote.id ? data.note : n))
+        );
+        toast({ title: "Note updated" });
+      } else {
+        setNotes((prev) => [data.note, ...prev]);
+        toast({ title: "Note added" });
+      }
+
+      setNoteContent("");
+      setEditingNote(null);
+    } catch (err) {
+      console.error("Save note error:", err);
+      toast({
+        title: "Failed to save note",
+        description: "Network error",
+        variant: "destructive",
+      });
+    } finally {
+      setSavingNote(false);
+    }
+  }
+
+  async function handleDeleteNote(noteId: string) {
+    if (!selectedProject) return;
+
+    try {
+      const response = await fetch(
+        `${SUPABASE_URL}/functions/v1/admin/notes/${selectedProject.project_token}/${noteId}`,
+        {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+            "apikey": SUPABASE_ANON_KEY,
+            "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+            "x-admin-key": adminKey,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        const data = await response.json();
+        toast({
+          title: "Failed to delete note",
+          description: data.error || "Unknown error",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setNotes((prev) => prev.filter((n) => n.id !== noteId));
+      toast({ title: "Note deleted" });
+    } catch (err) {
+      console.error("Delete note error:", err);
+      toast({
+        title: "Failed to delete note",
+        description: "Network error",
+        variant: "destructive",
+      });
+    }
+  }
+
   function handleAdminKeySubmit() {
     if (adminKey.trim()) {
-      setShowKeyInput(false);
       fetchProjects();
     }
+  }
+
+  function handleEditNote(note: Note) {
+    setEditingNote(note);
+    setNoteContent(note.content);
+  }
+
+  function handleCancelEdit() {
+    setEditingNote(null);
+    setNoteContent("");
   }
 
   function formatDate(dateStr: string) {
@@ -506,66 +727,162 @@ export default function AdminMessages() {
                 </div>
               </CardHeader>
 
-              <CardContent className="flex-1 p-0 flex flex-col">
-                {/* Messages */}
-                <ScrollArea className="flex-1 p-4">
-                  {loadingMessages ? (
-                    <div className="flex justify-center py-8">
-                      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                    </div>
-                  ) : messages.length === 0 ? (
-                    <p className="text-center text-muted-foreground py-8">No messages yet</p>
-                  ) : (
-                    <div className="space-y-4">
-                      <div ref={messagesEndRef} />
-                      {messages.map((msg, idx) => (
-                        <div
-                          key={idx}
-                          className={`p-4 rounded-lg ${
-                            msg.sender_type === "admin"
-                              ? "bg-primary/10 border-l-4 border-primary ml-8"
-                              : "bg-muted mr-8"
-                          }`}
-                        >
-                          <div className="flex justify-between items-start mb-2">
-                            <Badge variant="outline" className="text-xs">
-                              {msg.sender_type === "admin" ? "You" : "Client"}
-                            </Badge>
-                            <span className="text-xs text-muted-foreground">
-                              {formatFullDate(msg.created_at)}
-                            </span>
-                          </div>
-                          <p className="text-sm">{msg.content}</p>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </ScrollArea>
+              <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "messages" | "notes")} className="flex-1 flex flex-col">
+                <TabsList className="mx-4 mt-2 w-fit">
+                  <TabsTrigger value="messages" className="flex items-center gap-2">
+                    <MessageSquare className="h-4 w-4" />
+                    Messages
+                  </TabsTrigger>
+                  <TabsTrigger value="notes" className="flex items-center gap-2">
+                    <StickyNote className="h-4 w-4" />
+                    Notes
+                  </TabsTrigger>
+                </TabsList>
 
-                {/* Composer */}
-                <div className="border-t p-4 space-y-2">
-                  <Textarea
-                    placeholder="Type your reply..."
-                    value={replyContent}
-                    onChange={(e) => setReplyContent(e.target.value)}
-                    disabled={sending}
-                    className="min-h-[80px]"
-                  />
-                  <div className="flex justify-end">
-                    <Button
-                      onClick={handleSendReply}
-                      disabled={sending || !replyContent.trim()}
-                    >
-                      {sending ? (
-                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                <TabsContent value="messages" className="flex-1 flex flex-col m-0 p-0">
+                  <CardContent className="flex-1 p-0 flex flex-col">
+                    {/* Messages */}
+                    <ScrollArea className="flex-1 p-4">
+                      {loadingMessages ? (
+                        <div className="flex justify-center py-8">
+                          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                        </div>
+                      ) : messages.length === 0 ? (
+                        <p className="text-center text-muted-foreground py-8">No messages yet</p>
                       ) : (
-                        <Send className="h-4 w-4 mr-2" />
+                        <div className="space-y-4">
+                          <div ref={messagesEndRef} />
+                          {messages.map((msg, idx) => (
+                            <div
+                              key={idx}
+                              className={`p-4 rounded-lg ${
+                                msg.sender_type === "admin"
+                                  ? "bg-primary/10 border-l-4 border-primary ml-8"
+                                  : "bg-muted mr-8"
+                              }`}
+                            >
+                              <div className="flex justify-between items-start mb-2">
+                                <Badge variant="outline" className="text-xs">
+                                  {msg.sender_type === "admin" ? "You" : "Client"}
+                                </Badge>
+                                <span className="text-xs text-muted-foreground">
+                                  {formatFullDate(msg.created_at)}
+                                </span>
+                              </div>
+                              <p className="text-sm">{msg.content}</p>
+                            </div>
+                          ))}
+                        </div>
                       )}
-                      Send Reply
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
+                    </ScrollArea>
+
+                    {/* Composer */}
+                    <div className="border-t p-4 space-y-2">
+                      <Textarea
+                        placeholder="Type your reply..."
+                        value={replyContent}
+                        onChange={(e) => setReplyContent(e.target.value)}
+                        disabled={sending}
+                        className="min-h-[80px]"
+                      />
+                      <div className="flex justify-end">
+                        <Button
+                          onClick={handleSendReply}
+                          disabled={sending || !replyContent.trim()}
+                        >
+                          {sending ? (
+                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                          ) : (
+                            <Send className="h-4 w-4 mr-2" />
+                          )}
+                          Send Reply
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </TabsContent>
+
+                <TabsContent value="notes" className="flex-1 flex flex-col m-0 p-0">
+                  <CardContent className="flex-1 p-0 flex flex-col">
+                    {/* Notes Composer */}
+                    <div className="border-b p-4 space-y-2">
+                      <Textarea
+                        placeholder={editingNote ? "Edit your note..." : "Add an internal note..."}
+                        value={noteContent}
+                        onChange={(e) => setNoteContent(e.target.value)}
+                        disabled={savingNote}
+                        className="min-h-[80px]"
+                      />
+                      <div className="flex justify-end gap-2">
+                        {editingNote && (
+                          <Button variant="outline" onClick={handleCancelEdit}>
+                            Cancel
+                          </Button>
+                        )}
+                        <Button
+                          onClick={handleSaveNote}
+                          disabled={savingNote || !noteContent.trim()}
+                        >
+                          {savingNote ? (
+                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                          ) : (
+                            <StickyNote className="h-4 w-4 mr-2" />
+                          )}
+                          {editingNote ? "Update Note" : "Add Note"}
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Notes List */}
+                    <ScrollArea className="flex-1 p-4">
+                      {loadingNotes ? (
+                        <div className="flex justify-center py-8">
+                          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                        </div>
+                      ) : notes.length === 0 ? (
+                        <p className="text-center text-muted-foreground py-8">
+                          No internal notes yet. Notes are private and never shown to clients.
+                        </p>
+                      ) : (
+                        <div className="space-y-4">
+                          {notes.map((note) => (
+                            <div
+                              key={note.id}
+                              className="p-4 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800"
+                            >
+                              <div className="flex justify-between items-start mb-2">
+                                <span className="text-xs text-muted-foreground">
+                                  {formatFullDate(note.created_at)}
+                                  {note.updated_at !== note.created_at && " (edited)"}
+                                </span>
+                                <div className="flex gap-1">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleEditNote(note)}
+                                    className="h-6 w-6 p-0"
+                                  >
+                                    <Edit2 className="h-3 w-3" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleDeleteNote(note.id)}
+                                    className="h-6 w-6 p-0 text-destructive hover:text-destructive"
+                                  >
+                                    <Trash2 className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                              </div>
+                              <p className="text-sm whitespace-pre-wrap">{note.content}</p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </ScrollArea>
+                  </CardContent>
+                </TabsContent>
+              </Tabs>
             </>
           )}
         </Card>

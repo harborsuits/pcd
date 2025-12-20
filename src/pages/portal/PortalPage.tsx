@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2, FileText, MessageSquare, CreditCard, AlertCircle, Send, Home } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
 
 interface PortalMessage {
   content: string;
@@ -59,6 +60,7 @@ export default function PortalPage() {
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const originalTitle = useRef(document.title);
 
   // Scroll to bottom when new messages arrive
   const scrollToBottom = useCallback(() => {
@@ -69,6 +71,8 @@ export default function PortalPage() {
     console.log("✅ PortalPage mounted, token:", token?.slice(0, 8) + "...");
     if (token) {
       fetchPortalData(token);
+      // Mark admin messages as read when portal loads
+      markAdminMessagesAsRead(token);
     }
   }, [token]);
 
@@ -109,6 +113,22 @@ export default function PortalPage() {
             }
 
             console.log("✅ Adding new message to state");
+            
+            // Show toast for admin messages
+            if (newMsg.sender_type === "admin") {
+              toast({
+                title: "New message from Team",
+                description: newMsg.content.slice(0, 50) + (newMsg.content.length > 50 ? "..." : ""),
+              });
+              // Flash tab title
+              document.title = "(1) New message — Pleasant Cove";
+              setTimeout(() => {
+                document.title = originalTitle.current;
+              }, 5000);
+              // Mark as read since user is viewing
+              markAdminMessagesAsRead(token);
+            }
+
             return {
               ...prev,
               messages: [
@@ -188,6 +208,27 @@ export default function PortalPage() {
     }
   }
 
+  async function markAdminMessagesAsRead(portalToken: string) {
+    try {
+      console.log("📖 Marking admin messages as read...");
+      const { data: response, error } = await supabase.functions.invoke(
+        `messages/${portalToken}/mark-read`,
+        { method: "POST" }
+      );
+
+      if (error) {
+        console.error("Mark read error:", error);
+        return;
+      }
+
+      if (response?.marked_count > 0) {
+        console.log(`Marked ${response.marked_count} admin messages as read`);
+      }
+    } catch (err) {
+      console.error("Mark read exception:", err);
+    }
+  }
+
   function handleLoadOlderMessages() {
     if (!token || !data || data.messages.length === 0) return;
     const oldestMessage = data.messages[data.messages.length - 1];
@@ -220,6 +261,12 @@ export default function PortalPage() {
         setSendError(response.error);
         return;
       }
+
+      // Show success toast
+      toast({
+        title: "Message sent",
+        description: "Your message has been delivered.",
+      });
 
       // Optimistically add message to the top of the list (newest first)
       if (response?.message) {
