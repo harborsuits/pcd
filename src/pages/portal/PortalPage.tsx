@@ -70,6 +70,7 @@ export default function PortalPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const originalTitle = useRef(document.title);
   const markReadInFlight = useRef(false);
+  const clearQueueTimeoutRef = useRef<number | null>(null);
 
   // Scroll to bottom when new messages arrive (messages are oldest→newest)
   const scrollToBottom = useCallback(() => {
@@ -84,6 +85,15 @@ export default function PortalPage() {
       markAdminMessagesAsRead(token);
     }
   }, [token]);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (clearQueueTimeoutRef.current) {
+        window.clearTimeout(clearQueueTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Real-time subscription for new messages
   useEffect(() => {
@@ -431,13 +441,25 @@ export default function PortalPage() {
           ? "Some files failed to upload" 
           : undefined,
       });
+    } else {
+      toast({
+        title: "Upload failed",
+        description: `All ${fileArray.length} file(s) failed to upload.`,
+        variant: "destructive",
+      });
     }
 
     setUploadDesc("");
     setUploading(false);
     
-    // Clear queue after 3s
-    setTimeout(() => setUploadQueue([]), 3000);
+    // Clear queue after 3s (cancel any previous timeout)
+    if (clearQueueTimeoutRef.current) {
+      window.clearTimeout(clearQueueTimeoutRef.current);
+    }
+    clearQueueTimeoutRef.current = window.setTimeout(() => {
+      setUploadQueue([]);
+      clearQueueTimeoutRef.current = null;
+    }, 3000);
   }
 
   function handleDragOver(e: React.DragEvent) {
