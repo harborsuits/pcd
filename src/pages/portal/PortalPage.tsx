@@ -5,7 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, FileText, MessageSquare, CreditCard, AlertCircle, Send, Home, Download, Image as ImageIcon } from "lucide-react";
+import { Loader2, FileText, MessageSquare, CreditCard, AlertCircle, Send, Home, Download, Image as ImageIcon, Upload } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import { proxyMediaUrl, isImageType, getFileIcon } from "@/lib/media";
 
@@ -60,6 +62,9 @@ export default function PortalPage() {
   const [messageContent, setMessageContent] = useState("");
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploadDesc, setUploadDesc] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const originalTitle = useRef(document.title);
   const markReadInFlight = useRef(false);
@@ -337,6 +342,48 @@ export default function PortalPage() {
     }
   }
 
+  async function handleFileUpload(file: File) {
+    if (!token) return;
+    setUploading(true);
+    setUploadError(null);
+
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      if (uploadDesc.trim()) form.append("description", uploadDesc.trim());
+
+      const res = await fetch(
+        `${SUPABASE_URL}/functions/v1/files/${token}/upload`,
+        {
+          method: "POST",
+          body: form,
+        }
+      );
+
+      const response = await res.json();
+
+      if (!res.ok) {
+        console.error("Upload error:", response.error);
+        setUploadError(response.error || "Upload failed");
+        return;
+      }
+
+      toast({
+        title: "File uploaded",
+        description: "Your file has been uploaded successfully.",
+      });
+
+      setUploadDesc("");
+      // Refresh portal data to show new file
+      fetchPortalData(token);
+    } catch (err) {
+      console.error("Upload exception:", err);
+      setUploadError("Upload failed");
+    } finally {
+      setUploading(false);
+    }
+  }
+
   function formatDate(dateStr: string) {
     return new Date(dateStr).toLocaleDateString("en-US", {
       month: "short",
@@ -491,8 +538,57 @@ export default function PortalPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
+              {/* Upload Form */}
+              <div className="mb-6 p-4 border border-dashed border-border rounded-lg space-y-3">
+                <div className="flex items-center gap-2">
+                  <Upload className="h-5 w-5 text-muted-foreground" />
+                  <span className="font-medium">Upload a file</span>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="file-upload" className="sr-only">Choose file</Label>
+                  <Input
+                    id="file-upload"
+                    type="file"
+                    accept="image/*,.pdf"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) handleFileUpload(f);
+                      e.currentTarget.value = "";
+                    }}
+                    disabled={uploading}
+                    className="cursor-pointer"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="file-desc">Description (optional)</Label>
+                  <Input
+                    id="file-desc"
+                    value={uploadDesc}
+                    onChange={(e) => setUploadDesc(e.target.value)}
+                    placeholder="e.g., Floor plan PDF, inspiration image..."
+                    disabled={uploading}
+                  />
+                </div>
+                
+                {uploadError && (
+                  <p className="text-sm text-destructive">{uploadError}</p>
+                )}
+                {uploading && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Uploading...
+                  </div>
+                )}
+                
+                <p className="text-xs text-muted-foreground">
+                  Allowed: images + PDF • Max: 10MB
+                </p>
+              </div>
+
               {data.files.length === 0 ? (
-                <p className="text-muted-foreground text-center py-4">No files uploaded</p>
+                <p className="text-muted-foreground text-center py-4">No files uploaded yet</p>
               ) : (
                 <div className="space-y-3">
                   {data.files.map((file) => {
