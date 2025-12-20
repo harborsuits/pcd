@@ -71,6 +71,7 @@ export default function AdminMessages() {
   const [uploading, setUploading] = useState(false);
   const [uploadDesc, setUploadDesc] = useState("");
   const [uploadQueue, setUploadQueue] = useState<{ id: string; name: string; status: 'pending' | 'uploading' | 'done' | 'error'; error?: string }[]>([]);
+  const [isDragActive, setIsDragActive] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const originalTitle = useRef(document.title);
   const markReadInFlight = useRef<Record<string, boolean>>({});
@@ -685,6 +686,32 @@ export default function AdminMessages() {
     }, 3000);
   }
 
+  // Drag-drop handlers for admin upload
+  function onDragOver(e: React.DragEvent) {
+    e.preventDefault();
+    if (uploading) return;
+    setIsDragActive(true);
+  }
+
+  function onDragEnter(e: React.DragEvent) {
+    e.preventDefault();
+    if (uploading) return;
+    setIsDragActive(true);
+  }
+
+  function onDragLeave(e: React.DragEvent) {
+    e.preventDefault();
+    setIsDragActive(false);
+  }
+
+  function onDrop(e: React.DragEvent) {
+    e.preventDefault();
+    setIsDragActive(false);
+    if (uploading) return;
+    const files = e.dataTransfer?.files;
+    if (files && files.length > 0) handleAdminFileUpload(files);
+  }
+
   function formatDate(dateStr: string) {
     const date = new Date(dateStr);
     const now = new Date();
@@ -1035,11 +1062,23 @@ export default function AdminMessages() {
 
                 <TabsContent value="files" className="flex-1 flex flex-col m-0 p-0">
                   <CardContent className="flex-1 p-0 flex flex-col">
-                    {/* Upload Form */}
-                    <div className="border-b p-4 space-y-3">
+                    {/* Upload Form with Drop Zone */}
+                    <div
+                      onDragOver={onDragOver}
+                      onDragEnter={onDragEnter}
+                      onDragLeave={onDragLeave}
+                      onDrop={onDrop}
+                      className={[
+                        "border-b p-4 space-y-3 transition-colors",
+                        uploading ? "opacity-60" : "",
+                        isDragActive ? "bg-accent/20 border-accent" : "",
+                      ].join(" ")}
+                    >
                       <div className="flex items-center gap-2">
                         <Upload className="h-4 w-4 text-muted-foreground" />
-                        <span className="font-medium text-sm">Upload files to share with client</span>
+                        <span className="font-medium text-sm">
+                          {isDragActive ? "Drop files here..." : "Upload files to share with client"}
+                        </span>
                       </div>
                       
                       <div className="space-y-2">
@@ -1091,7 +1130,7 @@ export default function AdminMessages() {
                       )}
                       
                       <p className="text-xs text-muted-foreground">
-                        Images + PDF • Max 10MB each
+                        Drag & drop or click • Images + PDF • Max 10MB each
                       </p>
                     </div>
 
