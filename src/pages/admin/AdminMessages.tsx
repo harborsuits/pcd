@@ -26,6 +26,7 @@ interface Project {
 }
 
 interface Message {
+  id: string;
   content: string;
   sender_type: string;
   created_at: string;
@@ -37,11 +38,6 @@ interface Note {
   content: string;
   created_at: string;
   updated_at: string;
-}
-
-// Deduplication helper
-function getMessageKey(msg: Message): string {
-  return `${msg.created_at}|${msg.sender_type}|${msg.content}`;
 }
 
 export default function AdminMessages() {
@@ -64,7 +60,7 @@ export default function AdminMessages() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const originalTitle = useRef(document.title);
 
-  // Scroll to bottom
+  // Scroll to bottom (messages are oldest→newest, so we scroll to end)
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, []);
@@ -81,7 +77,10 @@ export default function AdminMessages() {
     if (selectedProject && adminKey) {
       fetchMessages(selectedProject.project_token);
       fetchNotes(selectedProject.project_token);
-      markMessagesAsRead(selectedProject.project_token);
+      // Only mark as read if there are unread messages
+      if (selectedProject.unread_count > 0) {
+        markMessagesAsRead(selectedProject.project_token);
+      }
     }
   }, [selectedProject, adminKey]);
 
@@ -105,6 +104,7 @@ export default function AdminMessages() {
         (payload) => {
           console.log("📨 New message in thread:", payload);
           const newMsg = payload.new as {
+            id: string;
             content: string;
             sender_type: string;
             created_at: string;
@@ -112,8 +112,8 @@ export default function AdminMessages() {
           };
 
           setMessages((prevMessages) => {
-            const newKey = getMessageKey(newMsg);
-            const exists = prevMessages.some((m) => getMessageKey(m) === newKey);
+            // Dedupe by id
+            const exists = prevMessages.some((m) => m.id === newMsg.id);
             if (exists) {
               console.log("⚠️ Duplicate message ignored");
               return prevMessages;
@@ -133,18 +133,20 @@ export default function AdminMessages() {
                 document.title = originalTitle.current;
               }, 5000);
               
-              // Mark as read immediately since we're viewing
+              // Mark as read since we're viewing
               markMessagesAsRead(token);
             }
 
+            // Append to end (oldest→newest order)
             return [
+              ...prevMessages,
               {
+                id: newMsg.id,
                 content: newMsg.content,
                 sender_type: newMsg.sender_type,
                 created_at: newMsg.created_at,
                 read_at: newMsg.read_at,
               },
-              ...prevMessages,
             ];
           });
 
@@ -278,7 +280,11 @@ export default function AdminMessages() {
         return;
       }
 
+      // Messages come in ascending order (oldest→newest), store as-is
       setMessages(data.messages || []);
+      
+      // Scroll to bottom after messages load
+      setTimeout(scrollToBottom, 100);
     } catch (err) {
       console.error("Error fetching messages:", err);
     } finally {
@@ -396,15 +402,19 @@ export default function AdminMessages() {
         return;
       }
 
-      // Optimistically add message
+      // Optimistically add message to end (oldest→newest)
       if (data.message) {
         setMessages((prev) => [
-          {
-            ...data.message,
-            read_at: null,
-          },
           ...prev,
+          {
+            id: data.message.id,
+            content: data.message.content,
+            sender_type: data.message.sender_type,
+            created_at: data.message.created_at,
+            read_at: data.message.read_at,
+          },
         ]);
+        setTimeout(scrollToBottom, 100);
       }
 
       setReplyContent("");
@@ -741,7 +751,7 @@ export default function AdminMessages() {
 
                 <TabsContent value="messages" className="flex-1 flex flex-col m-0 p-0">
                   <CardContent className="flex-1 p-0 flex flex-col">
-                    {/* Messages */}
+                    {/* Messages (oldest→newest, scroll to bottom) */}
                     <ScrollArea className="flex-1 p-4">
                       {loadingMessages ? (
                         <div className="flex justify-center py-8">
@@ -751,10 +761,9 @@ export default function AdminMessages() {
                         <p className="text-center text-muted-foreground py-8">No messages yet</p>
                       ) : (
                         <div className="space-y-4">
-                          <div ref={messagesEndRef} />
-                          {messages.map((msg, idx) => (
+                          {messages.map((msg) => (
                             <div
-                              key={idx}
+                              key={msg.id}
                               className={`p-4 rounded-lg ${
                                 msg.sender_type === "admin"
                                   ? "bg-primary/10 border-l-4 border-primary ml-8"
@@ -772,6 +781,7 @@ export default function AdminMessages() {
                               <p className="text-sm">{msg.content}</p>
                             </div>
                           ))}
+                          <div ref={messagesEndRef} />
                         </div>
                       )}
                     </ScrollArea>

@@ -101,12 +101,13 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Fetch messages (paginated, newest first) - fetch one extra to detect has_more
+    // Fetch messages (paginated, oldest first for proper ordering) - include id for deduplication
+    // We fetch in ascending order so messages display oldest → newest
     let messagesQuery = supabase
       .from("messages")
-      .select("content, sender_type, created_at, read_at")
+      .select("id, content, sender_type, created_at, read_at")
       .eq("project_id", project.id)
-      .order("created_at", { ascending: false })
+      .order("created_at", { ascending: true })
       .limit(messagesLimit + 1);
 
     if (messagesBefore) {
@@ -148,7 +149,7 @@ Deno.serve(async (req) => {
       // Non-fatal: continue with empty payments
     }
 
-    // Clean response - no internal IDs exposed
+    // Clean response - include id for deduplication
     const response = {
       business: {
         name: project.business_name,
@@ -156,6 +157,7 @@ Deno.serve(async (req) => {
         status: project.status,
       },
       messages: (messages || []).map((m) => ({
+        id: m.id,
         content: m.content,
         sender_type: m.sender_type,
         created_at: m.created_at,

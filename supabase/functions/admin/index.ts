@@ -105,89 +105,47 @@ function getSupabaseClient() {
   return createClient(supabaseUrl, supabaseServiceKey);
 }
 
-// GET /admin/inbox - List projects with last message and unread count
+// GET /admin/inbox - List projects with last message and unread count using RPC
 async function handleInbox(req: Request): Promise<Response> {
   const authError = validateAdminKey(req);
   if (authError) return authError;
 
   try {
-    console.log("Fetching admin inbox...");
+    console.log("Fetching admin inbox via RPC...");
 
     const supabase = getSupabaseClient();
 
-    // Fetch all active projects
-    const { data: projects, error: projectsError } = await supabase
-      .from("projects")
-      .select("id, project_token, business_name, status, updated_at")
-      .is("deleted_at", null)
-      .order("updated_at", { ascending: false });
+    // Use the efficient RPC function
+    const { data: inboxData, error: rpcError } = await supabase.rpc("admin_inbox_v1");
 
-    if (projectsError) {
-      console.error("Projects query error:", projectsError);
+    if (rpcError) {
+      console.error("RPC error:", rpcError);
       return new Response(
         JSON.stringify({ error: "Database error" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    if (!projects || projects.length === 0) {
-      return new Response(
-        JSON.stringify([]),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Get all project IDs for batch queries
-    const projectIds = projects.map(p => p.id);
-
-    // Batch fetch latest messages for all projects
-    const { data: latestMessages } = await supabase
-      .from("messages")
-      .select("project_id, content, sender_type, created_at")
-      .in("project_id", projectIds)
-      .order("created_at", { ascending: false });
-
-    // Batch fetch unread counts (client messages with no read_at)
-    const { data: unreadData } = await supabase
-      .from("messages")
-      .select("project_id")
-      .in("project_id", projectIds)
-      .eq("sender_type", "client")
-      .is("read_at", null);
-
-    // Build maps for efficient lookup
-    const lastMessageMap = new Map<string, { content: string; sender_type: string; created_at: string }>();
-    for (const msg of latestMessages || []) {
-      if (!lastMessageMap.has(msg.project_id)) {
-        lastMessageMap.set(msg.project_id, {
-          content: msg.content,
-          sender_type: msg.sender_type,
-          created_at: msg.created_at,
-        });
-      }
-    }
-
-    const unreadCountMap = new Map<string, number>();
-    for (const msg of unreadData || []) {
-      unreadCountMap.set(msg.project_id, (unreadCountMap.get(msg.project_id) || 0) + 1);
-    }
-
-    // Build response
-    const inbox = projects.map(p => ({
-      project_token: p.project_token,
-      business_name: p.business_name,
-      status: p.status,
-      last_message: lastMessageMap.get(p.id) || null,
-      unread_count: unreadCountMap.get(p.id) || 0,
+    // Transform to expected format
+    const inbox = (inboxData || []).map((row: {
+      project_token: string;
+      business_name: string;
+      status: string;
+      last_message_content: string | null;
+      last_message_sender_type: string | null;
+      last_message_created_at: string | null;
+      unread_count: number;
+    }) => ({
+      project_token: row.project_token,
+      business_name: row.business_name,
+      status: row.status,
+      last_message: row.last_message_content ? {
+        content: row.last_message_content,
+        sender_type: row.last_message_sender_type,
+        created_at: row.last_message_created_at,
+      } : null,
+      unread_count: Number(row.unread_count) || 0,
     }));
-
-    // Sort by last_message.created_at desc, nulls last
-    inbox.sort((a, b) => {
-      if (!a.last_message && !b.last_message) return 0;
-      if (!a.last_message) return 1;
-      if (!b.last_message) return -1;
-      return new Date(b.last_message.created_at).getTime() - new Date(a.last_message.created_at).getTime();
-    });
 
     console.log(`Inbox fetched: ${inbox.length} projects`);
 
@@ -274,7 +232,7 @@ async function handleMessagesReply(req: Request): Promise<Response> {
       );
     }
 
-    // Insert admin message
+    // Insert admin message - include id in response
     const { data: message, error: insertError } = await supabase
       .from("messages")
       .insert({
@@ -283,7 +241,7 @@ async function handleMessagesReply(req: Request): Promise<Response> {
         sender_type: "admin",
         content: trimmedContent,
       })
-      .select("sender_type, content, created_at")
+      .select("id, sender_type, content, created_at, read_at")
       .single();
 
     if (insertError) {
@@ -300,9 +258,11 @@ async function handleMessagesReply(req: Request): Promise<Response> {
       JSON.stringify({
         ok: true,
         message: {
+          id: message.id,
           sender_type: message.sender_type,
           content: message.content,
           created_at: message.created_at,
+          read_at: message.read_at,
         },
       }),
       { status: 201, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -498,7 +458,7 @@ async function handleCreateNote(req: Request, token: string): Promise<Response> 
 
     if (content.length > 10000) {
       return new Response(
-        JSON.stringify({ error: "Note too long (max 10000 chars)" }),
+        JSON.stringify({ error: "Content too long (max 10000 chars)" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -510,7 +470,7 @@ async function handleCreateNote(req: Request, token: string): Promise<Response> 
     // Verify project exists
     const { data: project, error: projectError } = await supabase
       .from("projects")
-      .select("id")
+      .select("id, project_token")
       .eq("project_token", token)
       .is("deleted_at", null)
       .maybeSingle();
@@ -522,12 +482,12 @@ async function handleCreateNote(req: Request, token: string): Promise<Response> 
       );
     }
 
-    // Create note
+    // Insert note
     const { data: note, error: insertError } = await supabase
       .from("admin_notes")
       .insert({
         project_id: project.id,
-        project_token: token,
+        project_token: project.project_token,
         content: content,
       })
       .select("id, content, created_at, updated_at")
@@ -590,7 +550,7 @@ async function handleUpdateNote(req: Request, token: string, noteId: string): Pr
 
     if (content.length > 10000) {
       return new Response(
-        JSON.stringify({ error: "Note too long (max 10000 chars)" }),
+        JSON.stringify({ error: "Content too long (max 10000 chars)" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -599,15 +559,30 @@ async function handleUpdateNote(req: Request, token: string, noteId: string): Pr
 
     const supabase = getSupabaseClient();
 
+    // Verify project exists
+    const { data: project, error: projectError } = await supabase
+      .from("projects")
+      .select("id")
+      .eq("project_token", token)
+      .is("deleted_at", null)
+      .maybeSingle();
+
+    if (projectError || !project) {
+      return new Response(
+        JSON.stringify({ error: "Project not found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // Update note
     const { data: note, error: updateError } = await supabase
       .from("admin_notes")
-      .update({ content })
+      .update({ content, updated_at: new Date().toISOString() })
       .eq("id", noteId)
-      .eq("project_token", token)
+      .eq("project_id", project.id)
       .is("deleted_at", null)
       .select("id, content, created_at, updated_at")
-      .maybeSingle();
+      .single();
 
     if (updateError) {
       console.error("Note update error:", updateError);
@@ -657,28 +632,34 @@ async function handleDeleteNote(req: Request, token: string, noteId: string): Pr
 
     const supabase = getSupabaseClient();
 
+    // Verify project exists
+    const { data: project, error: projectError } = await supabase
+      .from("projects")
+      .select("id")
+      .eq("project_token", token)
+      .is("deleted_at", null)
+      .maybeSingle();
+
+    if (projectError || !project) {
+      return new Response(
+        JSON.stringify({ error: "Project not found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // Soft delete note
-    const { data: note, error: deleteError } = await supabase
+    const { error: deleteError } = await supabase
       .from("admin_notes")
       .update({ deleted_at: new Date().toISOString() })
       .eq("id", noteId)
-      .eq("project_token", token)
-      .is("deleted_at", null)
-      .select("id")
-      .maybeSingle();
+      .eq("project_id", project.id)
+      .is("deleted_at", null);
 
     if (deleteError) {
       console.error("Note delete error:", deleteError);
       return new Response(
         JSON.stringify({ error: "Failed to delete note" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    if (!note) {
-      return new Response(
-        JSON.stringify({ error: "Note not found" }),
-        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
