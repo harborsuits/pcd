@@ -156,10 +156,10 @@ Deno.serve(async (req) => {
     const hasMoreMessages = (rawMessages || []).length > messagesLimit;
     const messages = hasMoreMessages ? (rawMessages || []).slice(0, messagesLimit) : (rawMessages || []);
 
-    // Fetch files (metadata only, no IDs)
+    // Fetch files (include id for media proxy)
     const { data: files, error: filesError } = await supabase
       .from("files")
-      .select("file_name, file_type, description, created_at")
+      .select("id, file_name, file_type, description, created_at")
       .eq("project_id", project.id)
       .order("created_at", { ascending: false });
 
@@ -195,6 +195,7 @@ Deno.serve(async (req) => {
         read_at: m.read_at,
       })),
       files: (files || []).map((f) => ({
+        id: f.id,
         file_name: f.file_name,
         file_type: f.file_type,
         description: f.description,
