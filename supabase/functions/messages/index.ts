@@ -1,9 +1,38 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const corsHeaders = {
+// Allowed origins for widget embedding
+const ALLOWED_ORIGINS = [
+  /^https?:\/\/.*\.lovable\.app$/,
+  /^https?:\/\/.*\.lovableproject\.com$/,
+  /^https?:\/\/.*\.squarespace\.com$/,
+  /^https?:\/\/.*\.sqsp\.com$/,
+  /^https?:\/\/localhost(:\d+)?$/,
+  /^https?:\/\/127\.0\.0\.1(:\d+)?$/,
+  /^https?:\/\/.*\.pleasantcove\.design$/,
+];
+
+// Static CORS headers for helper functions
+const staticCorsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
 };
+
+function isAllowedOrigin(origin: string | null): boolean {
+  if (!origin) return true;
+  return ALLOWED_ORIGINS.some(pattern => pattern.test(origin));
+}
+
+function getCorsHeaders(req: Request): Record<string, string> {
+  const origin = req.headers.get("origin");
+  if (origin && isAllowedOrigin(origin)) {
+    return {
+      ...staticCorsHeaders,
+      "Access-Control-Allow-Origin": origin,
+    };
+  }
+  return staticCorsHeaders;
+}
 
 // Token validation: alphanumeric + hyphens/underscores, 12-128 chars
 function isValidToken(token: string): boolean {
@@ -11,6 +40,8 @@ function isValidToken(token: string): boolean {
 }
 
 Deno.serve(async (req) => {
+  const corsHeaders = getCorsHeaders(req);
+
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -47,12 +78,12 @@ Deno.serve(async (req) => {
 
   // Route: POST /messages/:token/mark-read - Mark admin messages as read for portal
   if (action === "mark-read" && req.method === "POST") {
-    return handlePortalMarkRead(token);
+    return handlePortalMarkRead(token, corsHeaders);
   }
 
   // Route: POST /messages/:token - Send a client message
   if (req.method === "POST" && !action) {
-    return handleSendMessage(req, token);
+    return handleSendMessage(req, token, corsHeaders);
   }
 
   return new Response(
@@ -69,7 +100,11 @@ function getSupabaseClient() {
 }
 
 // POST /messages/:token - Send a client message
-async function handleSendMessage(req: Request, token: string): Promise<Response> {
+async function handleSendMessage(
+  req: Request,
+  token: string,
+  corsHeaders: Record<string, string>
+): Promise<Response> {
   try {
     // Parse request body
     let body: { content?: string };
@@ -171,7 +206,10 @@ async function handleSendMessage(req: Request, token: string): Promise<Response>
 }
 
 // POST /messages/:token/mark-read - Mark admin messages as read (portal side)
-async function handlePortalMarkRead(token: string): Promise<Response> {
+async function handlePortalMarkRead(
+  token: string,
+  corsHeaders: Record<string, string>
+): Promise<Response> {
   try {
     console.log(`Portal marking admin messages as read for token: ${token.slice(0, 8)}...`);
 
