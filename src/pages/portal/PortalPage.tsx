@@ -398,7 +398,13 @@ export default function PortalPage() {
   function handleDragOver(e: React.DragEvent) {
     e.preventDefault();
     e.stopPropagation();
-    setIsDragging(true);
+    if (!uploading) setIsDragging(true);
+  }
+
+  function handleDragEnter(e: React.DragEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!uploading) setIsDragging(true);
   }
 
   function handleDragLeave(e: React.DragEvent) {
@@ -412,9 +418,11 @@ export default function PortalPage() {
     e.stopPropagation();
     setIsDragging(false);
     
+    // Ignore drops while uploading
+    if (uploading) return;
+    
     const files = e.dataTransfer.files;
     if (files.length > 0) {
-      // Upload first file only
       handleFileUpload(files[0]);
     }
   }
@@ -583,8 +591,9 @@ export default function PortalPage() {
                   isDragging 
                     ? "border-primary bg-primary/5" 
                     : "border-border"
-                }`}
+                } ${uploading ? "opacity-50 pointer-events-none" : ""}`}
                 onDragOver={handleDragOver}
+                onDragEnter={handleDragEnter}
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
               >

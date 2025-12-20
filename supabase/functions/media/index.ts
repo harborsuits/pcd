@@ -38,6 +38,18 @@ const ALLOWED_ORIGINS: RegExp[] = [
   /^http:\/\/127\.0\.0\.1:\d+$/,
 ];
 
+// Frame ancestors for CSP (allows PDF iframe embedding)
+const FRAME_ANCESTORS = [
+  "https://*.lovable.dev",
+  "https://*.lovableproject.com",
+  "https://*.squarespace.com",
+  "https://*.squarespace-cdn.com",
+  "https://pleasantcove.design",
+  "https://www.pleasantcove.design",
+  "http://localhost:*",
+  "http://127.0.0.1:*",
+].join(" ");
+
 // Max file size (10MB)
 const MAX_SIZE = 10 * 1024 * 1024;
 
@@ -67,14 +79,17 @@ function corsHeadersFor(origin: string | null): Record<string, string> {
 }
 
 function getSecurityHeaders(contentType: string, size: number, corsHeaders: Record<string, string>): Record<string, string> {
+  const base = contentType.toLowerCase().split(";")[0].trim();
+  
   return {
     ...corsHeaders,
-    "Content-Type": contentType,
+    "Content-Type": base,
     "Content-Length": String(size),
     "Cache-Control": "public, max-age=3600",
     "X-Content-Type-Options": "nosniff",
-    "Content-Security-Policy": "default-src 'none'; img-src 'self' data:; style-src 'none'; script-src 'none';",
-    "X-Frame-Options": "DENY",
+    // Allow iframe embedding for PDF previews from allowed origins
+    // Do NOT set X-Frame-Options: DENY - it blocks iframe preview
+    "Content-Security-Policy": `default-src 'none'; img-src 'self' data:; style-src 'none'; script-src 'none'; frame-ancestors ${FRAME_ANCESTORS}`,
   };
 }
 
