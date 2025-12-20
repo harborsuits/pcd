@@ -24,10 +24,15 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Extract token from URL path: /demo/:token
+    // Extract token from URL path: /demo/:token or /functions/v1/demo/:token
     const url = new URL(req.url);
     const pathParts = url.pathname.split("/").filter(Boolean);
-    const token = pathParts[pathParts.length - 1];
+    
+    // Find "demo" in path and get the next segment as token
+    const demoIdx = pathParts.lastIndexOf("demo");
+    const token = demoIdx >= 0 && demoIdx < pathParts.length - 1 
+      ? pathParts[demoIdx + 1] 
+      : pathParts[pathParts.length - 1];
     const slugParam = url.searchParams.get("slug");
 
     if (!token || token === "demo") {

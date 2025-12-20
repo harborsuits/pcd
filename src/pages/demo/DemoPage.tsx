@@ -30,8 +30,14 @@ export default function DemoPage() {
       setState("loading");
       setErrorMessage("");
 
+      const baseUrl = import.meta.env.VITE_SUPABASE_URL;
+      if (!baseUrl) {
+        setErrorMessage("Missing VITE_SUPABASE_URL");
+        setState("error");
+        return;
+      }
+
       try {
-        const baseUrl = import.meta.env.VITE_SUPABASE_URL;
         const url = new URL(`${baseUrl}/functions/v1/demo/${token}`);
         
         // Pass slug for server-side validation
@@ -39,7 +45,12 @@ export default function DemoPage() {
           url.searchParams.set("slug", slug);
         }
 
-        const res = await fetch(url.toString());
+        const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+        const res = await fetch(url.toString(), {
+          headers: anonKey
+            ? { apikey: anonKey, Authorization: `Bearer ${anonKey}` }
+            : undefined,
+        });
 
         if (res.status === 404) {
           setState("not-found");
