@@ -2,3 +2,6 @@ project_id = "ararrbvhzaudfaxjwdrc"
 
 [functions.demo]
 verify_jwt = false
+
+[functions.portal]
+verify_jwt = false
