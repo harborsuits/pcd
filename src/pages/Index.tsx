@@ -25,6 +25,14 @@ const Index = () => {
               Go to Acme Portal
             </Link>
           </div>
+          <div className="pt-4 border-t border-border mt-4">
+            <Link 
+              to="/admin/messages" 
+              className="inline-block px-4 py-2 bg-muted text-muted-foreground rounded-md hover:bg-muted/80 text-sm"
+            >
+              Admin Messages
+            </Link>
+          </div>
         </div>
       </div>
     </div>
