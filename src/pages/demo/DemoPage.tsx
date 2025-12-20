@@ -1,5 +1,6 @@
-import { useParams } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import { useState, useEffect } from "react";
+import { Home } from "lucide-react";
 
 interface DemoData {
   business: {
@@ -127,6 +128,12 @@ export default function DemoPage() {
       {/* Demo Header */}
       <header className="border-b border-border bg-card">
         <div className="container mx-auto px-4 py-6">
+          <div className="flex items-center gap-4 mb-2">
+            <Link to="/" className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
+              <Home className="h-4 w-4" />
+              <span className="text-sm">Home</span>
+            </Link>
+          </div>
           <h1 className="text-2xl font-bold text-foreground">{data.business.name}</h1>
           <p className="text-sm text-muted-foreground mt-1">
             Demo Preview • {data.demo.template_type}

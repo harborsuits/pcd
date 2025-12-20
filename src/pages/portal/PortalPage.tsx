@@ -1,11 +1,11 @@
-import { useParams } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, FileText, MessageSquare, CreditCard, AlertCircle, Send } from "lucide-react";
+import { Loader2, FileText, MessageSquare, CreditCard, AlertCircle, Send, Home } from "lucide-react";
 
 interface PortalMessage {
   content: string;
@@ -212,6 +212,16 @@ export default function PortalPage() {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Navigation Header */}
+      <header className="border-b border-border bg-card">
+        <div className="container mx-auto px-4 py-3 max-w-4xl flex items-center gap-4">
+          <Link to="/" className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
+            <Home className="h-4 w-4" />
+            <span className="text-sm">Home</span>
+          </Link>
+        </div>
+      </header>
+
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         {/* Business Header */}
         <div className="mb-8">
