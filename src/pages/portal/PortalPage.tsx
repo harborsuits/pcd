@@ -87,11 +87,14 @@ export default function PortalPage() {
         return;
       }
 
-      if (messagesBefore && data) {
-        // Append older messages
-        setData({
-          ...response,
-          messages: [...data.messages, ...response.messages],
+      if (messagesBefore) {
+        // Append older messages using functional update to avoid stale closure
+        setData((prev) => {
+          if (!prev) return response;
+          return {
+            ...response,
+            messages: [...prev.messages, ...response.messages],
+          };
         });
       } else {
         setData(response);
