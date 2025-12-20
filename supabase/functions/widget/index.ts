@@ -1,5 +1,5 @@
 // Widget edge function - serves embeddable chat widget JS
-// GET /widget.js - returns the widget JavaScript
+// GET /widget - returns the widget JavaScript
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -7,46 +7,13 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "GET, OPTIONS",
 };
 
-// Allowed origins for embedding (production-safe)
-const ALLOWED_ORIGINS = [
-  // Lovable domains
-  /^https?:\/\/.*\.lovable\.app$/,
-  /^https?:\/\/.*\.lovableproject\.com$/,
-  // Squarespace
-  /^https?:\/\/.*\.squarespace\.com$/,
-  /^https?:\/\/.*\.sqsp\.com$/,
-  // Local development
-  /^https?:\/\/localhost(:\d+)?$/,
-  /^https?:\/\/127\.0\.0\.1(:\d+)?$/,
-  // Custom domains - add more as needed
-  /^https?:\/\/.*\.pleasantcove\.design$/,
-];
-
-function isAllowedOrigin(origin: string | null): boolean {
-  if (!origin) return true; // Allow requests without origin (some embeds)
-  return ALLOWED_ORIGINS.some(pattern => pattern.test(origin));
-}
-
-function getCorsHeaders(req: Request): Record<string, string> {
-  const origin = req.headers.get("origin");
-  if (origin && isAllowedOrigin(origin)) {
-    return {
-      ...corsHeaders,
-      "Access-Control-Allow-Origin": origin,
-    };
-  }
-  return corsHeaders;
-}
-
 Deno.serve(async (req) => {
-  const headers = getCorsHeaders(req);
-
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers });
+    return new Response(null, { headers: corsHeaders });
   }
 
   if (req.method !== "GET") {
-    return new Response("Method not allowed", { status: 405, headers });
+    return new Response("Method not allowed", { status: 405, headers: corsHeaders });
   }
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
@@ -89,11 +56,20 @@ Deno.serve(async (req) => {
   let isLoading = true;
   let error = null;
   let isSending = false;
-  let pollingInterval = null;
+  let openPollingInterval = null;
+  let closedPollingInterval = null;
   let markReadInFlight = false;
+  let realtimeChannel = null;
 
   // DOM Elements
-  let container, button, badge, panel, messagesContainer, composer, sendButton, closeButton;
+  let container, button, badge, panel, messagesContainer, composer, sendButton;
+
+  // SVG Icons (inline, uses currentColor)
+  const chatIcon = '<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>';
+  const closeIcon = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18"/><path d="M6 6l12 12"/></svg>';
+  const sendIcon = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>';
+  const emptyIcon = '<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 0 1-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>';
+  const spinnerIcon = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="pc-spin"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>';
 
   // Styles
   const styles = \`
@@ -103,6 +79,10 @@ Deno.serve(async (req) => {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
       font-size: 14px;
       line-height: 1.5;
+      --pc-accent: \${config.accent};
+    }
+    .pc-widget-container * {
+      box-sizing: border-box;
     }
     .pc-widget-container.bottom-right { bottom: 20px; right: 20px; }
     .pc-widget-container.bottom-left { bottom: 20px; left: 20px; }
@@ -121,14 +101,16 @@ Deno.serve(async (req) => {
       box-shadow: 0 4px 12px rgba(0,0,0,0.15);
       transition: transform 0.2s ease, box-shadow 0.2s ease;
       position: relative;
+      background: var(--pc-accent);
+      color: #ffffff;
     }
     .pc-widget-button:hover {
       transform: scale(1.05);
       box-shadow: 0 6px 16px rgba(0,0,0,0.2);
     }
-    .pc-widget-button svg {
-      width: 28px;
-      height: 28px;
+    .pc-widget-button:focus {
+      outline: 2px solid var(--pc-accent);
+      outline-offset: 2px;
     }
     
     .pc-widget-badge {
@@ -169,18 +151,10 @@ Deno.serve(async (req) => {
       opacity: 1;
       transform: scale(1) translateY(0);
     }
-    .bottom-right .pc-widget-panel, .bottom-left .pc-widget-panel {
-      bottom: 70px;
-    }
-    .top-right .pc-widget-panel, .top-left .pc-widget-panel {
-      top: 70px;
-    }
-    .bottom-right .pc-widget-panel, .top-right .pc-widget-panel {
-      right: 0;
-    }
-    .bottom-left .pc-widget-panel, .top-left .pc-widget-panel {
-      left: 0;
-    }
+    .bottom-right .pc-widget-panel, .bottom-left .pc-widget-panel { bottom: 70px; }
+    .top-right .pc-widget-panel, .top-left .pc-widget-panel { top: 70px; }
+    .bottom-right .pc-widget-panel, .top-right .pc-widget-panel { right: 0; }
+    .bottom-left .pc-widget-panel, .top-left .pc-widget-panel { left: 0; }
     
     .pc-widget-header {
       padding: 16px;
@@ -189,20 +163,9 @@ Deno.serve(async (req) => {
       justify-content: space-between;
       border-bottom: 1px solid rgba(0,0,0,0.1);
     }
-    .pc-widget-header-info {
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-    }
-    .pc-widget-header-title {
-      font-size: 16px;
-      font-weight: 600;
-      margin: 0;
-    }
-    .pc-widget-header-status {
-      font-size: 12px;
-      opacity: 0.7;
-    }
+    .pc-widget-header-info { display: flex; flex-direction: column; gap: 2px; }
+    .pc-widget-header-title { font-size: 16px; font-weight: 600; margin: 0; }
+    .pc-widget-header-status { font-size: 12px; opacity: 0.7; }
     .pc-widget-close {
       width: 32px;
       height: 32px;
@@ -214,10 +177,9 @@ Deno.serve(async (req) => {
       align-items: center;
       justify-content: center;
       transition: background 0.2s ease;
+      color: inherit;
     }
-    .pc-widget-close:hover {
-      background: rgba(0,0,0,0.1);
-    }
+    .pc-widget-close:hover { background: rgba(0,0,0,0.1); }
     
     .pc-widget-messages {
       flex: 1;
@@ -237,6 +199,8 @@ Deno.serve(async (req) => {
     .pc-widget-message.client {
       align-self: flex-end;
       border-bottom-right-radius: 4px;
+      background: var(--pc-accent);
+      color: #ffffff;
     }
     .pc-widget-message.admin {
       align-self: flex-start;
@@ -247,46 +211,9 @@ Deno.serve(async (req) => {
       opacity: 0.6;
       margin-top: 4px;
     }
-    .pc-widget-message.sending {
-      opacity: 0.7;
-    }
+    .pc-widget-message.sending { opacity: 0.7; }
     
-    .pc-widget-empty {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      text-align: center;
-      padding: 24px;
-      opacity: 0.7;
-    }
-    .pc-widget-empty svg {
-      width: 48px;
-      height: 48px;
-      margin-bottom: 12px;
-      opacity: 0.5;
-    }
-    
-    .pc-widget-loading {
-      flex: 1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .pc-widget-spinner {
-      width: 32px;
-      height: 32px;
-      border: 3px solid rgba(0,0,0,0.1);
-      border-top-color: currentColor;
-      border-radius: 50%;
-      animation: pc-spin 0.8s linear infinite;
-    }
-    @keyframes pc-spin {
-      to { transform: rotate(360deg); }
-    }
-    
-    .pc-widget-error {
+    .pc-widget-empty, .pc-widget-loading, .pc-widget-error {
       flex: 1;
       display: flex;
       flex-direction: column;
@@ -295,17 +222,23 @@ Deno.serve(async (req) => {
       text-align: center;
       padding: 24px;
     }
-    .pc-widget-error-text {
-      color: #ef4444;
-      margin-bottom: 12px;
-    }
+    .pc-widget-empty { opacity: 0.7; }
+    .pc-widget-empty svg { margin-bottom: 12px; opacity: 0.5; }
+    
+    .pc-spin { animation: pc-spin 0.8s linear infinite; }
+    @keyframes pc-spin { to { transform: rotate(360deg); } }
+    
+    .pc-widget-error-text { color: #ef4444; margin-bottom: 12px; }
     .pc-widget-retry {
       padding: 8px 16px;
       border: none;
       border-radius: 8px;
       cursor: pointer;
       font-weight: 500;
+      background: var(--pc-accent);
+      color: #ffffff;
     }
+    .pc-widget-retry:hover { opacity: 0.9; }
     
     .pc-widget-composer {
       padding: 12px 16px;
@@ -328,9 +261,7 @@ Deno.serve(async (req) => {
       outline: none;
       transition: border-color 0.2s ease;
     }
-    .pc-widget-input:focus {
-      border-color: currentColor;
-    }
+    .pc-widget-input:focus { border-color: var(--pc-accent); }
     .pc-widget-send {
       width: 40px;
       height: 40px;
@@ -341,15 +272,10 @@ Deno.serve(async (req) => {
       align-items: center;
       justify-content: center;
       transition: opacity 0.2s ease;
+      background: var(--pc-accent);
+      color: #ffffff;
     }
-    .pc-widget-send:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-    .pc-widget-send svg {
-      width: 20px;
-      height: 20px;
-    }
+    .pc-widget-send:disabled { opacity: 0.5; cursor: not-allowed; }
     
     .pc-widget-footer {
       padding: 8px 16px;
@@ -358,81 +284,28 @@ Deno.serve(async (req) => {
       opacity: 0.5;
       border-top: 1px solid rgba(0,0,0,0.05);
     }
-    .pc-widget-footer a {
-      color: inherit;
-      text-decoration: none;
-    }
-    .pc-widget-footer a:hover {
-      text-decoration: underline;
-    }
+    .pc-widget-footer a { color: inherit; text-decoration: none; }
+    .pc-widget-footer a:hover { text-decoration: underline; }
     
     /* Light theme */
-    .pc-widget-container.light .pc-widget-panel {
-      background: #ffffff;
-      color: #111827;
-    }
-    .pc-widget-container.light .pc-widget-message.client {
-      background: var(--pc-accent);
-      color: #ffffff;
-    }
-    .pc-widget-container.light .pc-widget-message.admin {
-      background: #f3f4f6;
-      color: #111827;
-    }
-    .pc-widget-container.light .pc-widget-input {
-      background: #ffffff;
-      color: #111827;
-    }
+    .pc-widget-container.light .pc-widget-panel { background: #ffffff; color: #111827; }
+    .pc-widget-container.light .pc-widget-message.admin { background: #f3f4f6; color: #111827; }
+    .pc-widget-container.light .pc-widget-input { background: #ffffff; color: #111827; }
     
     /* Dark theme */
-    .pc-widget-container.dark .pc-widget-panel {
-      background: #1f2937;
-      color: #f9fafb;
-    }
-    .pc-widget-container.dark .pc-widget-header {
-      border-color: rgba(255,255,255,0.1);
-    }
-    .pc-widget-container.dark .pc-widget-message.client {
-      background: var(--pc-accent);
-      color: #ffffff;
-    }
-    .pc-widget-container.dark .pc-widget-message.admin {
-      background: #374151;
-      color: #f9fafb;
-    }
-    .pc-widget-container.dark .pc-widget-input {
-      background: #374151;
-      color: #f9fafb;
-      border-color: rgba(255,255,255,0.15);
-    }
-    .pc-widget-container.dark .pc-widget-composer {
-      border-color: rgba(255,255,255,0.1);
-    }
-    .pc-widget-container.dark .pc-widget-close:hover {
-      background: rgba(255,255,255,0.1);
-    }
-    .pc-widget-container.dark .pc-widget-footer {
-      border-color: rgba(255,255,255,0.05);
-    }
+    .pc-widget-container.dark .pc-widget-panel { background: #1f2937; color: #f9fafb; }
+    .pc-widget-container.dark .pc-widget-header { border-color: rgba(255,255,255,0.1); }
+    .pc-widget-container.dark .pc-widget-message.admin { background: #374151; color: #f9fafb; }
+    .pc-widget-container.dark .pc-widget-input { background: #374151; color: #f9fafb; border-color: rgba(255,255,255,0.15); }
+    .pc-widget-container.dark .pc-widget-composer { border-color: rgba(255,255,255,0.1); }
+    .pc-widget-container.dark .pc-widget-close:hover { background: rgba(255,255,255,0.1); }
+    .pc-widget-container.dark .pc-widget-footer { border-color: rgba(255,255,255,0.05); }
 
     @media (prefers-reduced-motion: reduce) {
-      .pc-widget-panel {
-        transition: none;
-      }
-      .pc-widget-button {
-        transition: none;
-      }
-      .pc-widget-spinner {
-        animation-duration: 1.5s;
-      }
+      .pc-widget-panel, .pc-widget-button { transition: none; }
+      .pc-spin { animation-duration: 1.5s; }
     }
   \`;
-
-  // Icons
-  const chatIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>';
-  const closeIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>';
-  const sendIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>';
-  const emptyIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 0 1-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>';
 
   // Utilities
   function escapeHtml(str) {
@@ -457,42 +330,61 @@ Deno.serve(async (req) => {
         ...(options.headers || {}),
       },
     });
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.error || 'Request failed');
+    }
     return res.json();
   }
 
   // Fetch portal data
-  async function fetchData() {
-    isLoading = true;
-    error = null;
-    render();
+  async function fetchData(fullFetch = true) {
+    if (fullFetch) {
+      isLoading = true;
+      error = null;
+      render();
+    }
 
     try {
       const data = await apiCall('portal/' + config.token + '?messages_limit=100');
       
-      if (data.error) {
-        throw new Error(data.error);
-      }
-
       businessName = data.business?.name || 'Support';
       businessStatus = data.business?.status || 'active';
-      messages = data.messages || [];
+      
+      if (fullFetch) {
+        messages = data.messages || [];
+      } else {
+        // Merge new messages (for background poll)
+        const existingIds = new Set(messages.map(m => m.id));
+        const newMsgs = (data.messages || []).filter(m => !existingIds.has(m.id));
+        if (newMsgs.length > 0) {
+          messages = data.messages || [];
+          if (isOpen) {
+            scrollToBottom();
+          }
+        }
+      }
       
       // Count unread admin messages
       unreadCount = messages.filter(m => m.sender_type === 'admin' && !m.read_at).length;
       
       isLoading = false;
       render();
-      scrollToBottom();
       
-      // Mark as read if panel is open
-      if (isOpen && unreadCount > 0) {
-        markAsRead();
+      if (fullFetch) {
+        scrollToBottom();
+        // Mark as read if panel is open
+        if (isOpen && unreadCount > 0) {
+          markAsRead();
+        }
       }
     } catch (err) {
       console.error('[PleasantCove] Fetch error:', err);
-      error = err.message || 'Failed to load';
-      isLoading = false;
-      render();
+      if (fullFetch) {
+        error = err.message || 'Failed to load';
+        isLoading = false;
+        render();
+      }
     }
   }
 
@@ -520,10 +412,6 @@ Deno.serve(async (req) => {
         method: 'POST',
         body: JSON.stringify({ content: content.trim() }),
       });
-
-      if (data.error) {
-        throw new Error(data.error);
-      }
 
       // Replace temp message with real one
       messages = messages.map(m => 
@@ -561,52 +449,34 @@ Deno.serve(async (req) => {
     markReadInFlight = false;
   }
 
-  // Polling fallback
-  function startPolling() {
-    if (pollingInterval) return;
-    pollingInterval = setInterval(async () => {
-      if (!isOpen) return;
-      
-      try {
-        const data = await apiCall('portal/' + config.token + '?messages_limit=100');
-        if (data.error) return;
-
-        const oldIds = new Set(messages.map(m => m.id));
-        const newMessages = (data.messages || []).filter(m => !oldIds.has(m.id));
-        
-        if (newMessages.length > 0) {
-          messages = data.messages || [];
-          unreadCount = messages.filter(m => m.sender_type === 'admin' && !m.read_at).length;
-          render();
-          scrollToBottom();
-          
-          // Show notification for new admin messages
-          const newAdminMsgs = newMessages.filter(m => m.sender_type === 'admin');
-          if (newAdminMsgs.length > 0) {
-            showNotification(newAdminMsgs[0].content);
-          }
-        }
-      } catch (err) {
-        // Silent fail for polling
-      }
+  // Polling while OPEN (fast: every 8s)
+  function startOpenPolling() {
+    stopOpenPolling();
+    openPollingInterval = setInterval(() => {
+      if (isOpen) fetchData(false);
     }, 8000);
   }
 
-  function stopPolling() {
-    if (pollingInterval) {
-      clearInterval(pollingInterval);
-      pollingInterval = null;
+  function stopOpenPolling() {
+    if (openPollingInterval) {
+      clearInterval(openPollingInterval);
+      openPollingInterval = null;
     }
   }
 
-  // Notifications
-  function showNotification(content) {
-    // Flash tab title
-    const originalTitle = document.title;
-    document.title = '(1) New message — ' + businessName;
-    setTimeout(() => {
-      document.title = originalTitle;
-    }, 5000);
+  // Polling while CLOSED (slow: every 90s for badge updates)
+  function startClosedPolling() {
+    stopClosedPolling();
+    closedPollingInterval = setInterval(() => {
+      if (!isOpen) fetchData(false);
+    }, 90000);
+  }
+
+  function stopClosedPolling() {
+    if (closedPollingInterval) {
+      clearInterval(closedPollingInterval);
+      closedPollingInterval = null;
+    }
   }
 
   // Scroll to bottom
@@ -624,10 +494,12 @@ Deno.serve(async (req) => {
     render();
     
     if (isOpen) {
-      fetchData();
-      startPolling();
+      stopClosedPolling();
+      fetchData(true);
+      startOpenPolling();
     } else {
-      stopPolling();
+      stopOpenPolling();
+      startClosedPolling();
     }
   }
 
@@ -635,7 +507,7 @@ Deno.serve(async (req) => {
   function render() {
     // Badge
     if (badge) {
-      badge.textContent = unreadCount > 9 ? '9+' : unreadCount;
+      badge.textContent = unreadCount > 9 ? '9+' : String(unreadCount);
       badge.classList.toggle('visible', unreadCount > 0 && !isOpen);
     }
 
@@ -644,7 +516,7 @@ Deno.serve(async (req) => {
       panel.classList.toggle('open', isOpen);
     }
 
-    // Header
+    // Header title
     const headerTitle = panel?.querySelector('.pc-widget-header-title');
     if (headerTitle) {
       headerTitle.textContent = businessName;
@@ -653,31 +525,55 @@ Deno.serve(async (req) => {
     // Messages content
     if (messagesContainer) {
       if (isLoading) {
-        messagesContainer.innerHTML = '<div class="pc-widget-loading"><div class="pc-widget-spinner"></div></div>';
+        messagesContainer.innerHTML = '<div class="pc-widget-loading">' + spinnerIcon + '</div>';
       } else if (error) {
-        messagesContainer.innerHTML = \`
-          <div class="pc-widget-error">
-            <div class="pc-widget-error-text">\${escapeHtml(error)}</div>
-            <button class="pc-widget-retry" onclick="window.__pcWidget.retry()">Try Again</button>
-          </div>
-        \`;
+        messagesContainer.innerHTML = 
+          '<div class="pc-widget-error">' +
+            '<div class="pc-widget-error-text">' + escapeHtml(error) + '</div>' +
+            '<button class="pc-widget-retry">Try Again</button>' +
+          '</div>';
+        // Attach retry handler
+        const retryBtn = messagesContainer.querySelector('.pc-widget-retry');
+        if (retryBtn) {
+          retryBtn.onclick = () => fetchData(true);
+        }
       } else if (messages.length === 0) {
-        messagesContainer.innerHTML = \`
-          <div class="pc-widget-empty">
-            \${emptyIcon}
-            <div>No messages yet</div>
-            <div style="font-size:12px;margin-top:4px;">Send a message to get started</div>
-          </div>
-        \`;
+        messagesContainer.innerHTML = 
+          '<div class="pc-widget-empty">' +
+            emptyIcon +
+            '<div>No messages yet</div>' +
+            '<div style="font-size:12px;margin-top:4px;">Send a message to get started</div>' +
+          '</div>';
       } else {
-        messagesContainer.innerHTML = messages.map(m => \`
-          <div class="pc-widget-message \${m.sender_type}\${m.sending ? ' sending' : ''}">
-            <div>\${escapeHtml(m.content)}</div>
-            <div class="pc-widget-message-time">\${m.sending ? 'Sending...' : formatTime(m.created_at)}</div>
-          </div>
-        \`).join('');
+        messagesContainer.innerHTML = messages.map(m => 
+          '<div class="pc-widget-message ' + m.sender_type + (m.sending ? ' sending' : '') + '">' +
+            '<div>' + escapeHtml(m.content) + '</div>' +
+            '<div class="pc-widget-message-time">' + (m.sending ? 'Sending...' : formatTime(m.created_at)) + '</div>' +
+          '</div>'
+        ).join('');
       }
     }
+  }
+
+  // Build panel HTML
+  function buildPanelHTML() {
+    return (
+      '<div class="pc-widget-header">' +
+        '<div class="pc-widget-header-info">' +
+          '<h3 class="pc-widget-header-title">' + escapeHtml(businessName) + '</h3>' +
+          '<span class="pc-widget-header-status">We typically reply within a few hours</span>' +
+        '</div>' +
+        '<button class="pc-widget-close" aria-label="Close chat">' + closeIcon + '</button>' +
+      '</div>' +
+      '<div class="pc-widget-messages"></div>' +
+      '<div class="pc-widget-composer">' +
+        '<textarea class="pc-widget-input" placeholder="Type a message..." rows="1"></textarea>' +
+        '<button class="pc-widget-send" aria-label="Send message">' + sendIcon + '</button>' +
+      '</div>' +
+      '<div class="pc-widget-footer">' +
+        'Powered by <a href="https://pleasantcove.design" target="_blank" rel="noopener">Pleasant Cove</a>' +
+      '</div>'
+    );
   }
 
   // Initialize
@@ -687,18 +583,13 @@ Deno.serve(async (req) => {
     styleEl.textContent = styles;
     document.head.appendChild(styleEl);
 
-    // Set CSS variable for accent color
-    document.documentElement.style.setProperty('--pc-accent', config.accent);
-
-    // Create container
+    // Create container (CSS vars scoped here, not on document root)
     container = document.createElement('div');
     container.className = 'pc-widget-container ' + config.position + ' ' + config.theme;
 
     // Create button
     button = document.createElement('button');
     button.className = 'pc-widget-button';
-    button.style.backgroundColor = config.accent;
-    button.style.color = '#ffffff';
     button.innerHTML = chatIcon;
     button.onclick = toggle;
     button.setAttribute('aria-label', 'Open chat');
@@ -711,34 +602,13 @@ Deno.serve(async (req) => {
     // Create panel
     panel = document.createElement('div');
     panel.className = 'pc-widget-panel';
-    panel.innerHTML = \`
-      <div class="pc-widget-header">
-        <div class="pc-widget-header-info">
-          <h3 class="pc-widget-header-title">\${escapeHtml(businessName)}</h3>
-          <span class="pc-widget-header-status">We typically reply within a few hours</span>
-        </div>
-        <button class="pc-widget-close" aria-label="Close chat">\${closeIcon}</button>
-      </div>
-      <div class="pc-widget-messages"></div>
-      <div class="pc-widget-composer">
-        <textarea class="pc-widget-input" placeholder="Type a message..." rows="1"></textarea>
-        <button class="pc-widget-send" aria-label="Send message">\${sendIcon}</button>
-      </div>
-      <div class="pc-widget-footer">
-        Powered by <a href="https://pleasantcove.design" target="_blank" rel="noopener">Pleasant Cove</a>
-      </div>
-    \`;
+    panel.innerHTML = buildPanelHTML();
 
     // Get elements
     messagesContainer = panel.querySelector('.pc-widget-messages');
-    closeButton = panel.querySelector('.pc-widget-close');
+    const closeButton = panel.querySelector('.pc-widget-close');
     composer = panel.querySelector('.pc-widget-input');
     sendButton = panel.querySelector('.pc-widget-send');
-
-    // Set accent colors
-    sendButton.style.backgroundColor = config.accent;
-    sendButton.style.color = '#ffffff';
-    panel.querySelector('.pc-widget-retry')?.style.setProperty('background', config.accent);
 
     // Event listeners
     closeButton.onclick = toggle;
@@ -769,12 +639,17 @@ Deno.serve(async (req) => {
     container.appendChild(button);
     document.body.appendChild(container);
 
-    // Expose retry function
+    // Expose API
     window.__pcWidget = {
-      retry: fetchData,
       open: () => { if (!isOpen) toggle(); },
       close: () => { if (isOpen) toggle(); },
+      refresh: () => fetchData(true),
     };
+
+    // Start background polling for badge updates while closed
+    startClosedPolling();
+    // Initial unread fetch (lightweight)
+    fetchData(false);
 
     console.log('[PleasantCove] Widget initialized for token:', config.token.slice(0, 8) + '...');
   }
@@ -791,7 +666,7 @@ Deno.serve(async (req) => {
   return new Response(widgetJS, {
     status: 200,
     headers: {
-      ...headers,
+      ...corsHeaders,
       "Content-Type": "application/javascript; charset=utf-8",
       "Cache-Control": "public, max-age=300", // Cache for 5 minutes
     },
