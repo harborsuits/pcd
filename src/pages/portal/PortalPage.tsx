@@ -348,19 +348,19 @@ export default function PortalPage() {
     setUploadError(null);
 
     try {
-      const form = new FormData();
-      form.append("file", file);
-      if (uploadDesc.trim()) form.append("description", uploadDesc.trim());
+      const fd = new FormData();
+      fd.append("file", file);
+      if (uploadDesc.trim()) fd.append("description", uploadDesc.trim());
 
       const res = await fetch(
-        `${SUPABASE_URL}/functions/v1/files/${token}/upload`,
+        `${SUPABASE_URL}/functions/v1/files/${encodeURIComponent(token)}/upload`,
         {
           method: "POST",
-          body: form,
+          body: fd,
         }
       );
 
-      const response = await res.json();
+      const response = await res.json().catch(() => ({}));
 
       if (!res.ok) {
         console.error("Upload error:", response.error);
@@ -373,9 +373,18 @@ export default function PortalPage() {
         description: "Your file has been uploaded successfully.",
       });
 
+      // Optimistic update so file appears immediately
+      if (response?.file) {
+        setData((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            files: [response.file, ...prev.files],
+          };
+        });
+      }
+
       setUploadDesc("");
-      // Refresh portal data to show new file
-      fetchPortalData(token);
     } catch (err) {
       console.error("Upload exception:", err);
       setUploadError("Upload failed");

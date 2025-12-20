@@ -89,21 +89,33 @@ Deno.serve(async (req) => {
   const url = new URL(req.url);
   const parts = url.pathname.split("/").filter(Boolean);
   
-  // Expected: /functions/v1/files/:token/upload
-  // parts will be: ["functions", "v1", "files", ":token", "upload"]
-  const filesIndex = parts.indexOf("files");
-  if (filesIndex === -1 || filesIndex + 2 > parts.length - 1) {
-    return json(404, { error: "Not found" }, corsHeaders);
-  }
+  // In Supabase edge functions, path is /files/:token/upload (not /functions/v1/files/...)
+  // Handle both cases defensively
+  let token: string;
+  let action: string;
   
-  const token = parts[filesIndex + 1];
-  const action = parts[filesIndex + 2];
+  if (parts[0] === "files" && parts.length >= 3) {
+    // Direct path: /files/:token/upload
+    token = parts[1];
+    action = parts[2];
+  } else {
+    // Fallback: look for "files" in path
+    const filesIndex = parts.indexOf("files");
+    if (filesIndex === -1 || filesIndex + 2 >= parts.length) {
+      console.log("[Files] 404 - path parts:", parts);
+      return json(404, { error: "Not found" }, corsHeaders);
+    }
+    token = parts[filesIndex + 1];
+    action = parts[filesIndex + 2];
+  }
 
   if (!token || !isValidToken(token)) {
+    console.log("[Files] Invalid token:", token);
     return json(400, { error: "Invalid token" }, corsHeaders);
   }
   
   if (action !== "upload") {
+    console.log("[Files] Unknown action:", action);
     return json(404, { error: "Not found" }, corsHeaders);
   }
 
