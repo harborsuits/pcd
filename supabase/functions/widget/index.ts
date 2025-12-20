@@ -27,6 +27,7 @@ Deno.serve(async (req) => {
   // Configuration
   const SUPABASE_URL = '${supabaseUrl}';
   const SUPABASE_ANON_KEY = '${supabaseAnonKey}';
+  const MEDIA_PROXY_URL = SUPABASE_URL + '/functions/v1/media';
   
   // Find script tag and read data attributes
   const scriptTag = document.currentScript || document.querySelector('script[data-project-token]');
@@ -317,6 +318,28 @@ Deno.serve(async (req) => {
   function formatTime(dateStr) {
     const date = new Date(dateStr);
     return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  }
+
+  // Proxy media URLs through our secure endpoint
+  function proxyMediaUrl(url) {
+    if (!url) return '';
+    // If it's already our media proxy, return as-is
+    if (url.includes('/functions/v1/media')) return url;
+    // If it's a file ID (UUID format), use direct path
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (uuidRegex.test(url)) {
+      return MEDIA_PROXY_URL + '/' + url;
+    }
+    // Otherwise proxy the full URL
+    return MEDIA_PROXY_URL + '?url=' + encodeURIComponent(url);
+  }
+
+  // Check if content looks like it contains an image reference
+  function extractImageUrl(content) {
+    // Look for URLs in the content
+    const urlRegex = /(https?:\\/\\/[^\\s]+\\.(jpg|jpeg|png|gif|webp|avif))/gi;
+    const match = content.match(urlRegex);
+    return match ? match[0] : null;
   }
 
   async function apiCall(endpoint, options = {}) {
