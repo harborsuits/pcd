@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,16 +8,18 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2, Send, Search, MessageSquare } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
 interface Project {
-  id: string;
   project_token: string;
   business_name: string;
   status: string;
-  last_message?: {
+  last_message: {
     content: string;
     sender_type: string;
     created_at: string;
-  };
+  } | null;
   unread_count: number;
 }
 
@@ -43,60 +44,59 @@ export default function AdminMessages() {
   const [showKeyInput, setShowKeyInput] = useState(false);
 
   useEffect(() => {
-    fetchProjects();
-  }, []);
+    if (adminKey) {
+      fetchProjects();
+    } else {
+      setLoading(false);
+    }
+  }, [adminKey]);
 
   useEffect(() => {
-    if (selectedProject) {
+    if (selectedProject && adminKey) {
       fetchMessages(selectedProject.project_token);
     }
-  }, [selectedProject]);
+  }, [selectedProject, adminKey]);
 
   async function fetchProjects() {
+    if (!adminKey) return;
+
     try {
       setLoading(true);
-      
-      // Fetch projects with their latest message
-      const { data: projectsData, error: projectsError } = await supabase
-        .from("projects")
-        .select("id, project_token, business_name, status")
-        .is("deleted_at", null)
-        .order("updated_at", { ascending: false });
 
-      if (projectsError) {
-        console.error("Projects fetch error:", projectsError);
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/admin/inbox`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": SUPABASE_ANON_KEY,
+          "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+          "x-admin-key": adminKey,
+        },
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          toast({
+            title: "Unauthorized",
+            description: "Invalid admin key",
+            variant: "destructive",
+          });
+          setAdminKey("");
+          return;
+        }
+        console.error("Inbox fetch error:", data.error);
         return;
       }
 
-      // For each project, get latest message and unread count
-      const projectsWithMessages = await Promise.all(
-        (projectsData || []).map(async (project) => {
-          const { data: latestMessage } = await supabase
-            .from("messages")
-            .select("content, sender_type, created_at")
-            .eq("project_id", project.id)
-            .order("created_at", { ascending: false })
-            .limit(1)
-            .maybeSingle();
-
-          const { count: unreadCount } = await supabase
-            .from("messages")
-            .select("*", { count: "exact", head: true })
-            .eq("project_id", project.id)
-            .eq("sender_type", "client")
-            .is("read_at", null);
-
-          return {
-            ...project,
-            last_message: latestMessage || undefined,
-            unread_count: unreadCount || 0,
-          };
-        })
-      );
-
-      setProjects(projectsWithMessages);
+      setProjects(data);
     } catch (err) {
       console.error("Error fetching projects:", err);
+      toast({
+        title: "Error",
+        description: "Failed to fetch inbox",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
@@ -106,17 +106,26 @@ export default function AdminMessages() {
     try {
       setLoadingMessages(true);
 
-      const { data: response, error } = await supabase.functions.invoke(
-        `portal/${projectToken}?messages_limit=100`,
-        { method: "GET" }
+      const response = await fetch(
+        `${SUPABASE_URL}/functions/v1/portal/${projectToken}?messages_limit=100`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            "apikey": SUPABASE_ANON_KEY,
+            "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+          },
+        }
       );
 
-      if (error || response?.error) {
-        console.error("Messages fetch error:", error || response?.error);
+      const data = await response.json();
+
+      if (!response.ok || data.error) {
+        console.error("Messages fetch error:", data.error);
         return;
       }
 
-      setMessages(response.messages || []);
+      setMessages(data.messages || []);
     } catch (err) {
       console.error("Error fetching messages:", err);
     } finally {
@@ -141,11 +150,13 @@ export default function AdminMessages() {
 
     try {
       const response = await fetch(
-        `https://ararrbvhzaudfaxjwdrc.supabase.co/functions/v1/admin/messages/reply`,
+        `${SUPABASE_URL}/functions/v1/admin/messages/reply`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            "apikey": SUPABASE_ANON_KEY,
+            "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
             "x-admin-key": adminKey,
           },
           body: JSON.stringify({
@@ -197,6 +208,13 @@ export default function AdminMessages() {
     }
   }
 
+  function handleAdminKeySubmit() {
+    if (adminKey.trim()) {
+      setShowKeyInput(false);
+      fetchProjects();
+    }
+  }
+
   function formatDate(dateStr: string) {
     const date = new Date(dateStr);
     const now = new Date();
@@ -228,6 +246,35 @@ export default function AdminMessages() {
     return matchesSearch && matchesStatus;
   });
 
+  // Show admin key prompt if not set
+  if (!adminKey) {
+    return (
+      <div className="space-y-6">
+        <h2 className="text-2xl font-bold text-foreground">Messages</h2>
+        <Card className="max-w-md">
+          <CardHeader>
+            <CardTitle>Admin Authentication</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Enter your admin key to access the messaging inbox.
+            </p>
+            <Input
+              type="password"
+              placeholder="Admin key"
+              value={adminKey}
+              onChange={(e) => setAdminKey(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleAdminKeySubmit()}
+            />
+            <Button onClick={handleAdminKeySubmit} disabled={!adminKey.trim()}>
+              Access Inbox
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -240,30 +287,22 @@ export default function AdminMessages() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-foreground">Messages</h2>
-        {showKeyInput && (
-          <div className="flex items-center gap-2">
-            <Input
-              type="password"
-              placeholder="Admin key"
-              value={adminKey}
-              onChange={(e) => setAdminKey(e.target.value)}
-              className="w-48"
-            />
-            <Button size="sm" onClick={() => setShowKeyInput(false)}>
-              Save
-            </Button>
-          </div>
-        )}
-        {!showKeyInput && adminKey && (
+        <div className="flex items-center gap-2">
           <Badge variant="outline" className="text-green-600">
-            Admin key set
+            Authenticated
           </Badge>
-        )}
-        {!showKeyInput && !adminKey && (
-          <Button variant="outline" size="sm" onClick={() => setShowKeyInput(true)}>
-            Set Admin Key
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setAdminKey("");
+              setProjects([]);
+              setSelectedProject(null);
+            }}
+          >
+            Logout
           </Button>
-        )}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 h-[calc(100vh-200px)]">
@@ -303,10 +342,10 @@ export default function AdminMessages() {
                 <div className="divide-y">
                   {filteredProjects.map((project) => (
                     <button
-                      key={project.id}
+                      key={project.project_token}
                       onClick={() => setSelectedProject(project)}
                       className={`w-full text-left p-4 hover:bg-muted/50 transition-colors ${
-                        selectedProject?.id === project.id ? "bg-muted" : ""
+                        selectedProject?.project_token === project.project_token ? "bg-muted" : ""
                       }`}
                     >
                       <div className="flex items-start justify-between mb-1">
