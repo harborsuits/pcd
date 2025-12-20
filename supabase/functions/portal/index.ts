@@ -12,15 +12,13 @@ const ALLOWED_ORIGINS = [
 ];
 
 function isAllowedOrigin(origin: string | null): boolean {
-  if (!origin) return true;
+  if (!origin) return true; // Allow requests without origin (server-to-server, etc.)
   return ALLOWED_ORIGINS.some(pattern => pattern.test(origin));
 }
 
-function getCorsHeaders(req: Request): Record<string, string> {
-  const origin = req.headers.get("origin");
-  const allowedOrigin = origin && isAllowedOrigin(origin) ? origin : "*";
+function getCorsHeaders(origin: string | null): Record<string, string> {
   return {
-    "Access-Control-Allow-Origin": allowedOrigin,
+    "Access-Control-Allow-Origin": origin || "*",
     "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
   };
@@ -32,7 +30,17 @@ function isValidToken(token: string): boolean {
 }
 
 Deno.serve(async (req) => {
-  const corsHeaders = getCorsHeaders(req);
+  const origin = req.headers.get("origin");
+
+  // Check origin for CORS - reject disallowed origins
+  if (origin && !isAllowedOrigin(origin)) {
+    return new Response(
+      JSON.stringify({ error: "Origin not allowed" }),
+      { status: 403, headers: { "Content-Type": "application/json" } }
+    );
+  }
+
+  const corsHeaders = getCorsHeaders(origin);
 
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
