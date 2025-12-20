@@ -159,21 +159,43 @@ async function handleSearch(req: Request): Promise<Response> {
     const { lat, lng } = geocodeData.results[0].geometry.location;
     console.log(`Geocoded to: ${lat}, ${lng}`);
 
-    // Step 2: Text Search for businesses
-    const textSearchUrl = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(query)}&location=${lat},${lng}&radius=${radius_m}&key=${apiKey}`;
-    const searchRes = await fetch(textSearchUrl);
-    const searchData = await searchRes.json();
+    // Step 2: Text Search for businesses (with pagination - up to 3 pages)
+    let allPlaces: Array<{ place_id: string; name: string }> = [];
+    let nextPageToken: string | null = null;
+    const maxPages = 3;
 
-    if (searchData.status !== "OK" && searchData.status !== "ZERO_RESULTS") {
-      console.error("Places API error:", searchData);
-      return new Response(
-        JSON.stringify({ error: "Google Places API error", details: searchData.status }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    for (let page = 0; page < maxPages; page++) {
+      let textSearchUrl = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(query)}&location=${lat},${lng}&radius=${radius_m}&key=${apiKey}`;
+      
+      if (nextPageToken) {
+        // Google requires ~2 second delay before using next_page_token
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        textSearchUrl = `https://maps.googleapis.com/maps/api/place/textsearch/json?pagetoken=${nextPageToken}&key=${apiKey}`;
+      }
+
+      const searchRes = await fetch(textSearchUrl);
+      const searchData = await searchRes.json();
+
+      if (searchData.status !== "OK" && searchData.status !== "ZERO_RESULTS") {
+        if (page === 0) {
+          console.error("Places API error:", searchData);
+          return new Response(
+            JSON.stringify({ error: "Google Places API error", details: searchData.status }),
+            { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        break; // Later pages may fail, that's ok
+      }
+
+      const places = searchData.results || [];
+      allPlaces = allPlaces.concat(places);
+      console.log(`Page ${page + 1}: Found ${places.length} places (total: ${allPlaces.length})`);
+
+      nextPageToken = searchData.next_page_token || null;
+      if (!nextPageToken) break;
     }
 
-    const places = searchData.results || [];
-    console.log(`Found ${places.length} places`);
+    console.log(`Total places found: ${allPlaces.length}`);
 
     // Step 3: Get details for each place and upsert leads
     const supabase = getSupabaseClient();
@@ -191,7 +213,7 @@ async function handleSearch(req: Request): Promise<Response> {
       lead_reasons: string[];
     }> = [];
 
-    for (const place of places.slice(0, 20)) { // Limit to 20 to avoid API quota issues
+    for (const place of allPlaces) {
       try {
         // Get place details
         const detailsUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${place.place_id}&fields=name,formatted_address,formatted_phone_number,website,geometry,types,business_status&key=${apiKey}`;
@@ -259,8 +281,8 @@ async function handleSearch(req: Request): Promise<Response> {
         provider: "google_places",
         raw_meta: {
           geocode_result: geocodeData.results[0],
-          search_status: searchData.status,
-          total_found: places.length,
+          total_found: allPlaces.length,
+          pages_fetched: Math.min(maxPages, Math.ceil(allPlaces.length / 20)),
         },
       })
       .select("id")
@@ -276,7 +298,7 @@ async function handleSearch(req: Request): Promise<Response> {
       JSON.stringify({
         run_id: searchRun?.id || null,
         results: leads,
-        total_found: places.length,
+        total_found: allPlaces.length,
         processed: leads.length,
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
