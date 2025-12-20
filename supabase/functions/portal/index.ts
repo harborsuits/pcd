@@ -41,6 +41,18 @@ Deno.serve(async (req) => {
     );
     const messagesBefore = url.searchParams.get("messages_before"); // ISO timestamp cursor
 
+    // Validate messages_before if provided
+    if (messagesBefore) {
+      const parsedDate = new Date(messagesBefore);
+      if (isNaN(parsedDate.getTime())) {
+        console.log("Invalid messages_before timestamp");
+        return new Response(
+          JSON.stringify({ error: "Invalid messages_before" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
     if (!token || token === "portal") {
       console.log("Missing token in request");
       return new Response(
@@ -89,24 +101,28 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Fetch messages (paginated, newest first)
+    // Fetch messages (paginated, newest first) - fetch one extra to detect has_more
     let messagesQuery = supabase
       .from("messages")
       .select("content, sender_type, created_at, read_at")
       .eq("project_id", project.id)
       .order("created_at", { ascending: false })
-      .limit(messagesLimit);
+      .limit(messagesLimit + 1);
 
     if (messagesBefore) {
       messagesQuery = messagesQuery.lt("created_at", messagesBefore);
     }
 
-    const { data: messages, error: messagesError } = await messagesQuery;
+    const { data: rawMessages, error: messagesError } = await messagesQuery;
 
     if (messagesError) {
       console.error("Messages query error:", messagesError);
       // Non-fatal: continue with empty messages
     }
+
+    // Check if there are more messages and slice to limit
+    const hasMoreMessages = (rawMessages || []).length > messagesLimit;
+    const messages = hasMoreMessages ? (rawMessages || []).slice(0, messagesLimit) : (rawMessages || []);
 
     // Fetch files (metadata only, no IDs)
     const { data: files, error: filesError } = await supabase
@@ -160,7 +176,7 @@ Deno.serve(async (req) => {
       pagination: {
         messages_limit: messagesLimit,
         messages_before: messagesBefore,
-        has_more_messages: (messages || []).length === messagesLimit,
+        has_more_messages: hasMoreMessages,
       },
     };
 
