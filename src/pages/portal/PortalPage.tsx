@@ -8,6 +8,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Loader2, FileText, MessageSquare, CreditCard, AlertCircle, Send, Home } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
 interface PortalMessage {
   id: string;
   content: string;
@@ -57,6 +60,7 @@ export default function PortalPage() {
   const [sendError, setSendError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const originalTitle = useRef(document.title);
+  const markReadInFlight = useRef(false);
 
   // Scroll to bottom when new messages arrive (messages are oldest→newest)
   const scrollToBottom = useCallback(() => {
@@ -116,8 +120,9 @@ export default function PortalPage() {
                 title: "New message from Team",
                 description: newMsg.content.slice(0, 50) + (newMsg.content.length > 50 ? "..." : ""),
               });
-              // Flash tab title
-              document.title = "(1) New message — Pleasant Cove";
+              // Flash tab title with business name
+              const businessName = data?.business?.name || "Portal";
+              document.title = `(1) New message — ${businessName}`;
               setTimeout(() => {
                 document.title = originalTitle.current;
               }, 5000);
@@ -168,13 +173,22 @@ export default function PortalPage() {
         params.set("messages_before", messagesBefore);
       }
 
-      const { data: response, error: fetchError } = await supabase.functions.invoke(
-        `portal/${portalToken}?${params.toString()}`,
-        { method: "GET" }
+      const res = await fetch(
+        `${SUPABASE_URL}/functions/v1/portal/${portalToken}?${params.toString()}`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            "apikey": SUPABASE_ANON_KEY,
+            "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+          },
+        }
       );
 
-      if (fetchError) {
-        console.error("Portal fetch error:", fetchError);
+      const response = await res.json();
+
+      if (!res.ok) {
+        console.error("Portal fetch error:", response.error);
         setError("Portal not found");
         return;
       }
@@ -209,15 +223,28 @@ export default function PortalPage() {
   }
 
   async function markAdminMessagesAsRead(portalToken: string) {
+    // Throttle: skip if already in flight
+    if (markReadInFlight.current) return;
+    markReadInFlight.current = true;
+
     try {
       console.log("📖 Marking admin messages as read...");
-      const { data: response, error } = await supabase.functions.invoke(
-        `messages/${portalToken}/mark-read`,
-        { method: "POST" }
+      const res = await fetch(
+        `${SUPABASE_URL}/functions/v1/messages/${portalToken}/mark-read`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "apikey": SUPABASE_ANON_KEY,
+            "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+          },
+        }
       );
 
-      if (error) {
-        console.error("Mark read error:", error);
+      const response = await res.json();
+
+      if (!res.ok) {
+        console.error("Mark read error:", response.error);
         return;
       }
 
@@ -226,6 +253,8 @@ export default function PortalPage() {
       }
     } catch (err) {
       console.error("Mark read exception:", err);
+    } finally {
+      markReadInFlight.current = false;
     }
   }
 
@@ -243,16 +272,23 @@ export default function PortalPage() {
     setSendError(null);
 
     try {
-      const { data: response, error: sendErr } = await supabase.functions.invoke(
-        `messages/${token}`,
+      const res = await fetch(
+        `${SUPABASE_URL}/functions/v1/messages/${token}`,
         {
           method: "POST",
-          body: { content: messageContent.trim() },
+          headers: {
+            "Content-Type": "application/json",
+            "apikey": SUPABASE_ANON_KEY,
+            "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+          },
+          body: JSON.stringify({ content: messageContent.trim() }),
         }
       );
 
-      if (sendErr) {
-        console.error("Send message error:", sendErr);
+      const response = await res.json();
+
+      if (!res.ok) {
+        console.error("Send message error:", response.error);
         setSendError("Failed to send message");
         return;
       }
