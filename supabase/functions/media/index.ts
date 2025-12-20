@@ -47,8 +47,19 @@ function isAllowedOrigin(origin: string | null): boolean {
 }
 
 function corsHeadersFor(origin: string | null): Record<string, string> {
+  // If no origin, it's typically server-to-server; allow "*"
+  if (!origin) {
+    return {
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+      "Access-Control-Allow-Methods": "GET, OPTIONS",
+      "Vary": "Origin",
+    };
+  }
+
+  // Origin exists and is already allowed by the caller
   return {
-    "Access-Control-Allow-Origin": origin || "*",
+    "Access-Control-Allow-Origin": origin,
     "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
     "Access-Control-Allow-Methods": "GET, OPTIONS",
     "Vary": "Origin",
@@ -92,12 +103,13 @@ function isValidToken(token: string | null): token is string {
 Deno.serve(async (req) => {
   const origin = req.headers.get("origin");
   
-  // Strict CORS check
+  // Strict CORS check - return CORS headers even on 403 so browsers can read the error
   if (origin && !isAllowedOrigin(origin)) {
     console.error("[Media] Origin not allowed:", origin);
+    const blockedCors = corsHeadersFor(origin);
     return new Response(JSON.stringify({ error: "Origin not allowed" }), {
       status: 403,
-      headers: { "Content-Type": "application/json" },
+      headers: { ...blockedCors, "Content-Type": "application/json" },
     });
   }
   
