@@ -5,8 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, FileText, MessageSquare, CreditCard, AlertCircle, Send, Home } from "lucide-react";
+import { Loader2, FileText, MessageSquare, CreditCard, AlertCircle, Send, Home, Download, Image as ImageIcon } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { proxyMediaUrl, isImageType, getFileIcon } from "@/lib/media";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -20,6 +21,7 @@ interface PortalMessage {
 }
 
 interface PortalFile {
+  id: string;
   file_name: string;
   file_type: string;
   description: string | null;
@@ -493,22 +495,54 @@ export default function PortalPage() {
                 <p className="text-muted-foreground text-center py-4">No files uploaded</p>
               ) : (
                 <div className="space-y-3">
-                  {data.files.map((file, idx) => (
-                    <div key={idx} className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                      <div>
-                        <p className="font-medium">{file.file_name}</p>
-                        {file.description && (
-                          <p className="text-sm text-muted-foreground">{file.description}</p>
+                  {data.files.map((file) => {
+                    const fileUrl = proxyMediaUrl(file.id, token);
+                    const isImage = isImageType(file.file_type);
+                    
+                    return (
+                      <div key={file.id} className="p-3 bg-muted rounded-lg space-y-2">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="text-lg">{getFileIcon(file.file_type)}</span>
+                            <div>
+                              <p className="font-medium">{file.file_name}</p>
+                              {file.description && (
+                                <p className="text-sm text-muted-foreground">{file.description}</p>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline">{file.file_type}</Badge>
+                            <a
+                              href={fileUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center justify-center h-8 w-8 rounded-md hover:bg-background transition-colors"
+                              title="Download"
+                            >
+                              <Download className="h-4 w-4" />
+                            </a>
+                          </div>
+                        </div>
+                        
+                        {/* Image preview */}
+                        {isImage && (
+                          <a href={fileUrl} target="_blank" rel="noopener noreferrer" className="block">
+                            <img
+                              src={fileUrl}
+                              alt={file.file_name}
+                              className="max-h-48 rounded-md border border-border object-contain"
+                              loading="lazy"
+                            />
+                          </a>
                         )}
-                      </div>
-                      <div className="text-right">
-                        <Badge variant="outline">{file.file_type}</Badge>
-                        <p className="text-xs text-muted-foreground mt-1">
+                        
+                        <p className="text-xs text-muted-foreground">
                           {formatDate(file.created_at)}
                         </p>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </CardContent>

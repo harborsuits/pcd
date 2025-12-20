@@ -6,9 +6,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, Send, Search, MessageSquare, StickyNote, Trash2, Edit2 } from "lucide-react";
+import { Loader2, Send, Search, MessageSquare, StickyNote, Trash2, Edit2, FileText, Download } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { proxyMediaUrl, isImageType, getFileIcon } from "@/lib/media";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -40,11 +41,20 @@ interface Note {
   updated_at: string;
 }
 
+interface FileItem {
+  id: string;
+  file_name: string;
+  file_type: string;
+  description: string | null;
+  created_at: string;
+}
+
 export default function AdminMessages() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [notes, setNotes] = useState<Note[]>([]);
+  const [files, setFiles] = useState<FileItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [loadingNotes, setLoadingNotes] = useState(false);
@@ -56,7 +66,7 @@ export default function AdminMessages() {
   const [sending, setSending] = useState(false);
   const [savingNote, setSavingNote] = useState(false);
   const [adminKey, setAdminKey] = useState("");
-  const [activeTab, setActiveTab] = useState<"messages" | "notes">("messages");
+  const [activeTab, setActiveTab] = useState<"messages" | "notes" | "files">("messages");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const originalTitle = useRef(document.title);
   const markReadInFlight = useRef<Record<string, boolean>>({});
@@ -284,6 +294,9 @@ export default function AdminMessages() {
 
       // Messages come in ascending order (oldest→newest), store as-is
       setMessages(data.messages || []);
+      
+      // Also store files from the same response
+      setFiles(data.files || []);
       
       // Scroll to bottom after messages load
       setTimeout(scrollToBottom, 100);
@@ -745,11 +758,15 @@ export default function AdminMessages() {
                 </div>
               </CardHeader>
 
-              <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "messages" | "notes")} className="flex-1 flex flex-col">
+              <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "messages" | "notes" | "files")} className="flex-1 flex flex-col">
                 <TabsList className="mx-4 mt-2 w-fit">
                   <TabsTrigger value="messages" className="flex items-center gap-2">
                     <MessageSquare className="h-4 w-4" />
                     Messages
+                  </TabsTrigger>
+                  <TabsTrigger value="files" className="flex items-center gap-2">
+                    <FileText className="h-4 w-4" />
+                    Files ({files.length})
                   </TabsTrigger>
                   <TabsTrigger value="notes" className="flex items-center gap-2">
                     <StickyNote className="h-4 w-4" />
@@ -895,6 +912,69 @@ export default function AdminMessages() {
                               <p className="text-sm whitespace-pre-wrap">{note.content}</p>
                             </div>
                           ))}
+                        </div>
+                      )}
+                    </ScrollArea>
+                  </CardContent>
+                </TabsContent>
+
+                <TabsContent value="files" className="flex-1 flex flex-col m-0 p-0">
+                  <CardContent className="flex-1 p-4">
+                    <ScrollArea className="h-full">
+                      {files.length === 0 ? (
+                        <p className="text-center text-muted-foreground py-8">
+                          No files uploaded for this project.
+                        </p>
+                      ) : (
+                        <div className="space-y-3">
+                          {files.map((file) => {
+                            const fileUrl = proxyMediaUrl(file.id, selectedProject?.project_token);
+                            const isImage = isImageType(file.file_type);
+                            
+                            return (
+                              <div key={file.id} className="p-3 bg-muted rounded-lg space-y-2">
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-lg">{getFileIcon(file.file_type)}</span>
+                                    <div>
+                                      <p className="font-medium">{file.file_name}</p>
+                                      {file.description && (
+                                        <p className="text-sm text-muted-foreground">{file.description}</p>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <Badge variant="outline">{file.file_type}</Badge>
+                                    <a
+                                      href={fileUrl}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="inline-flex items-center justify-center h-8 w-8 rounded-md hover:bg-background transition-colors"
+                                      title="Download"
+                                    >
+                                      <Download className="h-4 w-4" />
+                                    </a>
+                                  </div>
+                                </div>
+                                
+                                {/* Image preview */}
+                                {isImage && (
+                                  <a href={fileUrl} target="_blank" rel="noopener noreferrer" className="block">
+                                    <img
+                                      src={fileUrl}
+                                      alt={file.file_name}
+                                      className="max-h-48 rounded-md border border-border object-contain"
+                                      loading="lazy"
+                                    />
+                                  </a>
+                                )}
+                                
+                                <p className="text-xs text-muted-foreground">
+                                  {formatFullDate(file.created_at)}
+                                </p>
+                              </div>
+                            );
+                          })}
                         </div>
                       )}
                     </ScrollArea>
