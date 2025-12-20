@@ -131,6 +131,155 @@ export type Database = {
           },
         ]
       }
+      lead_outreach_events: {
+        Row: {
+          channel: string
+          created_at: string
+          error: string | null
+          id: string
+          lead_id: string
+          message: string | null
+          provider_message_id: string | null
+          status: string
+        }
+        Insert: {
+          channel: string
+          created_at?: string
+          error?: string | null
+          id?: string
+          lead_id: string
+          message?: string | null
+          provider_message_id?: string | null
+          status?: string
+        }
+        Update: {
+          channel?: string
+          created_at?: string
+          error?: string | null
+          id?: string
+          lead_id?: string
+          message?: string | null
+          provider_message_id?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_outreach_events_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lead_search_runs: {
+        Row: {
+          created_at: string
+          id: string
+          location_text: string
+          provider: string | null
+          query_term: string
+          radius_m: number
+          raw_meta: Json | null
+          results_count: number | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          location_text: string
+          provider?: string | null
+          query_term: string
+          radius_m: number
+          raw_meta?: Json | null
+          results_count?: number | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          location_text?: string
+          provider?: string | null
+          query_term?: string
+          radius_m?: number
+          raw_meta?: Json | null
+          results_count?: number | null
+        }
+        Relationships: []
+      }
+      leads: {
+        Row: {
+          address: string | null
+          business_name: string
+          category: string | null
+          created_at: string
+          demo_project_id: string | null
+          demo_status: string | null
+          demo_token: string | null
+          demo_url: string | null
+          id: string
+          lat: number | null
+          lead_reasons: Json | null
+          lead_score: number | null
+          lng: number | null
+          location_text: string | null
+          outreach_status: string | null
+          phone: string | null
+          place_id: string
+          query_term: string | null
+          radius_m: number | null
+          source: string
+          updated_at: string
+          website: string | null
+        }
+        Insert: {
+          address?: string | null
+          business_name: string
+          category?: string | null
+          created_at?: string
+          demo_project_id?: string | null
+          demo_status?: string | null
+          demo_token?: string | null
+          demo_url?: string | null
+          id?: string
+          lat?: number | null
+          lead_reasons?: Json | null
+          lead_score?: number | null
+          lng?: number | null
+          location_text?: string | null
+          outreach_status?: string | null
+          phone?: string | null
+          place_id: string
+          query_term?: string | null
+          radius_m?: number | null
+          source?: string
+          updated_at?: string
+          website?: string | null
+        }
+        Update: {
+          address?: string | null
+          business_name?: string
+          category?: string | null
+          created_at?: string
+          demo_project_id?: string | null
+          demo_status?: string | null
+          demo_token?: string | null
+          demo_url?: string | null
+          id?: string
+          lat?: number | null
+          lead_reasons?: Json | null
+          lead_score?: number | null
+          lng?: number | null
+          location_text?: string | null
+          outreach_status?: string | null
+          phone?: string | null
+          place_id?: string
+          query_term?: string | null
+          radius_m?: number | null
+          source?: string
+          updated_at?: string
+          website?: string | null
+        }
+        Relationships: []
+      }
       messages: {
         Row: {
           content: string
@@ -212,6 +361,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      outreach_suppressions: {
+        Row: {
+          created_at: string
+          id: string
+          phone: string
+          reason: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          phone: string
+          reason?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          phone?: string
+          reason?: string | null
+        }
+        Relationships: []
       }
       payments: {
         Row: {
