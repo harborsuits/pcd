@@ -16,13 +16,27 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  if (req.method !== "POST") {
-    return new Response(
-      JSON.stringify({ error: "Method not allowed" }),
-      { status: 405, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+  const url = new URL(req.url);
+  const pathParts = url.pathname.split("/").filter(Boolean);
+  
+  // Find "admin" in path and get remaining segments
+  const adminIdx = pathParts.lastIndexOf("admin");
+  const subPath = adminIdx >= 0 ? pathParts.slice(adminIdx + 1).join("/") : "";
+
+  console.log(`Admin endpoint called: ${subPath}`);
+
+  // Route: POST /admin/messages/reply
+  if (subPath === "messages/reply" && req.method === "POST") {
+    return handleMessagesReply(req);
   }
 
+  return new Response(
+    JSON.stringify({ error: "Not found" }),
+    { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+  );
+});
+
+async function handleMessagesReply(req: Request): Promise<Response> {
   try {
     // Validate admin key
     const adminKey = req.headers.get("x-admin-key");
@@ -151,4 +165,4 @@ Deno.serve(async (req) => {
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
-});
+}
