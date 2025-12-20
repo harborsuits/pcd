@@ -6,7 +6,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, Send, Search, MessageSquare, StickyNote, Trash2, Edit2, FileText, Download } from "lucide-react";
+import { Loader2, Send, Search, MessageSquare, StickyNote, Trash2, Edit2, FileText, Download, Upload } from "lucide-react";
+import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { proxyMediaUrl, isImageType, getFileIcon } from "@/lib/media";
@@ -67,13 +68,26 @@ export default function AdminMessages() {
   const [savingNote, setSavingNote] = useState(false);
   const [adminKey, setAdminKey] = useState("");
   const [activeTab, setActiveTab] = useState<"messages" | "notes" | "files">("messages");
+  const [uploading, setUploading] = useState(false);
+  const [uploadDesc, setUploadDesc] = useState("");
+  const [uploadQueue, setUploadQueue] = useState<{ id: string; name: string; status: 'pending' | 'uploading' | 'done' | 'error'; error?: string }[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const originalTitle = useRef(document.title);
   const markReadInFlight = useRef<Record<string, boolean>>({});
+  const clearQueueTimeoutRef = useRef<number | null>(null);
 
   // Scroll to bottom (messages are oldest→newest, so we scroll to end)
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, []);
+
+  // Cleanup upload queue timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (clearQueueTimeoutRef.current) {
+        window.clearTimeout(clearQueueTimeoutRef.current);
+      }
+    };
   }, []);
 
   useEffect(() => {
@@ -570,6 +584,107 @@ export default function AdminMessages() {
     setNoteContent("");
   }
 
+  // File upload functions
+  async function uploadSingleFile(token: string, file: File, description: string): Promise<FileItem> {
+    const form = new FormData();
+    form.append("file", file);
+    if (description?.trim()) form.append("description", description.trim());
+
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/files/${encodeURIComponent(token)}/upload`, {
+      method: "POST",
+      body: form,
+    });
+
+    if (!res.ok) {
+      let msg = `Upload failed (${res.status})`;
+      try {
+        const j = await res.json();
+        if (j?.error) msg = j.error;
+      } catch {}
+      throw new Error(msg);
+    }
+
+    const data = await res.json();
+    return data.file || data;
+  }
+
+  async function handleAdminFileUpload(fileList: FileList | File[]) {
+    const token = selectedProject?.project_token;
+    if (!token) {
+      toast({ title: "Select a project first", variant: "destructive" });
+      return;
+    }
+    if (uploading) return;
+
+    const fileArray = Array.from(fileList || []);
+    if (fileArray.length === 0) return;
+
+    // Seed queue
+    const seeded = fileArray.map((f) => ({
+      id: crypto.randomUUID(),
+      name: f.name,
+      status: 'pending' as const,
+    }));
+    setUploadQueue(seeded);
+    setUploading(true);
+
+    let successCount = 0;
+
+    for (let i = 0; i < fileArray.length; i++) {
+      const file = fileArray[i];
+      const queueId = seeded[i].id;
+
+      setUploadQueue((q) =>
+        q.map((x) => (x.id === queueId ? { ...x, status: 'uploading' as const } : x))
+      );
+
+      try {
+        const newFile = await uploadSingleFile(token, file, uploadDesc);
+        successCount++;
+
+        if (newFile?.id) {
+          setFiles((prev) => [newFile, ...prev]);
+        }
+
+        setUploadQueue((q) =>
+          q.map((x) => (x.id === queueId ? { ...x, status: 'done' as const } : x))
+        );
+      } catch (e: any) {
+        setUploadQueue((q) =>
+          q.map((x) =>
+            x.id === queueId ? { ...x, status: 'error' as const, error: e?.message || 'Upload failed' } : x
+          )
+        );
+      }
+    }
+
+    // Toast summary
+    if (successCount > 0) {
+      toast({
+        title:
+          successCount === fileArray.length
+            ? `${successCount} file${successCount > 1 ? 's' : ''} uploaded`
+            : `${successCount}/${fileArray.length} files uploaded`,
+        description: successCount < fileArray.length ? 'Some files failed to upload' : undefined,
+      });
+    } else {
+      toast({
+        title: 'Upload failed',
+        description: `All ${fileArray.length} file(s) failed to upload.`,
+        variant: 'destructive',
+      });
+    }
+
+    setUploadDesc('');
+    setUploading(false);
+
+    if (clearQueueTimeoutRef.current) window.clearTimeout(clearQueueTimeoutRef.current);
+    clearQueueTimeoutRef.current = window.setTimeout(() => {
+      setUploadQueue([]);
+      clearQueueTimeoutRef.current = null;
+    }, 3000);
+  }
+
   function formatDate(dateStr: string) {
     const date = new Date(dateStr);
     const now = new Date();
@@ -919,11 +1034,72 @@ export default function AdminMessages() {
                 </TabsContent>
 
                 <TabsContent value="files" className="flex-1 flex flex-col m-0 p-0">
-                  <CardContent className="flex-1 p-4">
-                    <ScrollArea className="h-full">
+                  <CardContent className="flex-1 p-0 flex flex-col">
+                    {/* Upload Form */}
+                    <div className="border-b p-4 space-y-3">
+                      <div className="flex items-center gap-2">
+                        <Upload className="h-4 w-4 text-muted-foreground" />
+                        <span className="font-medium text-sm">Upload files to share with client</span>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="admin-file-desc" className="text-sm">Description (optional)</Label>
+                        <Input
+                          id="admin-file-desc"
+                          value={uploadDesc}
+                          onChange={(e) => setUploadDesc(e.target.value)}
+                          placeholder="e.g., Design mockup, contract..."
+                          disabled={uploading}
+                          className="text-sm"
+                        />
+                      </div>
+                      
+                      <div className="flex items-center gap-2">
+                        <Label htmlFor="admin-file-upload" className="sr-only">Choose files</Label>
+                        <Input
+                          id="admin-file-upload"
+                          type="file"
+                          accept="image/*,application/pdf"
+                          multiple
+                          onChange={(e) => {
+                            if (e.target.files && e.target.files.length > 0) {
+                              handleAdminFileUpload(e.target.files);
+                            }
+                            e.currentTarget.value = "";
+                          }}
+                          disabled={uploading}
+                          className="cursor-pointer text-sm"
+                        />
+                      </div>
+                      
+                      {/* Upload Queue Status */}
+                      {uploadQueue.length > 0 && (
+                        <div className="space-y-1">
+                          {uploadQueue.map((item) => (
+                            <div key={item.id} className="flex items-center gap-2 text-sm">
+                              {item.status === 'uploading' && <Loader2 className="h-3 w-3 animate-spin" />}
+                              {item.status === 'done' && <span className="text-green-500">✓</span>}
+                              {item.status === 'error' && <span className="text-destructive">✗</span>}
+                              {item.status === 'pending' && <span className="text-muted-foreground">○</span>}
+                              <span className={item.status === 'error' ? 'text-destructive' : 'text-muted-foreground'}>
+                                {item.name}
+                                {item.error && ` - ${item.error}`}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      
+                      <p className="text-xs text-muted-foreground">
+                        Images + PDF • Max 10MB each
+                      </p>
+                    </div>
+
+                    {/* Files List */}
+                    <ScrollArea className="flex-1 p-4">
                       {files.length === 0 ? (
                         <p className="text-center text-muted-foreground py-8">
-                          No files uploaded for this project.
+                          No files uploaded for this project yet.
                         </p>
                       ) : (
                         <div className="space-y-3">
