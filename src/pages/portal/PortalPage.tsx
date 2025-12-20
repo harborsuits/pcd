@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, FileText, MessageSquare, CreditCard, AlertCircle, Send, Home, Download, Image as ImageIcon, Upload } from "lucide-react";
+import { Loader2, FileText, MessageSquare, CreditCard, AlertCircle, Send, Home, Download, Image as ImageIcon, Upload, Eye, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
@@ -65,6 +65,8 @@ export default function PortalPage() {
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploadDesc, setUploadDesc] = useState("");
+  const [isDragging, setIsDragging] = useState(false);
+  const [pdfPreview, setPdfPreview] = useState<{ url: string; name: string } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const originalTitle = useRef(document.title);
   const markReadInFlight = useRef(false);
@@ -393,6 +395,34 @@ export default function PortalPage() {
     }
   }
 
+  function handleDragOver(e: React.DragEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  }
+
+  function handleDragLeave(e: React.DragEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  }
+
+  function handleDrop(e: React.DragEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+      // Upload first file only
+      handleFileUpload(files[0]);
+    }
+  }
+
+  function isPdf(fileType: string): boolean {
+    return fileType.toLowerCase() === "application/pdf";
+  }
+
   function formatDate(dateStr: string) {
     return new Date(dateStr).toLocaleDateString("en-US", {
       month: "short",
@@ -547,39 +577,54 @@ export default function PortalPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {/* Upload Form */}
-              <div className="mb-6 p-4 border border-dashed border-border rounded-lg space-y-3">
+              {/* Upload Form with Drag & Drop */}
+              <div 
+                className={`mb-6 p-4 border-2 border-dashed rounded-lg space-y-3 transition-colors ${
+                  isDragging 
+                    ? "border-primary bg-primary/5" 
+                    : "border-border"
+                }`}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+              >
                 <div className="flex items-center gap-2">
                   <Upload className="h-5 w-5 text-muted-foreground" />
-                  <span className="font-medium">Upload a file</span>
+                  <span className="font-medium">
+                    {isDragging ? "Drop file here" : "Upload a file"}
+                  </span>
                 </div>
                 
-                <div className="space-y-2">
-                  <Label htmlFor="file-upload" className="sr-only">Choose file</Label>
-                  <Input
-                    id="file-upload"
-                    type="file"
-                    accept="image/*,.pdf"
-                    onChange={(e) => {
-                      const f = e.target.files?.[0];
-                      if (f) handleFileUpload(f);
-                      e.currentTarget.value = "";
-                    }}
-                    disabled={uploading}
-                    className="cursor-pointer"
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="file-desc">Description (optional)</Label>
-                  <Input
-                    id="file-desc"
-                    value={uploadDesc}
-                    onChange={(e) => setUploadDesc(e.target.value)}
-                    placeholder="e.g., Floor plan PDF, inspiration image..."
-                    disabled={uploading}
-                  />
-                </div>
+                {!isDragging && (
+                  <>
+                    <div className="space-y-2">
+                      <Label htmlFor="file-upload" className="sr-only">Choose file</Label>
+                      <Input
+                        id="file-upload"
+                        type="file"
+                        accept="image/*,application/pdf"
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          if (f) handleFileUpload(f);
+                          e.currentTarget.value = "";
+                        }}
+                        disabled={uploading}
+                        className="cursor-pointer"
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="file-desc">Description (optional)</Label>
+                      <Input
+                        id="file-desc"
+                        value={uploadDesc}
+                        onChange={(e) => setUploadDesc(e.target.value)}
+                        placeholder="e.g., Floor plan PDF, inspiration image..."
+                        disabled={uploading}
+                      />
+                    </div>
+                  </>
+                )}
                 
                 {uploadError && (
                   <p className="text-sm text-destructive">{uploadError}</p>
@@ -592,7 +637,7 @@ export default function PortalPage() {
                 )}
                 
                 <p className="text-xs text-muted-foreground">
-                  Allowed: images + PDF • Max: 10MB
+                  {isDragging ? "Release to upload" : "Drag & drop or choose file • Images + PDF • Max 10MB"}
                 </p>
               </div>
 
@@ -616,8 +661,17 @@ export default function PortalPage() {
                               )}
                             </div>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <Badge variant="outline">{file.file_type}</Badge>
+                          <div className="flex items-center gap-1">
+                            <Badge variant="outline" className="text-xs">{file.file_type.split('/')[1] || file.file_type}</Badge>
+                            {isPdf(file.file_type) && (
+                              <button
+                                onClick={() => setPdfPreview({ url: fileUrl, name: file.file_name })}
+                                className="inline-flex items-center justify-center h-8 w-8 rounded-md hover:bg-background transition-colors"
+                                title="Preview PDF"
+                              >
+                                <Eye className="h-4 w-4" />
+                              </button>
+                            )}
                             <a
                               href={fileUrl}
                               target="_blank"
@@ -696,6 +750,36 @@ export default function PortalPage() {
           </Card>
         </div>
       </div>
+
+      {/* PDF Preview Modal */}
+      {pdfPreview && (
+        <div 
+          className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={() => setPdfPreview(null)}
+        >
+          <div 
+            className="bg-card border border-border rounded-lg shadow-lg w-full max-w-4xl max-h-[90vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between p-4 border-b border-border">
+              <h3 className="font-semibold truncate">{pdfPreview.name}</h3>
+              <button
+                onClick={() => setPdfPreview(null)}
+                className="inline-flex items-center justify-center h-8 w-8 rounded-md hover:bg-muted transition-colors"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="flex-1 min-h-0 p-4">
+              <iframe
+                src={pdfPreview.url}
+                title={pdfPreview.name}
+                className="w-full h-[70vh] rounded border border-border"
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
