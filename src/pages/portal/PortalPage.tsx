@@ -63,7 +63,7 @@ export default function PortalPage() {
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
-  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploadQueue, setUploadQueue] = useState<{ name: string; status: 'pending' | 'uploading' | 'done' | 'error'; error?: string }[]>([]);
   const [uploadDesc, setUploadDesc] = useState("");
   const [isDragging, setIsDragging] = useState(false);
   const [pdfPreview, setPdfPreview] = useState<{ url: string; name: string } | null>(null);
@@ -344,10 +344,8 @@ export default function PortalPage() {
     }
   }
 
-  async function handleFileUpload(file: File) {
-    if (!token) return;
-    setUploading(true);
-    setUploadError(null);
+  async function handleFileUpload(file: File): Promise<boolean> {
+    if (!token) return false;
 
     try {
       const fd = new FormData();
@@ -366,14 +364,8 @@ export default function PortalPage() {
 
       if (!res.ok) {
         console.error("Upload error:", response.error);
-        setUploadError(response.error || "Upload failed");
-        return;
+        throw new Error(response.error || "Upload failed");
       }
-
-      toast({
-        title: "File uploaded",
-        description: "Your file has been uploaded successfully.",
-      });
 
       // Optimistic update so file appears immediately
       if (response?.file) {
@@ -386,13 +378,66 @@ export default function PortalPage() {
         });
       }
 
-      setUploadDesc("");
-    } catch (err) {
+      return true;
+    } catch (err: any) {
       console.error("Upload exception:", err);
-      setUploadError("Upload failed");
-    } finally {
-      setUploading(false);
+      throw err;
     }
+  }
+
+  async function handleMultiFileUpload(files: FileList | File[]) {
+    if (!token || files.length === 0) return;
+    
+    const fileArray = Array.from(files);
+    
+    // Initialize queue
+    setUploadQueue(fileArray.map(f => ({ name: f.name, status: 'pending' })));
+    setUploading(true);
+
+    let successCount = 0;
+    
+    // Upload sequentially
+    for (let i = 0; i < fileArray.length; i++) {
+      const file = fileArray[i];
+      
+      // Mark current as uploading
+      setUploadQueue(prev => prev.map((item, idx) => 
+        idx === i ? { ...item, status: 'uploading' } : item
+      ));
+
+      try {
+        await handleFileUpload(file);
+        successCount++;
+        
+        // Mark as done
+        setUploadQueue(prev => prev.map((item, idx) => 
+          idx === i ? { ...item, status: 'done' } : item
+        ));
+      } catch (err: any) {
+        // Mark as error
+        setUploadQueue(prev => prev.map((item, idx) => 
+          idx === i ? { ...item, status: 'error', error: err.message } : item
+        ));
+      }
+    }
+
+    // Show toast summary
+    if (successCount > 0) {
+      toast({
+        title: successCount === fileArray.length 
+          ? `${successCount} file${successCount > 1 ? 's' : ''} uploaded`
+          : `${successCount}/${fileArray.length} files uploaded`,
+        description: successCount < fileArray.length 
+          ? "Some files failed to upload" 
+          : undefined,
+      });
+    }
+
+    setUploadDesc("");
+    setUploading(false);
+    
+    // Clear queue after 3s
+    setTimeout(() => setUploadQueue([]), 3000);
   }
 
   function handleDragOver(e: React.DragEvent) {
@@ -423,7 +468,7 @@ export default function PortalPage() {
     
     const files = e.dataTransfer.files;
     if (files.length > 0) {
-      handleFileUpload(files[0]);
+      handleMultiFileUpload(files);
     }
   }
 
@@ -612,9 +657,12 @@ export default function PortalPage() {
                         id="file-upload"
                         type="file"
                         accept="image/*,application/pdf"
+                        multiple
                         onChange={(e) => {
-                          const f = e.target.files?.[0];
-                          if (f) handleFileUpload(f);
+                          const files = e.target.files;
+                          if (files && files.length > 0) {
+                            handleMultiFileUpload(files);
+                          }
                           e.currentTarget.value = "";
                         }}
                         disabled={uploading}
@@ -635,10 +683,24 @@ export default function PortalPage() {
                   </>
                 )}
                 
-                {uploadError && (
-                  <p className="text-sm text-destructive">{uploadError}</p>
+                {/* Upload Queue Status */}
+                {uploadQueue.length > 0 && (
+                  <div className="space-y-1">
+                    {uploadQueue.map((item, idx) => (
+                      <div key={idx} className="flex items-center gap-2 text-sm">
+                        {item.status === 'uploading' && <Loader2 className="h-3 w-3 animate-spin" />}
+                        {item.status === 'done' && <span className="text-green-500">✓</span>}
+                        {item.status === 'error' && <span className="text-destructive">✗</span>}
+                        {item.status === 'pending' && <span className="text-muted-foreground">○</span>}
+                        <span className={item.status === 'error' ? 'text-destructive' : 'text-muted-foreground'}>
+                          {item.name}
+                          {item.error && ` - ${item.error}`}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
                 )}
-                {uploading && (
+                {uploading && uploadQueue.length === 0 && (
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Loader2 className="h-4 w-4 animate-spin" />
                     Uploading...
@@ -646,7 +708,7 @@ export default function PortalPage() {
                 )}
                 
                 <p className="text-xs text-muted-foreground">
-                  {isDragging ? "Release to upload" : "Drag & drop or choose file • Images + PDF • Max 10MB"}
+                  {isDragging ? "Release to upload" : "Drag & drop or choose files • Images + PDF • Max 10MB each"}
                 </p>
               </div>
 
