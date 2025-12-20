@@ -9,5 +9,5 @@ verify_jwt = false
 [functions.messages]
 verify_jwt = false
 
-[functions.admin-messages]
+[functions.admin]
 verify_jwt = false
