@@ -1,5 +1,5 @@
-// Media Proxy edge function
-// GET /media/:file_id - serve file by ID from storage
+// Media Proxy edge function - SECURE version
+// GET /media/:file_id?token=<project_token> - serve file by ID (requires token)
 // GET /media?url=<encoded> - proxy allowed external URLs
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -18,37 +18,56 @@ const ALLOWED_CONTENT_TYPES = [
   "application/pdf",
 ];
 
-// Allowed external hosts (add your storage domains here)
-const ALLOWED_HOSTS = [
-  new URL(SUPABASE_URL).hostname, // Our Supabase storage
-  "storage.googleapis.com",
-  "lh3.googleusercontent.com",
+// Allowed external hosts for URL proxy mode
+const ALLOWED_HOSTS: string[] = (() => {
+  try {
+    return [new URL(SUPABASE_URL).hostname];
+  } catch {
+    return [];
+  }
+})();
+
+// Allowed origins for CORS
+const ALLOWED_ORIGINS: RegExp[] = [
+  /^https:\/\/.*\.lovable\.dev$/,
+  /^https:\/\/.*\.lovableproject\.com$/,
+  /^https:\/\/.*\.squarespace\.com$/,
+  /^https:\/\/.*\.squarespace-cdn\.com$/,
+  /^https:\/\/(www\.)?pleasantcove\.design$/,
+  /^http:\/\/localhost:\d+$/,
+  /^http:\/\/127\.0\.0\.1:\d+$/,
 ];
 
 // Max file size (10MB)
 const MAX_SIZE = 10 * 1024 * 1024;
 
-// CORS headers
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "GET, OPTIONS",
-};
+function isAllowedOrigin(origin: string | null): boolean {
+  if (!origin) return true; // Allow server-to-server / same-origin
+  return ALLOWED_ORIGINS.some((re) => re.test(origin));
+}
 
-// Security headers for media responses
-function getSecurityHeaders(contentType: string, size: number): Record<string, string> {
+function corsHeadersFor(origin: string | null): Record<string, string> {
+  return {
+    "Access-Control-Allow-Origin": origin || "*",
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Methods": "GET, OPTIONS",
+    "Vary": "Origin",
+  };
+}
+
+function getSecurityHeaders(contentType: string, size: number, corsHeaders: Record<string, string>): Record<string, string> {
   return {
     ...corsHeaders,
     "Content-Type": contentType,
     "Content-Length": String(size),
-    "Cache-Control": "public, max-age=3600, immutable",
+    "Cache-Control": "public, max-age=3600",
     "X-Content-Type-Options": "nosniff",
     "Content-Security-Policy": "default-src 'none'; img-src 'self' data:; style-src 'none'; script-src 'none';",
     "X-Frame-Options": "DENY",
   };
 }
 
-function errorResponse(status: number, message: string): Response {
+function errorResponse(status: number, message: string, corsHeaders: Record<string, string>): Response {
   return new Response(JSON.stringify({ error: message }), {
     status,
     headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -64,14 +83,33 @@ function isAllowedHost(url: URL): boolean {
   return ALLOWED_HOSTS.some((host) => url.hostname === host || url.hostname.endsWith("." + host));
 }
 
+// Validate project token format
+function isValidToken(token: string | null): token is string {
+  if (!token) return false;
+  return /^[a-zA-Z0-9\-_]{12,128}$/.test(token.trim());
+}
+
 Deno.serve(async (req) => {
+  const origin = req.headers.get("origin");
+  
+  // Strict CORS check
+  if (origin && !isAllowedOrigin(origin)) {
+    console.error("[Media] Origin not allowed:", origin);
+    return new Response(JSON.stringify({ error: "Origin not allowed" }), {
+      status: 403,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+  
+  const corsHeaders = corsHeadersFor(origin);
+
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   if (req.method !== "GET") {
-    return errorResponse(405, "Method not allowed");
+    return errorResponse(405, "Method not allowed", corsHeaders);
   }
 
   const url = new URL(req.url);
@@ -82,37 +120,57 @@ Deno.serve(async (req) => {
   
   // Or get url from query: /media?url=<encoded>
   const proxyUrl = url.searchParams.get("url");
+  
+  // Get token from query for file ID mode
+  const token = url.searchParams.get("token")?.trim() || null;
 
-  console.log("[Media] Request:", { fileId, proxyUrl: proxyUrl?.slice(0, 50) });
+  console.log("[Media] Request:", { 
+    fileId: fileId?.slice(0, 8), 
+    proxyUrl: proxyUrl?.slice(0, 50),
+    hasToken: !!token,
+  });
 
   try {
-    // Mode 1: Fetch file by ID from our database + storage
+    // Mode 1: Fetch file by ID from our database + storage (REQUIRES TOKEN)
     if (fileId && fileId !== "media" && !proxyUrl) {
+      // Require valid token for file ID mode
+      if (!isValidToken(token)) {
+        console.error("[Media] Missing or invalid token for file:", fileId);
+        return errorResponse(401, "Missing or invalid token", corsHeaders);
+      }
+
       const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-      // Look up file record
+      // Look up file record AND verify it belongs to the project token
       const { data: file, error: fileError } = await supabase
         .from("files")
-        .select("storage_path, file_type, file_name")
+        .select(`
+          storage_path, 
+          file_type, 
+          file_name, 
+          project_id,
+          projects!inner(project_token)
+        `)
         .eq("id", fileId)
-        .single();
+        .eq("projects.project_token", token)
+        .maybeSingle();
 
       if (fileError || !file) {
-        console.error("[Media] File not found:", fileId, fileError);
-        return errorResponse(404, "File not found");
+        console.error("[Media] File not found or token mismatch:", fileId, fileError);
+        return errorResponse(404, "File not found", corsHeaders);
       }
 
       // Check content type
       if (!isAllowedContentType(file.file_type)) {
         console.error("[Media] Disallowed content type:", file.file_type);
-        return errorResponse(415, "Unsupported media type");
+        return errorResponse(415, "Unsupported media type", corsHeaders);
       }
 
       // Get file from storage
       // Assume storage_path is in format "bucket/path/to/file"
-      const pathParts = file.storage_path.split("/");
-      const bucket = pathParts[0];
-      const filePath = pathParts.slice(1).join("/");
+      const storageParts = file.storage_path.split("/");
+      const bucket = storageParts[0];
+      const filePath = storageParts.slice(1).join("/");
 
       const { data: fileData, error: storageError } = await supabase.storage
         .from(bucket)
@@ -120,82 +178,123 @@ Deno.serve(async (req) => {
 
       if (storageError || !fileData) {
         console.error("[Media] Storage error:", storageError);
-        return errorResponse(404, "File not found in storage");
+        return errorResponse(404, "File not found in storage", corsHeaders);
       }
 
       // Check size
       if (fileData.size > MAX_SIZE) {
-        return errorResponse(413, "File too large");
+        return errorResponse(413, "File too large", corsHeaders);
       }
 
       const arrayBuffer = await fileData.arrayBuffer();
 
       return new Response(arrayBuffer, {
         status: 200,
-        headers: getSecurityHeaders(file.file_type, arrayBuffer.byteLength),
+        headers: getSecurityHeaders(file.file_type, arrayBuffer.byteLength, corsHeaders),
       });
     }
 
-    // Mode 2: Proxy external URL
+    // Mode 2: Proxy external URL (no token required, but host must be allowed)
     if (proxyUrl) {
       let targetUrl: URL;
       try {
         targetUrl = new URL(proxyUrl);
       } catch {
-        return errorResponse(400, "Invalid URL");
+        return errorResponse(400, "Invalid URL", corsHeaders);
       }
 
-      // Check protocol
-      if (targetUrl.protocol !== "https:" && targetUrl.protocol !== "http:") {
-        return errorResponse(400, "Invalid protocol");
+      // HTTPS only
+      if (targetUrl.protocol !== "https:") {
+        console.error("[Media] HTTPS required, got:", targetUrl.protocol);
+        return errorResponse(400, "HTTPS required", corsHeaders);
       }
 
       // Check host allowlist
       if (!isAllowedHost(targetUrl)) {
         console.error("[Media] Host not allowed:", targetUrl.hostname);
-        return errorResponse(403, "Host not allowed");
+        return errorResponse(403, "Host not allowed", corsHeaders);
       }
 
-      // Fetch the resource
+      // Fetch the resource (don't auto-follow redirects)
       const response = await fetch(targetUrl.toString(), {
+        redirect: "manual",
         headers: {
           "User-Agent": "PleasantCove-MediaProxy/1.0",
         },
       });
 
+      // Handle redirects carefully
+      if (response.status >= 300 && response.status < 400) {
+        const location = response.headers.get("location");
+        if (!location) {
+          return errorResponse(502, "Upstream redirect missing location", corsHeaders);
+        }
+        
+        const redirectUrl = new URL(location, targetUrl);
+        if (!isAllowedHost(redirectUrl)) {
+          console.error("[Media] Redirect host not allowed:", redirectUrl.hostname);
+          return errorResponse(403, "Redirect host not allowed", corsHeaders);
+        }
+        
+        // Follow the redirect once
+        const redirectResponse = await fetch(redirectUrl.toString(), {
+          redirect: "manual",
+          headers: { "User-Agent": "PleasantCove-MediaProxy/1.0" },
+        });
+        
+        if (!redirectResponse.ok) {
+          return errorResponse(502, "Upstream error after redirect", corsHeaders);
+        }
+        
+        const contentType = redirectResponse.headers.get("content-type") || "";
+        if (!isAllowedContentType(contentType)) {
+          return errorResponse(415, "Unsupported media type", corsHeaders);
+        }
+        
+        const arrayBuffer = await redirectResponse.arrayBuffer();
+        if (arrayBuffer.byteLength > MAX_SIZE) {
+          return errorResponse(413, "File too large", corsHeaders);
+        }
+        
+        return new Response(arrayBuffer, {
+          status: 200,
+          headers: getSecurityHeaders(contentType.split(";")[0].trim(), arrayBuffer.byteLength, corsHeaders),
+        });
+      }
+
       if (!response.ok) {
         console.error("[Media] Upstream error:", response.status);
-        return errorResponse(502, "Upstream error");
+        return errorResponse(502, "Upstream error", corsHeaders);
       }
 
       // Check content type
       const contentType = response.headers.get("content-type") || "";
       if (!isAllowedContentType(contentType)) {
         console.error("[Media] Disallowed content type:", contentType);
-        return errorResponse(415, "Unsupported media type");
+        return errorResponse(415, "Unsupported media type", corsHeaders);
       }
 
       // Check size from header
       const contentLength = parseInt(response.headers.get("content-length") || "0", 10);
       if (contentLength > MAX_SIZE) {
-        return errorResponse(413, "File too large");
+        return errorResponse(413, "File too large", corsHeaders);
       }
 
       // Read body and check actual size
       const arrayBuffer = await response.arrayBuffer();
       if (arrayBuffer.byteLength > MAX_SIZE) {
-        return errorResponse(413, "File too large");
+        return errorResponse(413, "File too large", corsHeaders);
       }
 
       return new Response(arrayBuffer, {
         status: 200,
-        headers: getSecurityHeaders(contentType.split(";")[0].trim(), arrayBuffer.byteLength),
+        headers: getSecurityHeaders(contentType.split(";")[0].trim(), arrayBuffer.byteLength, corsHeaders),
       });
     }
 
-    return errorResponse(400, "Missing file_id or url parameter");
+    return errorResponse(400, "Missing file_id or url parameter", corsHeaders);
   } catch (err) {
     console.error("[Media] Error:", err);
-    return errorResponse(500, "Internal server error");
+    return errorResponse(500, "Internal server error", corsHeaders);
   }
 });

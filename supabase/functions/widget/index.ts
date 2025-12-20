@@ -320,18 +320,18 @@ Deno.serve(async (req) => {
     return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
   }
 
-  // Proxy media URLs through our secure endpoint
-  function proxyMediaUrl(url) {
-    if (!url) return '';
+  // Proxy media URLs through our secure endpoint (with token for file IDs)
+  function proxyMediaUrl(input) {
+    if (!input) return '';
     // If it's already our media proxy, return as-is
-    if (url.includes('/functions/v1/media')) return url;
-    // If it's a file ID (UUID format), use direct path
+    if (input.includes('/functions/v1/media')) return input;
+    // If it's a file ID (UUID format), use direct path WITH token
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    if (uuidRegex.test(url)) {
-      return MEDIA_PROXY_URL + '/' + url;
+    if (uuidRegex.test(input)) {
+      return MEDIA_PROXY_URL + '/' + input + '?token=' + encodeURIComponent(config.token);
     }
-    // Otherwise proxy the full URL
-    return MEDIA_PROXY_URL + '?url=' + encodeURIComponent(url);
+    // Otherwise proxy the full URL (no token needed for external URLs)
+    return MEDIA_PROXY_URL + '?url=' + encodeURIComponent(input);
   }
 
   // Check if content looks like it contains an image reference

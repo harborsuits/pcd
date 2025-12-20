@@ -5,23 +5,30 @@ const MEDIA_PROXY_URL = `${SUPABASE_URL}/functions/v1/media`;
 
 /**
  * Returns a proxied URL for media content.
- * - If url is a UUID (file_id), uses the /media/:id endpoint
+ * - If input is a UUID (file_id), uses /media/:id?token=<token> (token required)
  * - Otherwise uses /media?url=<encoded> for external URLs
+ * 
+ * @param input - Either a file UUID or an external URL
+ * @param projectToken - Required for file IDs, optional for external URLs
  */
-export function proxyMediaUrl(url: string): string {
-  if (!url) return '';
+export function proxyMediaUrl(input: string, projectToken?: string): string {
+  if (!input) return '';
   
   // If it's already our media proxy, return as-is
-  if (url.includes('/functions/v1/media')) return url;
+  if (input.includes('/functions/v1/media')) return input;
   
-  // If it's a file ID (UUID format), use direct path
+  // If it's a file ID (UUID format), use direct path with token
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-  if (uuidRegex.test(url)) {
-    return `${MEDIA_PROXY_URL}/${url}`;
+  if (uuidRegex.test(input)) {
+    if (!projectToken) {
+      console.warn('[proxyMediaUrl] File ID requires projectToken');
+      return '';
+    }
+    return `${MEDIA_PROXY_URL}/${input}?token=${encodeURIComponent(projectToken)}`;
   }
   
-  // Otherwise proxy the full URL
-  return `${MEDIA_PROXY_URL}?url=${encodeURIComponent(url)}`;
+  // Otherwise proxy the full URL (no token needed for external URLs)
+  return `${MEDIA_PROXY_URL}?url=${encodeURIComponent(input)}`;
 }
 
 /**
@@ -34,10 +41,27 @@ export function isImageUrl(url: string): boolean {
 }
 
 /**
+ * Check if a content type is an image
+ */
+export function isImageType(contentType: string): boolean {
+  if (!contentType) return false;
+  return contentType.toLowerCase().startsWith('image/');
+}
+
+/**
  * Extract image URLs from message content
  */
 export function extractImageUrls(content: string): string[] {
   const urlRegex = /(https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp|avif))/gi;
   const matches = content.match(urlRegex);
   return matches || [];
+}
+
+/**
+ * Get file icon based on file type
+ */
+export function getFileIcon(fileType: string): string {
+  if (isImageType(fileType)) return '🖼️';
+  if (fileType === 'application/pdf') return '📄';
+  return '📎';
 }
