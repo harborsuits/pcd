@@ -9,6 +9,7 @@ import { Loader2, FileText, MessageSquare, CreditCard, AlertCircle, Send, Home }
 import { toast } from "@/hooks/use-toast";
 
 interface PortalMessage {
+  id: string;
   content: string;
   sender_type: string;
   created_at: string;
@@ -45,11 +46,6 @@ interface PortalData {
   };
 }
 
-// Deduplication helper - creates a unique key for a message
-function getMessageKey(msg: PortalMessage): string {
-  return `${msg.created_at}|${msg.sender_type}|${msg.content}`;
-}
-
 export default function PortalPage() {
   const { token } = useParams<{ token: string }>();
   const [data, setData] = useState<PortalData | null>(null);
@@ -62,7 +58,7 @@ export default function PortalPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const originalTitle = useRef(document.title);
 
-  // Scroll to bottom when new messages arrive
+  // Scroll to bottom when new messages arrive (messages are oldest→newest)
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, []);
@@ -95,6 +91,7 @@ export default function PortalPage() {
         (payload) => {
           console.log("📨 New message received:", payload);
           const newMsg = payload.new as {
+            id: string;
             content: string;
             sender_type: string;
             created_at: string;
@@ -104,9 +101,8 @@ export default function PortalPage() {
           setData((prev) => {
             if (!prev) return prev;
 
-            // Deduplicate by checking if message already exists
-            const newKey = getMessageKey(newMsg);
-            const exists = prev.messages.some((m) => getMessageKey(m) === newKey);
+            // Deduplicate by id
+            const exists = prev.messages.some((m) => m.id === newMsg.id);
             if (exists) {
               console.log("⚠️ Duplicate message ignored");
               return prev;
@@ -129,16 +125,18 @@ export default function PortalPage() {
               markAdminMessagesAsRead(token);
             }
 
+            // Append to end (oldest→newest order)
             return {
               ...prev,
               messages: [
+                ...prev.messages,
                 {
+                  id: newMsg.id,
                   content: newMsg.content,
                   sender_type: newMsg.sender_type,
                   created_at: newMsg.created_at,
                   read_at: newMsg.read_at,
                 },
-                ...prev.messages,
               ],
             };
           });
@@ -188,16 +186,18 @@ export default function PortalPage() {
       }
 
       if (messagesBefore) {
-        // Append older messages using functional update to avoid stale closure
+        // Prepend older messages (they come in ascending order, so prepend to maintain oldest→newest)
         setData((prev) => {
           if (!prev) return response;
           return {
             ...response,
-            messages: [...prev.messages, ...response.messages],
+            messages: [...response.messages, ...prev.messages],
           };
         });
       } else {
         setData(response);
+        // Scroll to bottom after initial load
+        setTimeout(scrollToBottom, 100);
       }
     } catch (err) {
       console.error("Portal fetch exception:", err);
@@ -231,7 +231,8 @@ export default function PortalPage() {
 
   function handleLoadOlderMessages() {
     if (!token || !data || data.messages.length === 0) return;
-    const oldestMessage = data.messages[data.messages.length - 1];
+    // Oldest message is at the beginning (index 0)
+    const oldestMessage = data.messages[0];
     fetchPortalData(token, oldestMessage.created_at);
   }
 
@@ -268,21 +269,25 @@ export default function PortalPage() {
         description: "Your message has been delivered.",
       });
 
-      // Optimistically add message to the top of the list (newest first)
+      // Optimistically add message to end (oldest→newest)
       if (response?.message) {
         setData((prev) => {
           if (!prev) return prev;
           return {
             ...prev,
             messages: [
-              {
-                ...response.message,
-                read_at: null,
-              },
               ...prev.messages,
+              {
+                id: response.message.id,
+                content: response.message.content,
+                sender_type: response.message.sender_type,
+                created_at: response.message.created_at,
+                read_at: response.message.read_at,
+              },
             ],
           };
         });
+        setTimeout(scrollToBottom, 100);
       }
 
       setMessageContent("");
@@ -393,15 +398,28 @@ export default function PortalPage() {
                 </Button>
               </div>
 
-              {/* Messages List */}
+              {/* Messages List (oldest→newest, with load more at top) */}
               {data.messages.length === 0 ? (
                 <p className="text-muted-foreground text-center py-4">No messages yet</p>
               ) : (
                 <div className="space-y-4">
-                  <div ref={messagesEndRef} />
-                  {data.messages.map((msg, idx) => (
+                  {data.pagination.has_more_messages && (
+                    <Button
+                      variant="outline"
+                      className="w-full"
+                      onClick={handleLoadOlderMessages}
+                      disabled={loadingMore}
+                    >
+                      {loadingMore ? (
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      ) : null}
+                      Load older messages
+                    </Button>
+                  )}
+                  
+                  {data.messages.map((msg) => (
                     <div
-                      key={idx}
+                      key={msg.id}
                       className={`p-4 rounded-lg ${
                         msg.sender_type === "admin"
                           ? "bg-primary/10 border-l-4 border-primary"
@@ -420,19 +438,7 @@ export default function PortalPage() {
                     </div>
                   ))}
                   
-                  {data.pagination.has_more_messages && (
-                    <Button
-                      variant="outline"
-                      className="w-full"
-                      onClick={handleLoadOlderMessages}
-                      disabled={loadingMore}
-                    >
-                      {loadingMore ? (
-                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                      ) : null}
-                      Load older messages
-                    </Button>
-                  )}
+                  <div ref={messagesEndRef} />
                 </div>
               )}
             </CardContent>

@@ -125,7 +125,7 @@ async function handleSendMessage(req: Request, token: string): Promise<Response>
       );
     }
 
-    // Insert message
+    // Insert message - include id in response for deduplication
     const { data: message, error: insertError } = await supabase
       .from("messages")
       .insert({
@@ -134,7 +134,7 @@ async function handleSendMessage(req: Request, token: string): Promise<Response>
         sender_type: "client",
         content: content,
       })
-      .select("sender_type, content, created_at")
+      .select("id, sender_type, content, created_at, read_at")
       .single();
 
     if (insertError) {
@@ -151,9 +151,11 @@ async function handleSendMessage(req: Request, token: string): Promise<Response>
       JSON.stringify({
         ok: true,
         message: {
+          id: message.id,
           sender_type: message.sender_type,
           content: message.content,
           created_at: message.created_at,
+          read_at: message.read_at,
         },
       }),
       { status: 201, headers: { ...corsHeaders, "Content-Type": "application/json" } }

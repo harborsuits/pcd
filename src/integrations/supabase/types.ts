@@ -334,7 +334,19 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      admin_inbox_v1: {
+        Args: never
+        Returns: {
+          business_name: string
+          last_message_content: string
+          last_message_created_at: string
+          last_message_sender_type: string
+          project_id: string
+          project_token: string
+          status: string
+          unread_count: number
+        }[]
+      }
     }
     Enums: {
       project_status:
