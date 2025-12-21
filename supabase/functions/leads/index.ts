@@ -210,6 +210,8 @@ async function handleSearch(req: Request): Promise<Response> {
       place_id: string;
       business_name: string;
       phone: string | null;
+      phone_raw: string | null;
+      phone_e164: string | null;
       website: string | null;
       address: string | null;
       category: string | null;
@@ -221,8 +223,8 @@ async function handleSearch(req: Request): Promise<Response> {
 
     for (const place of allPlaces) {
       try {
-        // Get place details
-        const detailsUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${place.place_id}&fields=name,formatted_address,formatted_phone_number,website,geometry,types,business_status&key=${apiKey}`;
+        // Get place details - include international_phone_number for better phone data
+        const detailsUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${place.place_id}&fields=name,formatted_address,formatted_phone_number,international_phone_number,website,geometry,types,business_status&key=${apiKey}`;
         const detailsRes = await fetch(detailsUrl);
         const detailsData = await detailsRes.json();
 
@@ -232,9 +234,34 @@ async function handleSearch(req: Request): Promise<Response> {
         }
 
         const detail = detailsData.result;
+        
+        // Phone normalization logic
+        const phoneRaw = detail.international_phone_number || detail.formatted_phone_number || null;
+        let phoneE164: string | null = null;
+        
+        if (phoneRaw) {
+          // Try to normalize to E.164
+          const digitsOnly = phoneRaw.replace(/\D/g, "");
+          
+          if (phoneRaw.startsWith("+")) {
+            // Already has country code, strip spaces
+            phoneE164 = phoneRaw.replace(/\s+/g, "");
+          } else if (digitsOnly.length === 10) {
+            // US number assumption (10 digits)
+            phoneE164 = `+1${digitsOnly}`;
+          } else if (digitsOnly.length === 11 && digitsOnly.startsWith("1")) {
+            // US number with leading 1
+            phoneE164 = `+${digitsOnly}`;
+          }
+          // Otherwise phoneE164 stays null, we keep phone_raw
+        }
+        
+        // Best phone = E.164 if available, else raw
+        const bestPhone = phoneE164 || phoneRaw;
+        
         const { score, reasons } = computeLeadScore({
           website: detail.website,
-          phone: detail.formatted_phone_number,
+          phone: bestPhone,
           business_status: detail.business_status,
         });
 
@@ -251,7 +278,9 @@ async function handleSearch(req: Request): Promise<Response> {
             location_text: location,
             radius_m: radius_m,
             business_name: detail.name,
-            phone: detail.formatted_phone_number || null,
+            phone: bestPhone,
+            phone_raw: phoneRaw,
+            phone_e164: phoneE164,
             website: detail.website || null,
             address: detail.formatted_address || null,
             category: category,
@@ -260,7 +289,7 @@ async function handleSearch(req: Request): Promise<Response> {
             lead_score: score,
             lead_reasons: reasons,
           }, { onConflict: "place_id" })
-          .select("id, place_id, business_name, phone, website, address, category, lat, lng, lead_score, lead_reasons")
+          .select("id, place_id, business_name, phone, phone_raw, phone_e164, website, address, category, lat, lng, lead_score, lead_reasons")
           .single();
 
         if (upsertError) {
@@ -327,6 +356,7 @@ async function handleListLeads(req: Request): Promise<Response> {
   try {
     const url = new URL(req.url);
     const noWebsiteOnly = url.searchParams.get("no_website") === "true";
+    const phoneMissing = url.searchParams.get("phone_missing") === "true";
     const minScore = parseInt(url.searchParams.get("min_score") || "0", 10);
     const limit = parseInt(url.searchParams.get("limit") || "100", 10);
     const offset = parseInt(url.searchParams.get("offset") || "0", 10);
@@ -335,13 +365,17 @@ async function handleListLeads(req: Request): Promise<Response> {
 
     let query = supabase
       .from("leads")
-      .select("id, place_id, business_name, phone, website, address, category, lat, lng, lead_score, lead_reasons, demo_status, outreach_status, created_at")
+      .select("id, place_id, business_name, phone, phone_raw, phone_e164, website, address, category, lat, lng, lead_score, lead_reasons, demo_status, demo_url, industry_template, outreach_status, created_at")
       .gte("lead_score", minScore)
       .order("lead_score", { ascending: false })
       .range(offset, offset + limit - 1);
 
     if (noWebsiteOnly) {
       query = query.is("website", null);
+    }
+
+    if (phoneMissing) {
+      query = query.is("phone", null);
     }
 
     const { data: leads, error } = await query;
@@ -525,6 +559,10 @@ async function handleGenerateDemo(req: Request, leadId: string): Promise<Respons
 
     let projectId = lead.demo_project_id;
     let projectToken = lead.demo_token;
+    
+    // Use best available phone
+    const bestPhone = lead.phone_e164 || lead.phone_raw || lead.phone;
+    const phoneForTel = bestPhone?.replace(/\s+/g, "") || null;
 
     // Create or reuse project
     if (!projectId) {
@@ -536,7 +574,7 @@ async function handleGenerateDemo(req: Request, leadId: string): Promise<Respons
           business_name: lead.business_name,
           business_slug: businessSlug,
           project_token: projectToken,
-          contact_phone: lead.phone,
+          contact_phone: bestPhone,
           website: lead.website,
           address: lead.address,
           city: cityName,
@@ -577,12 +615,12 @@ async function handleGenerateDemo(req: Request, leadId: string): Promise<Respons
       },
       business: {
         name: lead.business_name,
-        phone: lead.phone,
+        phone: bestPhone,
         address: lead.address,
         website: lead.website,
       },
       cta: {
-        primary: lead.phone ? { label: "Call Now", action: `tel:${lead.phone}` } : null,
+        primary: phoneForTel ? { label: "Call Now", action: `tel:${phoneForTel}` } : null,
         secondary: { label: "Request Quote", action: "#quote" },
         tertiary: lead.address ? { label: "Get Directions", action: `https://maps.google.com/?q=${encodeURIComponent(lead.address)}` } : null,
       },

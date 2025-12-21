@@ -225,6 +225,8 @@ export type Database = {
           location_text: string | null
           outreach_status: string | null
           phone: string | null
+          phone_e164: string | null
+          phone_raw: string | null
           place_id: string
           query_term: string | null
           radius_m: number | null
@@ -251,6 +253,8 @@ export type Database = {
           location_text?: string | null
           outreach_status?: string | null
           phone?: string | null
+          phone_e164?: string | null
+          phone_raw?: string | null
           place_id: string
           query_term?: string | null
           radius_m?: number | null
@@ -277,6 +281,8 @@ export type Database = {
           location_text?: string | null
           outreach_status?: string | null
           phone?: string | null
+          phone_e164?: string | null
+          phone_raw?: string | null
           place_id?: string
           query_term?: string | null
           radius_m?: number | null

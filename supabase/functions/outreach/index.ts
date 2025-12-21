@@ -115,10 +115,10 @@ async function handleQueue(req: Request): Promise<Response> {
     const suppressedPhones = new Set((suppressions || []).map((s) => s.phone));
 
     for (const leadId of lead_ids) {
-      // Fetch lead
+      // Fetch lead with phone fields
       const { data: lead, error: leadError } = await supabase
         .from("leads")
-        .select("id, business_name, phone, demo_url, outreach_status")
+        .select("id, business_name, phone, phone_raw, phone_e164, demo_url, outreach_status")
         .eq("id", leadId)
         .single();
 
@@ -128,6 +128,9 @@ async function handleQueue(req: Request): Promise<Response> {
         continue;
       }
 
+      // Use best available phone (prefer E.164)
+      const bestPhone = lead.phone_e164 || lead.phone_raw || lead.phone;
+
       // Check skip conditions
       if (["skip", "opted_out", "queued", "sent"].includes(lead.outreach_status || "")) {
         skippedReasons["already_processed"] = (skippedReasons["already_processed"] || 0) + 1;
@@ -135,7 +138,7 @@ async function handleQueue(req: Request): Promise<Response> {
         continue;
       }
 
-      if (!lead.phone) {
+      if (!bestPhone) {
         skippedReasons["no_phone"] = (skippedReasons["no_phone"] || 0) + 1;
         skipped++;
         continue;
@@ -147,7 +150,8 @@ async function handleQueue(req: Request): Promise<Response> {
         continue;
       }
 
-      if (suppressedPhones.has(lead.phone)) {
+      // Check suppression with best phone (prefer E.164 for consistency)
+      if (suppressedPhones.has(bestPhone) || (lead.phone_e164 && suppressedPhones.has(lead.phone_e164))) {
         skippedReasons["suppressed"] = (skippedReasons["suppressed"] || 0) + 1;
         skipped++;
         continue;
