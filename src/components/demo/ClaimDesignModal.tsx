@@ -36,7 +36,7 @@ export function ClaimDesignModal({ open, onOpenChange, businessName, projectToke
 
     try {
       const baseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+      const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
       const res = await fetch(`${baseUrl}/functions/v1/demo/claim`, {
         method: "POST",
