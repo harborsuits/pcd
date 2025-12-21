@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
+import GetDemo from "./pages/GetDemo";
 import NotFound from "./pages/NotFound";
 import DemoPage from "./pages/demo/DemoPage";
 import PortalPage from "./pages/portal/PortalPage";
@@ -25,6 +26,7 @@ const App = () => (
         <Routes>
           {/* Marketing / Landing */}
           <Route path="/" element={<Index />} />
+          <Route path="/get-demo" element={<GetDemo />} />
 
           {/* Public Token Routes */}
           <Route path="/d/:token/:slug" element={<DemoPage />} />
