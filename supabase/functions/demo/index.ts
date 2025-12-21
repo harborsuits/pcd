@@ -115,12 +115,12 @@ Deno.serve(async (req) => {
     // Try to fetch enriched lead data if available
     const { data: lead } = await supabase
       .from("leads")
-      .select("lead_reasons, industry_template, category, phone")
+      .select("lead_enriched, industry_template, category, phone")
       .eq("demo_project_id", project.id)
       .maybeSingle();
 
-    // Extract enriched data from lead_reasons
-    const enrichedData = lead?.lead_reasons as Record<string, unknown> || {};
+    // Extract enriched data from lead_enriched (object, not array)
+    const enrichedData = lead?.lead_enriched as Record<string, unknown> || {};
     
     // Merge demo content with enriched data
     const mergedContent = {
@@ -133,7 +133,6 @@ Deno.serve(async (req) => {
       reviewCount: enrichedData.review_count || null,
       photoReferences: enrichedData.photo_references || [],
       nearbyTowns: enrichedData.neighborhood ? [enrichedData.neighborhood] : [],
-      googleTypes: enrichedData.google_types || [],
     };
 
     // Clean response - no internal IDs exposed
