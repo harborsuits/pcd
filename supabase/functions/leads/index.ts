@@ -458,12 +458,14 @@ async function handleSearchAndGenerate(req: Request): Promise<Response> {
     const results: Array<{
       lead_id: string;
       business_name: string;
+      phone_e164: string | null;
       demo_url: string | null;
       status: string;
     }> = [];
     
     let noWebsiteCount = 0;
     let demosCreated = 0;
+    let queuedCount = 0;
 
     // Step 3: Process each place - get details, filter, enrich, generate
     for (const place of allPlaces) {
@@ -588,6 +590,7 @@ async function handleSearchAndGenerate(req: Request): Promise<Response> {
           results.push({
             lead_id: lead.id,
             business_name: detail.name,
+            phone_e164: phoneE164,
             demo_url: lead.demo_url,
             status: "existing",
           });
@@ -690,12 +693,14 @@ async function handleSearchAndGenerate(req: Request): Promise<Response> {
               status: "queued",
               message: null, // Will be populated by sender
             });
+          queuedCount++;
         }
 
         demosCreated++;
         results.push({
           lead_id: lead.id,
           business_name: detail.name,
+          phone_e164: phoneE164,
           demo_url: demoUrl,
           status: "created",
         });
@@ -735,6 +740,7 @@ async function handleSearchAndGenerate(req: Request): Promise<Response> {
         total_found: allPlaces.length,
         no_website_count: noWebsiteCount,
         demos_created: demosCreated,
+        queued_count: queuedCount,
         results,
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }

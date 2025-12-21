@@ -9,10 +9,12 @@ import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Search, Globe, Phone, MapPin, ExternalLink, SkipForward, Loader2, AlertCircle, Sparkles, Send, RefreshCw, Rocket } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Search, Globe, Phone, MapPin, ExternalLink, SkipForward, Loader2, AlertCircle, Sparkles, Send, RefreshCw, Rocket, Copy, Check } from "lucide-react";
 import { toast } from "sonner";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const PUBLIC_BASE_URL = import.meta.env.VITE_PUBLIC_BASE_URL || window.location.origin;
 
 interface Lead {
   id: string;
@@ -53,9 +55,11 @@ interface SearchAndGenerateResult {
   total_found: number;
   no_website_count: number;
   demos_created: number;
+  queued_count: number;
   results: Array<{
     lead_id: string;
     business_name: string;
+    phone_e164: string | null;
     demo_url: string | null;
     status: string;
   }>;
@@ -70,8 +74,13 @@ export default function AdminLeads() {
   const [location, setLocation] = useState("");
   const [radius, setRadius] = useState("24140");
   const [maxDemos, setMaxDemos] = useState("20");
+  const [autoQueueOutreach, setAutoQueueOutreach] = useState(true);
   const [noWebsiteOnly, setNoWebsiteOnly] = useState(false);
   const [phoneMissing, setPhoneMissing] = useState(false);
+  
+  // Pipeline results modal
+  const [pipelineResults, setPipelineResults] = useState<SearchAndGenerateResult | null>(null);
+  const [copiedCsv, setCopiedCsv] = useState(false);
   
   // Selection state for bulk actions
   const [selectedLeads, setSelectedLeads] = useState<Set<string>>(new Set());
@@ -165,7 +174,7 @@ export default function AdminLeads() {
           location,
           radius_m: parseInt(radius, 10),
           max_demos: parseInt(maxDemos, 10),
-          queue_outreach: false,
+          queue_outreach: autoQueueOutreach,
         }),
       });
 
@@ -183,8 +192,9 @@ export default function AdminLeads() {
     },
     onSuccess: (data) => {
       toast.success(
-        `Found ${data.total_found} places → ${data.no_website_count} without websites → ${data.demos_created} demos created`
+        `Created ${data.demos_created} demos${data.queued_count ? `, queued ${data.queued_count} for outreach` : ""}`
       );
+      setPipelineResults(data);
       queryClient.invalidateQueries({ queryKey: ["leads"] });
     },
     onError: (error: Error) => {
@@ -434,36 +444,48 @@ export default function AdminLeads() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex items-end gap-2">
-              <Button
-                onClick={() => searchMutation.mutate()}
-                disabled={!query || !location || searchMutation.isPending || searchAndGenerateMutation.isPending}
-                variant="outline"
-                className="flex-1"
-              >
-                {searchMutation.isPending ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Search className="h-4 w-4" />
-                )}
-              </Button>
-              <Button
-                onClick={() => searchAndGenerateMutation.mutate()}
-                disabled={!query || !location || searchMutation.isPending || searchAndGenerateMutation.isPending}
-                className="flex-1"
-              >
-                {searchAndGenerateMutation.isPending ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Running...
-                  </>
-                ) : (
-                  <>
-                    <Rocket className="h-4 w-4 mr-2" />
-                    Find & Generate
-                  </>
-                )}
-              </Button>
+            <div className="flex flex-col gap-2">
+              <div className="flex items-end gap-2">
+                <Button
+                  onClick={() => searchMutation.mutate()}
+                  disabled={!query || !location || searchMutation.isPending || searchAndGenerateMutation.isPending}
+                  variant="outline"
+                  className="flex-1"
+                >
+                  {searchMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Search className="h-4 w-4" />
+                  )}
+                </Button>
+                <Button
+                  onClick={() => searchAndGenerateMutation.mutate()}
+                  disabled={!query || !location || searchMutation.isPending || searchAndGenerateMutation.isPending}
+                  className="flex-1"
+                >
+                  {searchAndGenerateMutation.isPending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Running...
+                    </>
+                  ) : (
+                    <>
+                      <Rocket className="h-4 w-4 mr-2" />
+                      Find & Generate
+                    </>
+                  )}
+                </Button>
+              </div>
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="autoQueue"
+                  checked={autoQueueOutreach}
+                  onCheckedChange={(checked) => setAutoQueueOutreach(!!checked)}
+                />
+                <Label htmlFor="autoQueue" className="text-xs text-muted-foreground cursor-pointer">
+                  Auto-queue SMS outreach
+                </Label>
+              </div>
             </div>
           </div>
           <p className="text-xs text-muted-foreground mt-3">
@@ -471,6 +493,104 @@ export default function AdminLeads() {
           </p>
         </CardContent>
       </Card>
+
+      {/* Pipeline Results Modal */}
+      <Dialog open={!!pipelineResults} onOpenChange={(open) => !open && setPipelineResults(null)}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-auto">
+          <DialogHeader>
+            <DialogTitle>Pipeline Results</DialogTitle>
+            <DialogDescription>
+              {pipelineResults?.demos_created} demos created from {pipelineResults?.total_found} places found
+            </DialogDescription>
+          </DialogHeader>
+          
+          {pipelineResults && (
+            <div className="space-y-4">
+              {/* Stats */}
+              <div className="grid grid-cols-4 gap-4">
+                <div className="text-center p-3 bg-muted rounded-lg">
+                  <div className="text-2xl font-bold">{pipelineResults.total_found}</div>
+                  <div className="text-xs text-muted-foreground">Total Found</div>
+                </div>
+                <div className="text-center p-3 bg-muted rounded-lg">
+                  <div className="text-2xl font-bold">{pipelineResults.no_website_count}</div>
+                  <div className="text-xs text-muted-foreground">No Website</div>
+                </div>
+                <div className="text-center p-3 bg-muted rounded-lg">
+                  <div className="text-2xl font-bold text-green-600">{pipelineResults.demos_created}</div>
+                  <div className="text-xs text-muted-foreground">Demos Created</div>
+                </div>
+                <div className="text-center p-3 bg-muted rounded-lg">
+                  <div className="text-2xl font-bold text-blue-600">{pipelineResults.queued_count || 0}</div>
+                  <div className="text-xs text-muted-foreground">Queued for SMS</div>
+                </div>
+              </div>
+
+              {/* CSV Export */}
+              <div className="flex justify-end">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const csvHeader = "Business Name,Phone,Demo URL\n";
+                    const csvRows = pipelineResults.results
+                      .filter(r => r.demo_url)
+                      .map(r => `"${r.business_name}","${r.phone_e164 || ""}","${PUBLIC_BASE_URL}${r.demo_url}"`)
+                      .join("\n");
+                    navigator.clipboard.writeText(csvHeader + csvRows);
+                    setCopiedCsv(true);
+                    setTimeout(() => setCopiedCsv(false), 2000);
+                    toast.success("CSV copied to clipboard");
+                  }}
+                >
+                  {copiedCsv ? <Check className="h-4 w-4 mr-1" /> : <Copy className="h-4 w-4 mr-1" />}
+                  Copy CSV
+                </Button>
+              </div>
+
+              {/* Results list */}
+              <div className="border rounded-lg overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Business</TableHead>
+                      <TableHead>Phone</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="w-24">Demo</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {pipelineResults.results.map((result) => (
+                      <TableRow key={result.lead_id}>
+                        <TableCell className="font-medium">{result.business_name}</TableCell>
+                        <TableCell className="text-sm text-muted-foreground">{result.phone_e164 || "—"}</TableCell>
+                        <TableCell>
+                          <Badge variant={result.status === "created" ? "default" : "secondary"}>
+                            {result.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {result.demo_url && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              asChild
+                            >
+                              <a href={result.demo_url} target="_blank" rel="noopener noreferrer">
+                                <ExternalLink className="h-4 w-4" />
+                              </a>
+                            </Button>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Filters & Bulk Actions */}
       <div className="flex items-center justify-between gap-4 flex-wrap">
@@ -554,8 +674,7 @@ export default function AdminLeads() {
                   <TableHead>Business</TableHead>
                   <TableHead>Phone</TableHead>
                   <TableHead>Website</TableHead>
-                  <TableHead>Demo</TableHead>
-                  <TableHead className="w-28">Actions</TableHead>
+                  <TableHead className="w-40">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -626,48 +745,23 @@ export default function AdminLeads() {
                       )}
                     </TableCell>
                     <TableCell>
-                      {lead.demo_status === "created" && lead.demo_url ? (
-                        <a
-                          href={lead.demo_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-1 text-sm hover:underline text-green-600"
-                        >
-                          View Demo
-                          <ExternalLink className="h-3 w-3" />
-                        </a>
-                      ) : lead.demo_status === "failed" ? (
-                        <Badge variant="destructive" className="text-xs">Failed</Badge>
-                      ) : (
-                        <span className="text-muted-foreground text-sm">—</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
                       <div className="flex items-center gap-1">
-                        {/* Enrich button - show if place_id exists and not enriched */}
-                        {lead.place_id && !lead.lead_enriched?.google_enriched && (
+                        {/* Primary action: Open Demo button - always visible when demo exists */}
+                        {lead.demo_status === "created" && lead.demo_url ? (
                           <Button
                             size="sm"
-                            variant="outline"
-                            onClick={() => enrichMutation.mutate(lead.id)}
-                            disabled={enrichMutation.isPending}
-                            title="Enrich from Google"
-                            className="text-blue-600 border-blue-200 hover:bg-blue-50"
+                            variant="default"
+                            asChild
+                            className="bg-green-600 hover:bg-green-700"
                           >
-                            {enrichMutation.isPending ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <RefreshCw className="h-4 w-4" />
-                            )}
+                            <a href={lead.demo_url} target="_blank" rel="noopener noreferrer">
+                              <ExternalLink className="h-4 w-4 mr-1" />
+                              Open Demo
+                            </a>
                           </Button>
-                        )}
-                        {/* Show enriched indicator */}
-                        {lead.lead_enriched?.google_enriched && (
-                          <Badge variant="outline" className="text-xs text-green-600 border-green-200">
-                            ★{(lead.lead_enriched.rating as number)?.toFixed(1) || "—"}
-                          </Badge>
-                        )}
-                        {lead.demo_status !== "created" && (
+                        ) : lead.demo_status === "failed" ? (
+                          <Badge variant="destructive" className="text-xs">Failed</Badge>
+                        ) : (
                           <Button
                             size="sm"
                             variant="outline"
@@ -678,9 +772,34 @@ export default function AdminLeads() {
                             {generateDemoMutation.isPending ? (
                               <Loader2 className="h-4 w-4 animate-spin" />
                             ) : (
-                              <Sparkles className="h-4 w-4" />
+                              <>
+                                <Sparkles className="h-4 w-4 mr-1" />
+                                Create
+                              </>
                             )}
                           </Button>
+                        )}
+                        
+                        {/* Secondary actions */}
+                        {lead.place_id && !lead.lead_enriched?.google_enriched && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => enrichMutation.mutate(lead.id)}
+                            disabled={enrichMutation.isPending}
+                            title="Enrich from Google"
+                          >
+                            {enrichMutation.isPending ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <RefreshCw className="h-4 w-4" />
+                            )}
+                          </Button>
+                        )}
+                        {lead.lead_enriched?.google_enriched && (
+                          <Badge variant="outline" className="text-xs text-green-600 border-green-200">
+                            ★{(lead.lead_enriched.rating as number)?.toFixed(1) || "—"}
+                          </Badge>
                         )}
                         <Button
                           size="sm"
