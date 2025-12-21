@@ -90,6 +90,23 @@ function inferIndustryTemplate(types: string[] | undefined, category: string | u
   return "default";
 }
 
+// Normalize phone to E.164 format
+function normalizeToE164(phone: string | undefined): string | null {
+  if (!phone) return null;
+  // Remove all non-digit characters except leading +
+  let cleaned = phone.replace(/[^\d+]/g, "");
+  // Ensure it starts with +
+  if (!cleaned.startsWith("+")) {
+    // Assume US if 10 digits
+    if (cleaned.length === 10) {
+      cleaned = "+1" + cleaned;
+    } else if (cleaned.length === 11 && cleaned.startsWith("1")) {
+      cleaned = "+" + cleaned;
+    }
+  }
+  return cleaned || null;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -103,6 +120,17 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // Admin auth check
+    const adminKey = Deno.env.get("ADMIN_KEY");
+    const providedKey = req.headers.get("x-admin-key");
+    
+    if (!adminKey || providedKey !== adminKey) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const { lead_id } = await req.json();
     
     if (!lead_id) {
@@ -179,33 +207,32 @@ Deno.serve(async (req) => {
       .slice(0, 6)
       .map(p => p.photo_reference);
 
-    // Build enriched data
+    // Build enriched data object (separate from lead_reasons array)
+    const enrichedMeta = {
+      google_enriched: true,
+      google_enriched_at: new Date().toISOString(),
+      rating: place.rating,
+      review_count: place.user_ratings_total,
+      city: addressParts.city,
+      state: addressParts.state,
+      zip: addressParts.zip,
+      neighborhood: addressParts.neighborhood,
+      photo_references: photoReferences,
+      business_status: place.business_status,
+    };
+
     const enrichedData = {
       // Update lead fields
       business_name: place.name || lead.business_name,
       address: place.formatted_address || lead.address,
       phone: place.formatted_phone_number || lead.phone,
-      phone_e164: place.international_phone_number || lead.phone_e164,
+      phone_e164: normalizeToE164(place.international_phone_number) || lead.phone_e164,
       website: place.website || lead.website,
       lat: place.geometry?.location.lat || lead.lat,
       lng: place.geometry?.location.lng || lead.lng,
       industry_template: industryTemplate,
-      // Store enriched data in lead_reasons (jsonb) for now
-      lead_reasons: {
-        ...(lead.lead_reasons || {}),
-        google_enriched: true,
-        google_enriched_at: new Date().toISOString(),
-        rating: place.rating,
-        review_count: place.user_ratings_total,
-        city: addressParts.city,
-        state: addressParts.state,
-        zip: addressParts.zip,
-        neighborhood: addressParts.neighborhood,
-        photo_references: photoReferences,
-        google_types: place.types,
-        business_status: place.business_status,
-        opening_hours: place.opening_hours?.weekday_text,
-      },
+      // Store enriched data separately - lead_reasons stays as array for scoring
+      lead_enriched: enrichedMeta,
     };
 
     // Update lead record

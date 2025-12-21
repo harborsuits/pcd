@@ -219,6 +219,7 @@ export type Database = {
           id: string
           industry_template: string | null
           lat: number | null
+          lead_enriched: Json | null
           lead_reasons: Json | null
           lead_score: number | null
           lng: number | null
@@ -247,6 +248,7 @@ export type Database = {
           id?: string
           industry_template?: string | null
           lat?: number | null
+          lead_enriched?: Json | null
           lead_reasons?: Json | null
           lead_score?: number | null
           lng?: number | null
@@ -275,6 +277,7 @@ export type Database = {
           id?: string
           industry_template?: string | null
           lat?: number | null
+          lead_enriched?: Json | null
           lead_reasons?: Json | null
           lead_score?: number | null
           lng?: number | null
