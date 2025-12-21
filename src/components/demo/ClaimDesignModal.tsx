@@ -87,7 +87,7 @@ export function ClaimDesignModal({ open, onOpenChange, businessName, projectToke
         body: JSON.stringify({
           project_token: projectToken,
           name: formData.name.trim(),
-          phone: formData.phone.trim(),
+          phone: normalizePhone(formData.phone.trim()),
           email: formData.email.trim(),
           notes: formData.notes.trim(),
         }),
