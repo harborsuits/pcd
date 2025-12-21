@@ -62,7 +62,7 @@ Deno.serve(async (req) => {
     // Build project query
     let projectQuery = supabase
       .from("projects")
-      .select("id, business_name, business_slug, status, project_token")
+      .select("id, business_name, business_slug, status, project_token, city, state, address, website, contact_phone")
       .eq("project_token", token)
       .is("deleted_at", null);
 
@@ -112,6 +112,30 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Try to fetch enriched lead data if available
+    const { data: lead } = await supabase
+      .from("leads")
+      .select("lead_reasons, industry_template, category, phone")
+      .eq("demo_project_id", project.id)
+      .maybeSingle();
+
+    // Extract enriched data from lead_reasons
+    const enrichedData = lead?.lead_reasons as Record<string, unknown> || {};
+    
+    // Merge demo content with enriched data
+    const mergedContent = {
+      ...(demo.content as Record<string, unknown>),
+      // Add enriched fields (prefer demo content if explicitly set)
+      city: (demo.content as Record<string, unknown>).city || project.city || enrichedData.city,
+      state: (demo.content as Record<string, unknown>).state || project.state || enrichedData.state,
+      phone: (demo.content as Record<string, unknown>).phone || project.contact_phone || lead?.phone,
+      rating: enrichedData.rating || null,
+      reviewCount: enrichedData.review_count || null,
+      photoReferences: enrichedData.photo_references || [],
+      nearbyTowns: enrichedData.neighborhood ? [enrichedData.neighborhood] : [],
+      googleTypes: enrichedData.google_types || [],
+    };
+
     // Clean response - no internal IDs exposed
     const response = {
       business: {
@@ -119,8 +143,8 @@ Deno.serve(async (req) => {
         slug: project.business_slug,
       },
       demo: {
-        template_type: demo.template_type,
-        content: demo.content,
+        template_type: lead?.industry_template || demo.template_type,
+        content: mergedContent,
       },
     };
 

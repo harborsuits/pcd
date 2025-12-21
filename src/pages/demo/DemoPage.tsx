@@ -209,6 +209,7 @@ function DemoRenderer({
   const initials = getInitials(businessName);
   const locationString = state ? `${city}, ${state}` : city;
   const nearbyTowns = (content.nearbyTowns as string[]) || [];
+  const photoReferences = (content.photoReferences as string[]) || [];
 
   return (
     <div className="pb-32">
@@ -328,6 +329,7 @@ function DemoRenderer({
       <WorkGallery 
         templateType={templateType} 
         businessName={businessName}
+        photoReferences={photoReferences}
       />
 
       {/* Reviews Preview */}
