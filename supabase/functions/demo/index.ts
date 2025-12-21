@@ -16,13 +16,119 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  if (req.method !== "GET") {
-    return new Response(
-      JSON.stringify({ error: "Method not allowed" }),
-      { status: 405, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+  const url = new URL(req.url);
+  const pathParts = url.pathname.split("/").filter(Boolean);
+  const demoIdx = pathParts.lastIndexOf("demo");
+  const subPath = demoIdx >= 0 ? pathParts.slice(demoIdx + 1).join("/") : "";
+
+  // Route: POST /demo/claim
+  if (subPath === "claim" && req.method === "POST") {
+    return handleClaim(req);
   }
 
+  // Route: GET /demo/:token (existing)
+  if (req.method === "GET") {
+    return handleGetDemo(req);
+  }
+
+  return new Response(
+    JSON.stringify({ error: "Method not allowed" }),
+    { status: 405, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+  );
+});
+
+// POST /demo/claim - Handle claim submissions
+async function handleClaim(req: Request): Promise<Response> {
+  try {
+    const body = await req.json();
+    const { project_token, name, phone, email, notes } = body;
+
+    if (!project_token || (!phone && !email)) {
+      return new Response(
+        JSON.stringify({ error: "project_token and at least phone or email required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (!isValidToken(project_token)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid token" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Find the project
+    const { data: project, error: projectError } = await supabase
+      .from("projects")
+      .select("id, business_name")
+      .eq("project_token", project_token)
+      .is("deleted_at", null)
+      .maybeSingle();
+
+    if (projectError || !project) {
+      console.error("Project not found for claim:", project_token);
+      return new Response(
+        JSON.stringify({ error: "Project not found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Find associated lead
+    const { data: lead } = await supabase
+      .from("leads")
+      .select("id")
+      .eq("demo_project_id", project.id)
+      .maybeSingle();
+
+    // Record the claim as a lead outreach event (inbound)
+    if (lead) {
+      await supabase.from("lead_outreach_events").insert({
+        lead_id: lead.id,
+        channel: "web",
+        status: "claimed",
+        message: JSON.stringify({ name, phone, email, notes }),
+      });
+
+      // Update lead status
+      await supabase
+        .from("leads")
+        .update({ outreach_status: "replied" })
+        .eq("id", lead.id);
+    }
+
+    // Also update project status to interested
+    await supabase
+      .from("projects")
+      .update({ 
+        status: "interested",
+        contact_name: name || null,
+        contact_phone: phone || null,
+        contact_email: email || null,
+        notes: notes || null,
+      })
+      .eq("id", project.id);
+
+    console.log(`Claim received for ${project.business_name}`);
+
+    return new Response(
+      JSON.stringify({ ok: true }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  } catch (error) {
+    console.error("Claim error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+}
+
+// GET /demo/:token - Existing demo fetch logic
+async function handleGetDemo(req: Request): Promise<Response> {
   try {
     // Extract token from URL path: /demo/:token or /functions/v1/demo/:token
     const url = new URL(req.url);
@@ -35,7 +141,7 @@ Deno.serve(async (req) => {
       : pathParts[pathParts.length - 1];
     const slugParam = url.searchParams.get("slug");
 
-    if (!token || token === "demo") {
+    if (!token || token === "demo" || token === "claim") {
       console.log("Missing token in request");
       return new Response(
         JSON.stringify({ error: "Token required" }),
@@ -135,12 +241,13 @@ Deno.serve(async (req) => {
       nearbyTowns: enrichedData.neighborhood ? [enrichedData.neighborhood] : [],
     };
 
-    // Clean response - no internal IDs exposed
+    // Clean response - no internal IDs exposed, but include token for claim
     const response = {
       business: {
         name: project.business_name,
         slug: project.business_slug,
       },
+      project_token: project.project_token,
       demo: {
         template_type: lead?.industry_template || demo.template_type,
         content: mergedContent,
@@ -161,4 +268,4 @@ Deno.serve(async (req) => {
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
-});
+}

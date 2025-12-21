@@ -4,6 +4,7 @@ import { MapPin, Clock, Shield, Star, Phone } from "lucide-react";
 import { themes, ThemeId, industryImages, getInitials } from "@/components/demo/themes";
 import { ThemeSwitcher } from "@/components/demo/ThemeSwitcher";
 import { QuoteModal } from "@/components/demo/QuoteModal";
+import { ClaimDesignModal } from "@/components/demo/ClaimDesignModal";
 import { ServiceAreaBlock } from "@/components/demo/ServiceAreaBlock";
 import { ReviewsPreview } from "@/components/demo/ReviewsPreview";
 import { WorkGallery } from "@/components/demo/WorkGallery";
@@ -14,6 +15,7 @@ interface DemoData {
     name: string;
     slug: string;
   };
+  project_token: string;
   demo: {
     template_type: string;
     content: Record<string, unknown>;
@@ -29,6 +31,7 @@ export default function DemoPage() {
   const [data, setData] = useState<DemoData | null>(null);
   const [errorMessage, setErrorMessage] = useState<string>("");
   const [quoteOpen, setQuoteOpen] = useState(false);
+  const [claimOpen, setClaimOpen] = useState(false);
   
   const themeParam = searchParams.get("style") as ThemeId | null;
   const currentTheme = themeParam && themes[themeParam] ? themeParam : "classic";
@@ -160,25 +163,41 @@ export default function DemoPage() {
         businessName={data.business.name}
       />
 
+      <ClaimDesignModal
+        open={claimOpen}
+        onOpenChange={setClaimOpen}
+        businessName={data.business.name}
+        projectToken={data.project_token}
+      />
+
       {/* Sticky Mobile CTA */}
       <StickyMobileCTA 
         phone={(data.demo.content as Record<string, unknown>).phone as string | undefined}
         onQuoteClick={() => setQuoteOpen(true)}
+        onClaimClick={() => setClaimOpen(true)}
       />
 
       {/* Desktop Footer - hidden on mobile since we have sticky CTA */}
       <footer className="hidden sm:block fixed bottom-0 left-0 right-0 border-t border-border bg-card/95 backdrop-blur-sm p-4 shadow-lg">
         <div className="container mx-auto flex items-center justify-between gap-3">
           <div className="text-sm text-muted-foreground">
-            <p className="font-medium text-foreground">Interested in using this site?</p>
-            <p>We handle setup & hosting. No obligation to proceed.</p>
+            <p className="font-medium text-foreground">Want this site live under your domain?</p>
+            <p>We handle setup, hosting, everything. No obligation.</p>
           </div>
-          <button 
-            onClick={() => setQuoteOpen(true)}
-            className="bg-primary text-primary-foreground px-6 py-2 rounded-md font-medium hover:bg-primary/90 transition-colors whitespace-nowrap"
-          >
-            Talk About Using This Site
-          </button>
+          <div className="flex gap-3">
+            <button 
+              onClick={() => setQuoteOpen(true)}
+              className="bg-secondary text-secondary-foreground px-5 py-2 rounded-md font-medium hover:bg-secondary/80 transition-colors whitespace-nowrap"
+            >
+              Get a Quote
+            </button>
+            <button 
+              onClick={() => setClaimOpen(true)}
+              className="bg-primary text-primary-foreground px-6 py-2 rounded-md font-medium hover:bg-primary/90 transition-colors whitespace-nowrap"
+            >
+              Claim This Design
+            </button>
+          </div>
         </div>
       </footer>
     </div>
