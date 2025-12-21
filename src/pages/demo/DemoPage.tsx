@@ -124,7 +124,17 @@ export default function DemoPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Demo Content - Full width, no debug header */}
+      {/* Preview Explanation Strip */}
+      <div className="bg-muted border-b border-border">
+        <div className="container mx-auto px-4 py-3 text-center">
+          <p className="text-sm text-muted-foreground">
+            This is a preview website built specifically for <span className="font-medium text-foreground">{data.business.name}</span>.
+            <span className="hidden sm:inline"> You are not committed to anything.</span>
+          </p>
+        </div>
+      </div>
+
+      {/* Demo Content */}
       <main className="container mx-auto px-4 py-8">
         <DemoRenderer 
           templateType={data.demo.template_type} 
@@ -133,14 +143,15 @@ export default function DemoPage() {
         />
       </main>
 
-      {/* Ownership CTA Footer */}
+      {/* Soft Next Steps Footer */}
       <footer className="fixed bottom-0 left-0 right-0 border-t border-border bg-card p-4 shadow-lg">
-        <div className="container mx-auto flex items-center justify-between">
-          <p className="text-sm text-muted-foreground">
-            This could be your live website in 24 hours.
-          </p>
-          <button className="bg-primary text-primary-foreground px-6 py-2 rounded-md font-medium hover:bg-primary/90 transition-colors">
-            Claim This Design
+        <div className="container mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div className="text-sm text-muted-foreground text-center sm:text-left">
+            <p className="font-medium text-foreground">Interested in using this site?</p>
+            <p className="hidden sm:block">We handle setup & hosting. No obligation to proceed.</p>
+          </div>
+          <button className="bg-primary text-primary-foreground px-6 py-2 rounded-md font-medium hover:bg-primary/90 transition-colors whitespace-nowrap">
+            Talk About Using This Site
           </button>
         </div>
       </footer>
@@ -165,7 +176,7 @@ function DemoRenderer({
   const tagline = (content.tagline as string) || getDefaultTagline(templateType, city);
 
   return (
-    <div className="space-y-16 pb-24">
+    <div className="space-y-16 pb-32">
       {/* Hero Section */}
       <section className="text-center py-12">
         <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
@@ -176,7 +187,7 @@ function DemoRenderer({
         </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <button className="bg-primary text-primary-foreground px-8 py-3 rounded-md font-semibold hover:bg-primary/90 transition-colors text-lg">
-            Request a Quote
+            See How This Could Be Your Website
           </button>
           {phone && (
             <a 
@@ -189,11 +200,14 @@ function DemoRenderer({
         </div>
       </section>
 
-      {/* Services Section */}
+      {/* Services Section - Framed as researched */}
       <section>
-        <h2 className="text-2xl font-bold text-foreground text-center mb-8">
-          Our Services
+        <h2 className="text-2xl font-bold text-foreground text-center mb-2">
+          Services Customers Search For
         </h2>
+        <p className="text-center text-muted-foreground mb-8 text-sm">
+          Common services associated with {businessName}
+        </p>
         <div className="grid md:grid-cols-3 gap-6">
           {services.map((service, index) => (
             <div 
@@ -218,10 +232,15 @@ function DemoRenderer({
         </div>
       </section>
 
-      {/* Generated Notice */}
-      <p className="text-center text-sm text-muted-foreground">
-        This preview was generated for {businessName} based on public business data.
-      </p>
+      {/* Generated Notice + Proof */}
+      <div className="text-center space-y-2">
+        <p className="text-sm text-muted-foreground">
+          Built using publicly available business information for {businessName}.
+        </p>
+        <p className="text-xs text-muted-foreground/70">
+          Optimized for local search and mobile customers.
+        </p>
+      </div>
     </div>
   );
 }
@@ -229,12 +248,12 @@ function DemoRenderer({
 // Helper functions for default content
 function getDefaultServices(templateType: string): string[] {
   const serviceMap: Record<string, string[]> = {
-    plumber: ["Emergency Repairs", "Drain Cleaning", "Water Heater Service", "Pipe Installation", "Leak Detection", "Bathroom Remodeling"],
-    roofer: ["Roof Repairs", "New Installations", "Storm Damage", "Gutter Services", "Inspections", "Metal Roofing"],
-    electrician: ["Electrical Repairs", "Panel Upgrades", "Lighting Installation", "Wiring Services", "Safety Inspections", "Generator Install"],
-    hvac: ["AC Repair", "Heating Service", "Installation", "Maintenance", "Indoor Air Quality", "Emergency Service"],
-    restaurant: ["Dine-In", "Takeout", "Catering", "Private Events", "Online Ordering", "Delivery"],
-    default: ["Professional Service", "Quality Work", "Customer Satisfaction", "Competitive Pricing", "Fast Response", "Expert Team"]
+    plumber: ["Emergency Plumbing Repairs", "Drain & Sewer Cleaning", "Water Heater Service", "Pipe Installation", "Leak Detection", "Bathroom Remodeling"],
+    roofer: ["Roof Repairs", "New Roof Installation", "Storm Damage Repair", "Gutter Services", "Roof Inspections", "Metal Roofing"],
+    electrician: ["Electrical Repairs", "Panel Upgrades", "Lighting Installation", "Wiring Services", "Safety Inspections", "Generator Installation"],
+    hvac: ["AC Repair & Service", "Heating System Service", "New Installation", "Preventive Maintenance", "Indoor Air Quality", "Emergency Service"],
+    restaurant: ["Dine-In Service", "Takeout Orders", "Catering", "Private Events", "Online Ordering", "Delivery"],
+    default: ["Professional Service", "Quality Workmanship", "Customer Satisfaction", "Competitive Pricing", "Fast Response", "Expert Team"]
   };
   return serviceMap[templateType] || serviceMap.default;
 }
