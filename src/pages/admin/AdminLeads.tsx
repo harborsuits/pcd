@@ -9,7 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Search, Globe, Phone, MapPin, ExternalLink, SkipForward, Loader2, AlertCircle, Sparkles, Send } from "lucide-react";
+import { Search, Globe, Phone, MapPin, ExternalLink, SkipForward, Loader2, AlertCircle, Sparkles, Send, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
@@ -28,6 +28,7 @@ interface Lead {
   lng: number;
   lead_score: number;
   lead_reasons: string[];
+  lead_enriched: Record<string, unknown> | null;
   demo_status: string;
   demo_url: string | null;
   industry_template: string | null;
@@ -187,6 +188,44 @@ export default function AdminLeads() {
     },
     onError: () => {
       toast.error("Failed to skip lead");
+    },
+  });
+
+  // Enrich lead mutation (Google Places data)
+  const enrichMutation = useMutation({
+    mutationFn: async (leadId: string) => {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/enrich-lead`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-admin-key": localStorage.getItem("admin_key") || "",
+        },
+        body: JSON.stringify({ lead_id: leadId }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Failed to enrich lead");
+      }
+
+      return res.json() as Promise<{ 
+        success: boolean; 
+        enriched: { 
+          rating?: number; 
+          review_count?: number; 
+          photo_count?: number;
+          city?: string;
+          state?: string;
+        } 
+      }>;
+    },
+    onSuccess: (data) => {
+      const e = data.enriched;
+      toast.success(`Enriched: ${e.rating ? `★${e.rating}` : ""} ${e.review_count ? `(${e.review_count} reviews)` : ""} ${e.photo_count ? `${e.photo_count} photos` : ""}`);
+      queryClient.invalidateQueries({ queryKey: ["leads"] });
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
     },
   });
 
@@ -521,6 +560,29 @@ export default function AdminLeads() {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1">
+                        {/* Enrich button - show if place_id exists and not enriched */}
+                        {lead.place_id && !lead.lead_enriched?.google_enriched && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => enrichMutation.mutate(lead.id)}
+                            disabled={enrichMutation.isPending}
+                            title="Enrich from Google"
+                            className="text-blue-600 border-blue-200 hover:bg-blue-50"
+                          >
+                            {enrichMutation.isPending ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <RefreshCw className="h-4 w-4" />
+                            )}
+                          </Button>
+                        )}
+                        {/* Show enriched indicator */}
+                        {lead.lead_enriched?.google_enriched && (
+                          <Badge variant="outline" className="text-xs text-green-600 border-green-200">
+                            ★{(lead.lead_enriched.rating as number)?.toFixed(1) || "—"}
+                          </Badge>
+                        )}
                         {lead.demo_status !== "created" && (
                           <Button
                             size="sm"

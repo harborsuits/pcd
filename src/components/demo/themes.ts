@@ -30,8 +30,8 @@ export interface DemoTheme {
 export const themes: Record<ThemeId, DemoTheme> = {
   classic: {
     id: "classic",
-    name: "Classic",
-    description: "Clean and professional",
+    name: "Clean",
+    description: "Clean and professional — great for service businesses",
     heroBg: "bg-gradient-to-br from-primary/5 via-background to-accent/5",
     heroOverlay: "",
     heroText: "text-foreground",
@@ -49,8 +49,8 @@ export const themes: Record<ThemeId, DemoTheme> = {
   },
   bold: {
     id: "bold",
-    name: "Bold",
-    description: "Modern contractor",
+    name: "Contractor",
+    description: "Bold and confident — stands out for contractors",
     heroBg: "bg-gradient-to-br from-primary via-primary/95 to-primary/90",
     heroOverlay: "absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSA2MCAwIEwgMCAwIDAgNjAiIGZpbGw9Im5vbmUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMC41IiBzdHJva2Utb3BhY2l0eT0iMC4wNSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3QgZmlsbD0idXJsKCNncmlkKSIgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIvPjwvc3ZnPg==')] opacity-50",
     heroText: "text-primary-foreground",
@@ -68,8 +68,8 @@ export const themes: Record<ThemeId, DemoTheme> = {
   },
   premium: {
     id: "premium",
-    name: "Premium",
-    description: "Elegant boutique",
+    name: "Boutique",
+    description: "Elegant and refined — perfect for premium services",
     heroBg: "bg-gradient-to-b from-secondary via-background to-background",
     heroOverlay: "",
     heroText: "text-foreground",

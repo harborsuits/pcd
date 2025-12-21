@@ -239,18 +239,32 @@ function DemoRenderer({
               {tagline}
             </p>
             
-            {/* Rating badge if available */}
-            {rating && (
-              <div className="flex items-center justify-center gap-2 mb-8">
-                <div className="flex items-center gap-1 bg-card/90 backdrop-blur-sm px-4 py-2 rounded-full shadow-md">
-                  <Star className="w-5 h-5 fill-yellow-400 text-yellow-400" />
+            {/* Proof Chips Row */}
+            <div className="flex flex-wrap items-center justify-center gap-3 mb-8">
+              {rating && (
+                <div className="flex items-center gap-1.5 bg-card/90 backdrop-blur-sm px-4 py-2 rounded-full shadow-md border border-border/50">
+                  <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
                   <span className="font-semibold text-foreground">{rating.toFixed(1)}</span>
                   {reviewCount && (
-                    <span className="text-muted-foreground text-sm">({reviewCount} reviews)</span>
+                    <span className="text-muted-foreground text-sm">({reviewCount})</span>
                   )}
+                  <span className="text-xs text-muted-foreground/70">Google</span>
                 </div>
+              )}
+              <div className="flex items-center gap-1.5 bg-card/90 backdrop-blur-sm px-4 py-2 rounded-full shadow-md border border-border/50">
+                <MapPin className="w-4 h-4 text-accent" />
+                <span className="text-sm text-foreground">{locationString}</span>
               </div>
-            )}
+              {phone && (
+                <a 
+                  href={`tel:${phone}`}
+                  className="flex items-center gap-1.5 bg-card/90 backdrop-blur-sm px-4 py-2 rounded-full shadow-md border border-border/50 hover:border-primary/50 transition-colors"
+                >
+                  <Phone className="w-4 h-4 text-accent" />
+                  <span className="text-sm text-foreground">{phone}</span>
+                </a>
+              )}
+            </div>
             
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <button 
@@ -259,15 +273,6 @@ function DemoRenderer({
               >
                 Get a Free Quote
               </button>
-              {phone && (
-                <a 
-                  href={`tel:${phone}`}
-                  className={`px-8 py-4 rounded-lg font-semibold transition-all text-lg flex items-center justify-center gap-2 ${theme.buttonSecondary}`}
-                >
-                  <Phone className="w-5 h-5" />
-                  {phone}
-                </a>
-              )}
             </div>
           </div>
         </div>
@@ -278,16 +283,16 @@ function DemoRenderer({
         <div className="container mx-auto px-4 py-4">
           <div className="flex flex-wrap items-center justify-center gap-6 text-sm">
             <div className="flex items-center gap-2 text-muted-foreground">
-              <MapPin className="w-4 h-4 text-accent" />
-              <span>Serving <span className="font-medium text-foreground">{locationString}</span> & surrounding areas</span>
+              <Clock className="w-4 h-4 text-accent" />
+              <span>{templateType === "plumber" || templateType === "electrician" || templateType === "hvac" ? "Emergency calls welcome" : "Fast response times"}</span>
             </div>
             <div className="hidden sm:flex items-center gap-2 text-muted-foreground">
-              <Clock className="w-4 h-4 text-accent" />
-              <span>Fast response times</span>
-            </div>
-            <div className="flex items-center gap-2 text-muted-foreground">
               <Shield className="w-4 h-4 text-accent" />
               <span>Licensed & Insured</span>
+            </div>
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <MapPin className="w-4 h-4 text-accent" />
+              <span>Upfront estimates</span>
             </div>
           </div>
         </div>
@@ -348,31 +353,48 @@ function DemoRenderer({
               Why Choose {businessName}?
             </h2>
             <div className="grid md:grid-cols-3 gap-8">
+              {/* Rating card - only show if we have real rating */}
+              {rating ? (
+                <div className="text-center">
+                  <div className="w-14 h-14 bg-yellow-400/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                    <Star className="w-7 h-7 text-yellow-500 fill-yellow-500" />
+                  </div>
+                  <h3 className="font-semibold text-foreground mb-2">{rating.toFixed(1)} Google Rating</h3>
+                  <p className="text-muted-foreground text-sm">
+                    {reviewCount ? `From ${reviewCount} verified reviews` : "Verified customer reviews"}
+                  </p>
+                </div>
+              ) : (
+                <div className="text-center">
+                  <div className="w-14 h-14 bg-accent/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                    <Shield className="w-7 h-7 text-accent" />
+                  </div>
+                  <h3 className="font-semibold text-foreground mb-2">Licensed & Insured</h3>
+                  <p className="text-muted-foreground text-sm">
+                    Full coverage for your peace of mind.
+                  </p>
+                </div>
+              )}
               <div className="text-center">
                 <div className="w-14 h-14 bg-accent/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
                   <MapPin className="w-7 h-7 text-accent" />
                 </div>
-                <h3 className="font-semibold text-foreground mb-2">Locally Owned</h3>
+                <h3 className="font-semibold text-foreground mb-2">Serving {city}</h3>
                 <p className="text-muted-foreground text-sm">
-                  Serving {locationString} and surrounding communities with pride.
+                  {nearbyTowns.length > 0 ? `Plus ${nearbyTowns.slice(0, 2).join(", ")} and nearby areas` : "And surrounding communities"}
                 </p>
               </div>
               <div className="text-center">
                 <div className="w-14 h-14 bg-accent/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
                   <Clock className="w-7 h-7 text-accent" />
                 </div>
-                <h3 className="font-semibold text-foreground mb-2">Quick Response</h3>
+                <h3 className="font-semibold text-foreground mb-2">
+                  {templateType === "plumber" || templateType === "electrician" ? "Emergency Available" : "Quick Response"}
+                </h3>
                 <p className="text-muted-foreground text-sm">
-                  We understand urgency and prioritize getting to you fast.
-                </p>
-              </div>
-              <div className="text-center">
-                <div className="w-14 h-14 bg-accent/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                  <Shield className="w-7 h-7 text-accent" />
-                </div>
-                <h3 className="font-semibold text-foreground mb-2">Trusted Professionals</h3>
-                <p className="text-muted-foreground text-sm">
-                  Licensed, insured, and committed to quality work.
+                  {templateType === "plumber" || templateType === "electrician" 
+                    ? "Same-day service when you need it most" 
+                    : "We prioritize getting to you fast"}
                 </p>
               </div>
             </div>

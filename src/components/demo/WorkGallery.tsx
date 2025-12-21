@@ -71,10 +71,12 @@ export function WorkGallery({ templateType, businessName, photoReferences = [] }
           <div className="text-center mb-8">
             <div className="inline-flex items-center gap-2 text-accent mb-2">
               <Camera className="w-5 h-5" />
-              <span className="text-sm font-medium uppercase tracking-wide">Our Work</span>
+              <span className="text-sm font-medium uppercase tracking-wide">
+                {hasRealPhotos ? "Photos from Google" : "Work Examples"}
+              </span>
             </div>
             <h2 className="text-2xl font-bold text-foreground">
-              Recent Projects
+              {hasRealPhotos ? "Recent Projects" : "Example Gallery"}
             </h2>
           </div>
 
@@ -102,8 +104,8 @@ export function WorkGallery({ templateType, businessName, photoReferences = [] }
           {/* Disclaimer */}
           <p className="text-center text-xs text-muted-foreground/60 mt-6">
             {hasRealPhotos 
-              ? `Photos from Google for ${businessName}`
-              : `Example work images — we can replace with photos from ${businessName}`
+              ? `Real photos pulled from Google for ${businessName}`
+              : `Example photos — we'll replace with your real photos`
             }
           </p>
         </div>
