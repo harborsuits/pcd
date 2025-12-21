@@ -4,6 +4,10 @@ import { MapPin, Clock, Shield, Star, Phone } from "lucide-react";
 import { themes, ThemeId, industryImages, getInitials } from "@/components/demo/themes";
 import { ThemeSwitcher } from "@/components/demo/ThemeSwitcher";
 import { QuoteModal } from "@/components/demo/QuoteModal";
+import { ServiceAreaBlock } from "@/components/demo/ServiceAreaBlock";
+import { ReviewsPreview } from "@/components/demo/ReviewsPreview";
+import { WorkGallery } from "@/components/demo/WorkGallery";
+import { StickyMobileCTA } from "@/components/demo/StickyMobileCTA";
 
 interface DemoData {
   business: {
@@ -156,12 +160,18 @@ export default function DemoPage() {
         businessName={data.business.name}
       />
 
-      {/* Soft Next Steps Footer */}
-      <footer className="fixed bottom-0 left-0 right-0 border-t border-border bg-card/95 backdrop-blur-sm p-4 shadow-lg">
-        <div className="container mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div className="text-sm text-muted-foreground text-center sm:text-left">
+      {/* Sticky Mobile CTA */}
+      <StickyMobileCTA 
+        phone={(data.demo.content as Record<string, unknown>).phone as string | undefined}
+        onQuoteClick={() => setQuoteOpen(true)}
+      />
+
+      {/* Desktop Footer - hidden on mobile since we have sticky CTA */}
+      <footer className="hidden sm:block fixed bottom-0 left-0 right-0 border-t border-border bg-card/95 backdrop-blur-sm p-4 shadow-lg">
+        <div className="container mx-auto flex items-center justify-between gap-3">
+          <div className="text-sm text-muted-foreground">
             <p className="font-medium text-foreground">Interested in using this site?</p>
-            <p className="hidden sm:block">We handle setup & hosting. No obligation to proceed.</p>
+            <p>We handle setup & hosting. No obligation to proceed.</p>
           </div>
           <button 
             onClick={() => setQuoteOpen(true)}
@@ -198,6 +208,7 @@ function DemoRenderer({
   const heroImage = industryImages[templateType] || industryImages.default;
   const initials = getInitials(businessName);
   const locationString = state ? `${city}, ${state}` : city;
+  const nearbyTowns = (content.nearbyTowns as string[]) || [];
 
   return (
     <div className="pb-32">
@@ -306,6 +317,27 @@ function DemoRenderer({
         </div>
       </section>
 
+      {/* Service Area Block */}
+      <ServiceAreaBlock 
+        city={city} 
+        state={state} 
+        nearbyTowns={nearbyTowns}
+      />
+
+      {/* Work Gallery */}
+      <WorkGallery 
+        templateType={templateType} 
+        businessName={businessName}
+      />
+
+      {/* Reviews Preview */}
+      <ReviewsPreview 
+        rating={rating}
+        reviewCount={reviewCount}
+        businessName={businessName}
+        templateType={templateType}
+      />
+
       {/* Social Proof / Trust Section */}
       <section className={`${theme.sectionBg} ${theme.sectionPadding}`}>
         <div className="container mx-auto px-4">
@@ -364,8 +396,8 @@ function DemoRenderer({
         </div>
       </section>
 
-      {/* Generated Notice */}
-      <div className="text-center py-8">
+      {/* Generated Notice - extra bottom padding on mobile for sticky CTA */}
+      <div className="text-center py-8 pb-24 sm:pb-8">
         <p className="text-xs text-muted-foreground/60">
           Preview generated using publicly available business information for {businessName}.
         </p>
