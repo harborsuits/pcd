@@ -1,5 +1,9 @@
-import { useParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import { useState, useEffect } from "react";
+import { MapPin, Clock, Shield, Star, Phone } from "lucide-react";
+import { themes, ThemeId, industryImages, getInitials } from "@/components/demo/themes";
+import { ThemeSwitcher } from "@/components/demo/ThemeSwitcher";
+import { QuoteModal } from "@/components/demo/QuoteModal";
 
 interface DemoData {
   business: {
@@ -16,11 +20,18 @@ type LoadingState = "idle" | "loading" | "success" | "not-found" | "error";
 
 export default function DemoPage() {
   const { token, slug } = useParams<{ token: string; slug: string }>();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [state, setState] = useState<LoadingState>("idle");
   const [data, setData] = useState<DemoData | null>(null);
   const [errorMessage, setErrorMessage] = useState<string>("");
+  const [quoteOpen, setQuoteOpen] = useState(false);
+  
+  const themeParam = searchParams.get("style") as ThemeId | null;
+  const currentTheme = themeParam && themes[themeParam] ? themeParam : "classic";
 
-  console.log("✅ DemoPage mounted", { token, slug, href: window.location.href });
+  const handleThemeChange = (theme: ThemeId) => {
+    setSearchParams({ style: theme });
+  };
 
   useEffect(() => {
     if (!token) {
@@ -41,8 +52,6 @@ export default function DemoPage() {
 
       try {
         const url = new URL(`${baseUrl}/functions/v1/demo/${token}`);
-        
-        // Pass slug for server-side validation
         if (slug) {
           url.searchParams.set("slug", slug);
         }
@@ -65,7 +74,6 @@ export default function DemoPage() {
 
         const json: DemoData = await res.json();
 
-        // Client-side canonical slug check (belt + suspenders)
         if (slug && json.business.slug !== slug) {
           setState("not-found");
           return;
@@ -83,7 +91,6 @@ export default function DemoPage() {
     fetchDemo();
   }, [token, slug]);
 
-  // Loading state
   if (state === "loading" || state === "idle") {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -95,7 +102,6 @@ export default function DemoPage() {
     );
   }
 
-  // Not found state
   if (state === "not-found") {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -107,7 +113,6 @@ export default function DemoPage() {
     );
   }
 
-  // Error state
   if (state === "error") {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -119,38 +124,49 @@ export default function DemoPage() {
     );
   }
 
-  // Success state - render demo
   if (!data) return null;
+
+  const theme = themes[currentTheme];
 
   return (
     <div className="min-h-screen bg-background">
+      <ThemeSwitcher currentTheme={currentTheme} onThemeChange={handleThemeChange} />
+      
       {/* Preview Explanation Strip */}
-      <div className="bg-muted border-b border-border">
-        <div className="container mx-auto px-4 py-3 text-center">
-          <p className="text-sm text-muted-foreground">
+      <div className="bg-accent/10 border-b border-accent/20">
+        <div className="container mx-auto px-4 py-2 text-center">
+          <p className="text-sm text-foreground/70">
             This is a preview website built specifically for <span className="font-medium text-foreground">{data.business.name}</span>.
             <span className="hidden sm:inline"> You are not committed to anything.</span>
           </p>
         </div>
       </div>
 
-      {/* Demo Content */}
-      <main className="container mx-auto px-4 py-8">
-        <DemoRenderer 
-          templateType={data.demo.template_type} 
-          content={data.demo.content}
-          businessName={data.business.name}
-        />
-      </main>
+      <DemoRenderer 
+        templateType={data.demo.template_type} 
+        content={data.demo.content}
+        businessName={data.business.name}
+        theme={theme}
+        onQuoteClick={() => setQuoteOpen(true)}
+      />
+
+      <QuoteModal 
+        open={quoteOpen} 
+        onOpenChange={setQuoteOpen}
+        businessName={data.business.name}
+      />
 
       {/* Soft Next Steps Footer */}
-      <footer className="fixed bottom-0 left-0 right-0 border-t border-border bg-card p-4 shadow-lg">
+      <footer className="fixed bottom-0 left-0 right-0 border-t border-border bg-card/95 backdrop-blur-sm p-4 shadow-lg">
         <div className="container mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="text-sm text-muted-foreground text-center sm:text-left">
             <p className="font-medium text-foreground">Interested in using this site?</p>
             <p className="hidden sm:block">We handle setup & hosting. No obligation to proceed.</p>
           </div>
-          <button className="bg-primary text-primary-foreground px-6 py-2 rounded-md font-medium hover:bg-primary/90 transition-colors whitespace-nowrap">
+          <button 
+            onClick={() => setQuoteOpen(true)}
+            className="bg-primary text-primary-foreground px-6 py-2 rounded-md font-medium hover:bg-primary/90 transition-colors whitespace-nowrap"
+          >
             Talk About Using This Site
           </button>
         </div>
@@ -159,101 +175,213 @@ export default function DemoPage() {
   );
 }
 
-// Lead-aware demo renderer - creates personalized landing page
 function DemoRenderer({ 
   templateType, 
   content,
-  businessName 
+  businessName,
+  theme,
+  onQuoteClick,
 }: { 
   templateType: string; 
   content: Record<string, unknown>;
   businessName: string;
+  theme: typeof themes.classic;
+  onQuoteClick: () => void;
 }) {
-  // Extract personalization data from content
   const city = (content.city as string) || "your area";
+  const state = (content.state as string) || "";
   const services = (content.services as string[]) || getDefaultServices(templateType);
   const phone = content.phone as string;
+  const rating = (content.rating as number) || null;
+  const reviewCount = (content.reviewCount as number) || null;
   const tagline = (content.tagline as string) || getDefaultTagline(templateType, city);
+  const heroImage = industryImages[templateType] || industryImages.default;
+  const initials = getInitials(businessName);
+  const locationString = state ? `${city}, ${state}` : city;
 
   return (
-    <div className="space-y-16 pb-32">
-      {/* Hero Section */}
-      <section className="text-center py-12">
-        <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
-          {businessName}
-        </h1>
-        <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-          {tagline}
-        </p>
-        <div className="flex flex-col sm:flex-row gap-4 justify-center">
-          <button className="bg-primary text-primary-foreground px-8 py-3 rounded-md font-semibold hover:bg-primary/90 transition-colors text-lg">
-            See How This Could Be Your Website
-          </button>
-          {phone && (
-            <a 
-              href={`tel:${phone}`}
-              className="border border-border text-foreground px-8 py-3 rounded-md font-semibold hover:bg-muted transition-colors text-lg"
-            >
-              Call {phone}
-            </a>
-          )}
-        </div>
-      </section>
-
-      {/* Services Section - Framed as researched */}
-      <section>
-        <h2 className="text-2xl font-bold text-foreground text-center mb-2">
-          Services Customers Search For
-        </h2>
-        <p className="text-center text-muted-foreground mb-8 text-sm">
-          Common services associated with {businessName}
-        </p>
-        <div className="grid md:grid-cols-3 gap-6">
-          {services.map((service, index) => (
-            <div 
-              key={index}
-              className="bg-card border border-border rounded-lg p-6 text-center hover:border-primary/50 transition-colors"
-            >
-              <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-primary text-xl">✓</span>
+    <div className="pb-32">
+      {/* Hero Section with Visual */}
+      <section className={`relative ${theme.heroBg} ${theme.sectionPadding} overflow-hidden`}>
+        {theme.heroOverlay && <div className={theme.heroOverlay} />}
+        
+        {/* Background Image (subtle) */}
+        <div 
+          className="absolute inset-0 opacity-10 bg-cover bg-center"
+          style={{ backgroundImage: `url(${heroImage})` }}
+        />
+        
+        <div className="relative container mx-auto px-4">
+          <div className="max-w-4xl mx-auto text-center">
+            {/* Logo Lockup */}
+            <div className="flex justify-center mb-6">
+              <div className="w-20 h-20 bg-primary text-primary-foreground rounded-2xl flex items-center justify-center text-2xl font-bold shadow-lg">
+                {initials}
               </div>
-              <h3 className="font-semibold text-foreground">{service}</h3>
             </div>
-          ))}
+            
+            <h1 className={`text-4xl md:text-5xl lg:text-6xl ${theme.headingWeight} ${theme.heroText} mb-4`}>
+              {businessName}
+            </h1>
+            <p className={`text-xl md:text-2xl ${theme.heroSubtext} mb-8 max-w-2xl mx-auto`}>
+              {tagline}
+            </p>
+            
+            {/* Rating badge if available */}
+            {rating && (
+              <div className="flex items-center justify-center gap-2 mb-8">
+                <div className="flex items-center gap-1 bg-card/90 backdrop-blur-sm px-4 py-2 rounded-full shadow-md">
+                  <Star className="w-5 h-5 fill-yellow-400 text-yellow-400" />
+                  <span className="font-semibold text-foreground">{rating.toFixed(1)}</span>
+                  {reviewCount && (
+                    <span className="text-muted-foreground text-sm">({reviewCount} reviews)</span>
+                  )}
+                </div>
+              </div>
+            )}
+            
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <button 
+                onClick={onQuoteClick}
+                className={`px-8 py-4 rounded-lg font-semibold transition-all text-lg ${theme.buttonPrimary}`}
+              >
+                Get a Free Quote
+              </button>
+              {phone && (
+                <a 
+                  href={`tel:${phone}`}
+                  className={`px-8 py-4 rounded-lg font-semibold transition-all text-lg flex items-center justify-center gap-2 ${theme.buttonSecondary}`}
+                >
+                  <Phone className="w-5 h-5" />
+                  {phone}
+                </a>
+              )}
+            </div>
+          </div>
         </div>
       </section>
 
-      {/* Trust Strip */}
-      <section className="bg-muted/50 rounded-lg p-8 text-center">
-        <div className="flex flex-wrap justify-center gap-8 text-muted-foreground">
-          <span>✓ Locally Owned & Operated</span>
-          <span>✓ Serving {city} & Surrounding Areas</span>
-          <span>✓ Licensed & Insured</span>
+      {/* Local Proof Bar */}
+      <section className="border-b border-border bg-card">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex flex-wrap items-center justify-center gap-6 text-sm">
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <MapPin className="w-4 h-4 text-accent" />
+              <span>Serving <span className="font-medium text-foreground">{locationString}</span> & surrounding areas</span>
+            </div>
+            <div className="hidden sm:flex items-center gap-2 text-muted-foreground">
+              <Clock className="w-4 h-4 text-accent" />
+              <span>Fast response times</span>
+            </div>
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Shield className="w-4 h-4 text-accent" />
+              <span>Licensed & Insured</span>
+            </div>
+          </div>
         </div>
       </section>
 
-      {/* Generated Notice + Proof */}
-      <div className="text-center space-y-2">
-        <p className="text-sm text-muted-foreground">
-          Built using publicly available business information for {businessName}.
-        </p>
-        <p className="text-xs text-muted-foreground/70">
-          Optimized for local search and mobile customers.
+      {/* Services Section */}
+      <section className={`${theme.sectionPadding}`}>
+        <div className="container mx-auto px-4">
+          <h2 className={`text-2xl md:text-3xl ${theme.headingWeight} text-foreground text-center mb-2`}>
+            Popular Services
+          </h2>
+          <p className="text-center text-muted-foreground mb-10 max-w-xl mx-auto">
+            Common requests we see for businesses like {businessName}
+          </p>
+          <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+            {services.slice(0, 6).map((service, index) => (
+              <div 
+                key={index}
+                className={`${theme.cardBg} border ${theme.cardBorder} ${theme.cardRadius} p-6 text-center transition-all ${theme.cardHover}`}
+              >
+                <div className="w-12 h-12 bg-accent/10 rounded-xl flex items-center justify-center mx-auto mb-4">
+                  <span className="text-accent text-xl">✓</span>
+                </div>
+                <h3 className={`font-semibold text-foreground ${theme.bodySize}`}>{service}</h3>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Social Proof / Trust Section */}
+      <section className={`${theme.sectionBg} ${theme.sectionPadding}`}>
+        <div className="container mx-auto px-4">
+          <div className="max-w-4xl mx-auto">
+            <h2 className={`text-2xl ${theme.headingWeight} text-foreground text-center mb-8`}>
+              Why Choose {businessName}?
+            </h2>
+            <div className="grid md:grid-cols-3 gap-8">
+              <div className="text-center">
+                <div className="w-14 h-14 bg-accent/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                  <MapPin className="w-7 h-7 text-accent" />
+                </div>
+                <h3 className="font-semibold text-foreground mb-2">Locally Owned</h3>
+                <p className="text-muted-foreground text-sm">
+                  Serving {locationString} and surrounding communities with pride.
+                </p>
+              </div>
+              <div className="text-center">
+                <div className="w-14 h-14 bg-accent/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                  <Clock className="w-7 h-7 text-accent" />
+                </div>
+                <h3 className="font-semibold text-foreground mb-2">Quick Response</h3>
+                <p className="text-muted-foreground text-sm">
+                  We understand urgency and prioritize getting to you fast.
+                </p>
+              </div>
+              <div className="text-center">
+                <div className="w-14 h-14 bg-accent/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                  <Shield className="w-7 h-7 text-accent" />
+                </div>
+                <h3 className="font-semibold text-foreground mb-2">Trusted Professionals</h3>
+                <p className="text-muted-foreground text-sm">
+                  Licensed, insured, and committed to quality work.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Call to Action */}
+      <section className={`${theme.sectionPadding}`}>
+        <div className="container mx-auto px-4 text-center">
+          <h2 className={`text-2xl md:text-3xl ${theme.headingWeight} text-foreground mb-4`}>
+            Ready to Get Started?
+          </h2>
+          <p className="text-muted-foreground mb-8 max-w-xl mx-auto">
+            Get a free quote from {businessName} today. No obligation, no pressure.
+          </p>
+          <button 
+            onClick={onQuoteClick}
+            className={`px-10 py-4 rounded-lg font-semibold transition-all text-lg ${theme.buttonPrimary}`}
+          >
+            Request a Free Quote
+          </button>
+        </div>
+      </section>
+
+      {/* Generated Notice */}
+      <div className="text-center py-8">
+        <p className="text-xs text-muted-foreground/60">
+          Preview generated using publicly available business information for {businessName}.
         </p>
       </div>
     </div>
   );
 }
 
-// Helper functions for default content
 function getDefaultServices(templateType: string): string[] {
   const serviceMap: Record<string, string[]> = {
-    plumber: ["Emergency Plumbing Repairs", "Drain & Sewer Cleaning", "Water Heater Service", "Pipe Installation", "Leak Detection", "Bathroom Remodeling"],
-    roofer: ["Roof Repairs", "New Roof Installation", "Storm Damage Repair", "Gutter Services", "Roof Inspections", "Metal Roofing"],
-    electrician: ["Electrical Repairs", "Panel Upgrades", "Lighting Installation", "Wiring Services", "Safety Inspections", "Generator Installation"],
-    hvac: ["AC Repair & Service", "Heating System Service", "New Installation", "Preventive Maintenance", "Indoor Air Quality", "Emergency Service"],
-    restaurant: ["Dine-In Service", "Takeout Orders", "Catering", "Private Events", "Online Ordering", "Delivery"],
-    default: ["Professional Service", "Quality Workmanship", "Customer Satisfaction", "Competitive Pricing", "Fast Response", "Expert Team"]
+    plumber: ["Emergency Plumbing", "Drain Cleaning", "Water Heaters", "Pipe Repair", "Leak Detection", "Bathroom Remodel"],
+    roofer: ["Roof Repairs", "New Installation", "Storm Damage", "Gutter Services", "Inspections", "Metal Roofing"],
+    electrician: ["Electrical Repairs", "Panel Upgrades", "Lighting", "Wiring", "Safety Inspections", "Generators"],
+    hvac: ["AC Repair", "Heating Service", "Installation", "Maintenance", "Air Quality", "Emergency Service"],
+    restaurant: ["Dine-In", "Takeout", "Catering", "Private Events", "Online Orders", "Delivery"],
+    default: ["Professional Service", "Quality Work", "Satisfaction Guaranteed", "Competitive Pricing", "Fast Response", "Expert Team"]
   };
   return serviceMap[templateType] || serviceMap.default;
 }
