@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { ArrowRight, MessageSquare, FolderOpen, Sparkles } from "lucide-react";
+import { ArrowRight, MessageSquare, FolderOpen, Sparkles, Shield, Smartphone, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
@@ -58,28 +58,50 @@ const Index = () => {
       <section className="flex-1 flex flex-col justify-center py-24 md:py-32">
         <div className="container mx-auto px-6">
           <div className="max-w-3xl">
-            <h1 className="font-serif text-4xl md:text-5xl lg:text-6xl font-bold leading-tight mb-6">
+            <h1 className="font-serif text-4xl md:text-5xl lg:text-6xl font-bold leading-tight mb-4">
               Websites with a
               <span className="block text-accent">built-in client portal.</span>
             </h1>
+            
+            {/* Target audience subheadline */}
+            <p className="text-base md:text-lg text-accent/80 font-medium mb-4">
+              For contractors & local service businesses who want fewer calls, less email, and a cleaner process.
+            </p>
+            
             <p className="text-lg md:text-xl text-muted-foreground leading-relaxed max-w-2xl mb-8">
               We build your site. You manage everything in one place — messaging, files, payments. No email chaos.
             </p>
             
-            {/* Clear routing CTAs */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+            {/* 2-path CTAs */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-6">
               <Button asChild size="lg" className="group">
                 <a href="#demos">
-                  See a Live Demo
+                  See a Demo
                   <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
                 </a>
               </Button>
-              <a 
-                href="#portal" 
-                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-              >
-                Already a client? Enter your portal →
-              </a>
+              <Button asChild variant="outline" size="lg" className="group">
+                <Link to="/get-demo">
+                  Get My Demo
+                  <Sparkles className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
+            </div>
+            
+            {/* Proof row */}
+            <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+              <div className="flex items-center gap-2">
+                <Shield className="h-4 w-4 text-accent" />
+                <span>Made for local businesses</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <MessageSquare className="h-4 w-4 text-accent" />
+                <span>Messaging + files + payments</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Smartphone className="h-4 w-4 text-accent" />
+                <span>Mobile-friendly</span>
+              </div>
             </div>
           </div>
         </div>
@@ -190,11 +212,42 @@ const Index = () => {
         </div>
       </section>
 
+      {/* Portal Screenshot Strip */}
+      <section className="py-16 border-t border-border">
+        <div className="container mx-auto px-6">
+          <div className="text-center mb-10">
+            <h2 className="font-serif text-2xl md:text-3xl font-bold mb-2">
+              Your portal, at a glance
+            </h2>
+            <p className="text-muted-foreground">
+              Messages, files, and payments — all in one private space.
+            </p>
+          </div>
+          <div className="grid grid-cols-3 gap-4 max-w-3xl mx-auto">
+            <div className="aspect-[4/3] bg-card border border-border rounded-lg flex flex-col items-center justify-center p-4 hover:border-accent/30 transition-colors">
+              <MessageSquare className="h-8 w-8 text-accent mb-2" />
+              <span className="text-sm font-medium text-foreground">Messages</span>
+              <span className="text-xs text-muted-foreground">Direct chat</span>
+            </div>
+            <div className="aspect-[4/3] bg-card border border-border rounded-lg flex flex-col items-center justify-center p-4 hover:border-accent/30 transition-colors">
+              <FolderOpen className="h-8 w-8 text-accent mb-2" />
+              <span className="text-sm font-medium text-foreground">Files</span>
+              <span className="text-xs text-muted-foreground">Organized gallery</span>
+            </div>
+            <div className="aspect-[4/3] bg-card border border-border rounded-lg flex flex-col items-center justify-center p-4 hover:border-accent/30 transition-colors">
+              <CreditCard className="h-8 w-8 text-accent mb-2" />
+              <span className="text-sm font-medium text-foreground">Payments</span>
+              <span className="text-xs text-muted-foreground">One-click invoices</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Client Portal Entry */}
-      <section id="portal" className="py-20">
+      <section id="portal" className="py-20 bg-secondary/30">
         <div className="container mx-auto px-6 text-center">
           <h2 className="font-serif text-3xl md:text-4xl font-bold mb-4">
-            Client Portal
+            Enter Your Portal
           </h2>
           <p className="text-muted-foreground max-w-lg mx-auto mb-8">
             Already working with us? Enter your portal code to access your project.
@@ -202,7 +255,7 @@ const Index = () => {
           <form onSubmit={handlePortalSubmit} className="flex flex-col sm:flex-row gap-3 max-w-sm mx-auto">
             <Input
               type="text"
-              placeholder="Enter your portal code"
+              placeholder="Your portal code"
               value={portalCode}
               onChange={(e) => setPortalCode(e.target.value)}
               className="flex-1"
