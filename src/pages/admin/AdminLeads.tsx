@@ -9,7 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Search, Globe, Phone, MapPin, ExternalLink, SkipForward, Loader2, AlertCircle, Sparkles, Send, RefreshCw } from "lucide-react";
+import { Search, Globe, Phone, MapPin, ExternalLink, SkipForward, Loader2, AlertCircle, Sparkles, Send, RefreshCw, Rocket } from "lucide-react";
 import { toast } from "sonner";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
@@ -48,6 +48,19 @@ interface SearchResult {
   processed: number;
 }
 
+interface SearchAndGenerateResult {
+  run_id: string | null;
+  total_found: number;
+  no_website_count: number;
+  demos_created: number;
+  results: Array<{
+    lead_id: string;
+    business_name: string;
+    demo_url: string | null;
+    status: string;
+  }>;
+}
+
 export default function AdminLeads() {
   const [adminKey, setAdminKey] = useState(() => localStorage.getItem("admin_key") || "");
   const [isAuthenticated, setIsAuthenticated] = useState(() => !!localStorage.getItem("admin_key"));
@@ -56,6 +69,7 @@ export default function AdminLeads() {
   const [query, setQuery] = useState("");
   const [location, setLocation] = useState("");
   const [radius, setRadius] = useState("24140");
+  const [maxDemos, setMaxDemos] = useState("20");
   const [noWebsiteOnly, setNoWebsiteOnly] = useState(false);
   const [phoneMissing, setPhoneMissing] = useState(false);
   
@@ -130,6 +144,47 @@ export default function AdminLeads() {
     },
     onSuccess: (data) => {
       toast.success(`Found ${data.total_found} places, added ${data.processed} leads`);
+      queryClient.invalidateQueries({ queryKey: ["leads"] });
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
+    },
+  });
+
+  // Search-and-generate mutation (full pipeline)
+  const searchAndGenerateMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/leads/search-and-generate`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-admin-key": localStorage.getItem("admin_key") || "",
+        },
+        body: JSON.stringify({
+          query,
+          location,
+          radius_m: parseInt(radius, 10),
+          max_demos: parseInt(maxDemos, 10),
+          queue_outreach: false,
+        }),
+      });
+
+      if (!res.ok) {
+        if (res.status === 403) {
+          localStorage.removeItem("admin_key");
+          setIsAuthenticated(false);
+          throw new Error("Invalid admin key");
+        }
+        const err = await res.json();
+        throw new Error(err.error || "Pipeline failed");
+      }
+
+      return res.json() as Promise<SearchAndGenerateResult>;
+    },
+    onSuccess: (data) => {
+      toast.success(
+        `Found ${data.total_found} places → ${data.no_website_count} without websites → ${data.demos_created} demos created`
+      );
       queryClient.invalidateQueries({ queryKey: ["leads"] });
     },
     onError: (error: Error) => {
@@ -331,7 +386,7 @@ export default function AdminLeads() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-4">
+          <div className="grid gap-4 md:grid-cols-5">
             <div className="space-y-2">
               <Label htmlFor="query">Occupation / Keywords</Label>
               <Input
@@ -365,26 +420,55 @@ export default function AdminLeads() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex items-end">
+            <div className="space-y-2">
+              <Label htmlFor="maxDemos">Max Demos</Label>
+              <Select value={maxDemos} onValueChange={setMaxDemos}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="5">5</SelectItem>
+                  <SelectItem value="10">10</SelectItem>
+                  <SelectItem value="20">20</SelectItem>
+                  <SelectItem value="50">50</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-end gap-2">
               <Button
                 onClick={() => searchMutation.mutate()}
-                disabled={!query || !location || searchMutation.isPending}
-                className="w-full"
+                disabled={!query || !location || searchMutation.isPending || searchAndGenerateMutation.isPending}
+                variant="outline"
+                className="flex-1"
               >
                 {searchMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Search className="h-4 w-4" />
+                )}
+              </Button>
+              <Button
+                onClick={() => searchAndGenerateMutation.mutate()}
+                disabled={!query || !location || searchMutation.isPending || searchAndGenerateMutation.isPending}
+                className="flex-1"
+              >
+                {searchAndGenerateMutation.isPending ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Searching...
+                    Running...
                   </>
                 ) : (
                   <>
-                    <Search className="h-4 w-4 mr-2" />
-                    Search
+                    <Rocket className="h-4 w-4 mr-2" />
+                    Find & Generate
                   </>
                 )}
               </Button>
             </div>
           </div>
+          <p className="text-xs text-muted-foreground mt-3">
+            <strong>Search</strong> just finds leads. <strong>Find & Generate</strong> finds leads without websites, enriches them, and creates demos automatically.
+          </p>
         </CardContent>
       </Card>
 
