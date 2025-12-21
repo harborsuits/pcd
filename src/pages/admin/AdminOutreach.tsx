@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { MessageSquare, Send, Ban, CheckCircle, Loader2, AlertCircle, ExternalLink } from "lucide-react";
+import { MessageSquare, Send, Ban, CheckCircle, Loader2, AlertCircle, ExternalLink, Rocket } from "lucide-react";
 import { toast } from "sonner";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
@@ -24,6 +24,8 @@ interface OutreachEvent {
     id: string;
     business_name: string;
     phone: string | null;
+    phone_e164: string | null;
+    phone_raw: string | null;
     demo_url: string | null;
     outreach_status: string;
   };
@@ -31,6 +33,7 @@ interface OutreachEvent {
 
 export default function AdminOutreach() {
   const [adminKey, setAdminKey] = useState(() => localStorage.getItem("admin_key") || "");
+  const [isSending, setIsSending] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(() => !!localStorage.getItem("admin_key"));
   const [statusFilter, setStatusFilter] = useState<string>("queued");
 
@@ -120,6 +123,39 @@ export default function AdminOutreach() {
     },
   });
 
+  // Send SMS mutation
+  const sendSmsMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/sms/send`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-admin-key": localStorage.getItem("admin_key") || "",
+        },
+        body: JSON.stringify({ limit: 25 }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Failed to send SMS");
+      }
+      return res.json() as Promise<{ ok: boolean; sent: number; failed: number; errors?: string[] }>;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["outreach-events"] });
+      if (data.sent > 0) {
+        toast.success(`Sent ${data.sent} SMS${data.sent > 1 ? "s" : ""}${data.failed > 0 ? `, ${data.failed} failed` : ""}`);
+      } else if (data.failed > 0) {
+        toast.error(`${data.failed} SMS failed to send`);
+      } else {
+        toast.info("No queued messages to send");
+      }
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to send SMS");
+    },
+  });
+
   // Login form
   if (!isAuthenticated) {
     return (
@@ -174,25 +210,41 @@ export default function AdminOutreach() {
         <p className="text-muted-foreground">Review and manage outreach messages</p>
       </div>
 
-      {/* Filters */}
-      <div className="flex items-center gap-4">
-        <div className="space-y-1">
-          <Label>Status Filter</Label>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-40">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="queued">Queued</SelectItem>
-              <SelectItem value="sent">Sent</SelectItem>
-              <SelectItem value="failed">Failed</SelectItem>
-              <SelectItem value="replied">Replied</SelectItem>
-            </SelectContent>
-          </Select>
+      {/* Actions & Filters */}
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <div className="space-y-1">
+            <Label>Status Filter</Label>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-40">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="queued">Queued</SelectItem>
+                <SelectItem value="sent">Sent</SelectItem>
+                <SelectItem value="failed">Failed</SelectItem>
+                <SelectItem value="replied">Replied</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="pt-6 text-sm text-muted-foreground">
+            {events.length} event{events.length !== 1 ? "s" : ""}
+          </div>
         </div>
-        <div className="pt-6 text-sm text-muted-foreground">
-          {events.length} event{events.length !== 1 ? "s" : ""}
-        </div>
+        
+        {/* Send SMS Button */}
+        <Button
+          onClick={() => sendSmsMutation.mutate()}
+          disabled={sendSmsMutation.isPending}
+          className="gap-2"
+        >
+          {sendSmsMutation.isPending ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Rocket className="h-4 w-4" />
+          )}
+          Send Queued SMS
+        </Button>
       </div>
 
       {/* Error state */}
