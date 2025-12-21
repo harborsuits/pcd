@@ -6,9 +6,10 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Search, Globe, Phone, MapPin, ExternalLink, SkipForward, Loader2, AlertCircle } from "lucide-react";
+import { Search, Globe, Phone, MapPin, ExternalLink, SkipForward, Loader2, AlertCircle, Sparkles, Send } from "lucide-react";
 import { toast } from "sonner";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
@@ -26,6 +27,8 @@ interface Lead {
   lead_score: number;
   lead_reasons: string[];
   demo_status: string;
+  demo_url: string | null;
+  industry_template: string | null;
   outreach_status: string;
   created_at: string;
 }
@@ -44,12 +47,14 @@ export default function AdminLeads() {
   // Search form state
   const [query, setQuery] = useState("");
   const [location, setLocation] = useState("");
-  const [radius, setRadius] = useState("24140"); // 15 miles in meters
+  const [radius, setRadius] = useState("24140");
   const [noWebsiteOnly, setNoWebsiteOnly] = useState(false);
+  
+  // Selection state for bulk actions
+  const [selectedLeads, setSelectedLeads] = useState<Set<string>>(new Set());
 
   const queryClient = useQueryClient();
 
-  // Handle admin login
   const handleLogin = () => {
     if (adminKey.trim()) {
       localStorage.setItem("admin_key", adminKey.trim());
@@ -122,6 +127,33 @@ export default function AdminLeads() {
     },
   });
 
+  // Generate demo mutation
+  const generateDemoMutation = useMutation({
+    mutationFn: async (leadId: string) => {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/leads/${leadId}/generate-demo`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-admin-key": localStorage.getItem("admin_key") || "",
+        },
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Failed to generate demo");
+      }
+
+      return res.json() as Promise<{ ok: boolean; demo_url: string; template_slug: string }>;
+    },
+    onSuccess: (data) => {
+      toast.success(`Demo created: ${data.template_slug}`);
+      queryClient.invalidateQueries({ queryKey: ["leads"] });
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
+    },
+  });
+
   // Skip lead mutation
   const skipMutation = useMutation({
     mutationFn: async (leadId: string) => {
@@ -148,6 +180,56 @@ export default function AdminLeads() {
       toast.error("Failed to skip lead");
     },
   });
+
+  // Queue to outreach mutation
+  const queueOutreachMutation = useMutation({
+    mutationFn: async (leadIds: string[]) => {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/outreach/queue`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-admin-key": localStorage.getItem("admin_key") || "",
+        },
+        body: JSON.stringify({ lead_ids: leadIds, template: "intro_v1" }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Failed to queue outreach");
+      }
+
+      return res.json() as Promise<{ ok: boolean; queued: number; skipped: number; skipped_reasons: Record<string, number> }>;
+    },
+    onSuccess: (data) => {
+      toast.success(`Queued ${data.queued} leads, skipped ${data.skipped}`);
+      setSelectedLeads(new Set());
+      queryClient.invalidateQueries({ queryKey: ["leads"] });
+      queryClient.invalidateQueries({ queryKey: ["outreach-events"] });
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
+    },
+  });
+
+  const toggleSelectLead = (leadId: string) => {
+    setSelectedLeads((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(leadId)) {
+        newSet.delete(leadId);
+      } else {
+        newSet.add(leadId);
+      }
+      return newSet;
+    });
+  };
+
+  const toggleSelectAll = (leads: Lead[]) => {
+    if (selectedLeads.size === leads.length) {
+      setSelectedLeads(new Set());
+    } else {
+      setSelectedLeads(new Set(leads.map((l) => l.id)));
+    }
+  };
 
   // Login form
   if (!isAuthenticated) {
@@ -179,6 +261,10 @@ export default function AdminLeads() {
   }
 
   const leads = leadsData?.leads || [];
+  const filteredLeads = leads.filter((l) => l.outreach_status !== "skip");
+  const readyForOutreach = filteredLeads.filter(
+    (l) => l.demo_status === "created" && l.phone && ["new", "created"].includes(l.outreach_status || "new")
+  );
 
   return (
     <div className="space-y-6">
@@ -254,19 +340,40 @@ export default function AdminLeads() {
         </CardContent>
       </Card>
 
-      {/* Filters */}
-      <div className="flex items-center gap-4">
-        <div className="flex items-center gap-2">
-          <Switch
-            id="noWebsite"
-            checked={noWebsiteOnly}
-            onCheckedChange={setNoWebsiteOnly}
-          />
-          <Label htmlFor="noWebsite">No website only</Label>
+      {/* Filters & Bulk Actions */}
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <Switch
+              id="noWebsite"
+              checked={noWebsiteOnly}
+              onCheckedChange={setNoWebsiteOnly}
+            />
+            <Label htmlFor="noWebsite">No website only</Label>
+          </div>
+          <div className="text-sm text-muted-foreground">
+            {filteredLeads.length} lead{filteredLeads.length !== 1 ? "s" : ""}
+          </div>
         </div>
-        <div className="text-sm text-muted-foreground">
-          {leads.length} lead{leads.length !== 1 ? "s" : ""}
-        </div>
+        
+        {selectedLeads.size > 0 && (
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">{selectedLeads.size} selected</span>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => queueOutreachMutation.mutate(Array.from(selectedLeads))}
+              disabled={queueOutreachMutation.isPending}
+            >
+              {queueOutreachMutation.isPending ? (
+                <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4 mr-1" />
+              )}
+              Queue to Outreach
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Error state */}
@@ -288,7 +395,7 @@ export default function AdminLeads() {
             <div className="flex items-center justify-center py-12">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
-          ) : leads.length === 0 ? (
+          ) : filteredLeads.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
               <Search className="h-12 w-12 mx-auto mb-4 opacity-50" />
               <p>No leads yet. Run a search to find businesses.</p>
@@ -297,17 +404,29 @@ export default function AdminLeads() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-10">
+                    <Checkbox
+                      checked={selectedLeads.size === filteredLeads.length && filteredLeads.length > 0}
+                      onCheckedChange={() => toggleSelectAll(filteredLeads)}
+                    />
+                  </TableHead>
                   <TableHead className="w-16">Score</TableHead>
                   <TableHead>Business</TableHead>
                   <TableHead>Phone</TableHead>
                   <TableHead>Website</TableHead>
-                  <TableHead>Address</TableHead>
-                  <TableHead className="w-24">Actions</TableHead>
+                  <TableHead>Demo</TableHead>
+                  <TableHead className="w-28">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {leads.filter(l => l.outreach_status !== "skip").map((lead) => (
+                {filteredLeads.map((lead) => (
                   <TableRow key={lead.id}>
+                    <TableCell>
+                      <Checkbox
+                        checked={selectedLeads.has(lead.id)}
+                        onCheckedChange={() => toggleSelectLead(lead.id)}
+                      />
+                    </TableCell>
                     <TableCell>
                       <Badge
                         variant={lead.lead_score >= 70 ? "default" : lead.lead_score >= 30 ? "secondary" : "outline"}
@@ -318,9 +437,16 @@ export default function AdminLeads() {
                     <TableCell>
                       <div>
                         <div className="font-medium">{lead.business_name}</div>
-                        {lead.category && (
-                          <div className="text-xs text-muted-foreground capitalize">{lead.category}</div>
-                        )}
+                        <div className="flex items-center gap-2">
+                          {lead.category && (
+                            <span className="text-xs text-muted-foreground capitalize">{lead.category}</span>
+                          )}
+                          {lead.industry_template && (
+                            <Badge variant="outline" className="text-xs">
+                              {lead.industry_template}
+                            </Badge>
+                          )}
+                        </div>
                       </div>
                     </TableCell>
                     <TableCell>
@@ -355,27 +481,39 @@ export default function AdminLeads() {
                       )}
                     </TableCell>
                     <TableCell>
-                      {lead.address ? (
-                        <div className="flex items-start gap-1 text-sm max-w-[200px]">
-                          <MapPin className="h-3 w-3 mt-0.5 shrink-0" />
-                          <span className="truncate" title={lead.address}>
-                            {lead.address}
-                          </span>
-                        </div>
+                      {lead.demo_status === "created" && lead.demo_url ? (
+                        <a
+                          href={lead.demo_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1 text-sm hover:underline text-green-600"
+                        >
+                          View Demo
+                          <ExternalLink className="h-3 w-3" />
+                        </a>
+                      ) : lead.demo_status === "failed" ? (
+                        <Badge variant="destructive" className="text-xs">Failed</Badge>
                       ) : (
                         <span className="text-muted-foreground text-sm">—</span>
                       )}
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          disabled
-                          title="Coming next"
-                        >
-                          Demo
-                        </Button>
+                        {lead.demo_status !== "created" && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => generateDemoMutation.mutate(lead.id)}
+                            disabled={generateDemoMutation.isPending}
+                            title="Generate demo"
+                          >
+                            {generateDemoMutation.isPending ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Sparkles className="h-4 w-4" />
+                            )}
+                          </Button>
+                        )}
                         <Button
                           size="sm"
                           variant="ghost"

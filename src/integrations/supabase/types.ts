@@ -210,12 +210,14 @@ export type Database = {
           address: string | null
           business_name: string
           category: string | null
+          company_blurb: string | null
           created_at: string
           demo_project_id: string | null
           demo_status: string | null
           demo_token: string | null
           demo_url: string | null
           id: string
+          industry_template: string | null
           lat: number | null
           lead_reasons: Json | null
           lead_score: number | null
@@ -234,12 +236,14 @@ export type Database = {
           address?: string | null
           business_name: string
           category?: string | null
+          company_blurb?: string | null
           created_at?: string
           demo_project_id?: string | null
           demo_status?: string | null
           demo_token?: string | null
           demo_url?: string | null
           id?: string
+          industry_template?: string | null
           lat?: number | null
           lead_reasons?: Json | null
           lead_score?: number | null
@@ -258,12 +262,14 @@ export type Database = {
           address?: string | null
           business_name?: string
           category?: string | null
+          company_blurb?: string | null
           created_at?: string
           demo_project_id?: string | null
           demo_status?: string | null
           demo_token?: string | null
           demo_url?: string | null
           id?: string
+          industry_template?: string | null
           lat?: number | null
           lead_reasons?: Json | null
           lead_score?: number | null
