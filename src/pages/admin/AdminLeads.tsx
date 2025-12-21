@@ -19,6 +19,8 @@ interface Lead {
   place_id: string;
   business_name: string;
   phone: string | null;
+  phone_raw: string | null;
+  phone_e164: string | null;
   website: string | null;
   address: string | null;
   category: string | null;
@@ -31,6 +33,11 @@ interface Lead {
   industry_template: string | null;
   outreach_status: string;
   created_at: string;
+}
+
+// Helper to get best phone display
+function getBestPhone(lead: Lead): string | null {
+  return lead.phone_e164 || lead.phone_raw || lead.phone;
 }
 
 interface SearchResult {
@@ -49,6 +56,7 @@ export default function AdminLeads() {
   const [location, setLocation] = useState("");
   const [radius, setRadius] = useState("24140");
   const [noWebsiteOnly, setNoWebsiteOnly] = useState(false);
+  const [phoneMissing, setPhoneMissing] = useState(false);
   
   // Selection state for bulk actions
   const [selectedLeads, setSelectedLeads] = useState<Set<string>>(new Set());
@@ -64,10 +72,11 @@ export default function AdminLeads() {
 
   // Fetch existing leads
   const { data: leadsData, isLoading: leadsLoading, error: leadsError } = useQuery({
-    queryKey: ["leads", noWebsiteOnly],
+    queryKey: ["leads", noWebsiteOnly, phoneMissing],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (noWebsiteOnly) params.set("no_website", "true");
+      if (phoneMissing) params.set("phone_missing", "true");
       params.set("limit", "100");
 
       const res = await fetch(`${SUPABASE_URL}/functions/v1/leads?${params}`, {
@@ -351,6 +360,14 @@ export default function AdminLeads() {
             />
             <Label htmlFor="noWebsite">No website only</Label>
           </div>
+          <div className="flex items-center gap-2">
+            <Switch
+              id="phoneMissing"
+              checked={phoneMissing}
+              onCheckedChange={setPhoneMissing}
+            />
+            <Label htmlFor="phoneMissing">Phone missing</Label>
+          </div>
           <div className="text-sm text-muted-foreground">
             {filteredLeads.length} lead{filteredLeads.length !== 1 ? "s" : ""}
           </div>
@@ -450,17 +467,22 @@ export default function AdminLeads() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      {lead.phone ? (
-                        <a
-                          href={`tel:${lead.phone}`}
-                          className="flex items-center gap-1 text-sm hover:underline"
-                        >
-                          <Phone className="h-3 w-3" />
-                          {lead.phone}
-                        </a>
-                      ) : (
-                        <span className="text-muted-foreground text-sm">—</span>
-                      )}
+                      {(() => {
+                        const displayPhone = getBestPhone(lead);
+                        return displayPhone ? (
+                          <a
+                            href={`tel:${displayPhone.replace(/\s+/g, "")}`}
+                            className="flex items-center gap-1 text-sm hover:underline"
+                          >
+                            <Phone className="h-3 w-3" />
+                            {displayPhone}
+                          </a>
+                        ) : (
+                          <Badge variant="outline" className="text-xs text-muted-foreground">
+                            No phone
+                          </Badge>
+                        );
+                      })()}
                     </TableCell>
                     <TableCell>
                       {lead.website ? (
