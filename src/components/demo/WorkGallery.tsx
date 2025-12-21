@@ -3,9 +3,16 @@ import { Camera } from "lucide-react";
 interface WorkGalleryProps {
   templateType: string;
   businessName: string;
+  photoReferences?: string[];
 }
 
-// Industry-specific placeholder work images
+// Build proxy URL for Google Place photos
+function getPhotoUrl(photoRef: string, width: number = 400): string {
+  const baseUrl = import.meta.env.VITE_SUPABASE_URL;
+  return `${baseUrl}/functions/v1/place-photo?ref=${encodeURIComponent(photoRef)}&w=${width}`;
+}
+
+// Industry-specific placeholder work images (fallback when no Google photos)
 const galleryImages: Record<string, { src: string; label: string }[]> = {
   plumber: [
     { src: "https://images.unsplash.com/photo-1585704032915-c3400ca199e7?w=400&h=300&fit=crop", label: "Water Heater Installation" },
@@ -41,8 +48,20 @@ const galleryImages: Record<string, { src: string; label: string }[]> = {
   ],
 };
 
-export function WorkGallery({ templateType, businessName }: WorkGalleryProps) {
-  const images = galleryImages[templateType] || galleryImages.default;
+export function WorkGallery({ templateType, businessName, photoReferences = [] }: WorkGalleryProps) {
+  // Use real Google photos if available, otherwise fall back to placeholders
+  const hasRealPhotos = photoReferences.length > 0;
+  
+  const images = hasRealPhotos
+    ? photoReferences.slice(0, 6).map((ref, i) => ({
+        src: getPhotoUrl(ref, 400),
+        label: `Photo ${i + 1}`,
+        isReal: true,
+      }))
+    : (galleryImages[templateType] || galleryImages.default).map(img => ({
+        ...img,
+        isReal: false,
+      }));
 
   return (
     <section className="py-12 bg-muted/30">
@@ -70,6 +89,7 @@ export function WorkGallery({ templateType, businessName }: WorkGalleryProps) {
                   src={image.src}
                   alt={image.label}
                   className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                  loading="lazy"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                 <div className="absolute bottom-0 left-0 right-0 p-3 translate-y-full group-hover:translate-y-0 transition-transform duration-300">
@@ -81,7 +101,10 @@ export function WorkGallery({ templateType, businessName }: WorkGalleryProps) {
 
           {/* Disclaimer */}
           <p className="text-center text-xs text-muted-foreground/60 mt-6">
-            Example work images — we can replace with photos from {businessName}
+            {hasRealPhotos 
+              ? `Photos from Google for ${businessName}`
+              : `Example work images — we can replace with photos from ${businessName}`
+            }
           </p>
         </div>
       </div>
