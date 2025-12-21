@@ -25,6 +25,11 @@ Deno.serve(async (req) => {
     return handleSearch(req);
   }
 
+  // Route: POST /leads/search-and-generate (admin only) - Full pipeline
+  if (subPath === "search-and-generate" && req.method === "POST") {
+    return handleSearchAndGenerate(req);
+  }
+
   // Route: POST /leads/request-demo (public - for lead capture)
   if (subPath === "request-demo" && req.method === "POST") {
     return handleRequestDemo(req);
@@ -346,6 +351,397 @@ async function handleSearch(req: Request): Promise<Response> {
 
   } catch (error) {
     console.error("Search error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+}
+
+// POST /leads/search-and-generate - Full pipeline: search → filter no-website → enrich → generate demos
+async function handleSearchAndGenerate(req: Request): Promise<Response> {
+  const authError = validateAdminKey(req);
+  if (authError) return authError;
+
+  try {
+    let body: { 
+      query?: string; 
+      location?: string; 
+      radius_m?: number;
+      max_demos?: number;
+      queue_outreach?: boolean;
+    };
+    try {
+      body = await req.json();
+    } catch {
+      return new Response(
+        JSON.stringify({ error: "Invalid JSON body" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const { query, location, radius_m = 15000, max_demos = 20, queue_outreach = false } = body;
+
+    if (!query || !location) {
+      return new Response(
+        JSON.stringify({ error: "query and location are required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const apiKey = Deno.env.get("GOOGLE_PLACES_API_KEY");
+    if (!apiKey) {
+      console.error("GOOGLE_PLACES_API_KEY not configured");
+      return new Response(
+        JSON.stringify({ error: "Google Places API not configured" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log(`Search-and-generate: "${query}" near "${location}" (max ${max_demos} demos)`);
+
+    // Step 1: Geocode the location
+    const geocodeUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(location)}&key=${apiKey}`;
+    const geocodeRes = await fetch(geocodeUrl);
+    const geocodeData = await geocodeRes.json();
+
+    if (!geocodeData.results || geocodeData.results.length === 0) {
+      return new Response(
+        JSON.stringify({ error: "Could not geocode location" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const { lat, lng } = geocodeData.results[0].geometry.location;
+    console.log(`Geocoded to: ${lat}, ${lng}`);
+
+    // Step 2: Text Search (up to 3 pages)
+    let allPlaces: Array<{ place_id: string; name: string }> = [];
+    let nextPageToken: string | null = null;
+    const maxPages = 3;
+
+    for (let page = 0; page < maxPages; page++) {
+      let textSearchUrl = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(query)}&location=${lat},${lng}&radius=${radius_m}&key=${apiKey}`;
+      
+      if (nextPageToken) {
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        textSearchUrl = `https://maps.googleapis.com/maps/api/place/textsearch/json?pagetoken=${nextPageToken}&key=${apiKey}`;
+      }
+
+      const searchRes = await fetch(textSearchUrl);
+      const searchData = await searchRes.json();
+
+      if (searchData.status !== "OK" && searchData.status !== "ZERO_RESULTS") {
+        if (page === 0) {
+          console.error("Places API error:", searchData);
+          return new Response(
+            JSON.stringify({ error: "Google Places API error", details: searchData.status }),
+            { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        break;
+      }
+
+      const places = searchData.results || [];
+      allPlaces = allPlaces.concat(places);
+      console.log(`Page ${page + 1}: Found ${places.length} places (total: ${allPlaces.length})`);
+
+      nextPageToken = searchData.next_page_token || null;
+      if (!nextPageToken) break;
+    }
+
+    console.log(`Total places found: ${allPlaces.length}`);
+
+    const supabase = getSupabaseClient();
+    
+    // Results tracking
+    const results: Array<{
+      lead_id: string;
+      business_name: string;
+      demo_url: string | null;
+      status: string;
+    }> = [];
+    
+    let noWebsiteCount = 0;
+    let demosCreated = 0;
+
+    // Step 3: Process each place - get details, filter, enrich, generate
+    for (const place of allPlaces) {
+      // Stop if we've hit max demos
+      if (demosCreated >= max_demos) {
+        console.log(`Reached max demos limit (${max_demos})`);
+        break;
+      }
+
+      try {
+        // Get full details including website
+        const detailsUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${place.place_id}&fields=name,formatted_address,formatted_phone_number,international_phone_number,website,geometry,types,business_status,rating,user_ratings_total,photos,address_components&key=${apiKey}`;
+        const detailsRes = await fetch(detailsUrl);
+        const detailsData = await detailsRes.json();
+
+        if (detailsData.status !== "OK") {
+          console.log(`Skipping ${place.name}: ${detailsData.status}`);
+          continue;
+        }
+
+        const detail = detailsData.result;
+
+        // FILTER: Skip if has website
+        if (detail.website) {
+          console.log(`Skipping ${detail.name}: has website`);
+          continue;
+        }
+
+        noWebsiteCount++;
+        console.log(`Processing no-website lead: ${detail.name}`);
+
+        // Phone normalization
+        const phoneRaw = detail.international_phone_number || detail.formatted_phone_number || null;
+        let phoneE164: string | null = null;
+        
+        if (phoneRaw) {
+          const digitsOnly = phoneRaw.replace(/\D/g, "");
+          if (phoneRaw.startsWith("+")) {
+            phoneE164 = phoneRaw.replace(/\s+/g, "");
+          } else if (digitsOnly.length === 10) {
+            phoneE164 = `+1${digitsOnly}`;
+          } else if (digitsOnly.length === 11 && digitsOnly.startsWith("1")) {
+            phoneE164 = `+${digitsOnly}`;
+          }
+        }
+
+        const bestPhone = phoneE164 || phoneRaw;
+
+        // Skip if no phone (can't do outreach)
+        if (!bestPhone) {
+          console.log(`Skipping ${detail.name}: no phone number`);
+          continue;
+        }
+
+        // Extract address components
+        let detailCity = "";
+        let detailState = "";
+        let detailZip = "";
+        let neighborhood = "";
+        for (const comp of detail.address_components || []) {
+          if (comp.types.includes("locality")) detailCity = comp.long_name;
+          if (comp.types.includes("administrative_area_level_1")) detailState = comp.short_name;
+          if (comp.types.includes("postal_code")) detailZip = comp.long_name;
+          if (comp.types.includes("neighborhood")) neighborhood = comp.long_name;
+        }
+
+        // Build enriched data
+        const photoReferences = (detail.photos || []).slice(0, 6).map((p: { photo_reference: string }) => p.photo_reference);
+        const enrichedMeta = {
+          google_enriched: true,
+          google_enriched_at: new Date().toISOString(),
+          rating: detail.rating || null,
+          review_count: detail.user_ratings_total || null,
+          city: detailCity,
+          state: detailState,
+          zip: detailZip,
+          neighborhood,
+          photo_references: photoReferences,
+          business_status: detail.business_status,
+        };
+
+        const category = detail.types?.[0]?.replace(/_/g, " ") || null;
+        const { score, reasons } = computeLeadScore({
+          website: undefined,
+          phone: bestPhone,
+          business_status: detail.business_status,
+        });
+
+        // Upsert lead
+        const { data: lead, error: leadError } = await supabase
+          .from("leads")
+          .upsert({
+            place_id: place.place_id,
+            source: "google_places",
+            query_term: query,
+            location_text: location,
+            radius_m: radius_m,
+            business_name: detail.name,
+            phone: bestPhone,
+            phone_raw: phoneRaw,
+            phone_e164: phoneE164,
+            website: null,
+            address: detail.formatted_address || null,
+            category,
+            lat: detail.geometry?.location?.lat,
+            lng: detail.geometry?.location?.lng,
+            lead_score: score,
+            lead_reasons: reasons,
+            lead_enriched: enrichedMeta,
+          }, { onConflict: "place_id" })
+          .select("id, demo_status, demo_url")
+          .single();
+
+        if (leadError) {
+          console.error(`Lead upsert error for ${detail.name}:`, leadError);
+          continue;
+        }
+
+        // Skip if demo already exists
+        if (lead.demo_status === "created" && lead.demo_url) {
+          console.log(`Demo already exists for ${detail.name}`);
+          results.push({
+            lead_id: lead.id,
+            business_name: detail.name,
+            demo_url: lead.demo_url,
+            status: "existing",
+          });
+          continue;
+        }
+
+        // Generate demo
+        const templateSlug = getIndustryTemplate(category, query);
+        const businessSlug = generateSlug(detail.name);
+        const projectToken = generateToken();
+        const cityDisplay = detailCity || location;
+
+        // Create project
+        const { data: newProject, error: projectError } = await supabase
+          .from("projects")
+          .insert({
+            business_name: detail.name,
+            business_slug: businessSlug,
+            project_token: projectToken,
+            contact_phone: bestPhone,
+            website: null,
+            address: detail.formatted_address,
+            city: detailCity,
+            state: detailState,
+            source: "lead_engine_bulk",
+            status: "lead",
+          })
+          .select("id, project_token")
+          .single();
+
+        if (projectError) {
+          console.error(`Project creation error for ${detail.name}:`, projectError);
+          continue;
+        }
+
+        // Build demo content
+        const heroHeadline = cityDisplay
+          ? `${detail.name} - Serving ${cityDisplay} & Surrounding Areas`
+          : `${detail.name} - Your Trusted Local Partner`;
+
+        const demoContent = {
+          template: templateSlug,
+          hero: {
+            headline: heroHeadline,
+            subheadline: "Quality service you can trust. Get started today!",
+          },
+          business: {
+            name: detail.name,
+            phone: bestPhone,
+            address: detail.formatted_address,
+            city: detailCity,
+            state: detailState,
+          },
+          enriched: enrichedMeta,
+          cta: {
+            primary: { label: "Call Now", action: `tel:${(phoneE164 || phoneRaw || "").replace(/\s+/g, "")}` },
+            secondary: { label: "Request Quote", action: "#quote" },
+            tertiary: detail.formatted_address ? { label: "Get Directions", action: `https://maps.google.com/?q=${encodeURIComponent(detail.formatted_address)}` } : null,
+          },
+          generated_at: new Date().toISOString(),
+        };
+
+        // Create demo
+        const { error: demoError } = await supabase
+          .from("demos")
+          .insert({
+            project_id: newProject.id,
+            project_token: projectToken,
+            template_type: templateSlug,
+            content: demoContent,
+          });
+
+        if (demoError) {
+          console.error(`Demo creation error for ${detail.name}:`, demoError);
+          continue;
+        }
+
+        const demoUrl = `/d/${projectToken}/${businessSlug}`;
+
+        // Update lead with demo info
+        await supabase
+          .from("leads")
+          .update({
+            demo_project_id: newProject.id,
+            demo_token: projectToken,
+            demo_url: demoUrl,
+            demo_status: "created",
+            industry_template: templateSlug,
+            outreach_status: queue_outreach ? "queued" : "new",
+          })
+          .eq("id", lead.id);
+
+        // Queue outreach if requested
+        if (queue_outreach && phoneE164) {
+          await supabase
+            .from("lead_outreach_events")
+            .insert({
+              lead_id: lead.id,
+              channel: "sms",
+              status: "queued",
+              message: null, // Will be populated by sender
+            });
+        }
+
+        demosCreated++;
+        results.push({
+          lead_id: lead.id,
+          business_name: detail.name,
+          demo_url: demoUrl,
+          status: "created",
+        });
+
+        console.log(`Demo created: ${demoUrl}`);
+
+      } catch (err) {
+        console.error(`Error processing ${place.name}:`, err);
+      }
+    }
+
+    // Log the search run
+    const { data: searchRun } = await supabase
+      .from("lead_search_runs")
+      .insert({
+        query_term: query,
+        location_text: location,
+        radius_m: radius_m,
+        results_count: results.length,
+        provider: "google_places",
+        raw_meta: {
+          total_found: allPlaces.length,
+          no_website_count: noWebsiteCount,
+          demos_created: demosCreated,
+          max_demos: max_demos,
+          queue_outreach,
+        },
+      })
+      .select("id")
+      .single();
+
+    console.log(`Pipeline complete: ${demosCreated} demos created from ${noWebsiteCount} no-website leads`);
+
+    return new Response(
+      JSON.stringify({
+        run_id: searchRun?.id || null,
+        total_found: allPlaces.length,
+        no_website_count: noWebsiteCount,
+        demos_created: demosCreated,
+        results,
+      }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+
+  } catch (error) {
+    console.error("Search-and-generate error:", error);
     return new Response(
       JSON.stringify({ error: "Internal server error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
