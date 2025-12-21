@@ -1,6 +1,5 @@
-import { useParams, Link } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { useState, useEffect } from "react";
-import { Home } from "lucide-react";
 
 interface DemoData {
   business: {
@@ -125,38 +124,23 @@ export default function DemoPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Demo Header */}
-      <header className="border-b border-border bg-card">
-        <div className="container mx-auto px-4 py-6">
-          <div className="flex items-center gap-4 mb-2">
-            <Link to="/" className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
-              <Home className="h-4 w-4" />
-              <span className="text-sm">Home</span>
-            </Link>
-          </div>
-          <h1 className="text-2xl font-bold text-foreground">{data.business.name}</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Demo Preview • {data.demo.template_type}
-          </p>
-        </div>
-      </header>
-
-      {/* Demo Content */}
+      {/* Demo Content - Full width, no debug header */}
       <main className="container mx-auto px-4 py-8">
         <DemoRenderer 
           templateType={data.demo.template_type} 
-          content={data.demo.content} 
+          content={data.demo.content}
+          businessName={data.business.name}
         />
       </main>
 
-      {/* Demo CTA Footer */}
-      <footer className="fixed bottom-0 left-0 right-0 border-t border-border bg-card p-4">
+      {/* Ownership CTA Footer */}
+      <footer className="fixed bottom-0 left-0 right-0 border-t border-border bg-card p-4 shadow-lg">
         <div className="container mx-auto flex items-center justify-between">
           <p className="text-sm text-muted-foreground">
-            Like what you see? Let's talk.
+            This could be your live website in 24 hours.
           </p>
           <button className="bg-primary text-primary-foreground px-6 py-2 rounded-md font-medium hover:bg-primary/90 transition-colors">
-            Get Started
+            Claim This Design
           </button>
         </div>
       </footer>
@@ -164,24 +148,105 @@ export default function DemoPage() {
   );
 }
 
-// Placeholder demo renderer - will be expanded with actual templates
+// Lead-aware demo renderer - creates personalized landing page
 function DemoRenderer({ 
   templateType, 
-  content 
+  content,
+  businessName 
 }: { 
   templateType: string; 
   content: Record<string, unknown>;
+  businessName: string;
 }) {
+  // Extract personalization data from content
+  const city = (content.city as string) || "your area";
+  const services = (content.services as string[]) || getDefaultServices(templateType);
+  const phone = content.phone as string;
+  const tagline = (content.tagline as string) || getDefaultTagline(templateType, city);
+
   return (
-    <div className="space-y-8">
-      <div className="bg-card border border-border rounded-lg p-6">
-        <h2 className="text-lg font-semibold text-foreground mb-4">
-          Template: {templateType}
+    <div className="space-y-16 pb-24">
+      {/* Hero Section */}
+      <section className="text-center py-12">
+        <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
+          {businessName}
+        </h1>
+        <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
+          {tagline}
+        </p>
+        <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <button className="bg-primary text-primary-foreground px-8 py-3 rounded-md font-semibold hover:bg-primary/90 transition-colors text-lg">
+            Request a Quote
+          </button>
+          {phone && (
+            <a 
+              href={`tel:${phone}`}
+              className="border border-border text-foreground px-8 py-3 rounded-md font-semibold hover:bg-muted transition-colors text-lg"
+            >
+              Call {phone}
+            </a>
+          )}
+        </div>
+      </section>
+
+      {/* Services Section */}
+      <section>
+        <h2 className="text-2xl font-bold text-foreground text-center mb-8">
+          Our Services
         </h2>
-        <pre className="bg-muted p-4 rounded text-sm overflow-auto text-muted-foreground">
-          {JSON.stringify(content, null, 2)}
-        </pre>
-      </div>
+        <div className="grid md:grid-cols-3 gap-6">
+          {services.map((service, index) => (
+            <div 
+              key={index}
+              className="bg-card border border-border rounded-lg p-6 text-center hover:border-primary/50 transition-colors"
+            >
+              <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="text-primary text-xl">✓</span>
+              </div>
+              <h3 className="font-semibold text-foreground">{service}</h3>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Trust Strip */}
+      <section className="bg-muted/50 rounded-lg p-8 text-center">
+        <div className="flex flex-wrap justify-center gap-8 text-muted-foreground">
+          <span>✓ Locally Owned & Operated</span>
+          <span>✓ Serving {city} & Surrounding Areas</span>
+          <span>✓ Licensed & Insured</span>
+        </div>
+      </section>
+
+      {/* Generated Notice */}
+      <p className="text-center text-sm text-muted-foreground">
+        This preview was generated for {businessName} based on public business data.
+      </p>
     </div>
   );
+}
+
+// Helper functions for default content
+function getDefaultServices(templateType: string): string[] {
+  const serviceMap: Record<string, string[]> = {
+    plumber: ["Emergency Repairs", "Drain Cleaning", "Water Heater Service", "Pipe Installation", "Leak Detection", "Bathroom Remodeling"],
+    roofer: ["Roof Repairs", "New Installations", "Storm Damage", "Gutter Services", "Inspections", "Metal Roofing"],
+    electrician: ["Electrical Repairs", "Panel Upgrades", "Lighting Installation", "Wiring Services", "Safety Inspections", "Generator Install"],
+    hvac: ["AC Repair", "Heating Service", "Installation", "Maintenance", "Indoor Air Quality", "Emergency Service"],
+    restaurant: ["Dine-In", "Takeout", "Catering", "Private Events", "Online Ordering", "Delivery"],
+    default: ["Professional Service", "Quality Work", "Customer Satisfaction", "Competitive Pricing", "Fast Response", "Expert Team"]
+  };
+  return serviceMap[templateType] || serviceMap.default;
+}
+
+function getDefaultTagline(templateType: string, city: string): string {
+  const taglineMap: Record<string, string> = {
+    plumber: `Professional plumbing services for ${city} homes and businesses`,
+    roofer: `Trusted roofing solutions protecting ${city} properties`,
+    electrician: `Reliable electrical services for ${city} residential and commercial`,
+    hvac: `Keeping ${city} comfortable year-round`,
+    restaurant: `Delicious food served fresh in ${city}`,
+    default: `Quality service you can trust in ${city}`
+  };
+  return taglineMap[templateType] || taglineMap.default;
 }
