@@ -18,6 +18,17 @@ interface ClaimDesignModalProps {
   projectToken: string;
 }
 
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function normalizePhone(raw: string) {
+  return raw.replace(/[^\d]/g, "");
+}
+
+function isValidPhone(raw: string) {
+  const digits = normalizePhone(raw);
+  return digits.length === 10 || (digits.length === 11 && digits.startsWith("1"));
+}
+
 export function ClaimDesignModal({ open, onOpenChange, businessName, projectToken }: ClaimDesignModalProps) {
   const [formData, setFormData] = useState({
     name: "",
@@ -28,33 +39,63 @@ export function ClaimDesignModal({ open, onOpenChange, businessName, projectToke
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<{ phone?: string; email?: string; form?: string }>({});
+
+  const validate = () => {
+    const next: typeof fieldErrors = {};
+    const phone = formData.phone.trim();
+    const email = formData.email.trim();
+
+    if (!phone && !email) {
+      next.form = "Please provide at least a phone number or an email.";
+    }
+
+    if (email && !emailRegex.test(email)) {
+      next.email = "Please enter a valid email address.";
+    }
+
+    if (phone && !isValidPhone(phone)) {
+      next.phone = "Please enter a valid phone number (10 digits).";
+    }
+
+    setFieldErrors(next);
+    return Object.keys(next).length === 0;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitting(true);
     setError(null);
 
+    if (!validate()) return;
+
+    setSubmitting(true);
     try {
       const baseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+      const clientKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
+      if (!baseUrl || !clientKey) {
+        throw new Error("Missing Supabase env config");
+      }
 
       const res = await fetch(`${baseUrl}/functions/v1/demo/claim`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...(anonKey ? { apikey: anonKey, Authorization: `Bearer ${anonKey}` } : {}),
+          apikey: clientKey,
+          Authorization: `Bearer ${clientKey}`,
         },
         body: JSON.stringify({
           project_token: projectToken,
-          name: formData.name,
-          phone: formData.phone,
-          email: formData.email,
-          notes: formData.notes,
+          name: formData.name.trim(),
+          phone: formData.phone.trim(),
+          email: formData.email.trim(),
+          notes: formData.notes.trim(),
         }),
       });
 
       if (!res.ok) {
-        throw new Error("Failed to submit");
+        const text = await res.text().catch(() => "");
+        throw new Error(text || "Failed to submit");
       }
 
       setSubmitted(true);
@@ -68,7 +109,13 @@ export function ClaimDesignModal({ open, onOpenChange, businessName, projectToke
 
   const handleChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+    // Clear field error on change
+    if (fieldErrors[field as keyof typeof fieldErrors]) {
+      setFieldErrors(prev => ({ ...prev, [field]: undefined, form: undefined }));
+    }
   };
+
+  const canSubmit = !submitting && (formData.phone.trim() || formData.email.trim());
 
   if (submitted) {
     return (
@@ -120,7 +167,11 @@ export function ClaimDesignModal({ open, onOpenChange, businessName, projectToke
                 placeholder="(555) 123-4567"
                 value={formData.phone}
                 onChange={(e) => handleChange("phone", e.target.value)}
+                className={fieldErrors.phone ? "border-destructive" : ""}
               />
+              {fieldErrors.phone && (
+                <p className="text-xs text-destructive">{fieldErrors.phone}</p>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="claim-email">Email</Label>
@@ -130,9 +181,17 @@ export function ClaimDesignModal({ open, onOpenChange, businessName, projectToke
                 placeholder="you@example.com"
                 value={formData.email}
                 onChange={(e) => handleChange("email", e.target.value)}
+                className={fieldErrors.email ? "border-destructive" : ""}
               />
+              {fieldErrors.email && (
+                <p className="text-xs text-destructive">{fieldErrors.email}</p>
+              )}
             </div>
           </div>
+
+          {fieldErrors.form && (
+            <p className="text-sm text-destructive text-center">{fieldErrors.form}</p>
+          )}
           
           <div className="space-y-2">
             <Label htmlFor="claim-notes">Anything we should know? (optional)</Label>
@@ -153,7 +212,7 @@ export function ClaimDesignModal({ open, onOpenChange, businessName, projectToke
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="flex-1">
               Not Yet
             </Button>
-            <Button type="submit" className="flex-1" disabled={submitting}>
+            <Button type="submit" className="flex-1" disabled={!canSubmit}>
               {submitting ? "Submitting..." : "Make This Mine"}
             </Button>
           </div>
