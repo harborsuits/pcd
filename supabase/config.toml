@@ -23,3 +23,6 @@ verify_jwt = false
 
 [functions.leads]
 verify_jwt = false
+
+[functions.outreach]
+verify_jwt = false

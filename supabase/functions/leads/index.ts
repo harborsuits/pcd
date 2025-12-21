@@ -30,6 +30,12 @@ Deno.serve(async (req) => {
     return handleListLeads(req);
   }
 
+  // Route: POST /leads/:id/generate-demo
+  if (subPath.endsWith("/generate-demo") && req.method === "POST") {
+    const leadId = subPath.replace("/generate-demo", "");
+    return handleGenerateDemo(req, leadId);
+  }
+
   // Route: PATCH /leads/:id (update lead status)
   if (subPath && req.method === "PATCH") {
     return handleUpdateLead(req, subPath);
@@ -419,6 +425,234 @@ async function handleUpdateLead(req: Request, leadId: string): Promise<Response>
 
   } catch (error) {
     console.error("Update lead error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+}
+
+// Map category/query to industry template
+function getIndustryTemplate(category: string | null, queryTerm: string | null): string {
+  const combined = `${category || ""} ${queryTerm || ""}`.toLowerCase();
+  
+  if (/roof|siding|gutter|contractor|construction|hvac|plumb|electric|landscap|paving|paint|handy|remodel|floor/.test(combined)) {
+    return "home-services";
+  }
+  if (/salon|barber|spa|nail|hair|beauty|cosmet|massage/.test(combined)) {
+    return "beauty";
+  }
+  if (/restaurant|cafe|coffee|food|bakery|pizz|grill|bar|pub|dining/.test(combined)) {
+    return "restaurant";
+  }
+  if (/realtor|real estate|property|mortgage|broker/.test(combined)) {
+    return "real-estate";
+  }
+  if (/auto|car|mechanic|repair|tire|body shop|detailing/.test(combined)) {
+    return "automotive";
+  }
+  if (/dentist|dental|doctor|clinic|medical|health|chiro|physio|optom/.test(combined)) {
+    return "healthcare";
+  }
+  if (/law|legal|attorney|accountant|cpa|consult|financial/.test(combined)) {
+    return "professional";
+  }
+  if (/gym|fitness|yoga|personal train|martial/.test(combined)) {
+    return "fitness";
+  }
+  
+  return "small-business";
+}
+
+// Extract city/town from address
+function extractCityFromAddress(address: string | null): string {
+  if (!address) return "";
+  // Try to extract city from format "123 Main St, City, ST 12345"
+  const parts = address.split(",");
+  if (parts.length >= 2) {
+    return parts[1].trim().split(" ")[0];
+  }
+  return "";
+}
+
+// Generate slug from business name
+function generateSlug(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 50);
+}
+
+// Generate a unique token
+function generateToken(): string {
+  const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
+  let token = "";
+  for (let i = 0; i < 12; i++) {
+    token += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return token;
+}
+
+// POST /leads/:id/generate-demo - Generate demo for a lead
+async function handleGenerateDemo(req: Request, leadId: string): Promise<Response> {
+  const authError = validateAdminKey(req);
+  if (authError) return authError;
+
+  const supabase = getSupabaseClient();
+
+  try {
+    // Load the lead
+    const { data: lead, error: leadError } = await supabase
+      .from("leads")
+      .select("*")
+      .eq("id", leadId)
+      .single();
+
+    if (leadError || !lead) {
+      return new Response(
+        JSON.stringify({ error: "Lead not found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log(`Generating demo for lead: ${lead.business_name}`);
+
+    // Determine industry template
+    const templateSlug = getIndustryTemplate(lead.category, lead.query_term);
+    const cityName = extractCityFromAddress(lead.address);
+    const businessSlug = generateSlug(lead.business_name);
+
+    let projectId = lead.demo_project_id;
+    let projectToken = lead.demo_token;
+
+    // Create or reuse project
+    if (!projectId) {
+      projectToken = generateToken();
+      
+      const { data: newProject, error: projectError } = await supabase
+        .from("projects")
+        .insert({
+          business_name: lead.business_name,
+          business_slug: businessSlug,
+          project_token: projectToken,
+          contact_phone: lead.phone,
+          website: lead.website,
+          address: lead.address,
+          city: cityName,
+          source: "lead_engine",
+          status: "lead",
+        })
+        .select("id, project_token")
+        .single();
+
+      if (projectError) {
+        console.error("Failed to create project:", projectError);
+        // Update lead with failed status
+        await supabase
+          .from("leads")
+          .update({ demo_status: "failed" })
+          .eq("id", leadId);
+          
+        return new Response(
+          JSON.stringify({ error: "Failed to create project", details: projectError.message }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      projectId = newProject.id;
+      projectToken = newProject.project_token;
+    }
+
+    // Build demo content
+    const heroHeadline = cityName
+      ? `${lead.business_name} - Serving ${cityName} & Surrounding Areas`
+      : `${lead.business_name} - Your Trusted Local Partner`;
+    
+    const demoContent = {
+      template: templateSlug,
+      hero: {
+        headline: heroHeadline,
+        subheadline: "Quality service you can trust. Get started today!",
+      },
+      business: {
+        name: lead.business_name,
+        phone: lead.phone,
+        address: lead.address,
+        website: lead.website,
+      },
+      cta: {
+        primary: lead.phone ? { label: "Call Now", action: `tel:${lead.phone}` } : null,
+        secondary: { label: "Request Quote", action: "#quote" },
+        tertiary: lead.address ? { label: "Get Directions", action: `https://maps.google.com/?q=${encodeURIComponent(lead.address)}` } : null,
+      },
+      generated_at: new Date().toISOString(),
+    };
+
+    // Upsert demo record
+    const { error: demoError } = await supabase
+      .from("demos")
+      .upsert({
+        project_id: projectId,
+        project_token: projectToken,
+        template_type: templateSlug,
+        content: demoContent,
+      }, { onConflict: "project_id" });
+
+    if (demoError) {
+      console.error("Failed to create demo:", demoError);
+      await supabase
+        .from("leads")
+        .update({ demo_status: "failed" })
+        .eq("id", leadId);
+        
+      return new Response(
+        JSON.stringify({ error: "Failed to create demo", details: demoError.message }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Build demo URL
+    const demoUrl = `/d/${projectToken}/${templateSlug}`;
+
+    // Update lead with demo info
+    const { error: updateError } = await supabase
+      .from("leads")
+      .update({
+        demo_project_id: projectId,
+        demo_token: projectToken,
+        demo_url: demoUrl,
+        demo_status: "created",
+        industry_template: templateSlug,
+      })
+      .eq("id", leadId);
+
+    if (updateError) {
+      console.error("Failed to update lead:", updateError);
+    }
+
+    console.log(`Demo generated: ${demoUrl}`);
+
+    return new Response(
+      JSON.stringify({
+        ok: true,
+        demo_url: demoUrl,
+        project_token: projectToken,
+        template_slug: templateSlug,
+        project_id: projectId,
+      }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+
+  } catch (error) {
+    console.error("Generate demo error:", error);
+    
+    // Mark as failed
+    await supabase
+      .from("leads")
+      .update({ demo_status: "failed" })
+      .eq("id", leadId);
+      
     return new Response(
       JSON.stringify({ error: "Internal server error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
