@@ -5,6 +5,9 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-admin-key, x-twilio-signature",
 };
 
+// Admin test phone number for QA (server-side only)
+const ADMIN_TEST_PHONE = "+12073805680";
+
 // Validate Twilio webhook signature using Web Crypto API
 // See: https://www.twilio.com/docs/usage/webhooks/webhooks-security
 async function validateTwilioSignature(req: Request, rawBody: string): Promise<boolean> {
@@ -91,6 +94,11 @@ Deno.serve(async (req) => {
   // Route: POST /sms/send (admin-only)
   if (subPath === "send" && req.method === "POST") {
     return handleSend(req);
+  }
+
+  // Route: POST /sms/send-test (admin-only) - Send test SMS to admin phone
+  if (subPath === "send-test" && req.method === "POST") {
+    return handleSendTest(req);
   }
 
   // Route: POST /sms/inbound (Twilio webhook - public but validated)
@@ -310,6 +318,95 @@ async function handleSend(req: Request): Promise<Response> {
     );
   } catch (error) {
     console.error("Send error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+}
+
+// POST /sms/send-test - Send test SMS to admin phone (for QA)
+async function handleSendTest(req: Request): Promise<Response> {
+  const authError = validateAdminKey(req);
+  if (authError) return authError;
+
+  try {
+    const body = await req.json().catch(() => ({}));
+    const leadId = body.lead_id;
+
+    if (!leadId) {
+      return new Response(
+        JSON.stringify({ error: "lead_id is required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const supabase = getSupabaseClient();
+
+    // Get the lead to build the message
+    const { data: lead, error: leadError } = await supabase
+      .from("leads")
+      .select("id, business_name, demo_url, phone_e164")
+      .eq("id", leadId)
+      .single();
+
+    if (leadError || !lead) {
+      return new Response(
+        JSON.stringify({ error: "Lead not found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (!lead.demo_url) {
+      return new Response(
+        JSON.stringify({ error: "Lead has no demo URL" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Build the same message that would go to the real lead
+    const publicBaseUrl = Deno.env.get("PUBLIC_BASE_URL") || "https://localsite.pro";
+    const demoFullUrl = `${publicBaseUrl.replace(/\/$/, "")}${lead.demo_url}`;
+    
+    const message = `Hi! I built a free website demo for ${lead.business_name}. Check it out: ${demoFullUrl} – Reply STOP to opt out.`;
+
+    console.log(`Sending TEST SMS to ${ADMIN_TEST_PHONE} for lead: ${lead.business_name}`);
+
+    // Send to admin test phone instead of lead's phone
+    const result = await sendTwilioSMS(ADMIN_TEST_PHONE, message);
+
+    if (!result.success) {
+      console.error("Test SMS failed:", result.error);
+      return new Response(
+        JSON.stringify({ ok: false, error: result.error }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Log test send (with test_sent status so it doesn't affect real outreach)
+    await supabase
+      .from("lead_outreach_events")
+      .insert({
+        lead_id: leadId,
+        channel: "sms",
+        message,
+        status: "test_sent",
+        provider_message_id: result.messageId,
+      });
+
+    console.log(`Test SMS sent successfully to ${ADMIN_TEST_PHONE}`);
+
+    return new Response(
+      JSON.stringify({ 
+        ok: true, 
+        message: `Test SMS sent to ${ADMIN_TEST_PHONE}`,
+        lead_name: lead.business_name,
+        demo_url: demoFullUrl,
+      }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  } catch (error) {
+    console.error("Send test error:", error);
     return new Response(
       JSON.stringify({ error: "Internal server error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
