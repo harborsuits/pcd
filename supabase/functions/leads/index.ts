@@ -111,12 +111,18 @@ interface GeoResult {
   };
 }
 
+// Geocoding error type for better error handling
+interface GeoError {
+  type: "api_denied" | "not_found" | "unknown";
+  message: string;
+}
+
 // Try geocoding with fallback - returns lat/lng and viewport for counties
 async function geocodeWithFallback(
   location: string,
   query: string,
   apiKey: string
-): Promise<GeoResult | null> {
+): Promise<{ result: GeoResult } | { error: GeoError }> {
   const normalizedLoc = normalizeLocation(location);
   const isCounty = isCountyLocation(normalizedLoc);
   
@@ -127,6 +133,17 @@ async function geocodeWithFallback(
   
   console.log(`Geocode attempt for "${normalizedLoc}": status=${geocodeData.status}, results=${geocodeData.results?.length || 0}, isCounty=${isCounty}`);
   
+  // Check for API key issues first
+  if (geocodeData.status === "REQUEST_DENIED") {
+    console.error("Geocoding API denied:", geocodeData.error_message);
+    return { 
+      error: { 
+        type: "api_denied", 
+        message: `Google API error: ${geocodeData.error_message || "REQUEST_DENIED"}. Check that Geocoding API is enabled and API key has no IP restrictions.` 
+      } 
+    };
+  }
+  
   if (geocodeData.status === "OK" && geocodeData.results?.length > 0) {
     const geometry = geocodeData.results[0].geometry;
     const loc = geometry?.location;
@@ -134,14 +151,16 @@ async function geocodeWithFallback(
     
     if (loc?.lat && loc?.lng) {
       return { 
-        lat: loc.lat, 
-        lng: loc.lng, 
-        method: "geocode",
-        isCounty,
-        viewport: viewport ? {
-          northeast: { lat: viewport.northeast.lat, lng: viewport.northeast.lng },
-          southwest: { lat: viewport.southwest.lat, lng: viewport.southwest.lng }
-        } : undefined
+        result: { 
+          lat: loc.lat, 
+          lng: loc.lng, 
+          method: "geocode",
+          isCounty,
+          viewport: viewport ? {
+            northeast: { lat: viewport.northeast.lat, lng: viewport.northeast.lng },
+            southwest: { lat: viewport.southwest.lat, lng: viewport.southwest.lng }
+          } : undefined
+        }
       };
     }
   }
@@ -155,15 +174,31 @@ async function geocodeWithFallback(
   
   console.log(`Places fallback for "${fallbackQuery}": status=${searchData.status}, results=${searchData.results?.length || 0}`);
   
+  // Check for API key issues in fallback
+  if (searchData.status === "REQUEST_DENIED") {
+    console.error("Places API denied:", searchData.error_message);
+    return { 
+      error: { 
+        type: "api_denied", 
+        message: `Google API error: ${searchData.error_message || "REQUEST_DENIED"}. Check that Places API is enabled and API key has no IP restrictions.` 
+      } 
+    };
+  }
+  
   if (searchData.status === "OK" && searchData.results?.length > 0) {
     const firstResult = searchData.results[0];
     const loc = firstResult.geometry?.location;
     if (loc?.lat && loc?.lng) {
-      return { lat: loc.lat, lng: loc.lng, method: "places_fallback", isCounty };
+      return { result: { lat: loc.lat, lng: loc.lng, method: "places_fallback", isCounty } };
     }
   }
   
-  return null;
+  return { 
+    error: { 
+      type: "not_found", 
+      message: "Could not understand that location. Try 'City, ST' format (e.g., 'Portland, ME' or 'Lincoln County, ME')." 
+    } 
+  };
 }
 
 // Generate grid points to cover a viewport (for county searches)
@@ -285,17 +320,18 @@ async function handleSearch(req: Request): Promise<Response> {
     // Step 1: Geocode the location with fallback
     const geoResult = await geocodeWithFallback(location, query, apiKey);
     
-    if (!geoResult) {
+    if ("error" in geoResult) {
+      const statusCode = geoResult.error.type === "api_denied" ? 500 : 400;
       return new Response(
         JSON.stringify({ 
           ok: false,
-          error: "Could not understand that location. Try 'City, ST' format (e.g., 'Portland, ME' or 'Lincoln County, ME')." 
+          error: geoResult.error.message
         }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: statusCode, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const { lat, lng, method } = geoResult;
+    const { lat, lng, method } = geoResult.result;
     console.log(`Geocoded to: ${lat}, ${lng} (method: ${method})`);
 
     // Step 2: Text Search for businesses (with pagination - up to 3 pages)
@@ -527,17 +563,18 @@ async function handleSearchAndGenerate(req: Request): Promise<Response> {
     // Step 1: Geocode the location with fallback
     const geoResult = await geocodeWithFallback(location, query, apiKey);
     
-    if (!geoResult) {
+    if ("error" in geoResult) {
+      const statusCode = geoResult.error.type === "api_denied" ? 500 : 400;
       return new Response(
         JSON.stringify({ 
           ok: false,
-          error: "Could not understand that location. Try 'City, ST' format (e.g., 'Portland, ME' or 'Lincoln County, ME')." 
+          error: geoResult.error.message
         }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: statusCode, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const { lat, lng, method, isCounty, viewport } = geoResult;
+    const { lat, lng, method, isCounty, viewport } = geoResult.result;
     console.log(`Geocoded to: ${lat}, ${lng} (method: ${method}, isCounty: ${isCounty})`);
 
     // Step 2: Text Search - different strategies for city vs county
