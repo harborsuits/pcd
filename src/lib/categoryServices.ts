@@ -138,9 +138,33 @@ export const tradeDisplayNames: Record<string, string> = {
   default: "Professional",
 };
 
+// Trade nouns for proper grammar (e.g., "professional plumbing work")
+const tradeNouns: Record<string, string> = {
+  plumber: "plumbing",
+  roofer: "roofing",
+  electrician: "electrical",
+  hvac: "HVAC",
+  landscaper: "landscaping",
+  painter: "painting",
+  cleaner: "cleaning",
+  restaurant: "dining",
+  contractor: "contracting",
+  default: "professional",
+};
+
+// Check if a template type is a known trade
+export function isKnownTrade(templateType: string): boolean {
+  return templateType in tradeDisplayNames && templateType !== "default";
+}
+
 // Get display name for a trade
 export function getTradeDisplayName(templateType: string): string {
   return tradeDisplayNames[templateType] || tradeDisplayNames.default;
+}
+
+// Get trade noun for proper grammar
+export function getTradeNoun(templateType: string): string {
+  return tradeNouns[templateType] || tradeNouns.default;
 }
 
 // Generate a tagline based on template and location
@@ -164,7 +188,7 @@ export function generateTagline(templateType: string, city: string): string {
 // Generate trade-aware CTA text
 export function getTradeCTAText(templateType: string): { button: string; heading: string } {
   const tradeName = getTradeDisplayName(templateType);
-  if (templateType === "default" || !tradeDisplayNames[templateType]) {
+  if (!isKnownTrade(templateType)) {
     return {
       button: "Request a Quote",
       heading: "Ready to Get Started?",
