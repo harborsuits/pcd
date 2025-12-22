@@ -69,6 +69,37 @@ interface PortalData {
   };
 }
 
+// Human-friendly status labels
+function getStatusLabel(status: string): string {
+  const labels: Record<string, string> = {
+    lead: "New",
+    contacted: "Getting Started",
+    interested: "Getting Started",
+    client: "In Progress",
+    completed: "Complete",
+    archived: "Archived",
+  };
+  return labels[status] || status;
+}
+
+// Status badge component
+function StatusBadge({ status }: { status: string }) {
+  const label = getStatusLabel(status);
+  
+  // Use different styling based on status
+  const isComplete = status === "completed";
+  const isActive = status === "client" || status === "interested";
+  
+  return (
+    <Badge 
+      variant={isComplete ? "default" : isActive ? "secondary" : "outline"}
+      className={isComplete ? "bg-green-500/10 text-green-600 border-green-500/20" : ""}
+    >
+      {label}
+    </Badge>
+  );
+}
+
 export default function PortalPage() {
   const { token } = useParams<{ token: string }>();
   const [data, setData] = useState<PortalData | null>(null);
@@ -601,9 +632,7 @@ export default function PortalPage() {
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-2">
             <h1 className="text-3xl font-bold">{data.business.name}</h1>
-            <Badge variant={data.business.status === "active" ? "default" : "secondary"}>
-              {data.business.status}
-            </Badge>
+            <StatusBadge status={data.business.status} />
           </div>
           <p className="text-muted-foreground">Your Project Workspace</p>
         </div>
@@ -856,18 +885,16 @@ export default function PortalPage() {
             </CardContent>
           </Card>
 
-          {/* Payments Section */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <CreditCard className="h-5 w-5" />
-                Payments ({data.payments.length})
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {data.payments.length === 0 ? (
-                <p className="text-muted-foreground text-center py-4">No payment history</p>
-              ) : (
+          {/* Payments Section - Only show if there are payments */}
+          {data.payments.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <CreditCard className="h-5 w-5" />
+                  Payments ({data.payments.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
                 <div className="space-y-3">
                   {data.payments.map((payment, idx) => (
                     <div key={idx} className="flex items-center justify-between p-3 bg-muted rounded-lg">
@@ -894,9 +921,9 @@ export default function PortalPage() {
                     </div>
                   ))}
                 </div>
-              )}
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
 

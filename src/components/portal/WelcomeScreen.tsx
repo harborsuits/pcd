@@ -1,6 +1,6 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Sparkles, MessageSquare, Upload, CheckCircle } from "lucide-react";
+import { Sparkles } from "lucide-react";
 
 interface WelcomeScreenProps {
   businessName: string;
@@ -17,41 +17,35 @@ export function WelcomeScreen({ businessName, onDismiss }: WelcomeScreenProps) {
           </div>
           
           <div>
-            <h1 className="text-2xl font-bold mb-2">Welcome to Your Workspace</h1>
+            <h1 className="text-2xl font-bold mb-2">Welcome, {businessName}</h1>
             <p className="text-muted-foreground">
-              This is your private portal for <span className="font-medium text-foreground">{businessName}</span>. 
-              Everything we work on together lives here.
+              This is your project space. Everything we work on together lives here.
             </p>
           </div>
           
-          <div className="grid gap-3 text-left">
-            <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
-              <MessageSquare className="h-5 w-5 text-primary mt-0.5 shrink-0" />
-              <div>
-                <p className="font-medium text-sm">Message us anytime</p>
-                <p className="text-xs text-muted-foreground">Ask questions, share ideas, give feedback</p>
-              </div>
-            </div>
+          <div className="text-left space-y-4 py-2">
+            <p className="text-sm text-foreground font-medium">Here's what happens next:</p>
             
-            <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
-              <Upload className="h-5 w-5 text-primary mt-0.5 shrink-0" />
-              <div>
-                <p className="font-medium text-sm">Upload files</p>
-                <p className="text-xs text-muted-foreground">Photos, logos, documents — drag & drop</p>
+            <div className="space-y-3">
+              <div className="flex items-start gap-3">
+                <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 text-primary text-sm font-semibold shrink-0">1</span>
+                <p className="text-sm text-muted-foreground">We'll refine the design to match your business</p>
               </div>
-            </div>
-            
-            <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
-              <CheckCircle className="h-5 w-5 text-primary mt-0.5 shrink-0" />
-              <div>
-                <p className="font-medium text-sm">Review & approve</p>
-                <p className="text-xs text-muted-foreground">See work-in-progress and give the green light</p>
+              
+              <div className="flex items-start gap-3">
+                <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 text-primary text-sm font-semibold shrink-0">2</span>
+                <p className="text-sm text-muted-foreground">You'll review and give feedback right here</p>
+              </div>
+              
+              <div className="flex items-start gap-3">
+                <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 text-primary text-sm font-semibold shrink-0">3</span>
+                <p className="text-sm text-muted-foreground">When you're ready, we'll build it live</p>
               </div>
             </div>
           </div>
           
           <Button onClick={onDismiss} className="w-full" size="lg">
-            Get Started
+            Go to my project
           </Button>
         </CardContent>
       </Card>
