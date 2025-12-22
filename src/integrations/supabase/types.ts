@@ -213,6 +213,9 @@ export type Database = {
           company_blurb: string | null
           created_at: string
           demo_project_id: string | null
+          demo_review_notes: string | null
+          demo_review_status: string
+          demo_reviewed_at: string | null
           demo_status: string | null
           demo_token: string | null
           demo_url: string | null
@@ -242,6 +245,9 @@ export type Database = {
           company_blurb?: string | null
           created_at?: string
           demo_project_id?: string | null
+          demo_review_notes?: string | null
+          demo_review_status?: string
+          demo_reviewed_at?: string | null
           demo_status?: string | null
           demo_token?: string | null
           demo_url?: string | null
@@ -271,6 +277,9 @@ export type Database = {
           company_blurb?: string | null
           created_at?: string
           demo_project_id?: string | null
+          demo_review_notes?: string | null
+          demo_review_status?: string
+          demo_reviewed_at?: string | null
           demo_status?: string | null
           demo_token?: string | null
           demo_url?: string | null

@@ -51,6 +51,12 @@ Deno.serve(async (req) => {
     return handleClearDemos(req);
   }
 
+  // Route: POST /leads/:id/review (admin only - approve/reject demo)
+  if (subPath.endsWith("/review") && req.method === "POST") {
+    const leadId = subPath.replace("/review", "");
+    return handleReviewDemo(req, leadId);
+  }
+
   // Route: PATCH /leads/:id (update lead status)
   if (subPath && req.method === "PATCH") {
     return handleUpdateLead(req, subPath);
@@ -1632,6 +1638,76 @@ async function handleClearDemos(req: Request): Promise<Response> {
 
   } catch (error) {
     console.error("Clear demos error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+}
+
+// ==================== REVIEW DEMO HANDLER ====================
+async function handleReviewDemo(req: Request, leadId: string): Promise<Response> {
+  const authError = validateAdminKey(req);
+  if (authError) return authError;
+
+  try {
+    let body: { status?: string; notes?: string };
+    try {
+      body = await req.json();
+    } catch {
+      return new Response(
+        JSON.stringify({ error: "Invalid JSON body" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const { status, notes } = body;
+
+    if (!status || !["pending", "approved", "rejected"].includes(status)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid status. Must be: pending, approved, or rejected" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const supabase = getSupabaseClient();
+
+    // Update lead with review status
+    const { data: lead, error } = await supabase
+      .from("leads")
+      .update({
+        demo_review_status: status,
+        demo_review_notes: notes ?? null,
+        demo_reviewed_at: new Date().toISOString(),
+      })
+      .eq("id", leadId)
+      .select("id, business_name, demo_review_status")
+      .single();
+
+    if (error) {
+      console.error("Review update error:", error);
+      return new Response(
+        JSON.stringify({ error: "Failed to update review status" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (!lead) {
+      return new Response(
+        JSON.stringify({ error: "Lead not found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log(`Lead ${leadId} (${lead.business_name}) review status updated to: ${status}`);
+
+    return new Response(
+      JSON.stringify({ ok: true, lead }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+
+  } catch (error) {
+    console.error("Review demo error:", error);
     return new Response(
       JSON.stringify({ error: "Internal server error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }

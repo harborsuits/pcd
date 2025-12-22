@@ -115,16 +115,24 @@ async function handleQueue(req: Request): Promise<Response> {
     const suppressedPhones = new Set((suppressions || []).map((s) => s.phone));
 
     for (const leadId of lead_ids) {
-      // Fetch lead with phone fields
+      // Fetch lead with phone fields AND review status
       const { data: lead, error: leadError } = await supabase
         .from("leads")
-        .select("id, business_name, phone, phone_raw, phone_e164, demo_url, outreach_status")
+        .select("id, business_name, phone, phone_raw, phone_e164, demo_url, outreach_status, demo_review_status")
         .eq("id", leadId)
         .single();
 
       if (leadError || !lead) {
         skippedReasons["not_found"] = (skippedReasons["not_found"] || 0) + 1;
         skipped++;
+        continue;
+      }
+
+      // CRITICAL: Only allow approved demos to be queued for outreach
+      if (lead.demo_review_status !== "approved") {
+        skippedReasons["not_approved"] = (skippedReasons["not_approved"] || 0) + 1;
+        skipped++;
+        console.log(`Skipping lead ${leadId}: demo_review_status is ${lead.demo_review_status}, not approved`);
         continue;
       }
 

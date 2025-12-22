@@ -13,7 +13,7 @@ import { Switch } from "@/components/ui/switch";
 import { 
   Search, Globe, Phone, MapPin, ExternalLink, Loader2, 
   Rocket, Copy, Check, MessageSquare, Send, Clock, 
-  RefreshCw, Building2, Wand2, Mail
+  RefreshCw, Building2, Wand2, Mail, CheckCircle, XCircle, Eye
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -67,6 +67,7 @@ interface Lead {
   lead_score: number;
   demo_status: string;
   demo_url: string | null;
+  demo_review_status: string;
   outreach_status: string;
   created_at: string;
 }
@@ -126,6 +127,7 @@ export function AcquisitionTab() {
   const [autoQueueOutreach, setAutoQueueOutreach] = useState(false);
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [searchStats, setSearchStats] = useState<SearchStats | null>(null);
+  const [reviewFilter, setReviewFilter] = useState<"all" | "pending" | "approved" | "rejected">("pending");
   
   const queryClient = useQueryClient();
 
@@ -295,6 +297,29 @@ export function AcquisitionTab() {
     },
   });
 
+  // Review demo mutation (approve/reject)
+  const reviewDemoMutation = useMutation({
+    mutationFn: async ({ leadId, status }: { leadId: string; status: "approved" | "rejected" | "pending" }) => {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/leads/${leadId}/review`, {
+        method: "POST",
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ status }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Failed to update review status");
+      }
+      return res.json();
+    },
+    onSuccess: (_, { status }) => {
+      toast.success(`Demo ${status}`);
+      queryClient.invalidateQueries({ queryKey: ["ops-leads"] });
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
+    },
+  });
+
   // Clear all leads with demos
   const clearLeadsMutation = useMutation({
     mutationFn: async () => {
@@ -326,9 +351,17 @@ export function AcquisitionTab() {
 
   const leads = leadsData?.leads || [];
   const leadsWithDemos = leads.filter(l => l.demo_status === "created");
+  const filteredLeads = reviewFilter === "all" 
+    ? leadsWithDemos 
+    : leadsWithDemos.filter(l => (l.demo_review_status || "pending") === reviewFilter);
   const outreachEvents = outreachData?.events || [];
   const queuedEvents = outreachEvents.filter(e => e.status === "queued");
   const sentEvents = outreachEvents.filter(e => e.status === "sent");
+  
+  // Count by review status
+  const pendingCount = leadsWithDemos.filter(l => (l.demo_review_status || "pending") === "pending").length;
+  const approvedCount = leadsWithDemos.filter(l => l.demo_review_status === "approved").length;
+  const rejectedCount = leadsWithDemos.filter(l => l.demo_review_status === "rejected").length;
 
   return (
     <div className="space-y-6">
@@ -601,6 +634,18 @@ export function AcquisitionTab() {
               <div className="flex items-center justify-between">
                 <CardTitle className="text-lg">Leads with Demos</CardTitle>
                 <div className="flex items-center gap-2">
+                  {/* Review Status Filter */}
+                  <Select value={reviewFilter} onValueChange={(v) => setReviewFilter(v as typeof reviewFilter)}>
+                    <SelectTrigger className="w-[130px] h-8">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All ({leadsWithDemos.length})</SelectItem>
+                      <SelectItem value="pending">Pending ({pendingCount})</SelectItem>
+                      <SelectItem value="approved">Approved ({approvedCount})</SelectItem>
+                      <SelectItem value="rejected">Rejected ({rejectedCount})</SelectItem>
+                    </SelectContent>
+                  </Select>
                   <Button
                     variant="outline"
                     size="sm"
@@ -629,9 +674,11 @@ export function AcquisitionTab() {
                   <div className="flex items-center justify-center py-8">
                     <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                   </div>
-                ) : leadsWithDemos.length === 0 ? (
+                ) : filteredLeads.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
-                    No demos generated yet. Use the search above to find leads.
+                    {leadsWithDemos.length === 0 
+                      ? "No demos generated yet. Use the search above to find leads."
+                      : `No ${reviewFilter} leads.`}
                   </div>
                 ) : (
                   <Table>
@@ -639,12 +686,12 @@ export function AcquisitionTab() {
                       <TableRow>
                         <TableHead>Business</TableHead>
                         <TableHead>Phone</TableHead>
-                        <TableHead>Outreach</TableHead>
-                        <TableHead className="w-[140px]">Actions</TableHead>
+                        <TableHead>Review</TableHead>
+                        <TableHead className="w-[200px]">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {leadsWithDemos.map((lead) => (
+                      {filteredLeads.map((lead) => (
                         <TableRow key={lead.id}>
                           <TableCell>
                             <div className="font-medium">{lead.business_name}</div>
@@ -666,22 +713,36 @@ export function AcquisitionTab() {
                           <TableCell>
                             <Badge
                               variant={
-                                lead.outreach_status === "sent" ? "default" :
-                                lead.outreach_status === "queued" ? "secondary" :
-                                "outline"
+                                lead.demo_review_status === "approved" ? "default" :
+                                lead.demo_review_status === "rejected" ? "destructive" :
+                                "secondary"
                               }
                             >
-                              {lead.outreach_status || "new"}
+                              {lead.demo_review_status || "pending"}
                             </Badge>
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-1">
                               {lead.demo_url && (
                                 <>
+                                  {/* Preview demo */}
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    asChild
+                                    title="Preview demo"
+                                  >
+                                    <a href={lead.demo_url} target="_blank" rel="noopener noreferrer">
+                                      <Eye className="h-4 w-4" />
+                                    </a>
+                                  </Button>
+                                  
+                                  {/* Copy link */}
                                   <Button
                                     variant="ghost"
                                     size="sm"
                                     onClick={() => copyDemoLink(lead.demo_url!, lead.id)}
+                                    title="Copy demo link"
                                   >
                                     {copiedId === lead.id ? (
                                       <Check className="h-4 w-4 text-green-500" />
@@ -689,25 +750,48 @@ export function AcquisitionTab() {
                                       <Copy className="h-4 w-4" />
                                     )}
                                   </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    asChild
-                                  >
-                                    <a href={lead.demo_url} target="_blank" rel="noopener noreferrer">
-                                      <ExternalLink className="h-4 w-4" />
-                                    </a>
-                                  </Button>
-                                  {!lead.outreach_status || lead.outreach_status === "new" ? (
+                                  
+                                  {/* Approve button - show if not approved */}
+                                  {lead.demo_review_status !== "approved" && (
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="text-green-600 border-green-600 hover:bg-green-50"
+                                      onClick={() => reviewDemoMutation.mutate({ leadId: lead.id, status: "approved" })}
+                                      disabled={reviewDemoMutation.isPending}
+                                      title="Approve demo"
+                                    >
+                                      <CheckCircle className="h-4 w-4" />
+                                    </Button>
+                                  )}
+                                  
+                                  {/* Reject button - show if not rejected */}
+                                  {lead.demo_review_status !== "rejected" && (
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="text-red-600 border-red-600 hover:bg-red-50"
+                                      onClick={() => reviewDemoMutation.mutate({ leadId: lead.id, status: "rejected" })}
+                                      disabled={reviewDemoMutation.isPending}
+                                      title="Reject demo"
+                                    >
+                                      <XCircle className="h-4 w-4" />
+                                    </Button>
+                                  )}
+                                  
+                                  {/* Queue Outreach - only for approved leads */}
+                                  {lead.demo_review_status === "approved" && 
+                                   (!lead.outreach_status || lead.outreach_status === "new") && (
                                     <Button
                                       variant="outline"
                                       size="sm"
                                       onClick={() => queueOutreachMutation.mutate(lead.id)}
                                       disabled={queueOutreachMutation.isPending}
+                                      title="Queue outreach"
                                     >
                                       <Mail className="h-4 w-4" />
                                     </Button>
-                                  ) : null}
+                                  )}
                                 </>
                               )}
                             </div>
