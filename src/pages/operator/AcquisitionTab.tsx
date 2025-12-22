@@ -128,6 +128,7 @@ export function AcquisitionTab() {
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [searchStats, setSearchStats] = useState<SearchStats | null>(null);
   const [reviewFilter, setReviewFilter] = useState<"all" | "pending" | "approved" | "rejected">("pending");
+  const [selectedLeadIds, setSelectedLeadIds] = useState<string[]>([]);
   
   const queryClient = useQueryClient();
 
@@ -362,6 +363,41 @@ export function AcquisitionTab() {
   const pendingCount = leadsWithDemos.filter(l => (l.demo_review_status || "pending") === "pending").length;
   const approvedCount = leadsWithDemos.filter(l => l.demo_review_status === "approved").length;
   const rejectedCount = leadsWithDemos.filter(l => l.demo_review_status === "rejected").length;
+
+  // Clear selection when filter changes
+  const handleFilterChange = (value: typeof reviewFilter) => {
+    setReviewFilter(value);
+    setSelectedLeadIds([]);
+  };
+
+  // Selection helpers
+  const toggleSelected = (id: string) => {
+    setSelectedLeadIds(prev =>
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    );
+  };
+
+  const selectAll = () => {
+    setSelectedLeadIds(filteredLeads.map(l => l.id));
+  };
+
+  const clearSelection = () => {
+    setSelectedLeadIds([]);
+  };
+
+  // Bulk review handler
+  const handleBulkReview = async (status: "approved" | "rejected") => {
+    if (selectedLeadIds.length === 0) return;
+    const ids = [...selectedLeadIds];
+    try {
+      await Promise.all(ids.map(leadId => reviewDemoMutation.mutateAsync({ leadId, status })));
+      toast.success(`${status === "approved" ? "Approved" : "Rejected"} ${ids.length} demos`);
+      clearSelection();
+    } catch (e: unknown) {
+      const error = e as Error;
+      toast.error(error?.message || `Bulk ${status} failed`);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -634,8 +670,34 @@ export function AcquisitionTab() {
               <div className="flex items-center justify-between">
                 <CardTitle className="text-lg">Leads with Demos</CardTitle>
                 <div className="flex items-center gap-2">
+                  {/* Bulk Actions */}
+                  {selectedLeadIds.length > 0 && (
+                    <>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-green-600 border-green-600 hover:bg-green-50"
+                        onClick={() => handleBulkReview("approved")}
+                        disabled={reviewDemoMutation.isPending}
+                      >
+                        <CheckCircle className="h-4 w-4 mr-1" />
+                        Approve ({selectedLeadIds.length})
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-red-600 border-red-600 hover:bg-red-50"
+                        onClick={() => handleBulkReview("rejected")}
+                        disabled={reviewDemoMutation.isPending}
+                      >
+                        <XCircle className="h-4 w-4 mr-1" />
+                        Reject ({selectedLeadIds.length})
+                      </Button>
+                    </>
+                  )}
+                  
                   {/* Review Status Filter */}
-                  <Select value={reviewFilter} onValueChange={(v) => setReviewFilter(v as typeof reviewFilter)}>
+                  <Select value={reviewFilter} onValueChange={(v) => handleFilterChange(v as typeof reviewFilter)}>
                     <SelectTrigger className="w-[130px] h-8">
                       <SelectValue />
                     </SelectTrigger>
@@ -684,6 +746,14 @@ export function AcquisitionTab() {
                   <Table>
                     <TableHeader>
                       <TableRow>
+                        <TableHead className="w-[40px]">
+                          <input
+                            type="checkbox"
+                            className="h-4 w-4 rounded border-border"
+                            checked={selectedLeadIds.length > 0 && selectedLeadIds.length === filteredLeads.length}
+                            onChange={(e) => e.target.checked ? selectAll() : clearSelection()}
+                          />
+                        </TableHead>
                         <TableHead>Business</TableHead>
                         <TableHead>Phone</TableHead>
                         <TableHead>Review</TableHead>
@@ -693,6 +763,14 @@ export function AcquisitionTab() {
                     <TableBody>
                       {filteredLeads.map((lead) => (
                         <TableRow key={lead.id}>
+                          <TableCell>
+                            <input
+                              type="checkbox"
+                              className="h-4 w-4 rounded border-border"
+                              checked={selectedLeadIds.includes(lead.id)}
+                              onChange={() => toggleSelected(lead.id)}
+                            />
+                          </TableCell>
                           <TableCell>
                             <div className="font-medium">{lead.business_name}</div>
                             <div className="text-xs text-muted-foreground flex items-center gap-1">

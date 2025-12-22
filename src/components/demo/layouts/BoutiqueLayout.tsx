@@ -1,6 +1,7 @@
 import { MapPin, Star, Phone, ArrowRight, Quote } from "lucide-react";
 import { industryImages, getInitials } from "../themes";
 import { getTradeDisplayName, getTradeCTAText, isKnownTrade } from "@/lib/categoryServices";
+import { getTradeIcon } from "@/lib/tradeIcons";
 import { getStableTestimonials } from "@/lib/testimonials";
 
 interface LayoutProps {
@@ -31,6 +32,7 @@ export function BoutiqueLayout({ templateType, content, businessName, onQuoteCli
     ? `${tradeName} Services in ${locationString}`
     : `Professional Services in ${locationString}`;
   const testimonials = getStableTestimonials({ businessName, city, templateType, count: 1 });
+  const TradeIcon = getTradeIcon(templateType);
 
   return (
     <div className="pb-32">
@@ -45,10 +47,15 @@ export function BoutiqueLayout({ templateType, content, businessName, onQuoteCli
         
         <div className="relative container mx-auto px-4 py-20">
           <div className="max-w-2xl">
-            {/* Refined location tag */}
-            <div className="flex items-center gap-2 text-muted-foreground mb-6">
-              <MapPin className="w-4 h-4" />
-              <span className="text-sm tracking-wide uppercase">{locationString}</span>
+            {/* Refined location tag with trade icon */}
+            <div className="flex items-center gap-3 text-muted-foreground mb-6">
+              <div className="w-10 h-10 bg-primary/10 text-primary rounded-full flex items-center justify-center">
+                <TradeIcon className="w-5 h-5" />
+              </div>
+              <div className="flex items-center gap-2">
+                <MapPin className="w-4 h-4" />
+                <span className="text-sm tracking-wide uppercase">{locationString}</span>
+              </div>
             </div>
             
             {/* Elegant heading - using tracking and lighter weight */}
