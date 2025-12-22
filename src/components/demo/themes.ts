@@ -1,4 +1,7 @@
 // Demo theme system - 3 distinct visual styles
+import { normalizeTradeKey, warnIfTradeFallback } from "@/lib/tradeNormalize";
+import { pickUnique, createGallerySeed } from "@/lib/imagePick";
+
 export type ThemeId = "classic" | "bold" | "premium";
 
 export interface DemoTheme {
@@ -112,60 +115,125 @@ export const industryImages: Record<string, string> = {
   default: contractorHero,
 };
 
-// HERO getter: always returns a valid URL - bulletproof fallback
-export function getHeroImage(templateType?: string): string {
-  const key = (templateType || "").toLowerCase();
+/**
+ * HERO getter: always returns a valid URL - bulletproof fallback
+ * Uses normalizeTradeKey to handle variations like "painting" -> "painter"
+ */
+export function getHeroImage(templateType?: string, businessName?: string): string {
+  const key = normalizeTradeKey(templateType);
+  warnIfTradeFallback(templateType, businessName);
   return industryImages[key] || industryImages.default;
 }
 
 // ============= GALLERY IMAGES =============
-// Industry-specific gallery images - 3 per trade
+// Industry-specific gallery images - 6 per trade for variety
 import plumberGallery1 from "@/assets/gallery/plumber-1.jpg";
 import plumberGallery2 from "@/assets/gallery/plumber-2.jpg";
 import plumberGallery3 from "@/assets/gallery/plumber-3.jpg";
+import plumberGallery4 from "@/assets/gallery/plumber-4.jpg";
+import plumberGallery5 from "@/assets/gallery/plumber-5.jpg";
+import plumberGallery6 from "@/assets/gallery/plumber-6.jpg";
+
 import rooferGallery1 from "@/assets/gallery/roofer-1.jpg";
 import rooferGallery2 from "@/assets/gallery/roofer-2.jpg";
 import rooferGallery3 from "@/assets/gallery/roofer-3.jpg";
+import rooferGallery4 from "@/assets/gallery/roofer-4.jpg";
+import rooferGallery5 from "@/assets/gallery/roofer-5.jpg";
+import rooferGallery6 from "@/assets/gallery/roofer-6.jpg";
+
 import electricianGallery1 from "@/assets/gallery/electrician-1.jpg";
 import electricianGallery2 from "@/assets/gallery/electrician-2.jpg";
 import electricianGallery3 from "@/assets/gallery/electrician-3.jpg";
+import electricianGallery4 from "@/assets/gallery/electrician-4.jpg";
+import electricianGallery5 from "@/assets/gallery/electrician-5.jpg";
+import electricianGallery6 from "@/assets/gallery/electrician-6.jpg";
+
 import hvacGallery1 from "@/assets/gallery/hvac-1.jpg";
 import hvacGallery2 from "@/assets/gallery/hvac-2.jpg";
 import hvacGallery3 from "@/assets/gallery/hvac-3.jpg";
+import hvacGallery4 from "@/assets/gallery/hvac-4.jpg";
+import hvacGallery5 from "@/assets/gallery/hvac-5.jpg";
+import hvacGallery6 from "@/assets/gallery/hvac-6.jpg";
+
 import landscaperGallery1 from "@/assets/gallery/landscaper-1.jpg";
 import landscaperGallery2 from "@/assets/gallery/landscaper-2.jpg";
 import landscaperGallery3 from "@/assets/gallery/landscaper-3.jpg";
+import landscaperGallery4 from "@/assets/gallery/landscaper-4.jpg";
+import landscaperGallery5 from "@/assets/gallery/landscaper-5.jpg";
+import landscaperGallery6 from "@/assets/gallery/landscaper-6.jpg";
+
 import painterGallery1 from "@/assets/gallery/painter-1.jpg";
 import painterGallery2 from "@/assets/gallery/painter-2.jpg";
 import painterGallery3 from "@/assets/gallery/painter-3.jpg";
+import painterGallery4 from "@/assets/gallery/painter-4.jpg";
+import painterGallery5 from "@/assets/gallery/painter-5.jpg";
+import painterGallery6 from "@/assets/gallery/painter-6.jpg";
+
 import cleanerGallery1 from "@/assets/gallery/cleaner-1.jpg";
 import cleanerGallery2 from "@/assets/gallery/cleaner-2.jpg";
 import cleanerGallery3 from "@/assets/gallery/cleaner-3.jpg";
+import cleanerGallery4 from "@/assets/gallery/cleaner-4.jpg";
+import cleanerGallery5 from "@/assets/gallery/cleaner-5.jpg";
+import cleanerGallery6 from "@/assets/gallery/cleaner-6.jpg";
+
 import contractorGallery1 from "@/assets/gallery/contractor-1.jpg";
 import contractorGallery2 from "@/assets/gallery/contractor-2.jpg";
 import contractorGallery3 from "@/assets/gallery/contractor-3.jpg";
+import contractorGallery4 from "@/assets/gallery/contractor-4.jpg";
+import contractorGallery5 from "@/assets/gallery/contractor-5.jpg";
+import contractorGallery6 from "@/assets/gallery/contractor-6.jpg";
+
 import restaurantGallery1 from "@/assets/gallery/restaurant-1.jpg";
 import restaurantGallery2 from "@/assets/gallery/restaurant-2.jpg";
 import restaurantGallery3 from "@/assets/gallery/restaurant-3.jpg";
+import restaurantGallery4 from "@/assets/gallery/restaurant-4.jpg";
+import restaurantGallery5 from "@/assets/gallery/restaurant-5.jpg";
+import restaurantGallery6 from "@/assets/gallery/restaurant-6.jpg";
 
 export const industryGalleries: Record<string, string[]> = {
-  plumber: [plumberGallery1, plumberGallery2, plumberGallery3],
-  roofer: [rooferGallery1, rooferGallery2, rooferGallery3],
-  electrician: [electricianGallery1, electricianGallery2, electricianGallery3],
-  hvac: [hvacGallery1, hvacGallery2, hvacGallery3],
-  landscaper: [landscaperGallery1, landscaperGallery2, landscaperGallery3],
-  painter: [painterGallery1, painterGallery2, painterGallery3],
-  cleaner: [cleanerGallery1, cleanerGallery2, cleanerGallery3],
-  contractor: [contractorGallery1, contractorGallery2, contractorGallery3],
-  restaurant: [restaurantGallery1, restaurantGallery2, restaurantGallery3],
-  default: [contractorGallery1, contractorGallery2, contractorGallery3],
+  plumber: [plumberGallery1, plumberGallery2, plumberGallery3, plumberGallery4, plumberGallery5, plumberGallery6],
+  roofer: [rooferGallery1, rooferGallery2, rooferGallery3, rooferGallery4, rooferGallery5, rooferGallery6],
+  electrician: [electricianGallery1, electricianGallery2, electricianGallery3, electricianGallery4, electricianGallery5, electricianGallery6],
+  hvac: [hvacGallery1, hvacGallery2, hvacGallery3, hvacGallery4, hvacGallery5, hvacGallery6],
+  landscaper: [landscaperGallery1, landscaperGallery2, landscaperGallery3, landscaperGallery4, landscaperGallery5, landscaperGallery6],
+  painter: [painterGallery1, painterGallery2, painterGallery3, painterGallery4, painterGallery5, painterGallery6],
+  cleaner: [cleanerGallery1, cleanerGallery2, cleanerGallery3, cleanerGallery4, cleanerGallery5, cleanerGallery6],
+  contractor: [contractorGallery1, contractorGallery2, contractorGallery3, contractorGallery4, contractorGallery5, contractorGallery6],
+  restaurant: [restaurantGallery1, restaurantGallery2, restaurantGallery3, restaurantGallery4, restaurantGallery5, restaurantGallery6],
+  default: [contractorGallery1, contractorGallery2, contractorGallery3, contractorGallery4, contractorGallery5, contractorGallery6],
 };
 
-// GALLERY getter: always returns valid images with safe fallback
+/**
+ * GALLERY getter: returns trade-matched images with safe fallback
+ * Simple version - just returns first N images from the pool
+ */
 export function getGalleryImages(templateType?: string, count: number = 3): string[] {
-  const key = (templateType || "").toLowerCase();
+  const key = normalizeTradeKey(templateType);
   const pool = industryGalleries[key] || industryGalleries.default;
   return pool.slice(0, Math.max(1, Math.min(count, pool.length)));
+}
+
+/**
+ * GALLERY getter for business: returns deterministic unique images
+ * Uses a seed based on business details so same business always gets same images
+ * Different businesses get different image selections from the pool
+ */
+export function getGalleryImagesForBusiness(opts: {
+  templateType?: string;
+  businessName?: string;
+  city?: string;
+  leadId?: string;
+  count?: number;
+}): string[] {
+  const key = normalizeTradeKey(opts.templateType);
+  const pool = industryGalleries[key] || industryGalleries.default;
+  const seed = createGallerySeed({
+    businessName: opts.businessName,
+    city: opts.city,
+    leadId: opts.leadId,
+    templateType: key,
+  });
+  return pickUnique(pool, opts.count ?? 3, seed);
 }
 
 // ============= UTILITIES =============
@@ -182,6 +250,8 @@ export function getInitials(name: string): string {
 
 // Trade-aware theme descriptions
 export function getTradeAwareThemeInfo(themeId: ThemeId, templateType: string): { name: string; description: string } {
+  const normalizedType = normalizeTradeKey(templateType);
+  
   const tradeDescriptions: Record<string, Record<ThemeId, { name: string; description: string }>> = {
     plumber: {
       classic: { name: "Clean", description: "Professional and trustworthy — shows you're reliable" },
@@ -231,7 +301,7 @@ export function getTradeAwareThemeInfo(themeId: ThemeId, templateType: string): 
   };
 
   // Return trade-specific or fall back to defaults
-  const tradeInfo = tradeDescriptions[templateType]?.[themeId];
+  const tradeInfo = tradeDescriptions[normalizedType]?.[themeId];
   if (tradeInfo) return tradeInfo;
 
   // Default fallbacks
