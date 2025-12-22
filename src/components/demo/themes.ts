@@ -87,28 +87,28 @@ export const themes: Record<ThemeId, DemoTheme> = {
   },
 };
 
-// Industry-specific hero images - each trade gets imagery that matches their work
+// Industry-specific hero images - custom generated for each trade
+import plumberHero from "@/assets/heroes/plumber-hero.jpg";
+import rooferHero from "@/assets/heroes/roofer-hero.jpg";
+import electricianHero from "@/assets/heroes/electrician-hero.jpg";
+import hvacHero from "@/assets/heroes/hvac-hero.jpg";
+import landscaperHero from "@/assets/heroes/landscaper-hero.jpg";
+import painterHero from "@/assets/heroes/painter-hero.jpg";
+import cleanerHero from "@/assets/heroes/cleaner-hero.jpg";
+import contractorHero from "@/assets/heroes/contractor-hero.jpg";
+import restaurantHero from "@/assets/heroes/restaurant-hero.jpg";
+
 export const industryImages: Record<string, string> = {
-  // Plumber - pipes, fixtures, professional plumbing work
-  plumber: "https://images.unsplash.com/photo-1585704032915-c3400ca199e7?w=1200&h=600&fit=crop",
-  // Roofer - roofing work, shingles, professional on a roof
-  roofer: "https://images.unsplash.com/photo-1632759145351-1d592919f522?w=1200&h=600&fit=crop",
-  // Electrician - electrical panel, wiring, professional work
-  electrician: "https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=1200&h=600&fit=crop",
-  // HVAC - air conditioning unit, heating system
-  hvac: "https://images.unsplash.com/photo-1585771724684-38269d6639fd?w=1200&h=600&fit=crop",
-  // Landscaper - beautiful landscaping, lawn care, garden work
-  landscaper: "https://images.unsplash.com/photo-1558904541-efa843a96f01?w=1200&h=600&fit=crop",
-  // Painter - painting walls, fresh paint, professional painter at work
-  painter: "https://images.unsplash.com/photo-1562259949-e8e7689d7828?w=1200&h=600&fit=crop",
-  // Cleaner - clean sparkling space, cleaning service
-  cleaner: "https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=1200&h=600&fit=crop",
-  // Contractor - construction, building, tools, professional work
-  contractor: "https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=1200&h=600&fit=crop",
-  // Restaurant - dining room, food service, welcoming space
-  restaurant: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=1200&h=600&fit=crop",
-  // Default - general professional service/tools
-  default: "https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=1200&h=600&fit=crop",
+  plumber: plumberHero,
+  roofer: rooferHero,
+  electrician: electricianHero,
+  hvac: hvacHero,
+  landscaper: landscaperHero,
+  painter: painterHero,
+  cleaner: cleanerHero,
+  contractor: contractorHero,
+  restaurant: restaurantHero,
+  default: contractorHero, // Use contractor as default
 };
 
 // Get initials from business name for logo circle
