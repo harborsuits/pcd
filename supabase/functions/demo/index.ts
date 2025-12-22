@@ -266,7 +266,7 @@ async function handleGetDemo(req: Request): Promise<Response> {
     // Try to fetch enriched lead data if available
     const { data: lead } = await supabase
       .from("leads")
-      .select("lead_enriched, industry_template, category, phone")
+      .select("lead_enriched, industry_template, category, phone, query_term")
       .eq("demo_project_id", project.id)
       .maybeSingle();
 
@@ -284,6 +284,9 @@ async function handleGetDemo(req: Request): Promise<Response> {
       reviewCount: enrichedData.review_count || null,
       photoReferences: enrichedData.photo_references || [],
       nearbyTowns: enrichedData.neighborhood ? [enrichedData.neighborhood] : [],
+      // CRITICAL: Include category and occupation for visual taxonomy resolution
+      category: lead?.category || null,
+      occupation: lead?.query_term || null,
     };
 
     // Clean response - no internal IDs exposed, but include token for claim
