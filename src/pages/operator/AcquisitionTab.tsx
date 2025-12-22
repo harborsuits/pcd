@@ -67,6 +67,17 @@ interface SearchAndGenerateResult {
   demos_created: number;
   queued_count: number;
   results: SearchResult[];
+  // Error case
+  ok?: boolean;
+  error?: string;
+}
+
+interface SearchStats {
+  total: number;
+  noWebsite: number;
+  resultsCount: number;
+  searchCompleted: boolean;
+  errorMessage?: string;
 }
 
 function getBestPhone(lead: Lead): string | null {
@@ -81,7 +92,7 @@ export function AcquisitionTab() {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [autoQueueOutreach, setAutoQueueOutreach] = useState(false);
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
-  const [lastSearchStats, setLastSearchStats] = useState<{ total: number; noWebsite: number } | null>(null);
+  const [searchStats, setSearchStats] = useState<SearchStats | null>(null);
   
   const queryClient = useQueryClient();
 
@@ -138,12 +149,28 @@ export function AcquisitionTab() {
       return res.json() as Promise<SearchAndGenerateResult>;
     },
     onSuccess: (data) => {
-      setSearchResults(data.results);
-      setLastSearchStats({ total: data.total_found, noWebsite: data.no_website_count });
-      toast.success(`Found ${data.results.length} leads without websites (${data.total_found} total businesses)`);
+      setSearchResults(data.results || []);
+      setSearchStats({ 
+        total: data.total_found || 0, 
+        noWebsite: data.no_website_count || 0,
+        resultsCount: data.results?.length || 0,
+        searchCompleted: true 
+      });
+      if (data.results?.length > 0) {
+        toast.success(`Found ${data.results.length} leads without websites (${data.total_found} total)`);
+      } else {
+        toast.info(`Found ${data.total_found} businesses, but ${data.no_website_count} without websites passed filters`);
+      }
       queryClient.invalidateQueries({ queryKey: ["ops-leads"] });
     },
     onError: (error: Error) => {
+      setSearchStats({ 
+        total: 0, 
+        noWebsite: 0, 
+        resultsCount: 0, 
+        searchCompleted: true, 
+        errorMessage: error.message 
+      });
       toast.error(error.message);
     },
   });
@@ -263,9 +290,9 @@ export function AcquisitionTab() {
           <Clock className="h-3 w-3" />
           {queuedEvents.length} queued
         </Badge>
-        {lastSearchStats && (
+        {searchStats && (
           <Badge variant="secondary" className="gap-1">
-            Last search: {lastSearchStats.noWebsite}/{lastSearchStats.total} no website
+            Last search: {searchStats.noWebsite}/{searchStats.total} no website
           </Badge>
         )}
       </div>
@@ -349,28 +376,48 @@ export function AcquisitionTab() {
         </CardContent>
       </Card>
 
-      {/* Search Results - Immediately visible after search */}
-      {searchResults.length > 0 && (
-        <Card className="border-primary/50">
+      {/* Search Results - Always visible after search completes */}
+      {searchStats?.searchCompleted && (
+        <Card className={searchStats.errorMessage ? "border-destructive/50" : "border-primary/50"}>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg flex items-center gap-2">
                 <Rocket className="h-5 w-5 text-primary" />
-                Search Results ({searchResults.length})
+                Search Results
               </CardTitle>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setSearchResults([])}
-              >
-                Clear
-              </Button>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">
+                  {searchStats.total} found • {searchStats.noWebsite} no website • {searchStats.resultsCount} ready
+                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => { setSearchResults([]); setSearchStats(null); }}
+                >
+                  Clear
+                </Button>
+              </div>
             </div>
           </CardHeader>
           <CardContent className="p-0">
-            <ScrollArea className="h-[350px]">
-              <Table>
-                <TableHeader>
+            {searchStats.errorMessage ? (
+              <div className="p-6 text-center text-destructive">
+                <p className="font-medium">Search Failed</p>
+                <p className="text-sm mt-1">{searchStats.errorMessage}</p>
+              </div>
+            ) : searchResults.length === 0 ? (
+              <div className="p-6 text-center text-muted-foreground">
+                <p className="font-medium">No results to display</p>
+                <p className="text-sm mt-1">
+                  Found {searchStats.total} businesses total, {searchStats.noWebsite} without websites.
+                  {searchStats.noWebsite === 0 && " All businesses in this area have websites."}
+                  {searchStats.noWebsite > 0 && searchStats.resultsCount === 0 && " Leads may be missing phone numbers or already exist."}
+                </p>
+              </div>
+            ) : (
+              <ScrollArea className="h-[350px]">
+                <Table>
+                  <TableHeader>
                   <TableRow>
                     <TableHead>Business</TableHead>
                     <TableHead>Phone</TableHead>
@@ -468,6 +515,7 @@ export function AcquisitionTab() {
                 </TableBody>
               </Table>
             </ScrollArea>
+            )}
           </CardContent>
         </Card>
       )}
