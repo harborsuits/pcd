@@ -75,8 +75,51 @@ export default function OpsPage() {
   const [radius, setRadius] = useState("24140");
   const [maxDemos, setMaxDemos] = useState("10");
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [adminKey, setAdminKey] = useState(() => localStorage.getItem("admin_key") || "");
+  const [isAuthed, setIsAuthed] = useState(() => !!localStorage.getItem("admin_key"));
   
   const queryClient = useQueryClient();
+
+  const handleSetAdminKey = () => {
+    if (adminKey.trim()) {
+      localStorage.setItem("admin_key", adminKey.trim());
+      setIsAuthed(true);
+      queryClient.invalidateQueries();
+      toast.success("Admin key saved");
+    }
+  };
+
+  // Show auth prompt if no admin key
+  if (!isAuthed) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Activity className="h-5 w-5" />
+              Ops Console
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label>Admin Key</Label>
+              <Input
+                type="password"
+                placeholder="Enter admin key"
+                value={adminKey}
+                onChange={(e) => setAdminKey(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleSetAdminKey()}
+              />
+            </div>
+            <Button className="w-full" onClick={handleSetAdminKey}>
+              <Rocket className="h-4 w-4 mr-2" />
+              Access Console
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   // Fetch leads with demos
   const { data: leadsData, isLoading: leadsLoading } = useQuery({
