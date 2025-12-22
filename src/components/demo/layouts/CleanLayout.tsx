@@ -1,6 +1,6 @@
 import { MapPin, Star, Phone, Quote } from "lucide-react";
 import { industryImages, getInitials } from "../themes";
-import { getTradeDisplayName, getTradeCTAText, isKnownTrade as checkKnownTrade } from "@/lib/categoryServices";
+import { getTradeDisplayName, getTradeCTAText, isKnownTrade } from "@/lib/categoryServices";
 
 interface LayoutProps {
   templateType: string;
@@ -24,12 +24,12 @@ export function CleanLayout({ templateType, content, businessName, onQuoteClick 
 
   // Trade-aware content
   const tradeName = getTradeDisplayName(templateType);
-  const isKnownTrade = checkKnownTrade(templateType);
+  const knownTrade = isKnownTrade(templateType);
   const ctaText = getTradeCTAText(templateType);
-  const heroSubheadline = isKnownTrade 
+  const heroSubheadline = knownTrade 
     ? `Professional ${tradeName} Services in ${locationString}`
     : `Professional Services in ${locationString}`;
-  const servicesTitle = isKnownTrade ? `Our ${tradeName} Services` : "Our Services";
+  const servicesTitle = knownTrade ? `Our ${tradeName} Services` : "Our Services";
 
   return (
     <div className="pb-32">

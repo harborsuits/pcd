@@ -1,6 +1,6 @@
 import { MapPin, Star, Phone, ArrowRight, Quote } from "lucide-react";
 import { industryImages, getInitials } from "../themes";
-import { getTradeDisplayName, getTradeCTAText, isKnownTrade as checkKnownTrade } from "@/lib/categoryServices";
+import { getTradeDisplayName, getTradeCTAText, isKnownTrade } from "@/lib/categoryServices";
 
 interface LayoutProps {
   templateType: string;
@@ -24,9 +24,9 @@ export function BoutiqueLayout({ templateType, content, businessName, onQuoteCli
 
   // Trade-aware content
   const tradeName = getTradeDisplayName(templateType);
-  const isKnownTrade = checkKnownTrade(templateType);
+  const knownTrade = isKnownTrade(templateType);
   const ctaText = getTradeCTAText(templateType);
-  const heroSubheadline = isKnownTrade 
+  const heroSubheadline = knownTrade 
     ? `${tradeName} Services in ${locationString}`
     : `Professional Services in ${locationString}`;
 
@@ -99,7 +99,7 @@ export function BoutiqueLayout({ templateType, content, businessName, onQuoteCli
           <div className="container mx-auto px-4">
             <div className="max-w-4xl mx-auto">
               <h2 className="text-sm uppercase tracking-widest text-muted-foreground mb-6">
-                {isKnownTrade ? `${tradeName} Services` : "Services"}
+                {knownTrade ? `${tradeName} Services` : "Services"}
               </h2>
               <div className="grid md:grid-cols-2 gap-x-12 gap-y-4">
                 {services.slice(0, 6).map((service, index) => (
