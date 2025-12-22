@@ -196,18 +196,27 @@ import restaurantGallery4 from "@/assets/gallery/restaurant-4.jpg";
 import restaurantGallery5 from "@/assets/gallery/restaurant-5.jpg";
 import restaurantGallery6 from "@/assets/gallery/restaurant-6.jpg";
 
-// Neutral gallery images for fallback categories
+// Neutral gallery images for fallback categories - expanded to 6 each
 import homeServicesGallery1 from "@/assets/gallery/home-services-1.jpg";
 import homeServicesGallery2 from "@/assets/gallery/home-services-2.jpg";
 import homeServicesGallery3 from "@/assets/gallery/home-services-3.jpg";
+import homeServicesGallery4 from "@/assets/gallery/home-services-4.jpg";
+import homeServicesGallery5 from "@/assets/gallery/home-services-5.jpg";
+import homeServicesGallery6 from "@/assets/gallery/home-services-6.jpg";
 
 import professionalGallery1 from "@/assets/gallery/professional-1.jpg";
 import professionalGallery2 from "@/assets/gallery/professional-2.jpg";
 import professionalGallery3 from "@/assets/gallery/professional-3.jpg";
+import professionalGallery4 from "@/assets/gallery/professional-4.jpg";
+import professionalGallery5 from "@/assets/gallery/professional-5.jpg";
+import professionalGallery6 from "@/assets/gallery/professional-6.jpg";
 
 import defaultGenericGallery1 from "@/assets/gallery/default-generic-1.jpg";
 import defaultGenericGallery2 from "@/assets/gallery/default-generic-2.jpg";
 import defaultGenericGallery3 from "@/assets/gallery/default-generic-3.jpg";
+import defaultGenericGallery4 from "@/assets/gallery/default-generic-4.jpg";
+import defaultGenericGallery5 from "@/assets/gallery/default-generic-5.jpg";
+import defaultGenericGallery6 from "@/assets/gallery/default-generic-6.jpg";
 
 const galleryImages: Record<VisualKey, string[]> = {
   // Exact trades - 6 images each
@@ -220,18 +229,18 @@ const galleryImages: Record<VisualKey, string[]> = {
   cleaner: [cleanerGallery1, cleanerGallery2, cleanerGallery3, cleanerGallery4, cleanerGallery5, cleanerGallery6],
   contractor: [contractorGallery1, contractorGallery2, contractorGallery3, contractorGallery4, contractorGallery5, contractorGallery6],
   restaurant: [restaurantGallery1, restaurantGallery2, restaurantGallery3, restaurantGallery4, restaurantGallery5, restaurantGallery6],
-  // Industry groups - use neutral imagery
-  home_services: [homeServicesGallery1, homeServicesGallery2, homeServicesGallery3],
-  auto: [homeServicesGallery1, homeServicesGallery2, homeServicesGallery3],
-  health: [professionalGallery1, professionalGallery2, professionalGallery3],
-  beauty: [professionalGallery1, professionalGallery2, professionalGallery3],
-  legal: [professionalGallery1, professionalGallery2, professionalGallery3],
-  real_estate: [professionalGallery1, professionalGallery2, professionalGallery3],
-  fitness: [professionalGallery1, professionalGallery2, professionalGallery3],
-  professional: [professionalGallery1, professionalGallery2, professionalGallery3],
-  retail: [defaultGenericGallery1, defaultGenericGallery2, defaultGenericGallery3],
-  // Neutral default - NOT construction!
-  default_generic: [defaultGenericGallery1, defaultGenericGallery2, defaultGenericGallery3],
+  // Industry groups - expanded to 6 images each for variety
+  home_services: [homeServicesGallery1, homeServicesGallery2, homeServicesGallery3, homeServicesGallery4, homeServicesGallery5, homeServicesGallery6],
+  auto: [homeServicesGallery1, homeServicesGallery2, homeServicesGallery3, homeServicesGallery4, homeServicesGallery5, homeServicesGallery6],
+  health: [professionalGallery1, professionalGallery2, professionalGallery3, professionalGallery4, professionalGallery5, professionalGallery6],
+  beauty: [professionalGallery1, professionalGallery2, professionalGallery3, professionalGallery4, professionalGallery5, professionalGallery6],
+  legal: [professionalGallery1, professionalGallery2, professionalGallery3, professionalGallery4, professionalGallery5, professionalGallery6],
+  real_estate: [professionalGallery1, professionalGallery2, professionalGallery3, professionalGallery4, professionalGallery5, professionalGallery6],
+  fitness: [professionalGallery1, professionalGallery2, professionalGallery3, professionalGallery4, professionalGallery5, professionalGallery6],
+  professional: [professionalGallery1, professionalGallery2, professionalGallery3, professionalGallery4, professionalGallery5, professionalGallery6],
+  retail: [defaultGenericGallery1, defaultGenericGallery2, defaultGenericGallery3, defaultGenericGallery4, defaultGenericGallery5, defaultGenericGallery6],
+  // Neutral default - NOT construction! - expanded to 6 images
+  default_generic: [defaultGenericGallery1, defaultGenericGallery2, defaultGenericGallery3, defaultGenericGallery4, defaultGenericGallery5, defaultGenericGallery6],
 };
 
 // ============= VISUAL KEY GETTER =============
