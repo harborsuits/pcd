@@ -19,13 +19,15 @@ export function CleanLayout({ templateType, content, businessName, onQuoteClick 
   const rating = (content.rating as number) || null;
   const reviewCount = (content.reviewCount as number) || null;
   const tagline = (content.tagline as string) || "";
-  const heroImage = getHeroImage(templateType, businessName);
-  const galleryImages = getGalleryImagesForBusiness({
+  const heroResult = getHeroImage({ templateType, businessName });
+  const heroImage = heroResult.heroImage;
+  const galleryResult = getGalleryImagesForBusiness({
     templateType,
     businessName,
     city,
     count: 3,
   });
+  const galleryImages = galleryResult.images;
   const initials = getInitials(businessName);
   const locationString = state ? `${city}, ${state}` : city;
   const nearbyTowns = (content.nearbyTowns as string[]) || [];

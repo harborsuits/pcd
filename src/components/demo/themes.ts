@@ -1,5 +1,5 @@
 // Demo theme system - 3 distinct visual styles
-import { normalizeTradeKey, warnIfTradeFallback } from "@/lib/tradeNormalize";
+import { resolveVisualKey, getFallbackChain, hasTradeImagery, getVisualDebugInfo, type VisualKey } from "@/lib/visualTaxonomy";
 import { pickUnique, createGallerySeed } from "@/lib/imagePick";
 
 export type ThemeId = "classic" | "bold" | "premium";
@@ -101,8 +101,13 @@ import painterHero from "@/assets/heroes/painter-hero.jpg";
 import cleanerHero from "@/assets/heroes/cleaner-hero.jpg";
 import contractorHero from "@/assets/heroes/contractor-hero.jpg";
 import restaurantHero from "@/assets/heroes/restaurant-hero.jpg";
+// Neutral fallback heroes (NOT construction!)
+import homeServicesHero from "@/assets/heroes/home-services-hero.jpg";
+import professionalHero from "@/assets/heroes/professional-hero.jpg";
+import defaultGenericHero from "@/assets/heroes/default-generic-hero.jpg";
 
-export const industryImages: Record<string, string> = {
+const heroImages: Record<VisualKey, string> = {
+  // Exact trades
   plumber: plumberHero,
   roofer: rooferHero,
   electrician: electricianHero,
@@ -112,18 +117,19 @@ export const industryImages: Record<string, string> = {
   cleaner: cleanerHero,
   contractor: contractorHero,
   restaurant: restaurantHero,
-  default: contractorHero,
+  // Industry groups - use appropriate neutral imagery
+  home_services: homeServicesHero,
+  auto: homeServicesHero, // automotive uses same as home services for now
+  health: professionalHero,
+  beauty: professionalHero,
+  legal: professionalHero,
+  real_estate: professionalHero,
+  fitness: professionalHero,
+  professional: professionalHero,
+  retail: defaultGenericHero,
+  // Neutral default - NOT construction!
+  default_generic: defaultGenericHero,
 };
-
-/**
- * HERO getter: always returns a valid URL - bulletproof fallback
- * Uses normalizeTradeKey to handle variations like "painting" -> "painter"
- */
-export function getHeroImage(templateType?: string, businessName?: string): string {
-  const key = normalizeTradeKey(templateType);
-  warnIfTradeFallback(templateType, businessName);
-  return industryImages[key] || industryImages.default;
-}
 
 // ============= GALLERY IMAGES =============
 // Industry-specific gallery images - 6 per trade for variety
@@ -190,7 +196,21 @@ import restaurantGallery4 from "@/assets/gallery/restaurant-4.jpg";
 import restaurantGallery5 from "@/assets/gallery/restaurant-5.jpg";
 import restaurantGallery6 from "@/assets/gallery/restaurant-6.jpg";
 
-export const industryGalleries: Record<string, string[]> = {
+// Neutral gallery images for fallback categories
+import homeServicesGallery1 from "@/assets/gallery/home-services-1.jpg";
+import homeServicesGallery2 from "@/assets/gallery/home-services-2.jpg";
+import homeServicesGallery3 from "@/assets/gallery/home-services-3.jpg";
+
+import professionalGallery1 from "@/assets/gallery/professional-1.jpg";
+import professionalGallery2 from "@/assets/gallery/professional-2.jpg";
+import professionalGallery3 from "@/assets/gallery/professional-3.jpg";
+
+import defaultGenericGallery1 from "@/assets/gallery/default-generic-1.jpg";
+import defaultGenericGallery2 from "@/assets/gallery/default-generic-2.jpg";
+import defaultGenericGallery3 from "@/assets/gallery/default-generic-3.jpg";
+
+const galleryImages: Record<VisualKey, string[]> = {
+  // Exact trades - 6 images each
   plumber: [plumberGallery1, plumberGallery2, plumberGallery3, plumberGallery4, plumberGallery5, plumberGallery6],
   roofer: [rooferGallery1, rooferGallery2, rooferGallery3, rooferGallery4, rooferGallery5, rooferGallery6],
   electrician: [electricianGallery1, electricianGallery2, electricianGallery3, electricianGallery4, electricianGallery5, electricianGallery6],
@@ -200,40 +220,127 @@ export const industryGalleries: Record<string, string[]> = {
   cleaner: [cleanerGallery1, cleanerGallery2, cleanerGallery3, cleanerGallery4, cleanerGallery5, cleanerGallery6],
   contractor: [contractorGallery1, contractorGallery2, contractorGallery3, contractorGallery4, contractorGallery5, contractorGallery6],
   restaurant: [restaurantGallery1, restaurantGallery2, restaurantGallery3, restaurantGallery4, restaurantGallery5, restaurantGallery6],
-  default: [contractorGallery1, contractorGallery2, contractorGallery3, contractorGallery4, contractorGallery5, contractorGallery6],
+  // Industry groups - use neutral imagery
+  home_services: [homeServicesGallery1, homeServicesGallery2, homeServicesGallery3],
+  auto: [homeServicesGallery1, homeServicesGallery2, homeServicesGallery3],
+  health: [professionalGallery1, professionalGallery2, professionalGallery3],
+  beauty: [professionalGallery1, professionalGallery2, professionalGallery3],
+  legal: [professionalGallery1, professionalGallery2, professionalGallery3],
+  real_estate: [professionalGallery1, professionalGallery2, professionalGallery3],
+  fitness: [professionalGallery1, professionalGallery2, professionalGallery3],
+  professional: [professionalGallery1, professionalGallery2, professionalGallery3],
+  retail: [defaultGenericGallery1, defaultGenericGallery2, defaultGenericGallery3],
+  // Neutral default - NOT construction!
+  default_generic: [defaultGenericGallery1, defaultGenericGallery2, defaultGenericGallery3],
 };
 
-/**
- * GALLERY getter: returns trade-matched images with safe fallback
- * Simple version - just returns first N images from the pool
- */
-export function getGalleryImages(templateType?: string, count: number = 3): string[] {
-  const key = normalizeTradeKey(templateType);
-  const pool = industryGalleries[key] || industryGalleries.default;
-  return pool.slice(0, Math.max(1, Math.min(count, pool.length)));
+// ============= VISUAL KEY GETTER =============
+export interface VisualResult {
+  visualKey: VisualKey;
+  heroImage: string;
+  usedFallback: boolean;
+  confidence: "exact" | "keyword" | "fallback";
+  matchedOn?: string;
 }
 
 /**
- * GALLERY getter for business: returns deterministic unique images
- * Uses a seed based on business details so same business always gets same images
- * Different businesses get different image selections from the pool
+ * Main entry point: resolves inputs to a visual key and returns hero image
+ * Logs warnings in dev mode when fallback is used
+ */
+export function getHeroImage(opts: {
+  templateType?: string;
+  category?: string;
+  occupation?: string;
+  businessName?: string;
+}): VisualResult {
+  const result = resolveVisualKey({
+    templateType: opts.templateType,
+    category: opts.category,
+    occupation: opts.occupation,
+    businessName: opts.businessName,
+  });
+
+  const heroImage = heroImages[result.visualKey] || heroImages.default_generic;
+  const usedFallback = result.confidence === "fallback";
+
+  // Dev warning for fallbacks
+  if (import.meta.env.DEV && usedFallback) {
+    console.warn("⚠️ VISUAL FALLBACK:", {
+      inputs: opts,
+      resolvedTo: result.visualKey,
+      confidence: result.confidence,
+      suggestion: "Add aliases in visualTaxonomy.ts for better matching",
+    });
+  }
+
+  return {
+    visualKey: result.visualKey,
+    heroImage,
+    usedFallback,
+    confidence: result.confidence,
+    matchedOn: result.matchedOn,
+  };
+}
+
+/**
+ * Get gallery images for a business with deterministic selection
+ * Uses fallback chain if pool is too small
  */
 export function getGalleryImagesForBusiness(opts: {
   templateType?: string;
+  category?: string;
+  occupation?: string;
   businessName?: string;
   city?: string;
   leadId?: string;
   count?: number;
-}): string[] {
-  const key = normalizeTradeKey(opts.templateType);
-  const pool = industryGalleries[key] || industryGalleries.default;
+}): { images: string[]; visualKey: VisualKey; usedFallback: boolean } {
+  const result = resolveVisualKey({
+    templateType: opts.templateType,
+    category: opts.category,
+    occupation: opts.occupation,
+    businessName: opts.businessName,
+  });
+
+  const count = opts.count ?? 3;
+  let pool = galleryImages[result.visualKey] || [];
+  let usedFallback = result.confidence === "fallback";
+
+  // If pool is too small, top up from fallback chain (NEVER from contractor for non-contractor)
+  if (pool.length < count) {
+    const chain = getFallbackChain(result.visualKey);
+    for (const fallbackKey of chain) {
+      if (pool.length >= count) break;
+      const fallbackPool = galleryImages[fallbackKey] || [];
+      const needed = count - pool.length;
+      pool = [...pool, ...fallbackPool.slice(0, needed)];
+      usedFallback = true;
+    }
+  }
+
+  // Create seed for deterministic selection
   const seed = createGallerySeed({
     businessName: opts.businessName,
     city: opts.city,
     leadId: opts.leadId,
-    templateType: key,
+    templateType: result.visualKey,
   });
-  return pickUnique(pool, opts.count ?? 3, seed);
+
+  const images = pickUnique(pool, count, seed);
+
+  return {
+    images,
+    visualKey: result.visualKey,
+    usedFallback,
+  };
+}
+
+/**
+ * Simple getter for backward compatibility
+ */
+export function getGalleryImages(templateType?: string, count: number = 3): string[] {
+  const result = getGalleryImagesForBusiness({ templateType, count });
+  return result.images;
 }
 
 // ============= UTILITIES =============
@@ -248,9 +355,18 @@ export function getInitials(name: string): string {
     .join("");
 }
 
+// Check if the visual key has trade-specific imagery
+export function isKnownVisualTrade(visualKey: VisualKey): boolean {
+  return hasTradeImagery(visualKey);
+}
+
+// Export debug helper for preview mode
+export { getVisualDebugInfo };
+
 // Trade-aware theme descriptions
 export function getTradeAwareThemeInfo(themeId: ThemeId, templateType: string): { name: string; description: string } {
-  const normalizedType = normalizeTradeKey(templateType);
+  const result = resolveVisualKey({ templateType });
+  const normalizedType = result.visualKey;
   
   const tradeDescriptions: Record<string, Record<ThemeId, { name: string; description: string }>> = {
     plumber: {
@@ -297,6 +413,22 @@ export function getTradeAwareThemeInfo(themeId: ThemeId, templateType: string): 
       classic: { name: "Clean", description: "Fresh and inviting — family-friendly feel" },
       bold: { name: "Bold", description: "Bold look — makes a statement" },
       premium: { name: "Fine Dining", description: "Elegant style for upscale dining" },
+    },
+    // Industry groups get generic descriptions
+    home_services: {
+      classic: { name: "Clean", description: "Professional and approachable" },
+      bold: { name: "Pro", description: "Bold and confident presence" },
+      premium: { name: "Premium", description: "Refined and trustworthy" },
+    },
+    professional: {
+      classic: { name: "Clean", description: "Professional and modern" },
+      bold: { name: "Bold", description: "Confident business presence" },
+      premium: { name: "Premium", description: "Elegant professional style" },
+    },
+    default_generic: {
+      classic: { name: "Clean", description: "Clean and professional" },
+      bold: { name: "Bold", description: "Bold and confident" },
+      premium: { name: "Premium", description: "Elegant and refined" },
     },
   };
 
