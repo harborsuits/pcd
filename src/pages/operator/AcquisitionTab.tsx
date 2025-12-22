@@ -13,7 +13,7 @@ import { Switch } from "@/components/ui/switch";
 import { 
   Search, Globe, Phone, MapPin, ExternalLink, Loader2, 
   Rocket, Copy, Check, MessageSquare, Send, Clock, 
-  RefreshCw, Building2, Wand2, Mail, CheckCircle, XCircle, Eye
+  RefreshCw, Building2, Wand2, Mail, CheckCircle, XCircle, Eye, FlaskConical
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -316,6 +316,29 @@ export function AcquisitionTab() {
     onSuccess: (_, { status }) => {
       toast.success(`Demo ${status}`);
       queryClient.invalidateQueries({ queryKey: ["ops-leads"] });
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
+    },
+  });
+
+  // Send test SMS to admin phone (for QA)
+  const sendTestSmsMutation = useMutation({
+    mutationFn: async (leadId: string) => {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/sms/send-test`, {
+        method: "POST",
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ lead_id: leadId }),
+      });
+      const data = await readJsonSafe(res);
+      if (!res.ok) {
+        throw new Error(data?.error || "Test SMS failed");
+      }
+      return data;
+    },
+    onSuccess: (data) => {
+      toast.success(data?.message || "Test SMS sent!");
+      queryClient.invalidateQueries({ queryKey: ["ops-outreach"] });
     },
     onError: (error: Error) => {
       toast.error(error.message);
@@ -882,6 +905,18 @@ export function AcquisitionTab() {
                                       <Mail className="h-4 w-4" />
                                     </Button>
                                   )}
+                                  
+                                  {/* Test SMS - Send to admin phone for QA */}
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => sendTestSmsMutation.mutate(lead.id)}
+                                    disabled={sendTestSmsMutation.isPending}
+                                    title="Send test SMS to your phone"
+                                    className="text-purple-600 hover:text-purple-700 hover:bg-purple-50"
+                                  >
+                                    <FlaskConical className="h-4 w-4" />
+                                  </Button>
                                 </>
                               )}
                             </div>
