@@ -88,6 +88,53 @@ function getSupabaseClient() {
   return createClient(supabaseUrl, supabaseServiceKey);
 }
 
+// Normalize location string for better geocoding
+function normalizeLocation(raw: string): string {
+  return (raw || "").trim().replace(/\s+/g, " ");
+}
+
+// Try geocoding with fallback - returns lat/lng or null
+async function geocodeWithFallback(
+  location: string,
+  query: string,
+  apiKey: string
+): Promise<{ lat: number; lng: number; method: string } | null> {
+  const normalizedLoc = normalizeLocation(location);
+  
+  // First try: standard geocoding
+  const geocodeUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(normalizedLoc)}&key=${apiKey}`;
+  const geocodeRes = await fetch(geocodeUrl);
+  const geocodeData = await geocodeRes.json();
+  
+  console.log(`Geocode attempt for "${normalizedLoc}": status=${geocodeData.status}, results=${geocodeData.results?.length || 0}`);
+  
+  if (geocodeData.status === "OK" && geocodeData.results?.length > 0) {
+    const loc = geocodeData.results[0].geometry?.location;
+    if (loc?.lat && loc?.lng) {
+      return { lat: loc.lat, lng: loc.lng, method: "geocode" };
+    }
+  }
+  
+  // Fallback: try Places Text Search to extract location from first result
+  console.log(`Geocoding failed, trying Places Text Search fallback for "${query} in ${normalizedLoc}"`);
+  const fallbackQuery = `${query} in ${normalizedLoc}`;
+  const textSearchUrl = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(fallbackQuery)}&key=${apiKey}`;
+  const searchRes = await fetch(textSearchUrl);
+  const searchData = await searchRes.json();
+  
+  console.log(`Places fallback for "${fallbackQuery}": status=${searchData.status}, results=${searchData.results?.length || 0}`);
+  
+  if (searchData.status === "OK" && searchData.results?.length > 0) {
+    const firstResult = searchData.results[0];
+    const loc = firstResult.geometry?.location;
+    if (loc?.lat && loc?.lng) {
+      return { lat: loc.lat, lng: loc.lng, method: "places_fallback" };
+    }
+  }
+  
+  return null;
+}
+
 // Compute lead score and reasons
 function computeLeadScore(place: {
   website?: string;
@@ -160,20 +207,21 @@ async function handleSearch(req: Request): Promise<Response> {
 
     console.log(`Searching for "${query}" near "${location}" (radius: ${radius_m}m)`);
 
-    // Step 1: Geocode the location to get lat/lng
-    const geocodeUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(location)}&key=${apiKey}`;
-    const geocodeRes = await fetch(geocodeUrl);
-    const geocodeData = await geocodeRes.json();
-
-    if (!geocodeData.results || geocodeData.results.length === 0) {
+    // Step 1: Geocode the location with fallback
+    const geoResult = await geocodeWithFallback(location, query, apiKey);
+    
+    if (!geoResult) {
       return new Response(
-        JSON.stringify({ error: "Could not geocode location", details: geocodeData }),
+        JSON.stringify({ 
+          ok: false,
+          error: "Could not understand that location. Try 'City, ST' format (e.g., 'Portland, ME' or 'Lincoln County, ME')." 
+        }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const { lat, lng } = geocodeData.results[0].geometry.location;
-    console.log(`Geocoded to: ${lat}, ${lng}`);
+    const { lat, lng, method } = geoResult;
+    console.log(`Geocoded to: ${lat}, ${lng} (method: ${method})`);
 
     // Step 2: Text Search for businesses (with pagination - up to 3 pages)
     let allPlaces: Array<{ place_id: string; name: string }> = [];
@@ -325,7 +373,8 @@ async function handleSearch(req: Request): Promise<Response> {
         results_count: leads.length,
         provider: "google_places",
         raw_meta: {
-          geocode_result: geocodeData.results[0],
+          geocode_method: method,
+          geocode_center: { lat, lng },
           total_found: allPlaces.length,
           pages_fetched: Math.min(maxPages, Math.ceil(allPlaces.length / 20)),
         },
@@ -400,20 +449,21 @@ async function handleSearchAndGenerate(req: Request): Promise<Response> {
 
     console.log(`Search-and-generate: "${query}" near "${location}" (max ${max_demos} demos)`);
 
-    // Step 1: Geocode the location
-    const geocodeUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(location)}&key=${apiKey}`;
-    const geocodeRes = await fetch(geocodeUrl);
-    const geocodeData = await geocodeRes.json();
-
-    if (!geocodeData.results || geocodeData.results.length === 0) {
+    // Step 1: Geocode the location with fallback
+    const geoResult = await geocodeWithFallback(location, query, apiKey);
+    
+    if (!geoResult) {
       return new Response(
-        JSON.stringify({ error: "Could not geocode location" }),
+        JSON.stringify({ 
+          ok: false,
+          error: "Could not understand that location. Try 'City, ST' format (e.g., 'Portland, ME' or 'Lincoln County, ME')." 
+        }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const { lat, lng } = geocodeData.results[0].geometry.location;
-    console.log(`Geocoded to: ${lat}, ${lng}`);
+    const { lat, lng, method } = geoResult;
+    console.log(`Geocoded to: ${lat}, ${lng} (method: ${method})`);
 
     // Step 2: Text Search (up to 3 pages)
     let allPlaces: Array<{ place_id: string; name: string }> = [];
