@@ -87,6 +87,7 @@ export const themes: Record<ThemeId, DemoTheme> = {
   },
 };
 
+// ============= HERO IMAGES =============
 // Industry-specific hero images - custom generated for each trade
 import plumberHero from "@/assets/heroes/plumber-hero.jpg";
 import rooferHero from "@/assets/heroes/roofer-hero.jpg";
@@ -108,8 +109,66 @@ export const industryImages: Record<string, string> = {
   cleaner: cleanerHero,
   contractor: contractorHero,
   restaurant: restaurantHero,
-  default: contractorHero, // Use contractor as default
+  default: contractorHero,
 };
+
+// HERO getter: always returns a valid URL - bulletproof fallback
+export function getHeroImage(templateType?: string): string {
+  const key = (templateType || "").toLowerCase();
+  return industryImages[key] || industryImages.default;
+}
+
+// ============= GALLERY IMAGES =============
+// Industry-specific gallery images - 3 per trade
+import plumberGallery1 from "@/assets/gallery/plumber-1.jpg";
+import plumberGallery2 from "@/assets/gallery/plumber-2.jpg";
+import plumberGallery3 from "@/assets/gallery/plumber-3.jpg";
+import rooferGallery1 from "@/assets/gallery/roofer-1.jpg";
+import rooferGallery2 from "@/assets/gallery/roofer-2.jpg";
+import rooferGallery3 from "@/assets/gallery/roofer-3.jpg";
+import electricianGallery1 from "@/assets/gallery/electrician-1.jpg";
+import electricianGallery2 from "@/assets/gallery/electrician-2.jpg";
+import electricianGallery3 from "@/assets/gallery/electrician-3.jpg";
+import hvacGallery1 from "@/assets/gallery/hvac-1.jpg";
+import hvacGallery2 from "@/assets/gallery/hvac-2.jpg";
+import hvacGallery3 from "@/assets/gallery/hvac-3.jpg";
+import landscaperGallery1 from "@/assets/gallery/landscaper-1.jpg";
+import landscaperGallery2 from "@/assets/gallery/landscaper-2.jpg";
+import landscaperGallery3 from "@/assets/gallery/landscaper-3.jpg";
+import painterGallery1 from "@/assets/gallery/painter-1.jpg";
+import painterGallery2 from "@/assets/gallery/painter-2.jpg";
+import painterGallery3 from "@/assets/gallery/painter-3.jpg";
+import cleanerGallery1 from "@/assets/gallery/cleaner-1.jpg";
+import cleanerGallery2 from "@/assets/gallery/cleaner-2.jpg";
+import cleanerGallery3 from "@/assets/gallery/cleaner-3.jpg";
+import contractorGallery1 from "@/assets/gallery/contractor-1.jpg";
+import contractorGallery2 from "@/assets/gallery/contractor-2.jpg";
+import contractorGallery3 from "@/assets/gallery/contractor-3.jpg";
+import restaurantGallery1 from "@/assets/gallery/restaurant-1.jpg";
+import restaurantGallery2 from "@/assets/gallery/restaurant-2.jpg";
+import restaurantGallery3 from "@/assets/gallery/restaurant-3.jpg";
+
+export const industryGalleries: Record<string, string[]> = {
+  plumber: [plumberGallery1, plumberGallery2, plumberGallery3],
+  roofer: [rooferGallery1, rooferGallery2, rooferGallery3],
+  electrician: [electricianGallery1, electricianGallery2, electricianGallery3],
+  hvac: [hvacGallery1, hvacGallery2, hvacGallery3],
+  landscaper: [landscaperGallery1, landscaperGallery2, landscaperGallery3],
+  painter: [painterGallery1, painterGallery2, painterGallery3],
+  cleaner: [cleanerGallery1, cleanerGallery2, cleanerGallery3],
+  contractor: [contractorGallery1, contractorGallery2, contractorGallery3],
+  restaurant: [restaurantGallery1, restaurantGallery2, restaurantGallery3],
+  default: [contractorGallery1, contractorGallery2, contractorGallery3],
+};
+
+// GALLERY getter: always returns valid images with safe fallback
+export function getGalleryImages(templateType?: string, count: number = 3): string[] {
+  const key = (templateType || "").toLowerCase();
+  const pool = industryGalleries[key] || industryGalleries.default;
+  return pool.slice(0, Math.max(1, Math.min(count, pool.length)));
+}
+
+// ============= UTILITIES =============
 
 // Get initials from business name for logo circle
 export function getInitials(name: string): string {

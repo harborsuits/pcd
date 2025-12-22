@@ -1,5 +1,5 @@
-import { MapPin, Star, Phone, ArrowRight, Quote } from "lucide-react";
-import { industryImages, getInitials } from "../themes";
+import { MapPin, Star, Phone, ArrowRight, Quote, Camera } from "lucide-react";
+import { getHeroImage, getGalleryImages, getInitials } from "../themes";
 import { getTradeDisplayName, getTradeCTAText, isKnownTrade } from "@/lib/categoryServices";
 import { getTradeIcon } from "@/lib/tradeIcons";
 import { getStableTestimonials } from "@/lib/testimonials";
@@ -19,7 +19,8 @@ export function BoutiqueLayout({ templateType, content, businessName, onQuoteCli
   const rating = (content.rating as number) || null;
   const reviewCount = (content.reviewCount as number) || null;
   const tagline = (content.tagline as string) || "";
-  const heroImage = industryImages[templateType] || industryImages.default;
+  const heroImage = getHeroImage(templateType);
+  const galleryImages = getGalleryImages(templateType, 3);
   const initials = getInitials(businessName);
   const locationString = state ? `${city}, ${state}` : city;
   const nearbyTowns = (content.nearbyTowns as string[]) || [];
@@ -126,8 +127,45 @@ export function BoutiqueLayout({ templateType, content, businessName, onQuoteCli
         </section>
       )}
 
+      {/* Gallery / Recent Work - Trade-specific, elegant style */}
+      <section className="py-20 bg-muted/10">
+        <div className="container mx-auto px-4">
+          <div className="max-w-4xl mx-auto">
+            <div className="flex items-center justify-between mb-10">
+              <div>
+                <div className="flex items-center gap-2 text-muted-foreground mb-2">
+                  <Camera className="w-4 h-4" />
+                  <span className="text-sm uppercase tracking-widest">
+                    {knownTrade ? `${tradeName} Portfolio` : "Portfolio"}
+                  </span>
+                </div>
+                <h2 className="text-2xl font-normal text-foreground">
+                  {knownTrade ? `Recent ${tradeName} Work` : "Recent Work"}
+                </h2>
+              </div>
+              <p className="text-sm text-muted-foreground hidden md:block">
+                {knownTrade ? "Photos representative of typical projects" : "Sample project photos"}
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+              {galleryImages.map((src, i) => (
+                <div key={i} className="overflow-hidden rounded-2xl border border-border/30 bg-muted/20 group">
+                  <img
+                    src={src}
+                    alt={knownTrade ? `${tradeName} project photo ${i + 1}` : `Project photo ${i + 1}`}
+                    className="h-52 w-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    loading="lazy"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Testimonial */}
-      <section className="py-20 bg-muted/20">
+      <section className="py-20">
         <div className="container mx-auto px-4">
           <div className="max-w-2xl mx-auto text-center">
             <h2 className="text-sm uppercase tracking-widest text-muted-foreground mb-8">
@@ -149,7 +187,7 @@ export function BoutiqueLayout({ templateType, content, businessName, onQuoteCli
       </section>
 
       {/* About / Trust section - Minimal, text-focused */}
-      <section className="py-20">
+      <section className="py-20 border-t border-border/30">
         <div className="container mx-auto px-4">
           <div className="max-w-2xl mx-auto text-center">
             <h2 className="text-3xl font-normal text-foreground mb-6">
