@@ -91,6 +91,16 @@ export const categoryServicesMap: Record<string, string[]> = {
     "General Repairs",
   ],
   
+  // Flooring
+  flooring: [
+    "Hardwood Installation",
+    "Tile & Stone Flooring",
+    "Laminate & Vinyl Plank",
+    "Carpet Installation",
+    "Floor Refinishing",
+    "Subfloor Repair",
+  ],
+  
   // Default fallback
   default: [
     "Professional Service",
@@ -120,6 +130,7 @@ export function inferTemplateFromCategory(category: string | null, googleTypes: 
   if (combined.includes("clean") || combined.includes("maid") || combined.includes("janitorial")) return "cleaner";
   if (combined.includes("restaurant") || combined.includes("food") || combined.includes("cafe") || combined.includes("bakery")) return "restaurant";
   if (combined.includes("contractor") || combined.includes("construction") || combined.includes("remodel")) return "contractor";
+  if (combined.includes("floor") || combined.includes("tile") || combined.includes("carpet") || combined.includes("hardwood") || combined.includes("laminate")) return "flooring";
   
   return "default";
 }
@@ -135,6 +146,7 @@ export const tradeDisplayNames: Record<string, string> = {
   cleaner: "Cleaning",
   restaurant: "Dining",
   contractor: "Contracting",
+  flooring: "Flooring",
   default: "Professional",
 };
 
@@ -149,6 +161,7 @@ const tradeNouns: Record<string, string> = {
   cleaner: "cleaning",
   restaurant: "dining",
   contractor: "contracting",
+  flooring: "flooring",
   default: "professional",
 };
 
@@ -179,6 +192,7 @@ export function generateTagline(templateType: string, city: string): string {
     cleaner: `Spotless cleaning services for ${city} homes and offices`,
     restaurant: `Delicious food served fresh in ${city}`,
     contractor: `Quality home improvements for ${city} homeowners`,
+    flooring: `Expert flooring installation for ${city} homes and businesses`,
     default: `Quality service you can trust in ${city}`,
   };
   

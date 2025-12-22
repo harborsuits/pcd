@@ -9,6 +9,7 @@ import {
   UtensilsCrossed,
   Hammer,
   Briefcase,
+  Grid3X3,
   type LucideIcon,
 } from "lucide-react";
 
@@ -22,6 +23,7 @@ const tradeIconMap: Record<string, LucideIcon> = {
   cleaner: SprayCan,
   restaurant: UtensilsCrossed,
   contractor: Hammer,
+  flooring: Grid3X3,
   default: Briefcase,
 };
 
