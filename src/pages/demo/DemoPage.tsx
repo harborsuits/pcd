@@ -147,6 +147,7 @@ export default function DemoPage() {
     ...visualInputs,
     count: 3,
     excludeHero: heroResult.heroImage,
+    photoReferences: content.photoReferences as string[] | undefined,
   });
   
   const debugInfo = {
@@ -156,6 +157,8 @@ export default function DemoPage() {
     usedFallback: heroResult.usedFallback || galleryResult.usedFallback,
     heroImage: heroResult.heroImage,
     galleryImages: galleryResult.images,
+    gallerySource: galleryResult.source,
+    photoReferences: (content.photoReferences as string[])?.length || 0,
     inputs: visualInputs,
   };
   return (
