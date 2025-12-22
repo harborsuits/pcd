@@ -145,6 +145,18 @@ async function handleClaim(req: Request): Promise<Response> {
 
     console.log(`Claim received for ${project.business_name}`);
 
+    // Insert welcome message from admin (so portal is never empty)
+    const welcomeMessage = `Hey! Thanks for claiming your design. I'm going to refine this to fit ${project.business_name} better.\n\nQuick question: do you have a logo, or should we start fresh?`;
+    
+    await supabase.from("messages").insert({
+      project_id: project.id,
+      project_token: project_token,
+      sender_type: "admin",
+      content: welcomeMessage,
+    });
+
+    console.log(`Welcome message inserted for ${project.business_name}`);
+
     // Send Telegram notification (non-blocking)
     const baseUrl = Deno.env.get("PUBLIC_BASE_URL") || "https://ararrbvhzaudfaxjwdrc.lovableproject.com";
     const telegramMsg =
@@ -155,7 +167,7 @@ async function handleClaim(req: Request): Promise<Response> {
       `• <b>Email:</b> ${email || "—"}\n` +
       (notes ? `• <b>Notes:</b> ${notes}\n` : "") +
       `• <b>Token:</b> <code>${project_token}</code>\n` +
-      `• <b>Portal:</b> ${baseUrl}/portal?token=${project_token}`;
+      `• <b>Portal:</b> ${baseUrl}/portal/${project_token}`;
     
     try { await notifyTelegram(telegramMsg); } catch (_) { /* fail silently */ }
 
