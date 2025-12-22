@@ -295,6 +295,28 @@ export function AcquisitionTab() {
     },
   });
 
+  // Clear all leads with demos
+  const clearLeadsMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/leads/clear-demos`, {
+        method: "POST",
+        headers: getAuthHeaders(),
+      });
+      if (!res.ok) {
+        const err = await readJsonSafe(res);
+        throw new Error(err?.error || "Failed to clear leads");
+      }
+      return res.json();
+    },
+    onSuccess: (data) => {
+      toast.success(`Cleared ${data.deleted || 0} leads with demos`);
+      queryClient.invalidateQueries({ queryKey: ["ops-leads"] });
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
+    },
+  });
+
   const copyDemoLink = (demoUrl: string, id: string) => {
     navigator.clipboard.writeText(`${PUBLIC_BASE_URL}${demoUrl}`);
     setCopiedId(id);
@@ -578,13 +600,27 @@ export function AcquisitionTab() {
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-lg">Leads with Demos</CardTitle>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => queryClient.invalidateQueries({ queryKey: ["ops-leads"] })}
-                >
-                  <RefreshCw className="h-4 w-4" />
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => queryClient.invalidateQueries({ queryKey: ["ops-leads"] })}
+                  >
+                    <RefreshCw className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => clearLeadsMutation.mutate()}
+                    disabled={clearLeadsMutation.isPending || leadsWithDemos.length === 0}
+                  >
+                    {clearLeadsMutation.isPending ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      "Clear"
+                    )}
+                  </Button>
+                </div>
               </div>
             </CardHeader>
             <CardContent className="p-0">

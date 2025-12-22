@@ -46,6 +46,11 @@ Deno.serve(async (req) => {
     return handleGenerateDemo(req, leadId);
   }
 
+  // Route: POST /leads/clear-demos (admin only - delete all leads with demos)
+  if (subPath === "clear-demos" && req.method === "POST") {
+    return handleClearDemos(req);
+  }
+
   // Route: PATCH /leads/:id (update lead status)
   if (subPath && req.method === "PATCH") {
     return handleUpdateLead(req, subPath);
@@ -1587,6 +1592,46 @@ async function handleRequestDemo(req: Request): Promise<Response> {
 
   } catch (error) {
     console.error("Request demo error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+}
+
+// ==================== CLEAR DEMOS HANDLER ====================
+async function handleClearDemos(req: Request): Promise<Response> {
+  const authError = validateAdminKey(req);
+  if (authError) return authError;
+
+  try {
+    const supabase = getSupabaseClient();
+
+    // Delete all leads that have demo_status = 'created'
+    const { data, error } = await supabase
+      .from("leads")
+      .delete()
+      .eq("demo_status", "created")
+      .select("id");
+
+    if (error) {
+      console.error("Failed to clear leads:", error);
+      return new Response(
+        JSON.stringify({ error: "Failed to clear leads" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const deletedCount = data?.length || 0;
+    console.log(`Cleared ${deletedCount} leads with demos`);
+
+    return new Response(
+      JSON.stringify({ ok: true, deleted: deletedCount }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+
+  } catch (error) {
+    console.error("Clear demos error:", error);
     return new Response(
       JSON.stringify({ error: "Internal server error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
