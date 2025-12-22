@@ -1,5 +1,6 @@
-import { MapPin, Clock, Shield, Star, Phone } from "lucide-react";
+import { MapPin, Star, Phone, Quote } from "lucide-react";
 import { industryImages, getInitials } from "../themes";
+import { getTradeDisplayName, getTradeCTAText } from "@/lib/categoryServices";
 
 interface LayoutProps {
   templateType: string;
@@ -21,6 +22,15 @@ export function CleanLayout({ templateType, content, businessName, onQuoteClick 
   const locationString = state ? `${city}, ${state}` : city;
   const nearbyTowns = (content.nearbyTowns as string[]) || [];
 
+  // Trade-aware content
+  const tradeName = getTradeDisplayName(templateType);
+  const isKnownTrade = templateType !== "default";
+  const ctaText = getTradeCTAText(templateType);
+  const heroSubheadline = isKnownTrade 
+    ? `Professional ${tradeName} Services in ${locationString}`
+    : `Professional Services in ${locationString}`;
+  const servicesTitle = isKnownTrade ? `Our ${tradeName} Services` : "Our Services";
+
   return (
     <div className="pb-32">
       {/* Clean Hero - White/light background, centered, minimal */}
@@ -34,12 +44,17 @@ export function CleanLayout({ templateType, content, businessName, onQuoteClick 
               </div>
             </div>
             
-            <h1 className="text-3xl md:text-4xl lg:text-5xl font-medium text-foreground mb-4 tracking-tight">
+            <h1 className="text-3xl md:text-4xl lg:text-5xl font-medium text-foreground mb-3 tracking-tight">
               {businessName}
             </h1>
             
+            {/* Trade-aware subheadline */}
+            <p className="text-lg text-primary font-medium mb-4">
+              {heroSubheadline}
+            </p>
+            
             {tagline && (
-              <p className="text-lg text-muted-foreground mb-6 max-w-xl mx-auto">
+              <p className="text-muted-foreground mb-6 max-w-xl mx-auto">
                 {tagline}
               </p>
             )}
@@ -78,7 +93,7 @@ export function CleanLayout({ templateType, content, businessName, onQuoteClick 
       {services.length > 0 && (
         <section className="py-12 border-t border-border/50">
           <div className="container mx-auto px-4">
-            <h2 className="text-xl font-medium text-foreground text-center mb-8">Services</h2>
+            <h2 className="text-xl font-medium text-foreground text-center mb-8">{servicesTitle}</h2>
             <div className="flex flex-wrap justify-center gap-3 max-w-3xl mx-auto">
               {services.slice(0, 6).map((service, index) => (
                 <span 
@@ -93,8 +108,28 @@ export function CleanLayout({ templateType, content, businessName, onQuoteClick 
         </section>
       )}
 
-      {/* Location info - simple text block */}
+      {/* Testimonial Placeholder - Social Proof */}
       <section className="py-12 bg-muted/20">
+        <div className="container mx-auto px-4">
+          <div className="max-w-2xl mx-auto text-center">
+            <h2 className="text-sm uppercase tracking-widest text-muted-foreground mb-6">
+              Trusted by Local Customers
+            </h2>
+            <div className="relative">
+              <Quote className="w-8 h-8 text-primary/20 mx-auto mb-4" />
+              <blockquote className="text-lg text-foreground italic mb-4">
+                "Reliable, professional, and easy to work with. We'd recommend {businessName} to anyone in the area."
+              </blockquote>
+              <cite className="text-sm text-muted-foreground not-italic">
+                — Local Customer, {city}
+              </cite>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Location info - simple text block */}
+      <section className="py-12">
         <div className="container mx-auto px-4 text-center max-w-2xl">
           <h2 className="text-xl font-medium text-foreground mb-3">
             Serving {city}
@@ -108,29 +143,32 @@ export function CleanLayout({ templateType, content, businessName, onQuoteClick 
       </section>
 
       {/* Simple CTA */}
-      <section className="py-16">
+      <section className="py-16 bg-primary/5">
         <div className="container mx-auto px-4 text-center">
           <h2 className="text-2xl font-medium text-foreground mb-4">
-            Ready to get started?
+            {ctaText.heading}
           </h2>
           <p className="text-muted-foreground mb-6">
-            Request a free, no-obligation quote today.
+            Fast response • Local service • No obligation
           </p>
           <button 
             onClick={onQuoteClick}
             className="px-8 py-3 bg-primary text-primary-foreground rounded-md font-medium hover:bg-primary/90 transition-colors"
           >
-            Request a Quote
+            {ctaText.button}
           </button>
         </div>
       </section>
 
-      {/* Footer notice */}
-      <div className="text-center py-6">
-        <p className="text-xs text-muted-foreground/60">
-          Preview generated for {businessName}
+      {/* Footer - Business name + location */}
+      <footer className="text-center py-8 border-t border-border/50">
+        <p className="text-sm text-foreground font-medium mb-1">
+          © {businessName} — {locationString}
         </p>
-      </div>
+        <p className="text-xs text-muted-foreground/60">
+          This is a preview website generated for demonstration purposes.
+        </p>
+      </footer>
     </div>
   );
 }

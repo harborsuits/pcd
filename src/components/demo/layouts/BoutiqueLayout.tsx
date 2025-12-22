@@ -1,5 +1,6 @@
-import { MapPin, Star, Phone, ArrowRight } from "lucide-react";
+import { MapPin, Star, Phone, ArrowRight, Quote } from "lucide-react";
 import { industryImages, getInitials } from "../themes";
+import { getTradeDisplayName, getTradeCTAText } from "@/lib/categoryServices";
 
 interface LayoutProps {
   templateType: string;
@@ -21,6 +22,14 @@ export function BoutiqueLayout({ templateType, content, businessName, onQuoteCli
   const locationString = state ? `${city}, ${state}` : city;
   const nearbyTowns = (content.nearbyTowns as string[]) || [];
 
+  // Trade-aware content
+  const tradeName = getTradeDisplayName(templateType);
+  const isKnownTrade = templateType !== "default";
+  const ctaText = getTradeCTAText(templateType);
+  const heroSubheadline = isKnownTrade 
+    ? `${tradeName} Services in ${locationString}`
+    : `Professional Services in ${locationString}`;
+
   return (
     <div className="pb-32">
       {/* Elegant Hero - Large imagery, serif-style heading, refined spacing */}
@@ -41,9 +50,14 @@ export function BoutiqueLayout({ templateType, content, businessName, onQuoteCli
             </div>
             
             {/* Elegant heading - using tracking and lighter weight */}
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-normal text-foreground mb-6 tracking-tight leading-tight">
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-normal text-foreground mb-3 tracking-tight leading-tight">
               {businessName}
             </h1>
+            
+            {/* Trade-aware subheadline */}
+            <p className="text-lg text-primary font-medium mb-6">
+              {heroSubheadline}
+            </p>
             
             {tagline && (
               <p className="text-xl text-muted-foreground mb-8 max-w-lg leading-relaxed">
@@ -85,7 +99,7 @@ export function BoutiqueLayout({ templateType, content, businessName, onQuoteCli
           <div className="container mx-auto px-4">
             <div className="max-w-4xl mx-auto">
               <h2 className="text-sm uppercase tracking-widest text-muted-foreground mb-6">
-                Services
+                {isKnownTrade ? `${tradeName} Services` : "Services"}
               </h2>
               <div className="grid md:grid-cols-2 gap-x-12 gap-y-4">
                 {services.slice(0, 6).map((service, index) => (
@@ -103,8 +117,26 @@ export function BoutiqueLayout({ templateType, content, businessName, onQuoteCli
         </section>
       )}
 
-      {/* About / Trust section - Minimal, text-focused */}
+      {/* Testimonial Placeholder */}
       <section className="py-20 bg-muted/20">
+        <div className="container mx-auto px-4">
+          <div className="max-w-2xl mx-auto text-center">
+            <h2 className="text-sm uppercase tracking-widest text-muted-foreground mb-8">
+              Client Testimonial
+            </h2>
+            <Quote className="w-10 h-10 text-primary/20 mx-auto mb-6" />
+            <blockquote className="text-2xl font-normal text-foreground mb-6 leading-relaxed">
+              "Working with {businessName} was a pleasure from start to finish. Professional, attentive, and the results exceeded our expectations."
+            </blockquote>
+            <cite className="text-muted-foreground not-italic">
+              — Satisfied Client, {city}
+            </cite>
+          </div>
+        </div>
+      </section>
+
+      {/* About / Trust section - Minimal, text-focused */}
+      <section className="py-20">
         <div className="container mx-auto px-4">
           <div className="max-w-2xl mx-auto text-center">
             <h2 className="text-3xl font-normal text-foreground mb-6">
@@ -130,17 +162,17 @@ export function BoutiqueLayout({ templateType, content, businessName, onQuoteCli
       </section>
 
       {/* Contact section - Refined */}
-      <section className="py-20">
+      <section className="py-20 bg-muted/10">
         <div className="container mx-auto px-4">
           <div className="max-w-xl mx-auto text-center">
             <h2 className="text-sm uppercase tracking-widest text-muted-foreground mb-4">
               Get in Touch
             </h2>
             <h3 className="text-3xl font-normal text-foreground mb-6">
-              Let's Start a Conversation
+              {ctaText.heading}
             </h3>
             <p className="text-muted-foreground mb-8">
-              We'd love to hear about your project. Reach out for a consultation.
+              Fast response • Local service • No obligation
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -148,7 +180,7 @@ export function BoutiqueLayout({ templateType, content, businessName, onQuoteCli
                 onClick={onQuoteClick}
                 className="group inline-flex items-center justify-center gap-3 px-8 py-4 bg-foreground text-background rounded-full font-medium hover:bg-foreground/90 transition-colors"
               >
-                Request Consultation
+                {ctaText.button}
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
               </button>
               
@@ -166,12 +198,15 @@ export function BoutiqueLayout({ templateType, content, businessName, onQuoteCli
         </div>
       </section>
 
-      {/* Footer notice */}
-      <div className="text-center py-8 border-t border-border/30">
-        <p className="text-xs text-muted-foreground/60 tracking-wide">
-          Preview generated for {businessName}
+      {/* Footer - Business name + location */}
+      <footer className="text-center py-8 border-t border-border/30">
+        <p className="text-sm text-foreground font-medium mb-1">
+          © {businessName} — {locationString}
         </p>
-      </div>
+        <p className="text-xs text-muted-foreground/60 tracking-wide">
+          This is a preview website generated for demonstration purposes.
+        </p>
+      </footer>
     </div>
   );
 }

@@ -1,5 +1,6 @@
-import { MapPin, Clock, Shield, Star, Phone, Wrench, CheckCircle } from "lucide-react";
+import { MapPin, Clock, Shield, Star, Phone, Wrench, CheckCircle, Quote } from "lucide-react";
 import { industryImages, getInitials } from "../themes";
+import { getTradeDisplayName, getTradeCTAText } from "@/lib/categoryServices";
 
 interface LayoutProps {
   templateType: string;
@@ -20,6 +21,18 @@ export function ContractorLayout({ templateType, content, businessName, onQuoteC
   const initials = getInitials(businessName);
   const locationString = state ? `${city}, ${state}` : city;
   const nearbyTowns = (content.nearbyTowns as string[]) || [];
+
+  // Trade-aware content
+  const tradeName = getTradeDisplayName(templateType);
+  const isKnownTrade = templateType !== "default";
+  const ctaText = getTradeCTAText(templateType);
+  const heroSubheadline = isKnownTrade 
+    ? `Professional ${tradeName} Services in ${locationString}`
+    : `Professional Services in ${locationString}`;
+  const servicesTitle = isKnownTrade ? `Our ${tradeName} Services` : "Our Services";
+  const servicesSubtitle = isKnownTrade 
+    ? `Professional ${tradeName.toLowerCase()} work done right the first time`
+    : "Professional work done right the first time";
 
   return (
     <div className="pb-32">
@@ -50,12 +63,17 @@ export function ContractorLayout({ templateType, content, businessName, onQuoteC
             </div>
             
             {/* Left-aligned heading */}
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold mb-4">
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold mb-3">
               {businessName}
             </h1>
             
+            {/* Trade-aware subheadline */}
+            <p className="text-xl text-accent font-semibold mb-4">
+              {heroSubheadline}
+            </p>
+            
             {tagline && (
-              <p className="text-xl text-primary-foreground/80 mb-6 max-w-2xl">
+              <p className="text-lg text-primary-foreground/80 mb-6 max-w-2xl">
                 {tagline}
               </p>
             )}
@@ -113,10 +131,10 @@ export function ContractorLayout({ templateType, content, businessName, onQuoteC
         <section className="py-16 bg-muted/30">
           <div className="container mx-auto px-4">
             <h2 className="text-2xl md:text-3xl font-extrabold text-foreground text-center mb-4">
-              Our Services
+              {servicesTitle}
             </h2>
             <p className="text-center text-muted-foreground mb-10 max-w-xl mx-auto">
-              Professional {templateType || "service"} work done right the first time
+              {servicesSubtitle}
             </p>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
               {services.slice(0, 6).map((service, index) => (
@@ -135,8 +153,33 @@ export function ContractorLayout({ templateType, content, businessName, onQuoteC
         </section>
       )}
 
+      {/* Testimonial Placeholder */}
+      <section className="py-16 border-t border-border">
+        <div className="container mx-auto px-4">
+          <div className="max-w-3xl mx-auto">
+            <h2 className="text-2xl font-extrabold text-foreground text-center mb-8">
+              Trusted by Local Customers
+            </h2>
+            <div className="bg-card border border-border rounded-xl p-8 shadow-lg">
+              <Quote className="w-10 h-10 text-primary/30 mb-4" />
+              <blockquote className="text-xl text-foreground mb-4">
+                "We called {businessName} when we needed help fast. They showed up on time, did great work, and the price was fair. Highly recommend!"
+              </blockquote>
+              <cite className="text-muted-foreground not-italic flex items-center gap-2">
+                <div className="flex">
+                  {[...Array(5)].map((_, i) => (
+                    <Star key={i} className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                  ))}
+                </div>
+                — {city} Homeowner
+              </cite>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Service Area */}
-      <section className="py-12 border-t border-border">
+      <section className="py-12 bg-muted/30">
         <div className="container mx-auto px-4">
           <div className="max-w-3xl mx-auto text-center">
             <h2 className="text-2xl font-extrabold text-foreground mb-4">
@@ -214,26 +257,29 @@ export function ContractorLayout({ templateType, content, businessName, onQuoteC
       <section className="py-16">
         <div className="container mx-auto px-4 text-center">
           <h2 className="text-2xl md:text-3xl font-extrabold text-foreground mb-4">
-            Ready to Get Started?
+            {ctaText.heading}
           </h2>
           <p className="text-muted-foreground mb-8 max-w-xl mx-auto">
-            Get a free estimate today — no obligation, no pressure.
+            Fast response • Local service • No obligation
           </p>
           <button 
             onClick={onQuoteClick}
             className="px-10 py-4 bg-primary text-primary-foreground rounded-lg font-bold text-lg hover:bg-primary/90 transition-colors shadow-lg"
           >
-            Get Your Free Quote
+            {ctaText.button}
           </button>
         </div>
       </section>
 
-      {/* Footer notice */}
-      <div className="text-center py-6">
-        <p className="text-xs text-muted-foreground/60">
-          Preview generated for {businessName}
+      {/* Footer - Business name + location */}
+      <footer className="text-center py-8 border-t border-border">
+        <p className="text-sm text-foreground font-bold mb-1">
+          © {businessName} — {locationString}
         </p>
-      </div>
+        <p className="text-xs text-muted-foreground/60">
+          This is a preview website generated for demonstration purposes.
+        </p>
+      </footer>
     </div>
   );
 }
