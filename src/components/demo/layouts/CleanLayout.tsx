@@ -1,6 +1,7 @@
 import { MapPin, Star, Phone, Quote } from "lucide-react";
 import { industryImages, getInitials } from "../themes";
 import { getTradeDisplayName, getTradeCTAText, isKnownTrade } from "@/lib/categoryServices";
+import { getStableTestimonials } from "@/lib/testimonials";
 
 interface LayoutProps {
   templateType: string;
@@ -30,7 +31,7 @@ export function CleanLayout({ templateType, content, businessName, onQuoteClick 
     ? `Professional ${tradeName} Services in ${locationString}`
     : `Professional Services in ${locationString}`;
   const servicesTitle = knownTrade ? `Our ${tradeName} Services` : "Our Services";
-
+  const testimonials = getStableTestimonials({ businessName, city, templateType, count: 1 });
   return (
     <div className="pb-32">
       {/* Clean Hero - White/light background, centered, minimal */}
@@ -108,22 +109,24 @@ export function CleanLayout({ templateType, content, businessName, onQuoteClick 
         </section>
       )}
 
-      {/* Testimonial Placeholder - Social Proof */}
+      {/* Testimonial - Social Proof */}
       <section className="py-12 bg-muted/20">
         <div className="container mx-auto px-4">
           <div className="max-w-2xl mx-auto text-center">
             <h2 className="text-sm uppercase tracking-widest text-muted-foreground mb-6">
               Trusted by Local Customers
             </h2>
-            <div className="relative">
-              <Quote className="w-8 h-8 text-primary/20 mx-auto mb-4" />
-              <blockquote className="text-lg text-foreground italic mb-4">
-                "Reliable, professional, and easy to work with. We'd recommend {businessName} to anyone in the area."
-              </blockquote>
-              <cite className="text-sm text-muted-foreground not-italic">
-                — Local Customer, {city}
-              </cite>
-            </div>
+            {testimonials.map((t, i) => (
+              <div key={i} className="relative">
+                <Quote className="w-8 h-8 text-primary/20 mx-auto mb-4" />
+                <blockquote className="text-lg text-foreground italic mb-4">
+                  {t.quote}
+                </blockquote>
+                <cite className="text-sm text-muted-foreground not-italic">
+                  {t.author}
+                </cite>
+              </div>
+            ))}
           </div>
         </div>
       </section>
