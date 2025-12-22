@@ -322,7 +322,15 @@ export function getGalleryImagesForBusiness(opts: {
         (img) => img !== opts.excludeHero && !pool.includes(img)
       );
       const needed = count - pool.length;
-      pool = [...pool, ...fallbackPool.slice(0, needed)];
+      // Use deterministic picking from fallback pool too (not just slice)
+      const fallbackSeed = createGallerySeed({
+        businessName: opts.businessName,
+        city: opts.city,
+        leadId: opts.leadId,
+        templateType: `${result.visualKey}::fallback::${fallbackKey}`,
+      });
+      const fallbackPicked = pickUnique(fallbackPool, needed, fallbackSeed);
+      pool = [...pool, ...fallbackPicked];
       usedFallback = true;
     }
   }

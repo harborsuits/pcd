@@ -1,12 +1,12 @@
 import { useParams, useSearchParams } from "react-router-dom";
-import { useState, useEffect } from "react";
-import { themes, ThemeId } from "@/components/demo/themes";
+import { useState, useEffect, useMemo } from "react";
+import { themes, ThemeId, getHeroImage, getGalleryImagesForBusiness } from "@/components/demo/themes";
 import { ThemeSwitcher } from "@/components/demo/ThemeSwitcher";
 import { QuoteModal } from "@/components/demo/QuoteModal";
 import { ClaimDesignModal } from "@/components/demo/ClaimDesignModal";
 import { StickyMobileCTA } from "@/components/demo/StickyMobileCTA";
 import { CleanLayout, ContractorLayout, BoutiqueLayout } from "@/components/demo/layouts";
-
+import { VisualDebugBadge } from "@/components/demo/VisualDebugBadge";
 interface DemoData {
   business: {
     name: string;
@@ -131,7 +131,33 @@ export default function DemoPage() {
   if (!data) return null;
 
   const theme = themes[currentTheme];
-
+  
+  // Compute visual debug info for the badge
+  const content = data.demo.content as Record<string, unknown>;
+  const visualInputs = {
+    templateType: data.demo.template_type,
+    category: content.category as string | undefined,
+    occupation: content.occupation as string | undefined,
+    businessName: data.business.name,
+    city: content.city as string | undefined,
+  };
+  
+  const heroResult = getHeroImage(visualInputs);
+  const galleryResult = getGalleryImagesForBusiness({
+    ...visualInputs,
+    count: 3,
+    excludeHero: heroResult.heroImage,
+  });
+  
+  const debugInfo = {
+    visualKey: heroResult.visualKey,
+    confidence: heroResult.confidence,
+    matchedOn: heroResult.matchedOn,
+    usedFallback: heroResult.usedFallback || galleryResult.usedFallback,
+    heroImage: heroResult.heroImage,
+    galleryImages: galleryResult.images,
+    inputs: visualInputs,
+  };
   return (
     <div className="min-h-screen bg-background">
       <ThemeSwitcher 
@@ -191,10 +217,13 @@ export default function DemoPage() {
 
       {/* Sticky Mobile CTA */}
       <StickyMobileCTA 
-        phone={(data.demo.content as Record<string, unknown>).phone as string | undefined}
+        phone={content.phone as string | undefined}
         onQuoteClick={() => setQuoteOpen(true)}
         onClaimClick={() => setClaimOpen(true)}
       />
+
+      {/* Visual Debug Badge - dev only or ?debugVisual=1 */}
+      <VisualDebugBadge debugInfo={debugInfo} />
 
       {/* Desktop Footer - hidden on mobile since we have sticky CTA */}
       <footer className="hidden sm:block fixed bottom-0 left-0 right-0 border-t border-border bg-card/95 backdrop-blur-sm p-4 shadow-lg">
