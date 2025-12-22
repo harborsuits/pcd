@@ -285,6 +285,7 @@ export function getHeroImage(opts: {
 /**
  * Get gallery images for a business with deterministic selection
  * Uses fallback chain if pool is too small
+ * Excludes hero image from gallery to prevent duplicates
  */
 export function getGalleryImagesForBusiness(opts: {
   templateType?: string;
@@ -294,6 +295,7 @@ export function getGalleryImagesForBusiness(opts: {
   city?: string;
   leadId?: string;
   count?: number;
+  excludeHero?: string; // Pass the hero image URL to exclude it from gallery
 }): { images: string[]; visualKey: VisualKey; usedFallback: boolean } {
   const result = resolveVisualKey({
     templateType: opts.templateType,
@@ -303,15 +305,22 @@ export function getGalleryImagesForBusiness(opts: {
   });
 
   const count = opts.count ?? 3;
-  let pool = galleryImages[result.visualKey] || [];
+  let pool = [...(galleryImages[result.visualKey] || [])];
   let usedFallback = result.confidence === "fallback";
+
+  // Exclude hero image from gallery pool to prevent duplicates
+  if (opts.excludeHero) {
+    pool = pool.filter((img) => img !== opts.excludeHero);
+  }
 
   // If pool is too small, top up from fallback chain (NEVER from contractor for non-contractor)
   if (pool.length < count) {
     const chain = getFallbackChain(result.visualKey);
     for (const fallbackKey of chain) {
       if (pool.length >= count) break;
-      const fallbackPool = galleryImages[fallbackKey] || [];
+      const fallbackPool = (galleryImages[fallbackKey] || []).filter(
+        (img) => img !== opts.excludeHero && !pool.includes(img)
+      );
       const needed = count - pool.length;
       pool = [...pool, ...fallbackPool.slice(0, needed)];
       usedFallback = true;

@@ -170,6 +170,42 @@ const INDUSTRY_KEYWORDS: Array<{ patterns: string[]; visualKey: VisualKey }> = [
   },
 ];
 
+// ============= TOKENIZER =============
+// Short aliases that need word-boundary matching to avoid false positives
+const SHORT_ALIASES = new Set(["ac", "pt", "law", "vet", "spa", "gym", "car", "tax"]);
+
+/**
+ * Tokenize input into words for safer matching
+ */
+function tokenize(input: string): string[] {
+  return input
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ") // Replace punctuation with spaces
+    .split(/\s+/)
+    .filter((t) => t.length > 0);
+}
+
+/**
+ * Check if tokens contain a phrase (handles multi-word phrases)
+ */
+function tokensContainPhrase(tokens: string[], phrase: string): boolean {
+  const phraseTokens = tokenize(phrase);
+  if (phraseTokens.length === 1) {
+    // Single word - check for exact token match or as substring in longer tokens
+    const word = phraseTokens[0];
+    // For short aliases, require exact match
+    if (SHORT_ALIASES.has(word)) {
+      return tokens.includes(word);
+    }
+    // For longer words, allow substring matching (e.g., "painting" matches "painter")
+    return tokens.some((t) => t.includes(word) || word.includes(t));
+  }
+  // Multi-word phrase - check if consecutive tokens match
+  const phraseStr = phraseTokens.join(" ");
+  const inputStr = tokens.join(" ");
+  return inputStr.includes(phraseStr);
+}
+
 // ============= RESOLVER =============
 
 export interface VisualKeyResult {
@@ -181,6 +217,7 @@ export interface VisualKeyResult {
 /**
  * Resolves any occupation/category/templateType to a canonical visualKey
  * Uses two-layer matching: exact trades → industry keywords → neutral default
+ * Uses word-boundary matching to prevent false positives from short strings
  */
 export function resolveVisualKey(opts: {
   occupation?: string;
@@ -198,9 +235,12 @@ export function resolveVisualKey(opts: {
     .filter(Boolean)
     .map((s) => (s as string).trim().toLowerCase());
 
+  // Tokenize all inputs for word-boundary matching
+  const allTokens = inputs.flatMap(tokenize);
+
   // LAYER A: Check exact trade aliases first
   for (const input of inputs) {
-    // Direct match
+    // Direct exact match (fastest path)
     if (EXACT_TRADE_ALIASES[input]) {
       return {
         visualKey: EXACT_TRADE_ALIASES[input],
@@ -208,24 +248,23 @@ export function resolveVisualKey(opts: {
         matchedOn: input,
       };
     }
+  }
 
-    // Check if input contains an alias key
-    for (const [alias, visualKey] of Object.entries(EXACT_TRADE_ALIASES)) {
-      if (input.includes(alias) || alias.includes(input)) {
-        return {
-          visualKey,
-          confidence: "exact",
-          matchedOn: alias,
-        };
-      }
+  // Check aliases using word-boundary matching (safe for short strings)
+  for (const [alias, visualKey] of Object.entries(EXACT_TRADE_ALIASES)) {
+    if (tokensContainPhrase(allTokens, alias)) {
+      return {
+        visualKey,
+        confidence: "exact",
+        matchedOn: alias,
+      };
     }
   }
 
-  // LAYER B: Check industry keywords
-  const combinedText = inputs.join(" ");
+  // LAYER B: Check industry keywords using word-boundary matching
   for (const { patterns, visualKey } of INDUSTRY_KEYWORDS) {
     for (const pattern of patterns) {
-      if (combinedText.includes(pattern)) {
+      if (tokensContainPhrase(allTokens, pattern)) {
         return {
           visualKey,
           confidence: "keyword",
