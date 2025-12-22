@@ -283,7 +283,9 @@ const Index = () => {
             <a href="mailto:hello@pleasantcove.design" className="hover:text-foreground transition-colors">
               Contact
             </a>
-            {/* Admin tucked behind subtle route - type /admin/messages to access */}
+            <Link to="/operator" className="hover:text-foreground transition-colors opacity-50 hover:opacity-100">
+              Operator
+            </Link>
           </div>
         </div>
       </footer>
