@@ -1,0 +1,306 @@
+// Visual Taxonomy System
+// Two-layer resolver: exact trades → industry groups → neutral default
+// Ensures every business gets visually appropriate imagery
+
+// ============= VISUAL KEYS =============
+// These are the canonical visual categories with dedicated image packs
+export const VISUAL_KEYS = [
+  // Layer A: Exact trades (9 trades with dedicated imagery)
+  "plumber",
+  "roofer", 
+  "electrician",
+  "hvac",
+  "landscaper",
+  "painter",
+  "cleaner",
+  "contractor",
+  "restaurant",
+  // Layer B: Industry groups (broader categories)
+  "home_services",    // handyman, movers, pest control, garage doors, pressure washing, etc.
+  "auto",             // auto repair, detailing, towing
+  "health",           // dentist, chiropractor, PT
+  "beauty",           // salon, barber, spa
+  "legal",            // law firm
+  "real_estate",      // agent, broker, property management
+  "fitness",          // gym, trainer, yoga
+  "professional",     // accounting, consulting, IT services
+  "retail",           // boutiques, shops
+  // Neutral fallback
+  "default_generic",  // truly unknown - neutral service professional look
+] as const;
+
+export type VisualKey = typeof VISUAL_KEYS[number];
+
+// ============= LAYER A: EXACT TRADE ALIASES =============
+// Maps variations to canonical trade keys (these get trade-specific imagery)
+const EXACT_TRADE_ALIASES: Record<string, VisualKey> = {
+  // Painter
+  painting: "painter", painters: "painter", paint: "painter", painter: "painter",
+  "house painter": "painter", "residential painter": "painter", "commercial painter": "painter",
+  "interior painter": "painter", "exterior painter": "painter", "deck staining": "painter",
+  "cabinet painting": "painter", "fence staining": "painter",
+
+  // Contractor
+  construction: "contractor", contractor: "contractor", contracting: "contractor",
+  contractors: "contractor", "general contractor": "contractor", builder: "contractor",
+  building: "contractor", remodeling: "contractor", remodeler: "contractor",
+  renovation: "contractor", "home builder": "contractor", framing: "contractor",
+  masonry: "contractor", "concrete contractor": "contractor",
+
+  // Electrician
+  electrical: "electrician", electrician: "electrician", electricians: "electrician",
+  electric: "electrician", "electrical contractor": "electrician",
+  "electrical service": "electrician",
+
+  // Roofer
+  roofing: "roofer", roofer: "roofer", roofers: "roofer", roof: "roofer",
+  "roofing contractor": "roofer", "roof repair": "roofer",
+
+  // Plumber
+  plumbing: "plumber", plumber: "plumber", plumbers: "plumber",
+  "plumbing contractor": "plumber", "drain cleaning": "plumber",
+
+  // Landscaper
+  landscaping: "landscaper", landscaper: "landscaper", landscapers: "landscaper",
+  lawn: "landscaper", "lawn care": "landscaper", "lawn service": "landscaper",
+  "yard work": "landscaper", gardener: "landscaper", gardening: "landscaper",
+  "tree service": "landscaper", "tree trimming": "landscaper",
+
+  // Cleaner
+  cleaning: "cleaner", cleaner: "cleaner", cleaners: "cleaner",
+  "cleaning service": "cleaner", "house cleaning": "cleaner",
+  "commercial cleaning": "cleaner", janitorial: "cleaner",
+  maid: "cleaner", "maid service": "cleaner",
+
+  // Restaurant
+  restaurant: "restaurant", restaurants: "restaurant", dining: "restaurant",
+  eatery: "restaurant", cafe: "restaurant", bistro: "restaurant",
+  catering: "restaurant", "food service": "restaurant",
+
+  // HVAC
+  hvac: "hvac", heating: "hvac", cooling: "hvac",
+  "air conditioning": "hvac", ac: "hvac", "hvac contractor": "hvac",
+  furnace: "hvac", "heating and cooling": "hvac",
+};
+
+// ============= LAYER B: INDUSTRY GROUP KEYWORDS =============
+// Keyword patterns that map to broader industry groups
+const INDUSTRY_KEYWORDS: Array<{ patterns: string[]; visualKey: VisualKey }> = [
+  // Home services (catch-all for residential services not matching exact trades)
+  {
+    patterns: [
+      "handyman", "handy", "movers", "moving", "pest control", "exterminator",
+      "garage door", "pressure wash", "power wash", "locksmith", "flooring",
+      "window", "blinds", "shutters", "gutter", "siding", "insulation",
+      "fence", "deck", "patio", "pool service", "appliance repair", "door",
+      "drywall", "tile", "carpet", "hardwood", "countertop", "cabinet",
+      "home improvement", "home repair", "home maintenance",
+    ],
+    visualKey: "home_services",
+  },
+  // Auto
+  {
+    patterns: [
+      "auto", "car", "mechanic", "automotive", "vehicle", "tire", "oil change",
+      "auto repair", "body shop", "detailing", "towing", "transmission",
+      "brake", "muffler", "exhaust", "alignment",
+    ],
+    visualKey: "auto",
+  },
+  // Health
+  {
+    patterns: [
+      "dentist", "dental", "chiropractor", "chiropractic", "physical therapy",
+      "pt", "doctor", "physician", "clinic", "medical", "optometrist",
+      "dermatologist", "orthodontist", "pediatric", "veterinar", "vet",
+    ],
+    visualKey: "health",
+  },
+  // Beauty
+  {
+    patterns: [
+      "salon", "barber", "spa", "hair", "nail", "beauty", "cosmetic",
+      "massage", "facial", "waxing", "lash", "brow", "makeup", "stylist",
+      "tattoo", "piercing",
+    ],
+    visualKey: "beauty",
+  },
+  // Legal
+  {
+    patterns: [
+      "law", "lawyer", "attorney", "legal", "notary", "paralegal",
+      "law firm", "litigation", "counsel",
+    ],
+    visualKey: "legal",
+  },
+  // Real estate
+  {
+    patterns: [
+      "real estate", "realtor", "realty", "property", "broker", "agent",
+      "property management", "rental", "leasing", "apartment",
+    ],
+    visualKey: "real_estate",
+  },
+  // Fitness
+  {
+    patterns: [
+      "gym", "fitness", "trainer", "personal training", "yoga", "pilates",
+      "crossfit", "martial art", "boxing", "dance studio", "workout",
+    ],
+    visualKey: "fitness",
+  },
+  // Professional services
+  {
+    patterns: [
+      "accounting", "accountant", "cpa", "bookkeeping", "tax",
+      "consulting", "consultant", "it service", "computer", "tech support",
+      "marketing", "advertising", "design", "graphic", "web design",
+      "photography", "photographer", "videograph", "insurance", "financial",
+      "advisor", "planning", "coaching", "tutor", "education",
+    ],
+    visualKey: "professional",
+  },
+  // Retail
+  {
+    patterns: [
+      "shop", "store", "boutique", "retail", "gift", "florist", "flower",
+      "bakery", "grocery", "market", "antique", "furniture", "jewelry",
+    ],
+    visualKey: "retail",
+  },
+];
+
+// ============= RESOLVER =============
+
+export interface VisualKeyResult {
+  visualKey: VisualKey;
+  confidence: "exact" | "keyword" | "fallback";
+  matchedOn?: string;
+}
+
+/**
+ * Resolves any occupation/category/templateType to a canonical visualKey
+ * Uses two-layer matching: exact trades → industry keywords → neutral default
+ */
+export function resolveVisualKey(opts: {
+  occupation?: string;
+  category?: string;
+  templateType?: string;
+  businessName?: string;
+}): VisualKeyResult {
+  // Combine all inputs for matching
+  const inputs = [
+    opts.occupation,
+    opts.category,
+    opts.templateType,
+    opts.businessName,
+  ]
+    .filter(Boolean)
+    .map((s) => (s as string).trim().toLowerCase());
+
+  // LAYER A: Check exact trade aliases first
+  for (const input of inputs) {
+    // Direct match
+    if (EXACT_TRADE_ALIASES[input]) {
+      return {
+        visualKey: EXACT_TRADE_ALIASES[input],
+        confidence: "exact",
+        matchedOn: input,
+      };
+    }
+
+    // Check if input contains an alias key
+    for (const [alias, visualKey] of Object.entries(EXACT_TRADE_ALIASES)) {
+      if (input.includes(alias) || alias.includes(input)) {
+        return {
+          visualKey,
+          confidence: "exact",
+          matchedOn: alias,
+        };
+      }
+    }
+  }
+
+  // LAYER B: Check industry keywords
+  const combinedText = inputs.join(" ");
+  for (const { patterns, visualKey } of INDUSTRY_KEYWORDS) {
+    for (const pattern of patterns) {
+      if (combinedText.includes(pattern)) {
+        return {
+          visualKey,
+          confidence: "keyword",
+          matchedOn: pattern,
+        };
+      }
+    }
+  }
+
+  // FALLBACK: Return neutral default (NOT contractor!)
+  return {
+    visualKey: "default_generic",
+    confidence: "fallback",
+  };
+}
+
+/**
+ * Get the fallback chain for a visualKey
+ * Used when a pool doesn't have enough images
+ */
+export function getFallbackChain(visualKey: VisualKey): VisualKey[] {
+  const chains: Partial<Record<VisualKey, VisualKey[]>> = {
+    // Trades fall back to home_services then generic
+    plumber: ["home_services", "default_generic"],
+    roofer: ["home_services", "default_generic"],
+    electrician: ["home_services", "default_generic"],
+    hvac: ["home_services", "default_generic"],
+    landscaper: ["home_services", "default_generic"],
+    painter: ["home_services", "default_generic"],
+    cleaner: ["home_services", "default_generic"],
+    contractor: ["home_services", "default_generic"],
+    // Industry groups fall back to generic
+    home_services: ["default_generic"],
+    auto: ["default_generic"],
+    health: ["professional", "default_generic"],
+    beauty: ["professional", "default_generic"],
+    legal: ["professional", "default_generic"],
+    real_estate: ["professional", "default_generic"],
+    fitness: ["professional", "default_generic"],
+    professional: ["default_generic"],
+    retail: ["default_generic"],
+    restaurant: ["default_generic"],
+    default_generic: [],
+  };
+
+  return chains[visualKey] || ["default_generic"];
+}
+
+/**
+ * Check if a visualKey has dedicated trade-specific imagery
+ */
+export function hasTradeImagery(visualKey: VisualKey): boolean {
+  const tradeKeys: VisualKey[] = [
+    "plumber", "roofer", "electrician", "hvac",
+    "landscaper", "painter", "cleaner", "contractor", "restaurant",
+  ];
+  return tradeKeys.includes(visualKey);
+}
+
+/**
+ * Dev-only debug info for visual matching
+ */
+export function getVisualDebugInfo(opts: {
+  occupation?: string;
+  category?: string;
+  templateType?: string;
+  businessName?: string;
+}): Record<string, unknown> {
+  const result = resolveVisualKey(opts);
+  return {
+    inputs: opts,
+    visualKey: result.visualKey,
+    confidence: result.confidence,
+    matchedOn: result.matchedOn,
+    hasDedicatedImagery: hasTradeImagery(result.visualKey),
+    fallbackChain: getFallbackChain(result.visualKey),
+  };
+}
