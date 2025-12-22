@@ -227,14 +227,14 @@ export function AcquisitionTab() {
         headers: getAuthHeaders(),
         body: JSON.stringify({ action: "send_queued" }),
       });
+      const data = await readJsonSafe(res);
       if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || "SMS send failed");
+        throw new Error(data?.error || "SMS send failed");
       }
-      return res.json();
+      return data;
     },
     onSuccess: (data) => {
-      toast.success(`Sent ${data.sent || 0} SMS messages`);
+      toast.success(`Sent ${data?.sent || 0} SMS messages`);
       queryClient.invalidateQueries({ queryKey: ["ops-outreach"] });
     },
     onError: (error: Error) => {
@@ -249,22 +249,22 @@ export function AcquisitionTab() {
         method: "POST",
         headers: getAuthHeaders(),
       });
+      const data = await readJsonSafe(res);
       if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || "Failed to generate demo");
+        throw new Error(data?.error || "Failed to generate demo");
       }
-      return res.json();
+      return data;
     },
     onSuccess: (data, leadId) => {
       toast.success("Demo created");
       // Update search results to reflect the new demo
       setSearchResults(prev => prev.map(r => 
-        r.lead_id === leadId ? { ...r, demo_url: data.demo_url, status: "created" } : r
+        r.lead_id === leadId ? { ...r, demo_url: data?.demo_url, status: "created" } : r
       ));
       queryClient.invalidateQueries({ queryKey: ["ops-leads"] });
 
       // If auto-queue is enabled, queue outreach
-      if (autoQueueOutreach && data.demo_url) {
+      if (autoQueueOutreach && data?.demo_url) {
         queueOutreachMutation.mutate(leadId);
       }
     },
@@ -281,11 +281,11 @@ export function AcquisitionTab() {
         headers: getAuthHeaders(),
         body: JSON.stringify({ lead_id: leadId }),
       });
+      const data = await readJsonSafe(res);
       if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || "Failed to queue outreach");
+        throw new Error(data?.error || "Failed to queue outreach");
       }
-      return res.json();
+      return data;
     },
     onSuccess: () => {
       toast.success("Outreach queued");
@@ -305,11 +305,11 @@ export function AcquisitionTab() {
         headers: getAuthHeaders(),
         body: JSON.stringify({ status }),
       });
+      const data = await readJsonSafe(res);
       if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || "Failed to update review status");
+        throw new Error(data?.error || "Failed to update review status");
       }
-      return res.json();
+      return data;
     },
     onSuccess: (_, { status }) => {
       toast.success(`Demo ${status}`);
@@ -327,14 +327,14 @@ export function AcquisitionTab() {
         method: "POST",
         headers: getAuthHeaders(),
       });
+      const data = await readJsonSafe(res);
       if (!res.ok) {
-        const err = await readJsonSafe(res);
-        throw new Error(err?.error || "Failed to clear leads");
+        throw new Error(data?.error || "Failed to clear leads");
       }
-      return res.json();
+      return data;
     },
     onSuccess: (data) => {
-      toast.success(`Cleared ${data.deleted || 0} leads with demos`);
+      toast.success(`Cleared ${data?.deleted || 0} leads with demos`);
       queryClient.invalidateQueries({ queryKey: ["ops-leads"] });
     },
     onError: (error: Error) => {
