@@ -101,6 +101,7 @@ import painterHero from "@/assets/heroes/painter-hero.jpg";
 import cleanerHero from "@/assets/heroes/cleaner-hero.jpg";
 import contractorHero from "@/assets/heroes/contractor-hero.jpg";
 import restaurantHero from "@/assets/heroes/restaurant-hero.jpg";
+import barberHero from "@/assets/heroes/barber-hero.jpg";
 // Neutral fallback heroes (NOT construction!)
 import homeServicesHero from "@/assets/heroes/home-services-hero.jpg";
 import professionalHero from "@/assets/heroes/professional-hero.jpg";
@@ -117,11 +118,12 @@ const heroImages: Record<VisualKey, string> = {
   cleaner: cleanerHero,
   contractor: contractorHero,
   restaurant: restaurantHero,
+  barber: barberHero,
   // Industry groups - use appropriate neutral imagery
   home_services: homeServicesHero,
   auto: homeServicesHero, // automotive uses same as home services for now
   health: professionalHero,
-  beauty: professionalHero,
+  personal_services: professionalHero,
   legal: professionalHero,
   real_estate: professionalHero,
   fitness: professionalHero,
@@ -196,6 +198,13 @@ import restaurantGallery4 from "@/assets/gallery/restaurant-4.jpg";
 import restaurantGallery5 from "@/assets/gallery/restaurant-5.jpg";
 import restaurantGallery6 from "@/assets/gallery/restaurant-6.jpg";
 
+import barberGallery1 from "@/assets/gallery/barber-1.jpg";
+import barberGallery2 from "@/assets/gallery/barber-2.jpg";
+import barberGallery3 from "@/assets/gallery/barber-3.jpg";
+import barberGallery4 from "@/assets/gallery/barber-4.jpg";
+import barberGallery5 from "@/assets/gallery/barber-5.jpg";
+import barberGallery6 from "@/assets/gallery/barber-6.jpg";
+
 // Neutral gallery images for fallback categories - expanded to 6 each
 import homeServicesGallery1 from "@/assets/gallery/home-services-1.jpg";
 import homeServicesGallery2 from "@/assets/gallery/home-services-2.jpg";
@@ -229,11 +238,12 @@ const galleryImages: Record<VisualKey, string[]> = {
   cleaner: [cleanerGallery1, cleanerGallery2, cleanerGallery3, cleanerGallery4, cleanerGallery5, cleanerGallery6],
   contractor: [contractorGallery1, contractorGallery2, contractorGallery3, contractorGallery4, contractorGallery5, contractorGallery6],
   restaurant: [restaurantGallery1, restaurantGallery2, restaurantGallery3, restaurantGallery4, restaurantGallery5, restaurantGallery6],
+  barber: [barberGallery1, barberGallery2, barberGallery3, barberGallery4, barberGallery5, barberGallery6],
   // Industry groups - expanded to 6 images each for variety
   home_services: [homeServicesGallery1, homeServicesGallery2, homeServicesGallery3, homeServicesGallery4, homeServicesGallery5, homeServicesGallery6],
   auto: [homeServicesGallery1, homeServicesGallery2, homeServicesGallery3, homeServicesGallery4, homeServicesGallery5, homeServicesGallery6],
   health: [professionalGallery1, professionalGallery2, professionalGallery3, professionalGallery4, professionalGallery5, professionalGallery6],
-  beauty: [professionalGallery1, professionalGallery2, professionalGallery3, professionalGallery4, professionalGallery5, professionalGallery6],
+  personal_services: [professionalGallery1, professionalGallery2, professionalGallery3, professionalGallery4, professionalGallery5, professionalGallery6],
   legal: [professionalGallery1, professionalGallery2, professionalGallery3, professionalGallery4, professionalGallery5, professionalGallery6],
   real_estate: [professionalGallery1, professionalGallery2, professionalGallery3, professionalGallery4, professionalGallery5, professionalGallery6],
   fitness: [professionalGallery1, professionalGallery2, professionalGallery3, professionalGallery4, professionalGallery5, professionalGallery6],
