@@ -97,7 +97,7 @@ export function AcquisitionTab() {
     queryKey: ["ops-outreach"],
     queryFn: async () => {
       const adminKey = localStorage.getItem("admin_key") || "";
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/outreach?limit=50`, {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/outreach/events?limit=50`, {
         headers: { "x-admin-key": adminKey },
       });
       if (!res.ok) throw new Error("Failed to fetch outreach");
