@@ -26,6 +26,7 @@ export function CleanLayout({ templateType, content, businessName, onQuoteClick 
     businessName,
     city,
     count: 3,
+    excludeHero: heroImage, // Prevent hero from appearing in gallery
   });
   const galleryImages = galleryResult.images;
   const initials = getInitials(businessName);
