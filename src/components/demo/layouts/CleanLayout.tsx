@@ -1,6 +1,7 @@
 import { MapPin, Star, Phone, Quote } from "lucide-react";
 import { industryImages, getInitials } from "../themes";
 import { getTradeDisplayName, getTradeCTAText, isKnownTrade } from "@/lib/categoryServices";
+import { getTradeIcon } from "@/lib/tradeIcons";
 import { getStableTestimonials } from "@/lib/testimonials";
 
 interface LayoutProps {
@@ -32,16 +33,18 @@ export function CleanLayout({ templateType, content, businessName, onQuoteClick 
     : `Professional Services in ${locationString}`;
   const servicesTitle = knownTrade ? `Our ${tradeName} Services` : "Our Services";
   const testimonials = getStableTestimonials({ businessName, city, templateType, count: 1 });
+  const TradeIcon = getTradeIcon(templateType);
+
   return (
     <div className="pb-32">
       {/* Clean Hero - White/light background, centered, minimal */}
       <section className="bg-gradient-to-b from-background via-muted/20 to-background py-16 md:py-24">
         <div className="container mx-auto px-4">
           <div className="max-w-3xl mx-auto text-center">
-            {/* Small subtle logo */}
+            {/* Small subtle logo with trade icon */}
             <div className="flex justify-center mb-6">
-              <div className="w-14 h-14 bg-primary/10 text-primary rounded-full flex items-center justify-center text-lg font-semibold">
-                {initials}
+              <div className="w-14 h-14 bg-primary/10 text-primary rounded-full flex items-center justify-center">
+                <TradeIcon className="w-7 h-7" />
               </div>
             </div>
             

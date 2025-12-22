@@ -1,6 +1,7 @@
-import { MapPin, Clock, Shield, Star, Phone, Wrench, CheckCircle, Quote } from "lucide-react";
+import { MapPin, Clock, Shield, Star, Phone, CheckCircle, Quote } from "lucide-react";
 import { industryImages, getInitials } from "../themes";
 import { getTradeDisplayName, getTradeCTAText, getTradeNoun, isKnownTrade } from "@/lib/categoryServices";
+import { getTradeIcon } from "@/lib/tradeIcons";
 import { getStableTestimonials } from "@/lib/testimonials";
 
 interface LayoutProps {
@@ -36,6 +37,7 @@ export function ContractorLayout({ templateType, content, businessName, onQuoteC
     ? `Professional ${tradeNoun} work done right the first time`
     : "Professional work done right the first time";
   const testimonials = getStableTestimonials({ businessName, city, templateType, count: 2 });
+  const TradeIcon = getTradeIcon(templateType);
 
   return (
     <div className="pb-32">
@@ -146,7 +148,7 @@ export function ContractorLayout({ templateType, content, businessName, onQuoteC
                   className="bg-card border border-border rounded-xl p-6 shadow-md hover:shadow-lg hover:-translate-y-1 transition-all"
                 >
                   <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
-                    <Wrench className="w-6 h-6 text-primary" />
+                    <TradeIcon className="w-6 h-6 text-primary" />
                   </div>
                   <h3 className="font-bold text-foreground text-lg">{service}</h3>
                 </div>
