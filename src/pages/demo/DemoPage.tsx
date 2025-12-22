@@ -134,7 +134,11 @@ export default function DemoPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <ThemeSwitcher currentTheme={currentTheme} onThemeChange={handleThemeChange} />
+      <ThemeSwitcher 
+        currentTheme={currentTheme} 
+        onThemeChange={handleThemeChange} 
+        templateType={data.demo.template_type}
+      />
       
       {/* Preview Explanation Strip */}
       <div className="bg-accent/10 border-b border-accent/20">

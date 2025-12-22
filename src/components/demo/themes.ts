@@ -106,3 +106,65 @@ export function getInitials(name: string): string {
     .map(word => word[0].toUpperCase())
     .join("");
 }
+
+// Trade-aware theme descriptions
+export function getTradeAwareThemeInfo(themeId: ThemeId, templateType: string): { name: string; description: string } {
+  const tradeDescriptions: Record<string, Record<ThemeId, { name: string; description: string }>> = {
+    plumber: {
+      classic: { name: "Clean", description: "Professional and trustworthy — shows you're reliable" },
+      bold: { name: "Pro", description: "Bold and confident — perfect for emergency services" },
+      premium: { name: "Premium", description: "Upscale look for high-end plumbing work" },
+    },
+    electrician: {
+      classic: { name: "Clean", description: "Professional look — shows safety and expertise" },
+      bold: { name: "Pro", description: "Bold style — great for commercial electrical" },
+      premium: { name: "Premium", description: "Refined look for premium electrical services" },
+    },
+    roofer: {
+      classic: { name: "Clean", description: "Professional — builds trust for big jobs" },
+      bold: { name: "Pro", description: "Bold and strong — shows you mean business" },
+      premium: { name: "Premium", description: "Upscale look for custom roofing work" },
+    },
+    hvac: {
+      classic: { name: "Clean", description: "Professional — reliable comfort specialists" },
+      bold: { name: "Pro", description: "Bold presence — stands out for HVAC pros" },
+      premium: { name: "Premium", description: "Refined style for high-end HVAC systems" },
+    },
+    landscaper: {
+      classic: { name: "Clean", description: "Fresh and professional — shows quality care" },
+      bold: { name: "Pro", description: "Bold look — great for commercial landscaping" },
+      premium: { name: "Boutique", description: "Elegant style for luxury landscape design" },
+    },
+    painter: {
+      classic: { name: "Clean", description: "Clean look — shows attention to detail" },
+      bold: { name: "Pro", description: "Bold style — perfect for commercial painters" },
+      premium: { name: "Boutique", description: "Artistic feel for premium painting services" },
+    },
+    cleaner: {
+      classic: { name: "Clean", description: "Fresh and minimal — just like your work" },
+      bold: { name: "Pro", description: "Bold presence for commercial cleaning" },
+      premium: { name: "Boutique", description: "Upscale look for premium cleaning services" },
+    },
+    contractor: {
+      classic: { name: "Clean", description: "Professional — trusted for any project" },
+      bold: { name: "Pro", description: "Bold and confident — shows you get it done" },
+      premium: { name: "Premium", description: "Refined style for custom home builds" },
+    },
+    restaurant: {
+      classic: { name: "Clean", description: "Fresh and inviting — family-friendly feel" },
+      bold: { name: "Bold", description: "Bold look — makes a statement" },
+      premium: { name: "Fine Dining", description: "Elegant style for upscale dining" },
+    },
+  };
+
+  // Return trade-specific or fall back to defaults
+  const tradeInfo = tradeDescriptions[templateType]?.[themeId];
+  if (tradeInfo) return tradeInfo;
+
+  // Default fallbacks
+  return {
+    classic: { name: "Clean", description: "Clean and professional — great for service businesses" },
+    bold: { name: "Bold", description: "Bold and confident — stands out from competition" },
+    premium: { name: "Premium", description: "Elegant and refined — perfect for premium services" },
+  }[themeId];
+}
