@@ -1,6 +1,6 @@
 import { MapPin, Clock, Shield, Star, Phone, Wrench, CheckCircle, Quote } from "lucide-react";
 import { industryImages, getInitials } from "../themes";
-import { getTradeDisplayName, getTradeCTAText, getTradeNoun, isKnownTrade as checkKnownTrade } from "@/lib/categoryServices";
+import { getTradeDisplayName, getTradeCTAText, getTradeNoun, isKnownTrade } from "@/lib/categoryServices";
 
 interface LayoutProps {
   templateType: string;
@@ -25,13 +25,13 @@ export function ContractorLayout({ templateType, content, businessName, onQuoteC
   // Trade-aware content
   const tradeName = getTradeDisplayName(templateType);
   const tradeNoun = getTradeNoun(templateType);
-  const isKnownTrade = checkKnownTrade(templateType);
+  const knownTrade = isKnownTrade(templateType);
   const ctaText = getTradeCTAText(templateType);
-  const heroSubheadline = isKnownTrade 
+  const heroSubheadline = knownTrade 
     ? `Professional ${tradeName} Services in ${locationString}`
     : `Professional Services in ${locationString}`;
-  const servicesTitle = isKnownTrade ? `Our ${tradeName} Services` : "Our Services";
-  const servicesSubtitle = isKnownTrade 
+  const servicesTitle = knownTrade ? `Our ${tradeName} Services` : "Our Services";
+  const servicesSubtitle = knownTrade 
     ? `Professional ${tradeNoun} work done right the first time`
     : "Professional work done right the first time";
 
