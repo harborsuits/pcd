@@ -136,7 +136,7 @@ export function CleanLayout({ templateType, content, businessName, onQuoteClick 
                 </h2>
               </div>
               <p className="text-sm text-muted-foreground hidden md:block">
-                {gallerySource === "google" ? "Photos from Google" : (knownTrade ? "Photos representative of typical projects" : "Sample project photos")}
+                {knownTrade ? "Photos representative of typical projects" : "Sample project photos"}
               </p>
             </div>
 

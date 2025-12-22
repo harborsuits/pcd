@@ -331,37 +331,47 @@ export function getGalleryImagesForBusiness(opts: {
   });
 
   const count = opts.count ?? 3;
-  
-  // Priority 1: Use Google Place photos if available
   const photoRefs = opts.photoReferences || [];
-  if (photoRefs.length >= count) {
-    const googleImages = photoRefs.slice(0, count).map(ref => getPhotoUrl(ref, 400));
-    return {
-      images: googleImages,
-      visualKey: result.visualKey,
-      usedFallback: false,
-      source: "google",
-    };
-  }
   
-  // Priority 2: Mix Google photos with stock (if some Google photos exist)
+  // Seed for deterministic selection
+  const seed = createGallerySeed({
+    businessName: opts.businessName,
+    city: opts.city,
+    leadId: opts.leadId,
+    templateType: result.visualKey,
+  });
+  
+  // Priority 1 & 2: Use Google Place photos if available
   if (photoRefs.length > 0) {
-    const googleImages = photoRefs.map(ref => getPhotoUrl(ref, 400));
+    // Build unique Google URLs, excluding hero if provided
+    const googlePool = Array.from(new Set(
+      photoRefs.map(ref => getPhotoUrl(ref, 400))
+    )).filter(url => url !== opts.excludeHero);
+    
+    // Use pickUnique to deterministically select from Google pool
+    const googleSeed = `${seed}::google`;
+    const googlePicked = pickUnique(googlePool, Math.min(count, googlePool.length), googleSeed);
+    
+    // If we have enough Google photos, return them
+    if (googlePicked.length >= count) {
+      return {
+        images: googlePicked,
+        visualKey: result.visualKey,
+        usedFallback: false,
+        source: "google",
+      };
+    }
+    
+    // Otherwise, top up with stock (excluding hero and already-picked Google URLs)
     const stockPool = [...(galleryImages[result.visualKey] || [])];
-    const filteredStock = stockPool.filter(img => img !== opts.excludeHero);
-    const needed = count - googleImages.length;
-    
-    const seed = createGallerySeed({
-      businessName: opts.businessName,
-      city: opts.city,
-      leadId: opts.leadId,
-      templateType: result.visualKey,
-    });
-    
+    const filteredStock = stockPool
+      .filter(img => img !== opts.excludeHero)
+      .filter(img => !googlePicked.includes(img));
+    const needed = count - googlePicked.length;
     const stockPicked = pickUnique(filteredStock, needed, seed);
     
     return {
-      images: [...googleImages, ...stockPicked],
+      images: [...googlePicked, ...stockPicked],
       visualKey: result.visualKey,
       usedFallback: false,
       source: "google",
@@ -400,14 +410,14 @@ export function getGalleryImagesForBusiness(opts: {
   }
 
   // Create seed for deterministic selection
-  const seed = createGallerySeed({
+  const stockSeed = createGallerySeed({
     businessName: opts.businessName,
     city: opts.city,
     leadId: opts.leadId,
     templateType: result.visualKey,
   });
 
-  const images = pickUnique(pool, count, seed);
+  const images = pickUnique(pool, count, stockSeed);
 
   return {
     images,
