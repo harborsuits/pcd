@@ -1,5 +1,5 @@
-import { MapPin, Clock, Shield, Star, Phone, CheckCircle, Quote } from "lucide-react";
-import { industryImages, getInitials } from "../themes";
+import { MapPin, Clock, Shield, Star, Phone, CheckCircle, Quote, Camera } from "lucide-react";
+import { getHeroImage, getGalleryImages, getInitials } from "../themes";
 import { getTradeDisplayName, getTradeCTAText, getTradeNoun, isKnownTrade } from "@/lib/categoryServices";
 import { getTradeIcon } from "@/lib/tradeIcons";
 import { getStableTestimonials } from "@/lib/testimonials";
@@ -19,7 +19,8 @@ export function ContractorLayout({ templateType, content, businessName, onQuoteC
   const rating = (content.rating as number) || null;
   const reviewCount = (content.reviewCount as number) || null;
   const tagline = (content.tagline as string) || "";
-  const heroImage = industryImages[templateType] || industryImages.default;
+  const heroImage = getHeroImage(templateType);
+  const galleryImages = getGalleryImages(templateType, 3);
   const initials = getInitials(businessName);
   const locationString = state ? `${city}, ${state}` : city;
   const nearbyTowns = (content.nearbyTowns as string[]) || [];
@@ -158,8 +159,45 @@ export function ContractorLayout({ templateType, content, businessName, onQuoteC
         </section>
       )}
 
-      {/* Testimonials */}
+      {/* Gallery / Recent Work - Trade-specific */}
       <section className="py-16 border-t border-border">
+        <div className="container mx-auto px-4">
+          <div className="max-w-5xl mx-auto">
+            <div className="flex items-center justify-between mb-8">
+              <div>
+                <div className="inline-flex items-center gap-2 text-primary mb-2">
+                  <Camera className="w-5 h-5" />
+                  <span className="text-sm font-medium uppercase tracking-wide">
+                    {knownTrade ? `${tradeName} Work` : "Our Work"}
+                  </span>
+                </div>
+                <h2 className="text-2xl font-extrabold text-foreground">
+                  {knownTrade ? `Recent ${tradeName} Projects` : "Recent Projects"}
+                </h2>
+              </div>
+              <p className="text-sm text-muted-foreground hidden md:block">
+                {knownTrade ? "Photos representative of typical projects" : "Sample project photos"}
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {galleryImages.map((src, i) => (
+                <div key={i} className="overflow-hidden rounded-xl border border-border bg-muted/20 shadow-md hover:shadow-lg transition-shadow">
+                  <img
+                    src={src}
+                    alt={knownTrade ? `${tradeName} project photo ${i + 1}` : `Project photo ${i + 1}`}
+                    className="h-48 w-full object-cover hover:scale-105 transition-transform duration-300"
+                    loading="lazy"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Testimonials */}
+      <section className="py-16 bg-muted/30">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto">
             <h2 className="text-2xl font-extrabold text-foreground text-center mb-8">

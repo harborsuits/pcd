@@ -1,5 +1,5 @@
-import { MapPin, Star, Phone, Quote } from "lucide-react";
-import { industryImages, getInitials } from "../themes";
+import { MapPin, Star, Phone, Quote, Camera } from "lucide-react";
+import { getHeroImage, getGalleryImages, getInitials } from "../themes";
 import { getTradeDisplayName, getTradeCTAText, isKnownTrade } from "@/lib/categoryServices";
 import { getTradeIcon } from "@/lib/tradeIcons";
 import { getStableTestimonials } from "@/lib/testimonials";
@@ -19,7 +19,8 @@ export function CleanLayout({ templateType, content, businessName, onQuoteClick 
   const rating = (content.rating as number) || null;
   const reviewCount = (content.reviewCount as number) || null;
   const tagline = (content.tagline as string) || "";
-  const heroImage = industryImages[templateType] || industryImages.default;
+  const heroImage = getHeroImage(templateType);
+  const galleryImages = getGalleryImages(templateType, 3);
   const initials = getInitials(businessName);
   const locationString = state ? `${city}, ${state}` : city;
   const nearbyTowns = (content.nearbyTowns as string[]) || [];
@@ -112,8 +113,40 @@ export function CleanLayout({ templateType, content, businessName, onQuoteClick 
         </section>
       )}
 
-      {/* Testimonial - Social Proof */}
+      {/* Gallery / Recent Work - Trade-specific */}
       <section className="py-12 bg-muted/20">
+        <div className="container mx-auto px-4">
+          <div className="max-w-3xl mx-auto">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-2">
+                <Camera className="w-5 h-5 text-primary" />
+                <h2 className="text-xl font-medium text-foreground">
+                  {knownTrade ? `Recent ${tradeName} Work` : "Recent Work"}
+                </h2>
+              </div>
+              <p className="text-sm text-muted-foreground hidden md:block">
+                {knownTrade ? "Photos representative of typical projects" : "Sample project photos"}
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {galleryImages.map((src, i) => (
+                <div key={i} className="overflow-hidden rounded-lg border border-border/50 bg-muted/30">
+                  <img
+                    src={src}
+                    alt={knownTrade ? `${tradeName} project photo ${i + 1}` : `Project photo ${i + 1}`}
+                    className="h-44 w-full object-cover hover:scale-105 transition-transform duration-300"
+                    loading="lazy"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Testimonial - Social Proof */}
+      <section className="py-12">
         <div className="container mx-auto px-4">
           <div className="max-w-2xl mx-auto text-center">
             <h2 className="text-sm uppercase tracking-widest text-muted-foreground mb-6">
@@ -135,7 +168,7 @@ export function CleanLayout({ templateType, content, businessName, onQuoteClick 
       </section>
 
       {/* Location info - simple text block */}
-      <section className="py-12">
+      <section className="py-12 border-t border-border/50">
         <div className="container mx-auto px-4 text-center max-w-2xl">
           <h2 className="text-xl font-medium text-foreground mb-3">
             Serving {city}
