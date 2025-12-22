@@ -84,6 +84,21 @@ const TRADE_ALIASES: Record<string, string> = {
   ac: "hvac",
   "hvac contractor": "hvac",
   furnace: "hvac",
+
+  // Barber / Hair Salon variations
+  barber: "barber",
+  barbershop: "barber",
+  "barber shop": "barber",
+  hairdresser: "barber",
+  haircutter: "barber",
+  haircutters: "barber",
+  "hair salon": "barber",
+  salon: "barber",
+  "hair stylist": "barber",
+  stylist: "barber",
+  haircut: "barber",
+  haircuts: "barber",
+  grooming: "barber",
 };
 
 // List of known normalized trade keys
@@ -97,6 +112,7 @@ export const KNOWN_TRADES = [
   "cleaner",
   "restaurant",
   "hvac",
+  "barber",
 ] as const;
 
 export type KnownTrade = typeof KNOWN_TRADES[number];

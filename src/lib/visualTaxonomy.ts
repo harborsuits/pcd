@@ -5,7 +5,7 @@
 // ============= VISUAL KEYS =============
 // These are the canonical visual categories with dedicated image packs
 export const VISUAL_KEYS = [
-  // Layer A: Exact trades (9 trades with dedicated imagery)
+  // Layer A: Exact trades (10 trades with dedicated imagery)
   "plumber",
   "roofer", 
   "electrician",
@@ -15,11 +15,12 @@ export const VISUAL_KEYS = [
   "cleaner",
   "contractor",
   "restaurant",
+  "barber",           // barber, salon, hairdresser, stylist
   // Layer B: Industry groups (broader categories)
   "home_services",    // handyman, movers, pest control, garage doors, pressure washing, etc.
   "auto",             // auto repair, detailing, towing
   "health",           // dentist, chiropractor, PT
-  "beauty",           // salon, barber, spa
+  "personal_services", // spa, massage, nails (non-barber beauty)
   "legal",            // law firm
   "real_estate",      // agent, broker, property management
   "fitness",          // gym, trainer, yoga
@@ -81,6 +82,13 @@ const EXACT_TRADE_ALIASES: Record<string, VisualKey> = {
   hvac: "hvac", heating: "hvac", cooling: "hvac",
   "air conditioning": "hvac", ac: "hvac", "hvac contractor": "hvac",
   furnace: "hvac", "heating and cooling": "hvac",
+
+  // Barber / Hair Salon (first-class trade - NOT generic beauty!)
+  barber: "barber", barbershop: "barber", "barber shop": "barber",
+  hairdresser: "barber", haircutter: "barber", haircutters: "barber",
+  "hair salon": "barber", salon: "barber", "hair stylist": "barber",
+  stylist: "barber", haircut: "barber", haircuts: "barber",
+  grooming: "barber", "men's grooming": "barber", "mens grooming": "barber",
 };
 
 // ============= LAYER B: INDUSTRY GROUP KEYWORDS =============
@@ -116,14 +124,14 @@ const INDUSTRY_KEYWORDS: Array<{ patterns: string[]; visualKey: VisualKey }> = [
     ],
     visualKey: "health",
   },
-  // Beauty
+  // Personal services (non-barber beauty: spa, massage, nails, etc.)
   {
     patterns: [
-      "salon", "barber", "spa", "hair", "nail", "beauty", "cosmetic",
-      "massage", "facial", "waxing", "lash", "brow", "makeup", "stylist",
-      "tattoo", "piercing",
+      "spa", "nail", "nails", "manicure", "pedicure", "beauty",
+      "massage", "facial", "waxing", "lash", "brow", "makeup",
+      "tattoo", "piercing", "cosmetic", "esthetician", "aesthetician",
     ],
-    visualKey: "beauty",
+    visualKey: "personal_services",
   },
   // Legal
   {
@@ -296,11 +304,13 @@ export function getFallbackChain(visualKey: VisualKey): VisualKey[] {
     painter: ["home_services", "default_generic"],
     cleaner: ["home_services", "default_generic"],
     contractor: ["home_services", "default_generic"],
+    // Barber falls back to personal_services then generic (NEVER home_services!)
+    barber: ["personal_services", "default_generic"],
     // Industry groups fall back to generic
     home_services: ["default_generic"],
     auto: ["default_generic"],
     health: ["professional", "default_generic"],
-    beauty: ["professional", "default_generic"],
+    personal_services: ["default_generic"],
     legal: ["professional", "default_generic"],
     real_estate: ["professional", "default_generic"],
     fitness: ["professional", "default_generic"],
@@ -319,7 +329,7 @@ export function getFallbackChain(visualKey: VisualKey): VisualKey[] {
 export function hasTradeImagery(visualKey: VisualKey): boolean {
   const tradeKeys: VisualKey[] = [
     "plumber", "roofer", "electrician", "hvac",
-    "landscaper", "painter", "cleaner", "contractor", "restaurant",
+    "landscaper", "painter", "cleaner", "contractor", "restaurant", "barber",
   ];
   return tradeKeys.includes(visualKey);
 }
