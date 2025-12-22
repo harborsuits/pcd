@@ -124,6 +124,25 @@ export function inferTemplateFromCategory(category: string | null, googleTypes: 
   return "default";
 }
 
+// Human-readable trade names for display
+export const tradeDisplayNames: Record<string, string> = {
+  plumber: "Plumbing",
+  roofer: "Roofing",
+  electrician: "Electrical",
+  hvac: "HVAC",
+  landscaper: "Landscaping",
+  painter: "Painting",
+  cleaner: "Cleaning",
+  restaurant: "Dining",
+  contractor: "Contracting",
+  default: "Professional",
+};
+
+// Get display name for a trade
+export function getTradeDisplayName(templateType: string): string {
+  return tradeDisplayNames[templateType] || tradeDisplayNames.default;
+}
+
 // Generate a tagline based on template and location
 export function generateTagline(templateType: string, city: string): string {
   const taglines: Record<string, string> = {
@@ -140,4 +159,19 @@ export function generateTagline(templateType: string, city: string): string {
   };
   
   return taglines[templateType] || taglines.default;
+}
+
+// Generate trade-aware CTA text
+export function getTradeCTAText(templateType: string): { button: string; heading: string } {
+  const tradeName = getTradeDisplayName(templateType);
+  if (templateType === "default" || !tradeDisplayNames[templateType]) {
+    return {
+      button: "Request a Quote",
+      heading: "Ready to Get Started?",
+    };
+  }
+  return {
+    button: `Get a ${tradeName} Quote`,
+    heading: `Need ${tradeName} Services?`,
+  };
 }
