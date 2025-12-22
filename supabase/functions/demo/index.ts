@@ -10,6 +10,37 @@ function isValidToken(token: string): boolean {
   return /^[a-zA-Z0-9\-_]{12,128}$/.test(token);
 }
 
+// Send Telegram notification (non-blocking)
+async function notifyTelegram(text: string): Promise<void> {
+  const token = Deno.env.get("TELEGRAM_BOT_TOKEN");
+  const chatId = Deno.env.get("TELEGRAM_CHAT_ID");
+  if (!token || !chatId) {
+    console.log("Telegram not configured, skipping notification");
+    return;
+  }
+
+  try {
+    const response = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        chat_id: chatId,
+        text,
+        parse_mode: "HTML",
+        disable_web_page_preview: true,
+      }),
+    });
+    
+    if (!response.ok) {
+      console.error("Telegram notification failed:", await response.text());
+    } else {
+      console.log("Telegram notification sent successfully");
+    }
+  } catch (error) {
+    console.error("Telegram notification error:", error);
+  }
+}
+
 Deno.serve(async (req) => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
@@ -113,6 +144,20 @@ async function handleClaim(req: Request): Promise<Response> {
       .eq("id", project.id);
 
     console.log(`Claim received for ${project.business_name}`);
+
+    // Send Telegram notification (non-blocking)
+    const baseUrl = Deno.env.get("PUBLIC_BASE_URL") || "https://ararrbvhzaudfaxjwdrc.lovableproject.com";
+    const telegramMsg =
+      `🟢 <b>New Design Claim</b>\n` +
+      `• <b>Business:</b> ${project.business_name}\n` +
+      `• <b>Name:</b> ${name || "—"}\n` +
+      `• <b>Phone:</b> ${phone || "—"}\n` +
+      `• <b>Email:</b> ${email || "—"}\n` +
+      (notes ? `• <b>Notes:</b> ${notes}\n` : "") +
+      `• <b>Token:</b> <code>${project_token}</code>\n` +
+      `• <b>Portal:</b> ${baseUrl}/portal?token=${project_token}`;
+    
+    try { await notifyTelegram(telegramMsg); } catch (_) { /* fail silently */ }
 
     return new Response(
       JSON.stringify({ ok: true }),
