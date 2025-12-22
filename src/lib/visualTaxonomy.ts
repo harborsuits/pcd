@@ -89,6 +89,8 @@ const EXACT_TRADE_ALIASES: Record<string, VisualKey> = {
   "hair salon": "barber", salon: "barber", "hair stylist": "barber",
   stylist: "barber", haircut: "barber", haircuts: "barber",
   grooming: "barber", "men's grooming": "barber", "mens grooming": "barber",
+  "hair studio": "barber", "beauty salon": "barber", "mens cuts": "barber",
+  "men's haircut": "barber", "women's haircut": "barber",
 };
 
 // ============= LAYER B: INDUSTRY GROUP KEYWORDS =============
@@ -223,6 +225,16 @@ export interface VisualKeyResult {
 }
 
 /**
+ * Normalize legacy keys that may still exist in data
+ */
+function normalizeLegacyKey(s: string): string {
+  const v = (s || "").toLowerCase().trim();
+  // Handle beauty → personal_services rename for backwards compat
+  if (v === "beauty") return "personal_services";
+  return v;
+}
+
+/**
  * Resolves any occupation/category/templateType to a canonical visualKey
  * Uses two-layer matching: exact trades → industry keywords → neutral default
  * Uses word-boundary matching to prevent false positives from short strings
@@ -233,7 +245,7 @@ export function resolveVisualKey(opts: {
   templateType?: string;
   businessName?: string;
 }): VisualKeyResult {
-  // Combine all inputs for matching
+  // Combine all inputs for matching, normalizing legacy keys
   const inputs = [
     opts.occupation,
     opts.category,
@@ -241,7 +253,7 @@ export function resolveVisualKey(opts: {
     opts.businessName,
   ]
     .filter(Boolean)
-    .map((s) => (s as string).trim().toLowerCase());
+    .map((s) => normalizeLegacyKey(s as string));
 
   // Tokenize all inputs for word-boundary matching
   const allTokens = inputs.flatMap(tokenize);
