@@ -473,6 +473,7 @@ export type Database = {
           deleted_at: string | null
           id: string
           notes: string | null
+          owner_user_id: string | null
           project_token: string
           source: string
           state: string | null
@@ -493,6 +494,7 @@ export type Database = {
           deleted_at?: string | null
           id?: string
           notes?: string | null
+          owner_user_id?: string | null
           project_token: string
           source?: string
           state?: string | null
@@ -513,6 +515,7 @@ export type Database = {
           deleted_at?: string | null
           id?: string
           notes?: string | null
+          owner_user_id?: string | null
           project_token?: string
           source?: string
           state?: string | null

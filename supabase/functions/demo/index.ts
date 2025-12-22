@@ -52,9 +52,14 @@ Deno.serve(async (req) => {
   const demoIdx = pathParts.lastIndexOf("demo");
   const subPath = demoIdx >= 0 ? pathParts.slice(demoIdx + 1).join("/") : "";
 
-  // Route: POST /demo/claim
+  // Route: POST /demo/claim (legacy, still works for non-auth claims)
   if (subPath === "claim" && req.method === "POST") {
     return handleClaim(req);
+  }
+  
+  // Route: POST /demo/claim-with-auth (new auth-based claim)
+  if (subPath === "claim-with-auth" && req.method === "POST") {
+    return handleClaimWithAuth(req);
   }
 
   // Route: GET /demo/:token (existing)
@@ -177,6 +182,119 @@ async function handleClaim(req: Request): Promise<Response> {
     );
   } catch (error) {
     console.error("Claim error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+}
+
+// POST /demo/claim-with-auth - Handle authenticated claim
+async function handleClaimWithAuth(req: Request): Promise<Response> {
+  try {
+    const body = await req.json();
+    const { project_token, user_id, name, email } = body;
+
+    if (!project_token || !user_id) {
+      return new Response(
+        JSON.stringify({ error: "project_token and user_id required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (!isValidToken(project_token)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid token" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Find the project
+    const { data: project, error: projectError } = await supabase
+      .from("projects")
+      .select("id, business_name, owner_user_id")
+      .eq("project_token", project_token)
+      .is("deleted_at", null)
+      .maybeSingle();
+
+    if (projectError || !project) {
+      return new Response(
+        JSON.stringify({ error: "Project not found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Check if already claimed by someone else
+    if (project.owner_user_id && project.owner_user_id !== user_id) {
+      return new Response(
+        JSON.stringify({ error: "Project already claimed" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Update project with owner and contact info
+    await supabase
+      .from("projects")
+      .update({ 
+        status: "interested",
+        owner_user_id: user_id,
+        contact_name: name || null,
+        contact_email: email || null,
+      })
+      .eq("id", project.id);
+
+    // Find associated lead and update
+    const { data: lead } = await supabase
+      .from("leads")
+      .select("id")
+      .eq("demo_project_id", project.id)
+      .maybeSingle();
+
+    if (lead) {
+      await supabase.from("lead_outreach_events").insert({
+        lead_id: lead.id,
+        channel: "web",
+        status: "claimed",
+        message: JSON.stringify({ name, email, auth: true }),
+      });
+
+      await supabase
+        .from("leads")
+        .update({ outreach_status: "replied" })
+        .eq("id", lead.id);
+    }
+
+    // Insert welcome message
+    const welcomeMessage = `Hey! Thanks for claiming your design. I'm going to refine this to fit ${project.business_name} better.\n\nQuick question: do you have a logo, or should we start fresh?`;
+    
+    await supabase.from("messages").insert({
+      project_id: project.id,
+      project_token: project_token,
+      sender_type: "admin",
+      content: welcomeMessage,
+    });
+
+    // Send Telegram notification
+    const baseUrl = Deno.env.get("PUBLIC_BASE_URL") || "https://ararrbvhzaudfaxjwdrc.lovableproject.com";
+    const telegramMsg =
+      `🟢 <b>New Design Claim (Auth)</b>\n` +
+      `• <b>Business:</b> ${project.business_name}\n` +
+      `• <b>Name:</b> ${name || "—"}\n` +
+      `• <b>Email:</b> ${email || "—"}\n` +
+      `• <b>Portal:</b> ${baseUrl}/p/${project_token}`;
+    
+    try { await notifyTelegram(telegramMsg); } catch (_) { /* fail silently */ }
+
+    return new Response(
+      JSON.stringify({ ok: true }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  } catch (error) {
+    console.error("Claim with auth error:", error);
     return new Response(
       JSON.stringify({ error: "Internal server error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }

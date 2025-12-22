@@ -5,13 +5,15 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, FileText, MessageSquare, CreditCard, AlertCircle, Send, Home, Download, Image as ImageIcon, Upload, Eye, X } from "lucide-react";
+import { Loader2, FileText, MessageSquare, CreditCard, AlertCircle, Send, Home, Download, Image as ImageIcon, Upload, Eye, X, LogOut } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import { proxyMediaUrl, isImageType, getFileIcon } from "@/lib/media";
 import { WelcomeScreen } from "@/components/portal/WelcomeScreen";
 import { ReviewQueue } from "@/components/portal/ReviewQueue";
+import { PortalAuthPage } from "./PortalAuthPage";
+import type { User, Session } from "@supabase/supabase-js";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -102,6 +104,11 @@ function StatusBadge({ status }: { status: string }) {
 
 export default function PortalPage() {
   const { token } = useParams<{ token: string }>();
+  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [authChecking, setAuthChecking] = useState(true);
+  const [businessName, setBusinessName] = useState<string>("");
+  const [requiresAuth, setRequiresAuth] = useState<boolean | null>(null);
   const [data, setData] = useState<PortalData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -125,23 +132,84 @@ export default function PortalPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, []);
 
+  // Check auth status
   useEffect(() => {
-    console.log("✅ PortalPage mounted, token:", token?.slice(0, 8) + "...");
-    if (token) {
-      fetchPortalData(token);
-      // Mark admin messages as read when portal loads
-      markAdminMessagesAsRead(token);
-    }
-  }, [token]);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+        setAuthChecking(false);
+      }
+    );
 
-  // Cleanup timeout on unmount
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      setAuthChecking(false);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  // Check if this portal requires auth (has owner_user_id set)
   useEffect(() => {
-    return () => {
-      if (clearQueueTimeoutRef.current) {
-        window.clearTimeout(clearQueueTimeoutRef.current);
+    if (!token) return;
+    
+    const checkPortalAuth = async () => {
+      try {
+        const res = await fetch(
+          `${SUPABASE_URL}/functions/v1/portal/${token}/check-auth`,
+          {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+              "apikey": SUPABASE_ANON_KEY,
+              "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+            },
+          }
+        );
+        
+        const data = await res.json();
+        setRequiresAuth(data.requires_auth ?? false);
+        setBusinessName(data.business_name ?? "");
+        
+        // If portal is not claimed yet, allow access with token only
+        if (!data.requires_auth) {
+          fetchPortalData(token);
+          markAdminMessagesAsRead(token);
+        }
+      } catch (err) {
+        console.error("Portal auth check error:", err);
+        setRequiresAuth(false);
       }
     };
-  }, []);
+    
+    checkPortalAuth();
+  }, [token]);
+
+  // Fetch portal data when auth is confirmed
+  useEffect(() => {
+    if (!token || requiresAuth === null) return;
+    
+    // If requires auth and user is logged in, fetch data
+    if (requiresAuth && user) {
+      fetchPortalData(token);
+      markAdminMessagesAsRead(token);
+    }
+  }, [token, requiresAuth, user]);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    toast({ title: "Logged out", description: "You've been signed out." });
+  };
+
+  const handleAuthSuccess = () => {
+    // Refetch portal data after successful auth
+    if (token) {
+      fetchPortalData(token);
+      markAdminMessagesAsRead(token);
+    }
+  };
 
   // Real-time subscription for new messages
   useEffect(() => {
@@ -570,6 +638,26 @@ export default function PortalPage() {
     }).format(cents / 100);
   }
 
+  // Show loading while checking auth
+  if (authChecking || requiresAuth === null) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  // If auth is required and user is not logged in, show auth page
+  if (requiresAuth && !user) {
+    return (
+      <PortalAuthPage
+        projectToken={token!}
+        businessName={businessName || "Project"}
+        onAuthSuccess={handleAuthSuccess}
+      />
+    );
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -619,11 +707,17 @@ export default function PortalPage() {
 
       {/* Navigation Header */}
       <header className="border-b border-border bg-card">
-        <div className="container mx-auto px-4 py-3 max-w-4xl flex items-center gap-4">
+        <div className="container mx-auto px-4 py-3 max-w-4xl flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
             <Home className="h-4 w-4" />
             <span className="text-sm">Home</span>
           </Link>
+          {user && (
+            <Button variant="ghost" size="sm" onClick={handleLogout} className="text-muted-foreground">
+              <LogOut className="h-4 w-4 mr-2" />
+              Log out
+            </Button>
+          )}
         </div>
       </header>
 

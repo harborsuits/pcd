@@ -53,11 +53,32 @@ Deno.serve(async (req) => {
   // Check for review-item action: POST /portal/:token/review/:itemId
   const portalIdx = pathParts.lastIndexOf("portal");
   const reviewIdx = pathParts.indexOf("review");
+  const checkAuthIdx = pathParts.indexOf("check-auth");
+  const linkOwnerIdx = pathParts.indexOf("link-owner");
+  const verifyOwnerIdx = pathParts.indexOf("verify-owner");
   
   if (reviewIdx > portalIdx && req.method === "POST") {
     const token = pathParts[portalIdx + 1];
     const itemId = pathParts[reviewIdx + 1];
     return handleReviewAction(req, token, itemId, corsHeaders);
+  }
+  
+  // GET /portal/:token/check-auth - Check if portal requires authentication
+  if (checkAuthIdx > portalIdx && req.method === "GET") {
+    const token = pathParts[portalIdx + 1];
+    return handleCheckAuth(token, corsHeaders);
+  }
+  
+  // POST /portal/:token/link-owner - Link user to project
+  if (linkOwnerIdx > portalIdx && req.method === "POST") {
+    const token = pathParts[portalIdx + 1];
+    return handleLinkOwner(req, token, corsHeaders);
+  }
+  
+  // POST /portal/:token/verify-owner - Verify user owns project
+  if (verifyOwnerIdx > portalIdx && req.method === "POST") {
+    const token = pathParts[portalIdx + 1];
+    return handleVerifyOwner(req, token, corsHeaders);
   }
 
   if (req.method !== "GET") {
@@ -372,6 +393,207 @@ async function handleReviewAction(
 
   } catch (error) {
     console.error("Review action error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+}
+
+// Check if portal requires authentication (has owner_user_id set)
+async function handleCheckAuth(
+  token: string,
+  corsHeaders: Record<string, string>
+): Promise<Response> {
+  try {
+    if (!token || !isValidToken(token)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid token" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    const { data: project, error } = await supabase
+      .from("projects")
+      .select("business_name, owner_user_id")
+      .eq("project_token", token)
+      .is("deleted_at", null)
+      .maybeSingle();
+
+    if (error || !project) {
+      return new Response(
+        JSON.stringify({ error: "Portal not found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // If owner_user_id is set, auth is required
+    const requiresAuth = !!project.owner_user_id;
+
+    return new Response(
+      JSON.stringify({
+        requires_auth: requiresAuth,
+        business_name: project.business_name,
+      }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  } catch (error) {
+    console.error("Check auth error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+}
+
+// Link a user to a project (set owner_user_id)
+async function handleLinkOwner(
+  req: Request,
+  token: string,
+  corsHeaders: Record<string, string>
+): Promise<Response> {
+  try {
+    if (!token || !isValidToken(token)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid token" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const body = await req.json();
+    const { user_id } = body;
+
+    if (!user_id) {
+      return new Response(
+        JSON.stringify({ error: "user_id required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Only link if not already owned
+    const { data: project, error: fetchError } = await supabase
+      .from("projects")
+      .select("id, owner_user_id, business_name")
+      .eq("project_token", token)
+      .is("deleted_at", null)
+      .maybeSingle();
+
+    if (fetchError || !project) {
+      return new Response(
+        JSON.stringify({ error: "Project not found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // If already owned by someone else, reject
+    if (project.owner_user_id && project.owner_user_id !== user_id) {
+      return new Response(
+        JSON.stringify({ error: "Project already claimed by another user" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Link the user
+    const { error: updateError } = await supabase
+      .from("projects")
+      .update({ owner_user_id: user_id })
+      .eq("id", project.id);
+
+    if (updateError) {
+      console.error("Link owner error:", updateError);
+      return new Response(
+        JSON.stringify({ error: "Failed to link owner" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log(`Linked user ${user_id} to project ${project.business_name}`);
+
+    return new Response(
+      JSON.stringify({ ok: true }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  } catch (error) {
+    console.error("Link owner error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+}
+
+// Verify user owns the project (or link if unclaimed)
+async function handleVerifyOwner(
+  req: Request,
+  token: string,
+  corsHeaders: Record<string, string>
+): Promise<Response> {
+  try {
+    if (!token || !isValidToken(token)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid token" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const body = await req.json();
+    const { user_id } = body;
+
+    if (!user_id) {
+      return new Response(
+        JSON.stringify({ error: "user_id required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    const { data: project, error: fetchError } = await supabase
+      .from("projects")
+      .select("id, owner_user_id")
+      .eq("project_token", token)
+      .is("deleted_at", null)
+      .maybeSingle();
+
+    if (fetchError || !project) {
+      return new Response(
+        JSON.stringify({ ok: false, error: "Project not found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // If not claimed, link this user
+    if (!project.owner_user_id) {
+      await supabase
+        .from("projects")
+        .update({ owner_user_id: user_id })
+        .eq("id", project.id);
+      
+      return new Response(
+        JSON.stringify({ ok: true }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Check if user is the owner
+    const isOwner = project.owner_user_id === user_id;
+
+    return new Response(
+      JSON.stringify({ ok: isOwner }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  } catch (error) {
+    console.error("Verify owner error:", error);
     return new Response(
       JSON.stringify({ error: "Internal server error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
