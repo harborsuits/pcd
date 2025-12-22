@@ -10,6 +10,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import { proxyMediaUrl, isImageType, getFileIcon } from "@/lib/media";
+import { WelcomeScreen } from "@/components/portal/WelcomeScreen";
+import { ReviewQueue } from "@/components/portal/ReviewQueue";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -37,6 +39,19 @@ interface PortalPayment {
   created_at: string;
 }
 
+interface ReviewItem {
+  id: string;
+  title: string;
+  description: string | null;
+  item_type: string;
+  item_url: string | null;
+  item_content: string | null;
+  status: string;
+  client_notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 interface PortalData {
   business: {
     name: string;
@@ -46,6 +61,7 @@ interface PortalData {
   messages: PortalMessage[];
   files: PortalFile[];
   payments: PortalPayment[];
+  review_items: ReviewItem[];
   pagination: {
     messages_limit: number;
     messages_before: string | null;
@@ -67,6 +83,7 @@ export default function PortalPage() {
   const [uploadDesc, setUploadDesc] = useState("");
   const [isDragging, setIsDragging] = useState(false);
   const [pdfPreview, setPdfPreview] = useState<{ url: string; name: string } | null>(null);
+  const [showWelcome, setShowWelcome] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const originalTitle = useRef(document.title);
   const markReadInFlight = useRef(false);
@@ -231,6 +248,13 @@ export default function PortalPage() {
         setData(response);
         // Scroll to bottom after initial load
         setTimeout(scrollToBottom, 100);
+        
+        // Show welcome screen for first-time visitors (no messages, no files)
+        const isFirstVisit = !localStorage.getItem(`portal_visited_${portalToken}`);
+        if (isFirstVisit && response.messages.length === 0 && response.files.length === 0) {
+          setShowWelcome(true);
+          localStorage.setItem(`portal_visited_${portalToken}`, "true");
+        }
       }
     } catch (err) {
       console.error("Portal fetch exception:", err);
@@ -537,8 +561,31 @@ export default function PortalPage() {
     );
   }
 
+  // Handler for when a review item is updated
+  const handleReviewItemUpdated = (itemId: string, newStatus: string, notes?: string) => {
+    setData((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        review_items: prev.review_items.map((item) =>
+          item.id === itemId
+            ? { ...item, status: newStatus, client_notes: notes || item.client_notes }
+            : item
+        ),
+      };
+    });
+  };
+
   return (
     <div className="min-h-screen bg-background">
+      {/* Welcome Screen */}
+      {showWelcome && data && (
+        <WelcomeScreen 
+          businessName={data.business.name} 
+          onDismiss={() => setShowWelcome(false)} 
+        />
+      )}
+
       {/* Navigation Header */}
       <header className="border-b border-border bg-card">
         <div className="container mx-auto px-4 py-3 max-w-4xl flex items-center gap-4">
@@ -558,10 +605,19 @@ export default function PortalPage() {
               {data.business.status}
             </Badge>
           </div>
-          <p className="text-muted-foreground">Client Portal</p>
+          <p className="text-muted-foreground">Your Project Workspace</p>
         </div>
 
         <div className="grid gap-6">
+          {/* Review Queue - Show first if there are pending items */}
+          {data.review_items && data.review_items.length > 0 && (
+            <ReviewQueue 
+              items={data.review_items} 
+              token={token!} 
+              onItemUpdated={handleReviewItemUpdated}
+            />
+          )}
+
           {/* Messages Section */}
           <Card>
             <CardHeader>
