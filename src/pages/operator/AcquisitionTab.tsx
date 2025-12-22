@@ -9,10 +9,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Switch } from "@/components/ui/switch";
 import { 
   Search, Globe, Phone, MapPin, ExternalLink, Loader2, 
   Rocket, Copy, Check, MessageSquare, Send, Clock, 
-  RefreshCw, Building2
+  RefreshCw, Building2, Wand2, Mail
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -50,19 +51,22 @@ interface OutreachEvent {
   };
 }
 
+interface SearchResult {
+  lead_id: string;
+  business_name: string;
+  phone_e164: string | null;
+  address?: string | null;
+  demo_url: string | null;
+  status: string;
+}
+
 interface SearchAndGenerateResult {
   run_id: string | null;
   total_found: number;
   no_website_count: number;
   demos_created: number;
   queued_count: number;
-  results: Array<{
-    lead_id: string;
-    business_name: string;
-    phone_e164: string | null;
-    demo_url: string | null;
-    status: string;
-  }>;
+  results: SearchResult[];
 }
 
 function getBestPhone(lead: Lead): string | null {
@@ -75,6 +79,9 @@ export function AcquisitionTab() {
   const [radius, setRadius] = useState("24140");
   const [maxDemos, setMaxDemos] = useState("10");
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [autoQueueOutreach, setAutoQueueOutreach] = useState(false);
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [lastSearchStats, setLastSearchStats] = useState<{ total: number; noWebsite: number } | null>(null);
   
   const queryClient = useQueryClient();
 
@@ -106,8 +113,8 @@ export function AcquisitionTab() {
     refetchInterval: 30000,
   });
 
-  // Search and generate mutation
-  const searchAndGenerateMutation = useMutation({
+  // Search mutation (search only, no auto-generate)
+  const searchMutation = useMutation({
     mutationFn: async () => {
       const adminKey = localStorage.getItem("admin_key") || "";
       const res = await fetch(`${SUPABASE_URL}/functions/v1/leads/search-and-generate`, {
@@ -121,19 +128,20 @@ export function AcquisitionTab() {
           location,
           radius_m: parseInt(radius, 10),
           max_demos: parseInt(maxDemos, 10),
-          queue_outreach: true,
+          queue_outreach: false, // Never auto-queue
         }),
       });
       if (!res.ok) {
         const err = await res.json();
-        throw new Error(err.error || "Pipeline failed");
+        throw new Error(err.error || "Search failed");
       }
       return res.json() as Promise<SearchAndGenerateResult>;
     },
     onSuccess: (data) => {
-      toast.success(`Created ${data.demos_created} demos, queued ${data.queued_count} for outreach`);
+      setSearchResults(data.results);
+      setLastSearchStats({ total: data.total_found, noWebsite: data.no_website_count });
+      toast.success(`Found ${data.results.length} leads without websites (${data.total_found} total businesses)`);
       queryClient.invalidateQueries({ queryKey: ["ops-leads"] });
-      queryClient.invalidateQueries({ queryKey: ["ops-outreach"] });
     },
     onError: (error: Error) => {
       toast.error(error.message);
@@ -184,8 +192,45 @@ export function AcquisitionTab() {
       }
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (data, leadId) => {
       toast.success("Demo created");
+      // Update search results to reflect the new demo
+      setSearchResults(prev => prev.map(r => 
+        r.lead_id === leadId ? { ...r, demo_url: data.demo_url, status: "created" } : r
+      ));
+      queryClient.invalidateQueries({ queryKey: ["ops-leads"] });
+
+      // If auto-queue is enabled, queue outreach
+      if (autoQueueOutreach && data.demo_url) {
+        queueOutreachMutation.mutate(leadId);
+      }
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
+    },
+  });
+
+  // Queue outreach for single lead
+  const queueOutreachMutation = useMutation({
+    mutationFn: async (leadId: string) => {
+      const adminKey = localStorage.getItem("admin_key") || "";
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/outreach/queue`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-admin-key": adminKey,
+        },
+        body: JSON.stringify({ lead_id: leadId }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Failed to queue outreach");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      toast.success("Outreach queued");
+      queryClient.invalidateQueries({ queryKey: ["ops-outreach"] });
       queryClient.invalidateQueries({ queryKey: ["ops-leads"] });
     },
     onError: (error: Error) => {
@@ -193,17 +238,15 @@ export function AcquisitionTab() {
     },
   });
 
-  const copyDemoLink = (lead: Lead) => {
-    if (!lead.demo_url) return;
-    navigator.clipboard.writeText(`${PUBLIC_BASE_URL}${lead.demo_url}`);
-    setCopiedId(lead.id);
+  const copyDemoLink = (demoUrl: string, id: string) => {
+    navigator.clipboard.writeText(`${PUBLIC_BASE_URL}${demoUrl}`);
+    setCopiedId(id);
     toast.success("Demo link copied");
     setTimeout(() => setCopiedId(null), 2000);
   };
 
   const leads = leadsData?.leads || [];
   const leadsWithDemos = leads.filter(l => l.demo_status === "created");
-  const leadsReadyForDemo = leads.filter(l => l.demo_status !== "created" && !l.website);
   const outreachEvents = outreachData?.events || [];
   const queuedEvents = outreachEvents.filter(e => e.status === "queued");
   const sentEvents = outreachEvents.filter(e => e.status === "sent");
@@ -220,15 +263,32 @@ export function AcquisitionTab() {
           <Clock className="h-3 w-3" />
           {queuedEvents.length} queued
         </Badge>
+        {lastSearchStats && (
+          <Badge variant="secondary" className="gap-1">
+            Last search: {lastSearchStats.noWebsite}/{lastSearchStats.total} no website
+          </Badge>
+        )}
       </div>
 
       {/* Search Panel */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Search className="h-5 w-5" />
-            Find Leads
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Search className="h-5 w-5" />
+              Find Leads
+            </CardTitle>
+            <div className="flex items-center gap-2">
+              <Label htmlFor="auto-outreach" className="text-sm text-muted-foreground">
+                Auto-queue outreach
+              </Label>
+              <Switch
+                id="auto-outreach"
+                checked={autoQueueOutreach}
+                onCheckedChange={setAutoQueueOutreach}
+              />
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap gap-3">
@@ -270,24 +330,147 @@ export function AcquisitionTab() {
               </SelectContent>
             </Select>
             <Button
-              onClick={() => searchAndGenerateMutation.mutate()}
-              disabled={!query || !location || searchAndGenerateMutation.isPending}
+              onClick={() => searchMutation.mutate()}
+              disabled={!query || !location || searchMutation.isPending}
             >
-              {searchAndGenerateMutation.isPending ? (
+              {searchMutation.isPending ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Running...
+                  Searching...
                 </>
               ) : (
                 <>
-                  <Rocket className="h-4 w-4 mr-2" />
-                  Find & Generate
+                  <Search className="h-4 w-4 mr-2" />
+                  Find Leads
                 </>
               )}
             </Button>
           </div>
         </CardContent>
       </Card>
+
+      {/* Search Results - Immediately visible after search */}
+      {searchResults.length > 0 && (
+        <Card className="border-primary/50">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Rocket className="h-5 w-5 text-primary" />
+                Search Results ({searchResults.length})
+              </CardTitle>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSearchResults([])}
+              >
+                Clear
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="p-0">
+            <ScrollArea className="h-[350px]">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Business</TableHead>
+                    <TableHead>Phone</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="w-[200px]">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {searchResults.map((result) => (
+                    <TableRow key={result.lead_id}>
+                      <TableCell>
+                        <div className="font-medium">{result.business_name}</div>
+                        {result.address && (
+                          <div className="text-xs text-muted-foreground flex items-center gap-1">
+                            <MapPin className="h-3 w-3" />
+                            {result.address.split(",").slice(0, 2).join(",")}
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {result.phone_e164 ? (
+                          <div className="flex items-center gap-1 text-sm">
+                            <Phone className="h-3 w-3" />
+                            {result.phone_e164}
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground text-sm">No phone</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={
+                            result.status === "created" || result.demo_url ? "default" :
+                            result.status === "existing" ? "secondary" :
+                            "outline"
+                          }
+                        >
+                          {result.demo_url ? "Demo Ready" : result.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1">
+                          {/* Generate Demo button */}
+                          {!result.demo_url && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => generateDemoMutation.mutate(result.lead_id)}
+                              disabled={generateDemoMutation.isPending}
+                            >
+                              <Wand2 className="h-4 w-4 mr-1" />
+                              Demo
+                            </Button>
+                          )}
+                          
+                          {/* Copy Demo Link */}
+                          {result.demo_url && (
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => copyDemoLink(result.demo_url!, result.lead_id)}
+                              >
+                                {copiedId === result.lead_id ? (
+                                  <Check className="h-4 w-4 text-green-500" />
+                                ) : (
+                                  <Copy className="h-4 w-4" />
+                                )}
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                asChild
+                              >
+                                <a href={result.demo_url} target="_blank" rel="noopener noreferrer">
+                                  <ExternalLink className="h-4 w-4" />
+                                </a>
+                              </Button>
+                              {/* Queue Outreach */}
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => queueOutreachMutation.mutate(result.lead_id)}
+                                disabled={queueOutreachMutation.isPending}
+                              >
+                                <Mail className="h-4 w-4 mr-1" />
+                                Queue
+                              </Button>
+                            </>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </ScrollArea>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Main Content */}
       <div className="grid gap-6 lg:grid-cols-3">
@@ -364,7 +547,7 @@ export function AcquisitionTab() {
                                   <Button
                                     variant="ghost"
                                     size="sm"
-                                    onClick={() => copyDemoLink(lead)}
+                                    onClick={() => copyDemoLink(lead.demo_url!, lead.id)}
                                   >
                                     {copiedId === lead.id ? (
                                       <Check className="h-4 w-4 text-green-500" />
@@ -381,6 +564,16 @@ export function AcquisitionTab() {
                                       <ExternalLink className="h-4 w-4" />
                                     </a>
                                   </Button>
+                                  {!lead.outreach_status || lead.outreach_status === "new" ? (
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => queueOutreachMutation.mutate(lead.id)}
+                                      disabled={queueOutreachMutation.isPending}
+                                    >
+                                      <Mail className="h-4 w-4" />
+                                    </Button>
+                                  ) : null}
                                 </>
                               )}
                             </div>
@@ -393,44 +586,6 @@ export function AcquisitionTab() {
               </ScrollArea>
             </CardContent>
           </Card>
-
-          {/* Pending Leads */}
-          {leadsReadyForDemo.length > 0 && (
-            <Card className="mt-4">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Globe className="h-5 w-5" />
-                  Leads Without Demos ({leadsReadyForDemo.length})
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-0">
-                <ScrollArea className="h-[200px]">
-                  <Table>
-                    <TableBody>
-                      {leadsReadyForDemo.slice(0, 10).map((lead) => (
-                        <TableRow key={lead.id}>
-                          <TableCell className="font-medium">{lead.business_name}</TableCell>
-                          <TableCell className="text-sm text-muted-foreground">
-                            {getBestPhone(lead) || "No phone"}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => generateDemoMutation.mutate(lead.id)}
-                              disabled={generateDemoMutation.isPending}
-                            >
-                              Generate Demo
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </ScrollArea>
-              </CardContent>
-            </Card>
-          )}
         </div>
 
         {/* Activity Panel - 1 column */}
@@ -468,25 +623,25 @@ export function AcquisitionTab() {
             </CardHeader>
             <CardContent className="p-0">
               <Tabs defaultValue="queued">
-                <div className="px-4">
-                  <TabsList className="w-full">
-                    <TabsTrigger value="queued" className="flex-1">
-                      Queued ({queuedEvents.length})
-                    </TabsTrigger>
-                    <TabsTrigger value="sent" className="flex-1">
-                      Sent ({sentEvents.length})
-                    </TabsTrigger>
-                  </TabsList>
-                </div>
-                <TabsContent value="queued" className="mt-0">
-                  <ScrollArea className="h-[250px]">
+                <TabsList className="w-full grid grid-cols-2">
+                  <TabsTrigger value="queued" className="gap-1">
+                    <Clock className="h-3 w-3" />
+                    Queued ({queuedEvents.length})
+                  </TabsTrigger>
+                  <TabsTrigger value="sent" className="gap-1">
+                    <Send className="h-3 w-3" />
+                    Sent ({sentEvents.length})
+                  </TabsTrigger>
+                </TabsList>
+                <ScrollArea className="h-[250px]">
+                  <TabsContent value="queued" className="m-0">
                     {queuedEvents.length === 0 ? (
-                      <p className="text-center py-6 text-muted-foreground text-sm">
+                      <div className="text-center py-6 text-muted-foreground text-sm">
                         No queued messages
-                      </p>
+                      </div>
                     ) : (
                       <div className="divide-y">
-                        {queuedEvents.slice(0, 20).map((event) => (
+                        {queuedEvents.map((event) => (
                           <div key={event.id} className="p-3">
                             <div className="font-medium text-sm">
                               {event.lead?.business_name || "Unknown"}
@@ -494,44 +649,34 @@ export function AcquisitionTab() {
                             <div className="text-xs text-muted-foreground">
                               {event.lead?.phone_e164 || "No phone"}
                             </div>
-                            {event.message && (
-                              <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-                                {event.message}
-                              </p>
-                            )}
                           </div>
                         ))}
                       </div>
                     )}
-                  </ScrollArea>
-                </TabsContent>
-                <TabsContent value="sent" className="mt-0">
-                  <ScrollArea className="h-[250px]">
+                  </TabsContent>
+                  <TabsContent value="sent" className="m-0">
                     {sentEvents.length === 0 ? (
-                      <p className="text-center py-6 text-muted-foreground text-sm">
+                      <div className="text-center py-6 text-muted-foreground text-sm">
                         No sent messages yet
-                      </p>
+                      </div>
                     ) : (
                       <div className="divide-y">
-                        {sentEvents.slice(0, 20).map((event) => (
+                        {sentEvents.map((event) => (
                           <div key={event.id} className="p-3">
-                            <div className="flex items-center justify-between">
-                              <span className="font-medium text-sm">
-                                {event.lead?.business_name || "Unknown"}
-                              </span>
-                              <span className="text-xs text-muted-foreground">
-                                {format(new Date(event.created_at), "MMM d, h:mm a")}
-                              </span>
+                            <div className="font-medium text-sm">
+                              {event.lead?.business_name || "Unknown"}
                             </div>
-                            <div className="text-xs text-muted-foreground">
-                              {event.lead?.phone_e164}
+                            <div className="text-xs text-muted-foreground flex items-center gap-2">
+                              <span>{event.lead?.phone_e164 || "No phone"}</span>
+                              <span>•</span>
+                              <span>{format(new Date(event.created_at), "MMM d, h:mm a")}</span>
                             </div>
                           </div>
                         ))}
                       </div>
                     )}
-                  </ScrollArea>
-                </TabsContent>
+                  </TabsContent>
+                </ScrollArea>
               </Tabs>
             </CardContent>
           </Card>
