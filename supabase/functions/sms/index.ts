@@ -5,6 +5,77 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-admin-key, x-twilio-signature",
 };
 
+// Validate Twilio webhook signature using Web Crypto API
+// See: https://www.twilio.com/docs/usage/webhooks/webhooks-security
+async function validateTwilioSignature(req: Request, rawBody: string): Promise<boolean> {
+  const signature = req.headers.get("x-twilio-signature");
+  const authToken = Deno.env.get("TWILIO_AUTH_TOKEN");
+
+  if (!signature || !authToken) {
+    console.error("Missing Twilio signature or auth token");
+    return false;
+  }
+
+  // Build the validation URL (Twilio uses the full URL including any query params)
+  // For edge functions, we need to use the actual public URL that Twilio calls
+  const publicBaseUrl = Deno.env.get("PUBLIC_BASE_URL");
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  
+  // Construct the URL Twilio would have used to call this webhook
+  let validationUrl: string;
+  if (publicBaseUrl) {
+    // Use configured public URL for webhook
+    validationUrl = `${publicBaseUrl.replace(/\/$/, "")}/functions/v1/sms/inbound`;
+  } else if (supabaseUrl) {
+    validationUrl = `${supabaseUrl.replace(/\/$/, "")}/functions/v1/sms/inbound`;
+  } else {
+    console.error("No PUBLIC_BASE_URL or SUPABASE_URL configured");
+    return false;
+  }
+
+  // Parse form data and sort parameters alphabetically
+  const params = new URLSearchParams(rawBody);
+  const sortedParams: [string, string][] = [];
+  params.forEach((value, key) => {
+    sortedParams.push([key, value]);
+  });
+  sortedParams.sort((a, b) => a[0].localeCompare(b[0]));
+
+  // Build the data string: URL + sorted params concatenated
+  let dataString = validationUrl;
+  for (const [key, value] of sortedParams) {
+    dataString += key + value;
+  }
+
+  try {
+    // Calculate HMAC-SHA1 using Web Crypto API
+    const encoder = new TextEncoder();
+    const key = await crypto.subtle.importKey(
+      "raw",
+      encoder.encode(authToken),
+      { name: "HMAC", hash: "SHA-1" },
+      false,
+      ["sign"]
+    );
+    const signatureBytes = await crypto.subtle.sign("HMAC", key, encoder.encode(dataString));
+    const expectedSignature = btoa(String.fromCharCode(...new Uint8Array(signatureBytes)));
+
+    const isValid = signature === expectedSignature;
+    if (!isValid) {
+      console.error("Invalid Twilio signature", { 
+        received: signature.substring(0, 10) + "...", 
+        expected: expectedSignature.substring(0, 10) + "...",
+        url: validationUrl
+      });
+    }
+    
+    return isValid;
+  } catch (error) {
+    console.error("Error validating Twilio signature:", error);
+    return false;
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -249,12 +320,25 @@ async function handleSend(req: Request): Promise<Response> {
 // POST /sms/inbound - Handle inbound SMS from Twilio webhook
 async function handleInbound(req: Request): Promise<Response> {
   try {
-    // Parse form data from Twilio webhook
-    const formData = await req.formData();
-    const from = formData.get("From") as string;
-    const to = formData.get("To") as string;
-    const body = formData.get("Body") as string;
-    const messageSid = formData.get("MessageSid") as string;
+    // Clone request to read body for signature validation
+    const rawBody = await req.text();
+    
+    // Validate Twilio signature to prevent spoofed requests
+    const isValidSignature = await validateTwilioSignature(req, rawBody);
+    if (!isValidSignature) {
+      console.error("Invalid Twilio signature - rejecting request");
+      return new Response(
+        '<?xml version="1.0" encoding="UTF-8"?><Response></Response>',
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "text/xml" } }
+      );
+    }
+
+    // Parse form data from validated request body
+    const params = new URLSearchParams(rawBody);
+    const from = params.get("From") as string;
+    const to = params.get("To") as string;
+    const body = params.get("Body") as string;
+    const messageSid = params.get("MessageSid") as string;
 
     console.log(`Inbound SMS from ${from}: ${body}`);
 
