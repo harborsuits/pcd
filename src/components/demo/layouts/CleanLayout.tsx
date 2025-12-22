@@ -19,6 +19,7 @@ export function CleanLayout({ templateType, content, businessName, onQuoteClick 
   const rating = (content.rating as number) || null;
   const reviewCount = (content.reviewCount as number) || null;
   const tagline = (content.tagline as string) || "";
+  const photoReferences = (content.photoReferences as string[]) || [];
   const heroResult = getHeroImage({ templateType, businessName });
   const heroImage = heroResult.heroImage;
   const galleryResult = getGalleryImagesForBusiness({
@@ -26,9 +27,11 @@ export function CleanLayout({ templateType, content, businessName, onQuoteClick 
     businessName,
     city,
     count: 3,
-    excludeHero: heroImage, // Prevent hero from appearing in gallery
+    excludeHero: heroImage,
+    photoReferences, // Use real Google photos when available
   });
   const galleryImages = galleryResult.images;
+  const gallerySource = galleryResult.source;
   const initials = getInitials(businessName);
   const locationString = state ? `${city}, ${state}` : city;
   const nearbyTowns = (content.nearbyTowns as string[]) || [];
@@ -133,7 +136,7 @@ export function CleanLayout({ templateType, content, businessName, onQuoteClick 
                 </h2>
               </div>
               <p className="text-sm text-muted-foreground hidden md:block">
-                {knownTrade ? "Photos representative of typical projects" : "Sample project photos"}
+                {gallerySource === "google" ? "Photos from Google" : (knownTrade ? "Photos representative of typical projects" : "Sample project photos")}
               </p>
             </div>
 

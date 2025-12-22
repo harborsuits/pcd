@@ -301,9 +301,15 @@ export function getHeroImage(opts: {
   };
 }
 
+// Build proxy URL for Google Place photos
+function getPhotoUrl(photoRef: string, width: number = 400): string {
+  const baseUrl = import.meta.env.VITE_SUPABASE_URL;
+  return `${baseUrl}/functions/v1/place-photo?ref=${encodeURIComponent(photoRef)}&w=${width}`;
+}
+
 /**
  * Get gallery images for a business with deterministic selection
- * Uses fallback chain if pool is too small
+ * Priority: 1) Google Place photos, 2) Curated stock, 3) Fallback chain
  * Excludes hero image from gallery to prevent duplicates
  */
 export function getGalleryImagesForBusiness(opts: {
@@ -315,7 +321,8 @@ export function getGalleryImagesForBusiness(opts: {
   leadId?: string;
   count?: number;
   excludeHero?: string; // Pass the hero image URL to exclude it from gallery
-}): { images: string[]; visualKey: VisualKey; usedFallback: boolean } {
+  photoReferences?: string[]; // Google Place photo references (highest priority)
+}): { images: string[]; visualKey: VisualKey; usedFallback: boolean; source: "google" | "stock" | "fallback" } {
   const result = resolveVisualKey({
     templateType: opts.templateType,
     category: opts.category,
@@ -324,6 +331,44 @@ export function getGalleryImagesForBusiness(opts: {
   });
 
   const count = opts.count ?? 3;
+  
+  // Priority 1: Use Google Place photos if available
+  const photoRefs = opts.photoReferences || [];
+  if (photoRefs.length >= count) {
+    const googleImages = photoRefs.slice(0, count).map(ref => getPhotoUrl(ref, 400));
+    return {
+      images: googleImages,
+      visualKey: result.visualKey,
+      usedFallback: false,
+      source: "google",
+    };
+  }
+  
+  // Priority 2: Mix Google photos with stock (if some Google photos exist)
+  if (photoRefs.length > 0) {
+    const googleImages = photoRefs.map(ref => getPhotoUrl(ref, 400));
+    const stockPool = [...(galleryImages[result.visualKey] || [])];
+    const filteredStock = stockPool.filter(img => img !== opts.excludeHero);
+    const needed = count - googleImages.length;
+    
+    const seed = createGallerySeed({
+      businessName: opts.businessName,
+      city: opts.city,
+      leadId: opts.leadId,
+      templateType: result.visualKey,
+    });
+    
+    const stockPicked = pickUnique(filteredStock, needed, seed);
+    
+    return {
+      images: [...googleImages, ...stockPicked],
+      visualKey: result.visualKey,
+      usedFallback: false,
+      source: "google",
+    };
+  }
+
+  // Priority 3: Use curated stock images
   let pool = [...(galleryImages[result.visualKey] || [])];
   let usedFallback = result.confidence === "fallback";
 
@@ -368,6 +413,7 @@ export function getGalleryImagesForBusiness(opts: {
     images,
     visualKey: result.visualKey,
     usedFallback,
+    source: usedFallback ? "fallback" : "stock",
   };
 }
 
