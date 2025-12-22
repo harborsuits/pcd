@@ -1,6 +1,6 @@
 import { MapPin, Clock, Shield, Star, Phone, Wrench, CheckCircle, Quote } from "lucide-react";
 import { industryImages, getInitials } from "../themes";
-import { getTradeDisplayName, getTradeCTAText } from "@/lib/categoryServices";
+import { getTradeDisplayName, getTradeCTAText, getTradeNoun, isKnownTrade as checkKnownTrade } from "@/lib/categoryServices";
 
 interface LayoutProps {
   templateType: string;
@@ -24,14 +24,15 @@ export function ContractorLayout({ templateType, content, businessName, onQuoteC
 
   // Trade-aware content
   const tradeName = getTradeDisplayName(templateType);
-  const isKnownTrade = templateType !== "default";
+  const tradeNoun = getTradeNoun(templateType);
+  const isKnownTrade = checkKnownTrade(templateType);
   const ctaText = getTradeCTAText(templateType);
   const heroSubheadline = isKnownTrade 
     ? `Professional ${tradeName} Services in ${locationString}`
     : `Professional Services in ${locationString}`;
   const servicesTitle = isKnownTrade ? `Our ${tradeName} Services` : "Our Services";
   const servicesSubtitle = isKnownTrade 
-    ? `Professional ${tradeName.toLowerCase()} work done right the first time`
+    ? `Professional ${tradeNoun} work done right the first time`
     : "Professional work done right the first time";
 
   return (
@@ -90,7 +91,7 @@ export function ContractorLayout({ templateType, content, businessName, onQuoteC
                 onClick={onQuoteClick}
                 className="px-8 py-4 bg-accent text-accent-foreground rounded-lg font-bold text-lg hover:bg-accent/90 transition-colors shadow-lg"
               >
-                Get a Free Quote
+                {ctaText.button}
               </button>
               {phone && (
                 <a 

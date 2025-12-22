@@ -1,6 +1,6 @@
 import { MapPin, Star, Phone, ArrowRight, Quote } from "lucide-react";
 import { industryImages, getInitials } from "../themes";
-import { getTradeDisplayName, getTradeCTAText } from "@/lib/categoryServices";
+import { getTradeDisplayName, getTradeCTAText, isKnownTrade as checkKnownTrade } from "@/lib/categoryServices";
 
 interface LayoutProps {
   templateType: string;
@@ -24,7 +24,7 @@ export function BoutiqueLayout({ templateType, content, businessName, onQuoteCli
 
   // Trade-aware content
   const tradeName = getTradeDisplayName(templateType);
-  const isKnownTrade = templateType !== "default";
+  const isKnownTrade = checkKnownTrade(templateType);
   const ctaText = getTradeCTAText(templateType);
   const heroSubheadline = isKnownTrade 
     ? `${tradeName} Services in ${locationString}`
@@ -86,7 +86,7 @@ export function BoutiqueLayout({ templateType, content, businessName, onQuoteCli
               onClick={onQuoteClick}
               className="group inline-flex items-center gap-3 px-8 py-4 bg-foreground text-background rounded-full font-medium hover:bg-foreground/90 transition-colors"
             >
-              Start a Project
+              {ctaText.button}
               <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </button>
           </div>

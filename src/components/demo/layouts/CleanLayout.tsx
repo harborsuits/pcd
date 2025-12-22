@@ -1,6 +1,6 @@
 import { MapPin, Star, Phone, Quote } from "lucide-react";
 import { industryImages, getInitials } from "../themes";
-import { getTradeDisplayName, getTradeCTAText } from "@/lib/categoryServices";
+import { getTradeDisplayName, getTradeCTAText, isKnownTrade as checkKnownTrade } from "@/lib/categoryServices";
 
 interface LayoutProps {
   templateType: string;
@@ -24,7 +24,7 @@ export function CleanLayout({ templateType, content, businessName, onQuoteClick 
 
   // Trade-aware content
   const tradeName = getTradeDisplayName(templateType);
-  const isKnownTrade = templateType !== "default";
+  const isKnownTrade = checkKnownTrade(templateType);
   const ctaText = getTradeCTAText(templateType);
   const heroSubheadline = isKnownTrade 
     ? `Professional ${tradeName} Services in ${locationString}`
@@ -83,7 +83,7 @@ export function CleanLayout({ templateType, content, businessName, onQuoteClick 
               onClick={onQuoteClick}
               className="px-6 py-3 bg-primary text-primary-foreground rounded-md font-medium hover:bg-primary/90 transition-colors"
             >
-              Get a Free Quote
+              {ctaText.button}
             </button>
           </div>
         </div>
