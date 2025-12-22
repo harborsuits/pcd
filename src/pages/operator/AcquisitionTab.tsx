@@ -127,6 +127,7 @@ export function AcquisitionTab() {
   // Search mutation (search only, no auto-generate)
   const searchMutation = useMutation({
     mutationFn: async () => {
+      console.log("SEARCH MUTATION TRIGGERED", { query, location, radius, maxDemos });
       const adminKey = localStorage.getItem("admin_key") || "";
       const res = await fetch(`${SUPABASE_URL}/functions/v1/leads/search-and-generate`, {
         method: "POST",
@@ -139,16 +140,29 @@ export function AcquisitionTab() {
           location,
           radius_m: parseInt(radius, 10),
           max_demos: parseInt(maxDemos, 10),
-          queue_outreach: false, // Never auto-queue
+          queue_outreach: false,
         }),
       });
+      console.log("Search response status:", res.status);
+      const data = await res.json();
+      console.log("Search response data:", data);
       if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || "Search failed");
+        throw new Error(data.error || "Search failed");
       }
-      return res.json() as Promise<SearchAndGenerateResult>;
+      return data as SearchAndGenerateResult;
+    },
+    onMutate: () => {
+      console.log("SEARCH STARTED - setting pending state");
+      setSearchStats({
+        total: 0,
+        noWebsite: 0,
+        resultsCount: 0,
+        searchCompleted: false,
+      });
+      setSearchResults([]);
     },
     onSuccess: (data) => {
+      console.log("SEARCH SUCCESS", data);
       setSearchResults(data.results || []);
       setSearchStats({ 
         total: data.total_found || 0, 
@@ -159,11 +173,12 @@ export function AcquisitionTab() {
       if (data.results?.length > 0) {
         toast.success(`Found ${data.results.length} leads without websites (${data.total_found} total)`);
       } else {
-        toast.info(`Found ${data.total_found} businesses, but ${data.no_website_count} without websites passed filters`);
+        toast.info(`Found ${data.total_found} businesses, ${data.no_website_count} without websites`);
       }
       queryClient.invalidateQueries({ queryKey: ["ops-leads"] });
     },
     onError: (error: Error) => {
+      console.error("SEARCH ERROR", error);
       setSearchStats({ 
         total: 0, 
         noWebsite: 0, 
@@ -375,6 +390,16 @@ export function AcquisitionTab() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Search in progress indicator */}
+      {searchStats && !searchStats.searchCompleted && (
+        <Card className="border-primary/50">
+          <CardContent className="py-8 text-center">
+            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2 text-primary" />
+            <p className="text-muted-foreground">Searching for businesses...</p>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Search Results - Always visible after search completes */}
       {searchStats?.searchCompleted && (
