@@ -5,7 +5,7 @@
 // ============= VISUAL KEYS =============
 // These are the canonical visual categories with dedicated image packs
 export const VISUAL_KEYS = [
-  // Layer A: Exact trades (10 trades with dedicated imagery)
+  // Layer A: Exact trades (11 trades with dedicated imagery)
   "plumber",
   "roofer", 
   "electrician",
@@ -16,6 +16,7 @@ export const VISUAL_KEYS = [
   "contractor",
   "restaurant",
   "barber",           // barber, salon, hairdresser, stylist
+  "flooring",         // flooring, tile, hardwood, carpet, laminate
   // Layer B: Industry groups (broader categories)
   "home_services",    // handyman, movers, pest control, garage doors, pressure washing, etc.
   "auto",             // auto repair, detailing, towing
@@ -91,19 +92,33 @@ const EXACT_TRADE_ALIASES: Record<string, VisualKey> = {
   grooming: "barber", "men's grooming": "barber", "mens grooming": "barber",
   "hair studio": "barber", "beauty salon": "barber", "mens cuts": "barber",
   "men's haircut": "barber", "women's haircut": "barber",
+
+  // Flooring / Tile (first-class trade)
+  flooring: "flooring", "floor installer": "flooring", "flooring installer": "flooring",
+  "flooring contractor": "flooring", "flooring company": "flooring",
+  tile: "flooring", "tile installer": "flooring", tiling: "flooring",
+  "tile contractor": "flooring", "tile setter": "flooring",
+  hardwood: "flooring", "hardwood floors": "flooring", "hardwood flooring": "flooring",
+  "wood floor": "flooring", "wood flooring": "flooring",
+  laminate: "flooring", "laminate flooring": "flooring",
+  "vinyl plank": "flooring", lvp: "flooring", "luxury vinyl": "flooring",
+  carpet: "flooring", "carpet installer": "flooring", "carpet installation": "flooring",
+  "floor refinishing": "flooring", "wood floor refinishing": "flooring",
+  "floor sanding": "flooring", "floor polishing": "flooring",
 };
 
 // ============= LAYER B: INDUSTRY GROUP KEYWORDS =============
 // Keyword patterns that map to broader industry groups
 const INDUSTRY_KEYWORDS: Array<{ patterns: string[]; visualKey: VisualKey }> = [
   // Home services (catch-all for residential services not matching exact trades)
+  // NOTE: flooring/tile/carpet/hardwood are handled as first-class trades above
   {
     patterns: [
       "handyman", "handy", "movers", "moving", "pest control", "exterminator",
-      "garage door", "pressure wash", "power wash", "locksmith", "flooring",
+      "garage door", "pressure wash", "power wash", "locksmith",
       "window", "blinds", "shutters", "gutter", "siding", "insulation",
       "fence", "deck", "patio", "pool service", "appliance repair", "door",
-      "drywall", "tile", "carpet", "hardwood", "countertop", "cabinet",
+      "drywall", "countertop", "cabinet",
       "home improvement", "home repair", "home maintenance",
     ],
     visualKey: "home_services",
@@ -318,6 +333,8 @@ export function getFallbackChain(visualKey: VisualKey): VisualKey[] {
     contractor: ["home_services", "default_generic"],
     // Barber falls back to personal_services then generic (NEVER home_services!)
     barber: ["personal_services", "default_generic"],
+    // Flooring falls back to home_services then generic
+    flooring: ["home_services", "default_generic"],
     // Industry groups fall back to generic
     home_services: ["default_generic"],
     auto: ["default_generic"],
@@ -341,7 +358,7 @@ export function getFallbackChain(visualKey: VisualKey): VisualKey[] {
 export function hasTradeImagery(visualKey: VisualKey): boolean {
   const tradeKeys: VisualKey[] = [
     "plumber", "roofer", "electrician", "hvac",
-    "landscaper", "painter", "cleaner", "contractor", "restaurant", "barber",
+    "landscaper", "painter", "cleaner", "contractor", "restaurant", "barber", "flooring",
   ];
   return tradeKeys.includes(visualKey);
 }

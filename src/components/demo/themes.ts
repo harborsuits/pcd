@@ -102,6 +102,7 @@ import cleanerHero from "@/assets/heroes/cleaner-hero.jpg";
 import contractorHero from "@/assets/heroes/contractor-hero.jpg";
 import restaurantHero from "@/assets/heroes/restaurant-hero.jpg";
 import barberHero from "@/assets/heroes/barber-hero.jpg";
+import flooringHero from "@/assets/heroes/flooring-hero.jpg";
 // Neutral fallback heroes (NOT construction!)
 import homeServicesHero from "@/assets/heroes/home-services-hero.jpg";
 import professionalHero from "@/assets/heroes/professional-hero.jpg";
@@ -119,6 +120,7 @@ const heroImages: Record<VisualKey, string> = {
   contractor: contractorHero,
   restaurant: restaurantHero,
   barber: barberHero,
+  flooring: flooringHero,
   // Industry groups - use appropriate neutral imagery
   home_services: homeServicesHero,
   auto: homeServicesHero, // automotive uses same as home services for now
@@ -205,6 +207,13 @@ import barberGallery4 from "@/assets/gallery/barber-4.jpg";
 import barberGallery5 from "@/assets/gallery/barber-5.jpg";
 import barberGallery6 from "@/assets/gallery/barber-6.jpg";
 
+import flooringGallery1 from "@/assets/gallery/flooring-1.jpg";
+import flooringGallery2 from "@/assets/gallery/flooring-2.jpg";
+import flooringGallery3 from "@/assets/gallery/flooring-3.jpg";
+import flooringGallery4 from "@/assets/gallery/flooring-4.jpg";
+import flooringGallery5 from "@/assets/gallery/flooring-5.jpg";
+import flooringGallery6 from "@/assets/gallery/flooring-6.jpg";
+
 // Neutral gallery images for fallback categories - expanded to 6 each
 import homeServicesGallery1 from "@/assets/gallery/home-services-1.jpg";
 import homeServicesGallery2 from "@/assets/gallery/home-services-2.jpg";
@@ -239,6 +248,7 @@ const galleryImages: Record<VisualKey, string[]> = {
   contractor: [contractorGallery1, contractorGallery2, contractorGallery3, contractorGallery4, contractorGallery5, contractorGallery6],
   restaurant: [restaurantGallery1, restaurantGallery2, restaurantGallery3, restaurantGallery4, restaurantGallery5, restaurantGallery6],
   barber: [barberGallery1, barberGallery2, barberGallery3, barberGallery4, barberGallery5, barberGallery6],
+  flooring: [flooringGallery1, flooringGallery2, flooringGallery3, flooringGallery4, flooringGallery5, flooringGallery6],
   // Industry groups - expanded to 6 images each for variety
   home_services: [homeServicesGallery1, homeServicesGallery2, homeServicesGallery3, homeServicesGallery4, homeServicesGallery5, homeServicesGallery6],
   auto: [homeServicesGallery1, homeServicesGallery2, homeServicesGallery3, homeServicesGallery4, homeServicesGallery5, homeServicesGallery6],
