@@ -33,6 +33,27 @@ function getAuthHeaders() {
   };
 }
 
+// Safe JSON reader that handles non-JSON responses
+async function readJsonSafe(res: Response) {
+  const text = await res.text();
+  try {
+    return text ? JSON.parse(text) : null;
+  } catch {
+    return { raw: text };
+  }
+}
+
+// Format HTTP errors with status and message
+function formatHttpError(res: Response, data: Record<string, unknown> | null) {
+  const msg =
+    data?.error ||
+    data?.message ||
+    data?.raw ||
+    res.statusText ||
+    "Request failed";
+  return `(${res.status}) ${msg}`;
+}
+
 interface Lead {
   id: string;
   place_id: string;
@@ -150,10 +171,10 @@ export function AcquisitionTab() {
         }),
       });
       console.log("Search response status:", res.status);
-      const data = await res.json();
+      const data = await readJsonSafe(res);
       console.log("Search response data:", data);
       if (!res.ok) {
-        throw new Error(data.error || "Search failed");
+        throw new Error(formatHttpError(res, data));
       }
       return data as SearchAndGenerateResult;
     },
@@ -420,9 +441,19 @@ export function AcquisitionTab() {
           </CardHeader>
           <CardContent className="p-0">
             {searchStats.errorMessage ? (
-              <div className="p-6 text-center text-destructive">
-                <p className="font-medium">Search Failed</p>
-                <p className="text-sm mt-1">{searchStats.errorMessage}</p>
+              <div className="p-6 text-center">
+                <p className="font-medium text-destructive">Search Failed</p>
+                <p className="text-sm mt-1 text-muted-foreground">{searchStats.errorMessage}</p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-4"
+                  onClick={() => searchMutation.mutate()}
+                  disabled={searchMutation.isPending}
+                >
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Retry Search
+                </Button>
               </div>
             ) : searchResults.length === 0 ? (
               <div className="p-6 text-center text-muted-foreground">
