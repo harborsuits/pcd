@@ -19,7 +19,19 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 const PUBLIC_BASE_URL = import.meta.env.VITE_PUBLIC_BASE_URL || window.location.origin;
+
+// Helper to get auth headers for edge function calls
+function getAuthHeaders() {
+  const adminKey = localStorage.getItem("admin_key") || "";
+  return {
+    "Content-Type": "application/json",
+    "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+    "apikey": SUPABASE_ANON_KEY,
+    "x-admin-key": adminKey,
+  };
+}
 
 interface Lead {
   id: string;
@@ -100,9 +112,8 @@ export function AcquisitionTab() {
   const { data: leadsData, isLoading: leadsLoading } = useQuery({
     queryKey: ["ops-leads"],
     queryFn: async () => {
-      const adminKey = localStorage.getItem("admin_key") || "";
       const res = await fetch(`${SUPABASE_URL}/functions/v1/leads?no_website=true&limit=100`, {
-        headers: { "x-admin-key": adminKey },
+        headers: getAuthHeaders(),
       });
       if (!res.ok) throw new Error("Failed to fetch leads");
       return res.json() as Promise<{ leads: Lead[] }>;
@@ -114,9 +125,8 @@ export function AcquisitionTab() {
   const { data: outreachData } = useQuery({
     queryKey: ["ops-outreach"],
     queryFn: async () => {
-      const adminKey = localStorage.getItem("admin_key") || "";
       const res = await fetch(`${SUPABASE_URL}/functions/v1/outreach/events?limit=50`, {
-        headers: { "x-admin-key": adminKey },
+        headers: getAuthHeaders(),
       });
       if (!res.ok) throw new Error("Failed to fetch outreach");
       return res.json() as Promise<{ events: OutreachEvent[] }>;
@@ -128,18 +138,14 @@ export function AcquisitionTab() {
   const searchMutation = useMutation({
     mutationFn: async () => {
       console.log("SEARCH MUTATION TRIGGERED", { query, location, radius, maxDemos });
-      const adminKey = localStorage.getItem("admin_key") || "";
       const res = await fetch(`${SUPABASE_URL}/functions/v1/leads/search-and-generate`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-admin-key": adminKey,
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify({
           query,
           location,
-          radius_m: parseInt(radius, 10),
-          max_demos: parseInt(maxDemos, 10),
+          radius_m: Number(radius) || 24140,
+          max_demos: Number(maxDemos) || 10,
           queue_outreach: false,
         }),
       });
@@ -193,13 +199,9 @@ export function AcquisitionTab() {
   // Send SMS mutation
   const sendSmsMutation = useMutation({
     mutationFn: async () => {
-      const adminKey = localStorage.getItem("admin_key") || "";
       const res = await fetch(`${SUPABASE_URL}/functions/v1/sms`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-admin-key": adminKey,
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ action: "send_queued" }),
       });
       if (!res.ok) {
@@ -220,13 +222,9 @@ export function AcquisitionTab() {
   // Generate demo for single lead
   const generateDemoMutation = useMutation({
     mutationFn: async (leadId: string) => {
-      const adminKey = localStorage.getItem("admin_key") || "";
       const res = await fetch(`${SUPABASE_URL}/functions/v1/leads/${leadId}/generate-demo`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-admin-key": adminKey,
-        },
+        headers: getAuthHeaders(),
       });
       if (!res.ok) {
         const err = await res.json();
@@ -255,13 +253,9 @@ export function AcquisitionTab() {
   // Queue outreach for single lead
   const queueOutreachMutation = useMutation({
     mutationFn: async (leadId: string) => {
-      const adminKey = localStorage.getItem("admin_key") || "";
       const res = await fetch(`${SUPABASE_URL}/functions/v1/outreach/queue`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-admin-key": adminKey,
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ lead_id: leadId }),
       });
       if (!res.ok) {
