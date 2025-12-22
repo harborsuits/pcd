@@ -1139,12 +1139,23 @@ function generateToken(): string {
   return token;
 }
 
-// POST /leads/:id/generate-demo - Generate demo for a lead
+// POST /leads/:id/generate-demo - Generate demo for a lead (supports force regeneration)
 async function handleGenerateDemo(req: Request, leadId: string): Promise<Response> {
   const authError = validateAdminKey(req);
   if (authError) return authError;
 
   const supabase = getSupabaseClient();
+
+  // Parse optional body for force flag and category override
+  let forceRegenerate = false;
+  let categoryOverride: string | null = null;
+  try {
+    const body = await req.json();
+    forceRegenerate = body?.force === true;
+    categoryOverride = body?.category || null;
+  } catch {
+    // No body is fine - default to normal generate
+  }
 
   try {
     // Load the lead
@@ -1161,13 +1172,15 @@ async function handleGenerateDemo(req: Request, leadId: string): Promise<Respons
       );
     }
 
-    console.log(`Generating demo for lead: ${lead.business_name}`);
+    console.log(`Generating demo for lead: ${lead.business_name} (force=${forceRegenerate}, categoryOverride=${categoryOverride})`);
 
-    // Determine industry template
-    const templateSlug = getIndustryTemplate(lead.category, lead.query_term);
+    // Determine industry template - use override if provided
+    const effectiveCategory = categoryOverride || lead.category;
+    const templateSlug = getIndustryTemplate(effectiveCategory, lead.query_term);
     const cityName = extractCityFromAddress(lead.address);
     const businessSlug = generateSlug(lead.business_name);
 
+    // If force regenerating, we'll reuse the existing project but update demo content
     let projectId = lead.demo_project_id;
     let projectToken = lead.demo_token;
     
@@ -1280,7 +1293,7 @@ async function handleGenerateDemo(req: Request, leadId: string): Promise<Respons
       console.error("Failed to update lead:", updateError);
     }
 
-    console.log(`Demo generated: ${demoUrl}`);
+    console.log(`Demo ${forceRegenerate ? 'regenerated' : 'generated'}: ${demoUrl}`);
 
     return new Response(
       JSON.stringify({
@@ -1289,6 +1302,7 @@ async function handleGenerateDemo(req: Request, leadId: string): Promise<Respons
         project_token: projectToken,
         template_slug: templateSlug,
         project_id: projectId,
+        regenerated: forceRegenerate,
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

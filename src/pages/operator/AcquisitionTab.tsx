@@ -243,12 +243,13 @@ export function AcquisitionTab() {
     },
   });
 
-  // Generate demo for single lead
+  // Generate demo for single lead (supports force regeneration)
   const generateDemoMutation = useMutation({
-    mutationFn: async (leadId: string) => {
+    mutationFn: async ({ leadId, force = false }: { leadId: string; force?: boolean }) => {
       const res = await fetch(`${SUPABASE_URL}/functions/v1/leads/${leadId}/generate-demo`, {
         method: "POST",
         headers: getAuthHeaders(),
+        body: JSON.stringify({ force }),
       });
       const data = await readJsonSafe(res);
       if (!res.ok) {
@@ -256,8 +257,8 @@ export function AcquisitionTab() {
       }
       return data;
     },
-    onSuccess: (data, leadId) => {
-      toast.success("Demo created");
+    onSuccess: (data, { leadId }) => {
+      toast.success(data?.regenerated ? "Demo regenerated" : "Demo created");
       // Update search results to reflect the new demo
       setSearchResults(prev => prev.map(r => 
         r.lead_id === leadId ? { ...r, demo_url: data?.demo_url, status: "created" } : r
@@ -606,7 +607,7 @@ export function AcquisitionTab() {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => generateDemoMutation.mutate(result.lead_id)}
+                              onClick={() => generateDemoMutation.mutate({ leadId: result.lead_id })}
                               disabled={generateDemoMutation.isPending}
                             >
                               <Wand2 className="h-4 w-4 mr-1" />
@@ -813,6 +814,17 @@ export function AcquisitionTab() {
                                     <a href={lead.demo_url} target="_blank" rel="noopener noreferrer">
                                       <Eye className="h-4 w-4" />
                                     </a>
+                                  </Button>
+                                  
+                                  {/* Regenerate demo */}
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => generateDemoMutation.mutate({ leadId: lead.id, force: true })}
+                                    disabled={generateDemoMutation.isPending}
+                                    title="Regenerate demo"
+                                  >
+                                    <RefreshCw className="h-4 w-4" />
                                   </Button>
                                   
                                   {/* Copy link */}
