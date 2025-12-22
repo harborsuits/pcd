@@ -1,6 +1,7 @@
 import { MapPin, Star, Phone, ArrowRight, Quote } from "lucide-react";
 import { industryImages, getInitials } from "../themes";
 import { getTradeDisplayName, getTradeCTAText, isKnownTrade } from "@/lib/categoryServices";
+import { getStableTestimonials } from "@/lib/testimonials";
 
 interface LayoutProps {
   templateType: string;
@@ -29,6 +30,7 @@ export function BoutiqueLayout({ templateType, content, businessName, onQuoteCli
   const heroSubheadline = knownTrade 
     ? `${tradeName} Services in ${locationString}`
     : `Professional Services in ${locationString}`;
+  const testimonials = getStableTestimonials({ businessName, city, templateType, count: 1 });
 
   return (
     <div className="pb-32">
@@ -117,20 +119,24 @@ export function BoutiqueLayout({ templateType, content, businessName, onQuoteCli
         </section>
       )}
 
-      {/* Testimonial Placeholder */}
+      {/* Testimonial */}
       <section className="py-20 bg-muted/20">
         <div className="container mx-auto px-4">
           <div className="max-w-2xl mx-auto text-center">
             <h2 className="text-sm uppercase tracking-widest text-muted-foreground mb-8">
               Client Testimonial
             </h2>
-            <Quote className="w-10 h-10 text-primary/20 mx-auto mb-6" />
-            <blockquote className="text-2xl font-normal text-foreground mb-6 leading-relaxed">
-              "Working with {businessName} was a pleasure from start to finish. Professional, attentive, and the results exceeded our expectations."
-            </blockquote>
-            <cite className="text-muted-foreground not-italic">
-              — Satisfied Client, {city}
-            </cite>
+            {testimonials.map((t, i) => (
+              <div key={i}>
+                <Quote className="w-10 h-10 text-primary/20 mx-auto mb-6" />
+                <blockquote className="text-2xl font-normal text-foreground mb-6 leading-relaxed">
+                  {t.quote}
+                </blockquote>
+                <cite className="text-muted-foreground not-italic">
+                  {t.author}
+                </cite>
+              </div>
+            ))}
           </div>
         </div>
       </section>

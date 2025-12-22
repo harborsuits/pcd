@@ -1,6 +1,7 @@
 import { MapPin, Clock, Shield, Star, Phone, Wrench, CheckCircle, Quote } from "lucide-react";
 import { industryImages, getInitials } from "../themes";
 import { getTradeDisplayName, getTradeCTAText, getTradeNoun, isKnownTrade } from "@/lib/categoryServices";
+import { getStableTestimonials } from "@/lib/testimonials";
 
 interface LayoutProps {
   templateType: string;
@@ -34,6 +35,7 @@ export function ContractorLayout({ templateType, content, businessName, onQuoteC
   const servicesSubtitle = knownTrade 
     ? `Professional ${tradeNoun} work done right the first time`
     : "Professional work done right the first time";
+  const testimonials = getStableTestimonials({ businessName, city, templateType, count: 2 });
 
   return (
     <div className="pb-32">
@@ -154,26 +156,30 @@ export function ContractorLayout({ templateType, content, businessName, onQuoteC
         </section>
       )}
 
-      {/* Testimonial Placeholder */}
+      {/* Testimonials */}
       <section className="py-16 border-t border-border">
         <div className="container mx-auto px-4">
-          <div className="max-w-3xl mx-auto">
+          <div className="max-w-4xl mx-auto">
             <h2 className="text-2xl font-extrabold text-foreground text-center mb-8">
               Trusted by Local Customers
             </h2>
-            <div className="bg-card border border-border rounded-xl p-8 shadow-lg">
-              <Quote className="w-10 h-10 text-primary/30 mb-4" />
-              <blockquote className="text-xl text-foreground mb-4">
-                "We called {businessName} when we needed help fast. They showed up on time, did great work, and the price was fair. Highly recommend!"
-              </blockquote>
-              <cite className="text-muted-foreground not-italic flex items-center gap-2">
-                <div className="flex">
-                  {[...Array(5)].map((_, i) => (
-                    <Star key={i} className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                  ))}
+            <div className="grid md:grid-cols-2 gap-6">
+              {testimonials.map((t, i) => (
+                <div key={i} className="bg-card border border-border rounded-xl p-8 shadow-lg">
+                  <Quote className="w-10 h-10 text-primary/30 mb-4" />
+                  <blockquote className="text-lg text-foreground mb-4">
+                    {t.quote}
+                  </blockquote>
+                  <cite className="text-muted-foreground not-italic flex items-center gap-2">
+                    <div className="flex">
+                      {[...Array(5)].map((_, j) => (
+                        <Star key={j} className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                      ))}
+                    </div>
+                    {t.author}
+                  </cite>
                 </div>
-                — {city} Homeowner
-              </cite>
+              ))}
             </div>
           </div>
         </div>
