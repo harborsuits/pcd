@@ -93,25 +93,56 @@ function normalizeLocation(raw: string): string {
   return (raw || "").trim().replace(/\s+/g, " ");
 }
 
-// Try geocoding with fallback - returns lat/lng or null
+// Check if location looks like a county
+function isCountyLocation(location: string): boolean {
+  const lower = location.toLowerCase();
+  return lower.includes("county") || lower.includes(" co,") || lower.includes(" co ");
+}
+
+// Geocode result type - supports both point and viewport
+interface GeoResult {
+  lat: number;
+  lng: number;
+  method: string;
+  isCounty: boolean;
+  viewport?: {
+    northeast: { lat: number; lng: number };
+    southwest: { lat: number; lng: number };
+  };
+}
+
+// Try geocoding with fallback - returns lat/lng and viewport for counties
 async function geocodeWithFallback(
   location: string,
   query: string,
   apiKey: string
-): Promise<{ lat: number; lng: number; method: string } | null> {
+): Promise<GeoResult | null> {
   const normalizedLoc = normalizeLocation(location);
+  const isCounty = isCountyLocation(normalizedLoc);
   
   // First try: standard geocoding
   const geocodeUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(normalizedLoc)}&key=${apiKey}`;
   const geocodeRes = await fetch(geocodeUrl);
   const geocodeData = await geocodeRes.json();
   
-  console.log(`Geocode attempt for "${normalizedLoc}": status=${geocodeData.status}, results=${geocodeData.results?.length || 0}`);
+  console.log(`Geocode attempt for "${normalizedLoc}": status=${geocodeData.status}, results=${geocodeData.results?.length || 0}, isCounty=${isCounty}`);
   
   if (geocodeData.status === "OK" && geocodeData.results?.length > 0) {
-    const loc = geocodeData.results[0].geometry?.location;
+    const geometry = geocodeData.results[0].geometry;
+    const loc = geometry?.location;
+    const viewport = geometry?.viewport;
+    
     if (loc?.lat && loc?.lng) {
-      return { lat: loc.lat, lng: loc.lng, method: "geocode" };
+      return { 
+        lat: loc.lat, 
+        lng: loc.lng, 
+        method: "geocode",
+        isCounty,
+        viewport: viewport ? {
+          northeast: { lat: viewport.northeast.lat, lng: viewport.northeast.lng },
+          southwest: { lat: viewport.southwest.lat, lng: viewport.southwest.lng }
+        } : undefined
+      };
     }
   }
   
@@ -128,11 +159,55 @@ async function geocodeWithFallback(
     const firstResult = searchData.results[0];
     const loc = firstResult.geometry?.location;
     if (loc?.lat && loc?.lng) {
-      return { lat: loc.lat, lng: loc.lng, method: "places_fallback" };
+      return { lat: loc.lat, lng: loc.lng, method: "places_fallback", isCounty };
     }
   }
   
   return null;
+}
+
+// Generate grid points to cover a viewport (for county searches)
+function generateGridPoints(
+  viewport: { northeast: { lat: number; lng: number }; southwest: { lat: number; lng: number } },
+  gridSize: number = 3
+): Array<{ lat: number; lng: number }> {
+  const points: Array<{ lat: number; lng: number }> = [];
+  const latStep = (viewport.northeast.lat - viewport.southwest.lat) / gridSize;
+  const lngStep = (viewport.northeast.lng - viewport.southwest.lng) / gridSize;
+  
+  // Generate points in a grid pattern
+  for (let i = 0; i < gridSize; i++) {
+    for (let j = 0; j < gridSize; j++) {
+      points.push({
+        lat: viewport.southwest.lat + latStep * (i + 0.5),
+        lng: viewport.southwest.lng + lngStep * (j + 0.5)
+      });
+    }
+  }
+  
+  console.log(`Generated ${points.length} grid points to cover viewport`);
+  return points;
+}
+
+// Calculate appropriate radius for grid search based on viewport size
+function calculateGridRadius(
+  viewport: { northeast: { lat: number; lng: number }; southwest: { lat: number; lng: number } },
+  gridSize: number = 3
+): number {
+  // Approximate distance in meters using Haversine-like calculation
+  const latDiff = Math.abs(viewport.northeast.lat - viewport.southwest.lat);
+  const lngDiff = Math.abs(viewport.northeast.lng - viewport.southwest.lng);
+  
+  // Rough conversion: 1 degree lat ≈ 111km, 1 degree lng ≈ 85km (at mid-latitudes)
+  const heightKm = latDiff * 111;
+  const widthKm = lngDiff * 85;
+  
+  // Grid cell diagonal should be covered by radius
+  const cellDiagonalKm = Math.sqrt(Math.pow(heightKm / gridSize, 2) + Math.pow(widthKm / gridSize, 2));
+  const radiusM = Math.min(Math.ceil(cellDiagonalKm * 1000 * 0.75), 50000); // Cap at 50km
+  
+  console.log(`Viewport size: ~${heightKm.toFixed(1)}km x ${widthKm.toFixed(1)}km, grid radius: ${radiusM}m`);
+  return radiusM;
 }
 
 // Compute lead score and reasons
@@ -462,45 +537,76 @@ async function handleSearchAndGenerate(req: Request): Promise<Response> {
       );
     }
 
-    const { lat, lng, method } = geoResult;
-    console.log(`Geocoded to: ${lat}, ${lng} (method: ${method})`);
+    const { lat, lng, method, isCounty, viewport } = geoResult;
+    console.log(`Geocoded to: ${lat}, ${lng} (method: ${method}, isCounty: ${isCounty})`);
 
-    // Step 2: Text Search (up to 3 pages)
+    // Step 2: Text Search - different strategies for city vs county
     let allPlaces: Array<{ place_id: string; name: string }> = [];
-    let nextPageToken: string | null = null;
-    const maxPages = 3;
+    const seenPlaceIds = new Set<string>();
 
-    for (let page = 0; page < maxPages; page++) {
-      let textSearchUrl = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(query)}&location=${lat},${lng}&radius=${radius_m}&key=${apiKey}`;
+    if (isCounty && viewport) {
+      // COUNTY SEARCH: Use grid-based approach to cover the entire area
+      const gridPoints = generateGridPoints(viewport, 3); // 3x3 = 9 search points
+      const gridRadius = calculateGridRadius(viewport, 3);
       
-      if (nextPageToken) {
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        textSearchUrl = `https://maps.googleapis.com/maps/api/place/textsearch/json?pagetoken=${nextPageToken}&key=${apiKey}`;
-      }
-
-      const searchRes = await fetch(textSearchUrl);
-      const searchData = await searchRes.json();
-
-      if (searchData.status !== "OK" && searchData.status !== "ZERO_RESULTS") {
-        if (page === 0) {
-          console.error("Places API error:", searchData);
-          return new Response(
-            JSON.stringify({ error: "Google Places API error", details: searchData.status }),
-            { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
+      console.log(`County search: ${gridPoints.length} grid points, radius ${gridRadius}m`);
+      
+      for (const point of gridPoints) {
+        const textSearchUrl = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(query)}&location=${point.lat},${point.lng}&radius=${gridRadius}&key=${apiKey}`;
+        const searchRes = await fetch(textSearchUrl);
+        const searchData = await searchRes.json();
+        
+        if (searchData.status === "OK") {
+          const places = searchData.results || [];
+          for (const place of places) {
+            if (!seenPlaceIds.has(place.place_id)) {
+              seenPlaceIds.add(place.place_id);
+              allPlaces.push(place);
+            }
+          }
+          console.log(`Grid point (${point.lat.toFixed(3)}, ${point.lng.toFixed(3)}): ${places.length} results, ${allPlaces.length} unique total`);
         }
-        break;
+        
+        // Small delay between grid searches to avoid rate limiting
+        await new Promise(resolve => setTimeout(resolve, 200));
       }
+    } else {
+      // CITY/POINT SEARCH: Standard radius-based search with pagination
+      let nextPageToken: string | null = null;
+      const maxPages = 3;
 
-      const places = searchData.results || [];
-      allPlaces = allPlaces.concat(places);
-      console.log(`Page ${page + 1}: Found ${places.length} places (total: ${allPlaces.length})`);
+      for (let page = 0; page < maxPages; page++) {
+        let textSearchUrl = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(query)}&location=${lat},${lng}&radius=${radius_m}&key=${apiKey}`;
+        
+        if (nextPageToken) {
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          textSearchUrl = `https://maps.googleapis.com/maps/api/place/textsearch/json?pagetoken=${nextPageToken}&key=${apiKey}`;
+        }
 
-      nextPageToken = searchData.next_page_token || null;
-      if (!nextPageToken) break;
+        const searchRes = await fetch(textSearchUrl);
+        const searchData = await searchRes.json();
+
+        if (searchData.status !== "OK" && searchData.status !== "ZERO_RESULTS") {
+          if (page === 0) {
+            console.error("Places API error:", searchData);
+            return new Response(
+              JSON.stringify({ error: "Google Places API error", details: searchData.status }),
+              { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
+          break;
+        }
+
+        const places = searchData.results || [];
+        allPlaces = allPlaces.concat(places);
+        console.log(`Page ${page + 1}: Found ${places.length} places (total: ${allPlaces.length})`);
+
+        nextPageToken = searchData.next_page_token || null;
+        if (!nextPageToken) break;
+      }
     }
 
-    console.log(`Total places found: ${allPlaces.length}`);
+    console.log(`Total unique places found: ${allPlaces.length} (search type: ${isCounty ? 'county-grid' : 'city-radius'})`);
 
     const supabase = getSupabaseClient();
     
