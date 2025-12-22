@@ -14,6 +14,7 @@ import AdminProjects from "./pages/admin/AdminProjects";
 import AdminMessages from "./pages/admin/AdminMessages";
 import AdminLeads from "./pages/admin/AdminLeads";
 import AdminOutreach from "./pages/admin/AdminOutreach";
+import OpsPage from "./pages/ops/OpsPage";
 
 const queryClient = new QueryClient();
 
@@ -31,6 +32,9 @@ const App = () => (
           {/* Public Token Routes */}
           <Route path="/d/:token/:slug" element={<DemoPage />} />
           <Route path="/p/:token" element={<PortalPage />} />
+
+          {/* Operator Console (secret URL) */}
+          <Route path="/_ops-x7k9" element={<OpsPage />} />
 
           {/* Admin Routes */}
           <Route path="/admin" element={<AdminLayout />}>
