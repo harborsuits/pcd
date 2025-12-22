@@ -47,6 +47,19 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const url = new URL(req.url);
+  const pathParts = url.pathname.split("/").filter(Boolean);
+  
+  // Check for review-item action: POST /portal/:token/review/:itemId
+  const portalIdx = pathParts.lastIndexOf("portal");
+  const reviewIdx = pathParts.indexOf("review");
+  
+  if (reviewIdx > portalIdx && req.method === "POST") {
+    const token = pathParts[portalIdx + 1];
+    const itemId = pathParts[reviewIdx + 1];
+    return handleReviewAction(req, token, itemId, corsHeaders);
+  }
+
   if (req.method !== "GET") {
     return new Response(
       JSON.stringify({ error: "Method not allowed" }),
@@ -180,6 +193,18 @@ Deno.serve(async (req) => {
       // Non-fatal: continue with empty payments
     }
 
+    // Fetch review items
+    const { data: reviewItems, error: reviewItemsError } = await supabase
+      .from("review_items")
+      .select("id, title, description, item_type, item_url, item_content, status, client_notes, created_at, updated_at")
+      .eq("project_id", project.id)
+      .order("created_at", { ascending: false });
+
+    if (reviewItemsError) {
+      console.error("Review items query error:", reviewItemsError);
+      // Non-fatal: continue with empty review items
+    }
+
     // Clean response - include id for deduplication
     const response = {
       business: {
@@ -207,6 +232,18 @@ Deno.serve(async (req) => {
         status: p.status,
         created_at: p.created_at,
       })),
+      review_items: (reviewItems || []).map((r) => ({
+        id: r.id,
+        title: r.title,
+        description: r.description,
+        item_type: r.item_type,
+        item_url: r.item_url,
+        item_content: r.item_content,
+        status: r.status,
+        client_notes: r.client_notes,
+        created_at: r.created_at,
+        updated_at: r.updated_at,
+      })),
       pagination: {
         messages_limit: messagesLimit,
         messages_before: messagesBefore,
@@ -229,3 +266,115 @@ Deno.serve(async (req) => {
     );
   }
 });
+
+// Handle review item approval/changes request
+async function handleReviewAction(
+  req: Request, 
+  token: string, 
+  itemId: string,
+  corsHeaders: Record<string, string>
+): Promise<Response> {
+  try {
+    if (!token || !isValidToken(token)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid token" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (!itemId) {
+      return new Response(
+        JSON.stringify({ error: "Item ID required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const body = await req.json();
+    const { action, notes } = body;
+
+    if (!action || !["approve", "request_changes"].includes(action)) {
+      return new Response(
+        JSON.stringify({ error: "action must be 'approve' or 'request_changes'" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Verify the item belongs to the project with this token
+    const { data: item, error: itemError } = await supabase
+      .from("review_items")
+      .select("id, project_token, title")
+      .eq("id", itemId)
+      .eq("project_token", token)
+      .maybeSingle();
+
+    if (itemError || !item) {
+      console.error("Review item not found:", itemError);
+      return new Response(
+        JSON.stringify({ error: "Item not found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Update the item status
+    const newStatus = action === "approve" ? "approved" : "changes_requested";
+    const { error: updateError } = await supabase
+      .from("review_items")
+      .update({
+        status: newStatus,
+        client_notes: action === "request_changes" ? (notes || null) : null,
+      })
+      .eq("id", itemId);
+
+    if (updateError) {
+      console.error("Update review item error:", updateError);
+      return new Response(
+        JSON.stringify({ error: "Failed to update item" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log(`Review item ${itemId} updated to ${newStatus}`);
+
+    // Send Telegram notification
+    const telegramBotToken = Deno.env.get("TELEGRAM_BOT_TOKEN");
+    const telegramChatId = Deno.env.get("TELEGRAM_CHAT_ID");
+    if (telegramBotToken && telegramChatId) {
+      const emoji = action === "approve" ? "✅" : "🔄";
+      const msg = `${emoji} <b>Review Update</b>\n` +
+        `• <b>Item:</b> ${item.title}\n` +
+        `• <b>Action:</b> ${action === "approve" ? "Approved" : "Changes Requested"}\n` +
+        (notes ? `• <b>Notes:</b> ${notes}\n` : "") +
+        `• <b>Token:</b> <code>${token.slice(0, 12)}...</code>`;
+      
+      try {
+        await fetch(`https://api.telegram.org/bot${telegramBotToken}/sendMessage`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            chat_id: telegramChatId,
+            text: msg,
+            parse_mode: "HTML",
+          }),
+        });
+      } catch (e) {
+        console.error("Telegram notification failed:", e);
+      }
+    }
+
+    return new Response(
+      JSON.stringify({ ok: true, status: newStatus }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+
+  } catch (error) {
+    console.error("Review action error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+}

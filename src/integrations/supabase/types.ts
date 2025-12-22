@@ -514,6 +514,59 @@ export type Database = {
         }
         Relationships: []
       }
+      review_items: {
+        Row: {
+          client_notes: string | null
+          created_at: string
+          description: string | null
+          id: string
+          item_content: string | null
+          item_type: string
+          item_url: string | null
+          project_id: string
+          project_token: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          client_notes?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          item_content?: string | null
+          item_type?: string
+          item_url?: string | null
+          project_id: string
+          project_token: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          client_notes?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          item_content?: string | null
+          item_type?: string
+          item_url?: string | null
+          project_id?: string
+          project_token?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "review_items_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
