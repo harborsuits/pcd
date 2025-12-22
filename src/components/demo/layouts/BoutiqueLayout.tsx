@@ -1,5 +1,5 @@
 import { MapPin, Star, Phone, ArrowRight, Quote, Camera } from "lucide-react";
-import { getHeroImage, getGalleryImages, getInitials } from "../themes";
+import { getHeroImage, getGalleryImagesForBusiness, getInitials } from "../themes";
 import { getTradeDisplayName, getTradeCTAText, isKnownTrade } from "@/lib/categoryServices";
 import { getTradeIcon } from "@/lib/tradeIcons";
 import { getStableTestimonials } from "@/lib/testimonials";
@@ -19,8 +19,13 @@ export function BoutiqueLayout({ templateType, content, businessName, onQuoteCli
   const rating = (content.rating as number) || null;
   const reviewCount = (content.reviewCount as number) || null;
   const tagline = (content.tagline as string) || "";
-  const heroImage = getHeroImage(templateType);
-  const galleryImages = getGalleryImages(templateType, 3);
+  const heroImage = getHeroImage(templateType, businessName);
+  const galleryImages = getGalleryImagesForBusiness({
+    templateType,
+    businessName,
+    city,
+    count: 3,
+  });
   const initials = getInitials(businessName);
   const locationString = state ? `${city}, ${state}` : city;
   const nearbyTowns = (content.nearbyTowns as string[]) || [];
