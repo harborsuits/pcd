@@ -3,7 +3,7 @@ import { useState, useEffect, useMemo } from "react";
 import { themes, ThemeId, getHeroImage, getGalleryImagesForBusiness } from "@/components/demo/themes";
 import { ThemeSwitcher } from "@/components/demo/ThemeSwitcher";
 import { QuoteModal } from "@/components/demo/QuoteModal";
-import { ClaimDesignModal } from "@/components/demo/ClaimDesignModal";
+import { ClaimAuthModal } from "@/components/demo/ClaimAuthModal";
 import { StickyMobileCTA } from "@/components/demo/StickyMobileCTA";
 import { CleanLayout, ContractorLayout, BoutiqueLayout } from "@/components/demo/layouts";
 import { VisualDebugBadge } from "@/components/demo/VisualDebugBadge";
@@ -211,7 +211,7 @@ export default function DemoPage() {
         businessName={data.business.name}
       />
 
-      <ClaimDesignModal
+      <ClaimAuthModal
         open={claimOpen}
         onOpenChange={setClaimOpen}
         businessName={data.business.name}
