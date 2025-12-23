@@ -713,10 +713,17 @@ export default function PortalPage() {
             <span className="text-sm">Home</span>
           </Link>
           {user && (
-            <Button variant="ghost" size="sm" onClick={handleLogout} className="text-muted-foreground">
-              <LogOut className="h-4 w-4 mr-2" />
-              Log out
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button asChild variant="ghost" size="sm" className="text-muted-foreground">
+                <Link to="/portal">
+                  My Portals
+                </Link>
+              </Button>
+              <Button variant="ghost" size="sm" onClick={handleLogout} className="text-muted-foreground">
+                <LogOut className="h-4 w-4 mr-2" />
+                Log out
+              </Button>
+            </div>
           )}
         </div>
       </header>

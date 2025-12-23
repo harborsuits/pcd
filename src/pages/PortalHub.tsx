@@ -224,10 +224,11 @@ export default function PortalHub() {
                 <Card>
                   <CardContent className="py-8 text-center">
                     <p className="text-muted-foreground mb-2">
-                      You don't have any portals yet.
+                      No portals yet
                     </p>
-                    <p className="text-sm text-muted-foreground">
-                      When you claim a demo, it will appear here.
+                    <p className="text-sm text-muted-foreground max-w-sm mx-auto">
+                      Your portals appear here after you claim a demo from a link we text or email you. 
+                      You can also paste a portal link below.
                     </p>
                   </CardContent>
                 </Card>
