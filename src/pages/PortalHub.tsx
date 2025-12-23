@@ -50,6 +50,7 @@ export default function PortalHub() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
   
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
@@ -180,9 +181,51 @@ export default function PortalHub() {
     }
   };
 
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email) {
+      setError("Please enter your email address");
+      return;
+    }
+    
+    setError(null);
+    setInfo(null);
+    setLoading(true);
+
+    try {
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/portal`,
+      });
+
+      if (resetError) {
+        setError(resetError.message);
+        return;
+      }
+
+      setInfo("Check your email for a password reset link.");
+      setShowForgotPassword(false);
+    } catch (err) {
+      console.error("Reset error:", err);
+      setError("Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleLogout = async () => {
     await supabase.auth.signOut();
     setPortals([]);
+  };
+
+  const handleOpenLink = (e: React.FormEvent) => {
+    e.preventDefault();
+    const token = extractToken(linkInput);
+    if (token) {
+      setLinkError(null);
+      navigate(`/p/${token}`);
+    } else {
+      setLinkError("Please paste a valid portal link");
+    }
   };
 
   if (authChecking) {
@@ -215,6 +258,36 @@ export default function PortalHub() {
               Logged in as {user.email}
             </p>
 
+            {/* Always show "Open from link" at top */}
+            <Card className="mb-6">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <ExternalLink className="h-4 w-4" />
+                  Open from a link
+                </CardTitle>
+                <CardDescription>
+                  Paste the link from your text message or email
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handleOpenLink} className="flex gap-2">
+                  <Input
+                    placeholder="https://... or portal code"
+                    value={linkInput}
+                    onChange={(e) => {
+                      setLinkInput(e.target.value);
+                      setLinkError(null);
+                    }}
+                    className="flex-1"
+                  />
+                  <Button type="submit">Open</Button>
+                </form>
+                {linkError && (
+                  <p className="text-sm text-destructive mt-2">{linkError}</p>
+                )}
+              </CardContent>
+            </Card>
+
             {loadingPortals ? (
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -223,55 +296,15 @@ export default function PortalHub() {
               <div className="space-y-6">
                 <Card>
                   <CardContent className="py-8 text-center">
-                    <p className="text-muted-foreground mb-2">
+                    <p className="font-medium text-foreground mb-2">
                       No portals yet
                     </p>
-                    <p className="text-sm text-muted-foreground max-w-sm mx-auto">
-                      Your portals appear here after you claim a demo from a link we text or email you. 
-                      You can also paste a portal link below.
+                    <p className="text-sm text-muted-foreground max-w-sm mx-auto mb-4">
+                      Creating an account doesn't create a portal. You need a demo link to claim one.
                     </p>
-                  </CardContent>
-                </Card>
-                
-                {/* Open from link */}
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-lg flex items-center gap-2">
-                      <ExternalLink className="h-4 w-4" />
-                      Open from a link
-                    </CardTitle>
-                    <CardDescription>
-                      Paste the link from your text message or email
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <form 
-                      onSubmit={(e) => {
-                        e.preventDefault();
-                        const token = extractToken(linkInput);
-                        if (token) {
-                          setLinkError(null);
-                          navigate(`/p/${token}`);
-                        } else {
-                          setLinkError("Please paste a valid portal link");
-                        }
-                      }}
-                      className="flex gap-2"
-                    >
-                      <Input
-                        placeholder="https://... or portal code"
-                        value={linkInput}
-                        onChange={(e) => {
-                          setLinkInput(e.target.value);
-                          setLinkError(null);
-                        }}
-                        className="flex-1"
-                      />
-                      <Button type="submit">Open</Button>
-                    </form>
-                    {linkError && (
-                      <p className="text-sm text-destructive mt-2">{linkError}</p>
-                    )}
+                    <p className="text-sm text-muted-foreground max-w-sm mx-auto">
+                      Paste a link above, or request a free demo below.
+                    </p>
                   </CardContent>
                 </Card>
 
@@ -348,53 +381,104 @@ export default function PortalHub() {
               </TabsList>
 
               <TabsContent value="login">
-                <form onSubmit={handleLogin} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="login-email">Email</Label>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="login-email"
-                        type="email"
-                        placeholder="you@example.com"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        className="pl-10"
-                        required
-                      />
+                {showForgotPassword ? (
+                  <form onSubmit={handleForgotPassword} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="reset-email">Email</Label>
+                      <div className="relative">
+                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          id="reset-email"
+                          type="email"
+                          placeholder="you@example.com"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          className="pl-10"
+                          required
+                        />
+                      </div>
                     </div>
-                  </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="login-password">Password</Label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="login-password"
-                        type="password"
-                        placeholder="Your password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        className="pl-10"
-                        required
-                      />
+                    {error && <p className="text-sm text-destructive">{error}</p>}
+                    {info && <p className="text-sm text-accent">{info}</p>}
+
+                    <Button type="submit" className="w-full" disabled={loading}>
+                      {loading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Sending...
+                        </>
+                      ) : (
+                        "Send Reset Link"
+                      )}
+                    </Button>
+
+                    <button
+                      type="button"
+                      onClick={() => { setShowForgotPassword(false); setError(null); setInfo(null); }}
+                      className="text-sm text-muted-foreground hover:text-foreground w-full text-center"
+                    >
+                      Back to login
+                    </button>
+                  </form>
+                ) : (
+                  <form onSubmit={handleLogin} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="login-email">Email</Label>
+                      <div className="relative">
+                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          id="login-email"
+                          type="email"
+                          placeholder="you@example.com"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          className="pl-10"
+                          required
+                        />
+                      </div>
                     </div>
-                  </div>
 
-                  {error && <p className="text-sm text-destructive">{error}</p>}
-                  {info && <p className="text-sm text-accent">{info}</p>}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="login-password">Password</Label>
+                        <button
+                          type="button"
+                          onClick={() => { setShowForgotPassword(true); setError(null); setInfo(null); }}
+                          className="text-xs text-muted-foreground hover:text-foreground"
+                        >
+                          Forgot password?
+                        </button>
+                      </div>
+                      <div className="relative">
+                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          id="login-password"
+                          type="password"
+                          placeholder="Your password"
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          className="pl-10"
+                          required
+                        />
+                      </div>
+                    </div>
 
-                  <Button type="submit" className="w-full" disabled={loading}>
-                    {loading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Logging in...
-                      </>
-                    ) : (
-                      "Log In"
-                    )}
-                  </Button>
-                </form>
+                    {error && <p className="text-sm text-destructive">{error}</p>}
+                    {info && <p className="text-sm text-accent">{info}</p>}
+
+                    <Button type="submit" className="w-full" disabled={loading}>
+                      {loading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Logging in...
+                        </>
+                      ) : (
+                        "Log In"
+                      )}
+                    </Button>
+                  </form>
+                )}
               </TabsContent>
 
               <TabsContent value="signup">
