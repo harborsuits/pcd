@@ -1,8 +1,6 @@
 import { Link } from "react-router-dom";
-import { ArrowRight, MessageSquare, FolderOpen, Sparkles, Shield, Smartphone, CreditCard } from "lucide-react";
+import { ArrowRight, MessageSquare, FolderOpen, Sparkles, Shield, Smartphone, CreditCard, LogIn } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { useState } from "react";
 
 const exampleDemos = [
   {
@@ -26,14 +24,6 @@ const exampleDemos = [
 ];
 
 const Index = () => {
-  const [portalCode, setPortalCode] = useState("");
-
-  const handlePortalSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (portalCode.trim()) {
-      window.location.href = `/p/${portalCode.trim()}`;
-    }
-  };
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground">
@@ -243,32 +233,26 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Client Portal Entry */}
+      {/* Client Portal Entry - simplified, no code needed */}
       <section id="portal" className="py-20 bg-secondary/30">
         <div className="container mx-auto px-6 text-center">
           <h2 className="font-serif text-3xl md:text-4xl font-bold mb-4">
-            Enter Your Portal
+            Already a client?
           </h2>
           <p className="text-muted-foreground max-w-lg mx-auto mb-8">
-            Already working with us? Enter your portal code to access your project.
+            Access your portal using the link we sent you, or log in below.
           </p>
-          <form onSubmit={handlePortalSubmit} className="flex flex-col sm:flex-row gap-3 max-w-sm mx-auto">
-            <Input
-              type="text"
-              placeholder="Your portal code"
-              value={portalCode}
-              onChange={(e) => setPortalCode(e.target.value)}
-              className="flex-1"
-            />
-            <Button type="submit" disabled={!portalCode.trim()}>
-              Enter Portal
-            </Button>
-          </form>
+          <Button asChild size="lg" variant="outline" className="group">
+            <Link to="/login">
+              <LogIn className="mr-2 h-4 w-4" />
+              Log in to your portal
+            </Link>
+          </Button>
           <p className="text-sm text-muted-foreground mt-6">
             Not a client yet?{" "}
-            <a href="mailto:hello@pleasantcove.design" className="text-accent hover:underline">
-              Get in touch
-            </a>
+            <Link to="/get-demo" className="text-accent hover:underline">
+              Get a free demo
+            </Link>
           </p>
         </div>
       </section>
