@@ -9,6 +9,7 @@ import NotFound from "./pages/NotFound";
 import DemoPage from "./pages/demo/DemoPage";
 import PortalPage from "./pages/portal/PortalPage";
 import PortalHub from "./pages/PortalHub";
+import OnboardingWizard from "./pages/portal/OnboardingWizard";
 import OperatorLayout from "./pages/operator/OperatorLayout";
 
 const queryClient = new QueryClient();
@@ -24,6 +25,7 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/get-demo" element={<GetDemo />} />
           <Route path="/portal" element={<PortalHub />} />
+          <Route path="/portal/new" element={<OnboardingWizard />} />
           <Route path="/login" element={<PortalHub />} />
 
           {/* Public Token Routes */}

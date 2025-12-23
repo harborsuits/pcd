@@ -56,6 +56,7 @@ Deno.serve(async (req) => {
   const checkAuthIdx = pathParts.indexOf("check-auth");
   const linkOwnerIdx = pathParts.indexOf("link-owner");
   const verifyOwnerIdx = pathParts.indexOf("verify-owner");
+  const createProjectIdx = pathParts.indexOf("create-project");
   const myProjectsIdx = pathParts.indexOf("my-projects");
   
   if (reviewIdx > portalIdx && req.method === "POST") {
@@ -85,6 +86,11 @@ Deno.serve(async (req) => {
   // GET /portal/my-projects - Get all projects owned by the logged-in user
   if (myProjectsIdx > portalIdx && req.method === "GET") {
     return handleMyProjects(req, corsHeaders);
+  }
+
+  // POST /portal/create-project - Create a new project from onboarding intake
+  if (createProjectIdx > portalIdx && req.method === "POST") {
+    return handleCreateProject(req, corsHeaders);
   }
 
   if (req.method !== "GET") {
@@ -667,6 +673,162 @@ async function handleMyProjects(
     );
   } catch (error) {
     console.error("My projects error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+}
+
+// Generate a random project token
+function generateToken(): string {
+  const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
+  let token = "";
+  for (let i = 0; i < 24; i++) {
+    token += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return token;
+}
+
+// Generate a URL-friendly slug from business name
+function slugify(text: string): string {
+  return text
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, "")
+    .replace(/[\s_-]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 50);
+}
+
+// POST /portal/create-project - Create a new project from onboarding intake
+async function handleCreateProject(
+  req: Request,
+  corsHeaders: Record<string, string>
+): Promise<Response> {
+  try {
+    // Extract user from JWT
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Verify JWT and get user
+    const jwt = authHeader.replace("Bearer ", "");
+    const { data: { user }, error: authError } = await supabase.auth.getUser(jwt);
+
+    if (authError || !user) {
+      return new Response(
+        JSON.stringify({ error: "Invalid or expired token" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Parse intake data
+    const body = await req.json();
+    const { intake } = body;
+
+    if (!intake || !intake.businessName) {
+      return new Response(
+        JSON.stringify({ error: "Business name is required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Generate project token and slug
+    const projectToken = generateToken();
+    const businessSlug = slugify(intake.businessName);
+
+    // Create the project
+    const { data: project, error: insertError } = await supabase
+      .from("projects")
+      .insert({
+        project_token: projectToken,
+        business_name: intake.businessName,
+        business_slug: businessSlug,
+        owner_user_id: user.id,
+        contact_email: user.email,
+        status: "lead",
+        source: "onboarding",
+        notes: JSON.stringify({
+          intake: {
+            businessType: intake.businessType,
+            mainGoal: intake.mainGoal,
+            styleVibe: intake.styleVibe,
+            colorPreset: intake.colorPreset,
+            inspirationLinks: intake.inspirationLinks,
+            functionality: intake.functionality,
+            hoursType: intake.hoursType,
+          },
+          createdAt: new Date().toISOString(),
+        }),
+      })
+      .select("id, project_token, business_name")
+      .single();
+
+    if (insertError) {
+      console.error("Create project error:", insertError);
+      return new Response(
+        JSON.stringify({ error: "Failed to create project" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log(`Created project ${project.business_name} for user ${user.id}`);
+
+    // Send auto-welcome message
+    await supabase.from("messages").insert({
+      project_id: project.id,
+      project_token: projectToken,
+      sender_type: "system",
+      content: `Hey — I've got everything I need to start on ${intake.businessName}. I'll send a first version soon. You can upload logos or photos anytime here.`,
+    });
+
+    // Send Telegram notification
+    const telegramBotToken = Deno.env.get("TELEGRAM_BOT_TOKEN");
+    const telegramChatId = Deno.env.get("TELEGRAM_CHAT_ID");
+    if (telegramBotToken && telegramChatId) {
+      const msg = `🆕 <b>New Project Created</b>\n` +
+        `• <b>Business:</b> ${intake.businessName}\n` +
+        `• <b>Type:</b> ${intake.businessType || "—"}\n` +
+        `• <b>Goal:</b> ${intake.mainGoal || "—"}\n` +
+        `• <b>Style:</b> ${intake.styleVibe || "—"}\n` +
+        `• <b>Features:</b> ${(intake.functionality || []).join(", ") || "—"}\n` +
+        `• <b>Email:</b> ${user.email}\n` +
+        `• <b>Token:</b> <code>${projectToken}</code>`;
+
+      try {
+        await fetch(`https://api.telegram.org/bot${telegramBotToken}/sendMessage`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            chat_id: telegramChatId,
+            text: msg,
+            parse_mode: "HTML",
+          }),
+        });
+      } catch (e) {
+        console.error("Telegram notification failed:", e);
+      }
+    }
+
+    return new Response(
+      JSON.stringify({
+        ok: true,
+        project_token: projectToken,
+        business_name: project.business_name,
+      }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  } catch (error) {
+    console.error("Create project error:", error);
     return new Response(
       JSON.stringify({ error: "Internal server error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
