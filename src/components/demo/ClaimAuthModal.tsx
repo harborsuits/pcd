@@ -68,20 +68,28 @@ export function ClaimAuthModal({
         return;
       }
 
-      if (data.session) {
-        // Use the session's access token to claim the project
-        await claimProjectWithSession(data.session.access_token, name);
+      if (!data.session) {
+        // No session = email confirmation required
         setSuccess(true);
-
         toast({
-          title: "Design claimed!",
-          description: "Your portal is ready.",
+          title: "Check your email",
+          description: "Confirm your email, then come back to finish claiming your portal.",
         });
-
-        setTimeout(() => {
-          navigate(`/p/${projectToken}`);
-        }, 1500);
+        return;
       }
+
+      // Use the session's access token to claim the project
+      await claimProjectWithSession(data.session.access_token, name);
+      setSuccess(true);
+
+      toast({
+        title: "Design claimed!",
+        description: "Your portal is ready.",
+      });
+
+      setTimeout(() => {
+        navigate(`/p/${projectToken}`);
+      }, 1500);
     } catch (err) {
       console.error("Signup error:", err);
       setError("Something went wrong. Please try again.");
