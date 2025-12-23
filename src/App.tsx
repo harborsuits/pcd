@@ -8,6 +8,7 @@ import GetDemo from "./pages/GetDemo";
 import NotFound from "./pages/NotFound";
 import DemoPage from "./pages/demo/DemoPage";
 import PortalPage from "./pages/portal/PortalPage";
+import LoginPage from "./pages/LoginPage";
 import OperatorLayout from "./pages/operator/OperatorLayout";
 
 const queryClient = new QueryClient();
@@ -22,6 +23,7 @@ const App = () => (
           {/* Marketing / Landing */}
           <Route path="/" element={<Index />} />
           <Route path="/get-demo" element={<GetDemo />} />
+          <Route path="/login" element={<LoginPage />} />
 
           {/* Public Token Routes */}
           <Route path="/d/:token/:slug" element={<DemoPage />} />

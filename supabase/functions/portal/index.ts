@@ -56,6 +56,7 @@ Deno.serve(async (req) => {
   const checkAuthIdx = pathParts.indexOf("check-auth");
   const linkOwnerIdx = pathParts.indexOf("link-owner");
   const verifyOwnerIdx = pathParts.indexOf("verify-owner");
+  const myProjectsIdx = pathParts.indexOf("my-projects");
   
   if (reviewIdx > portalIdx && req.method === "POST") {
     const token = pathParts[portalIdx + 1];
@@ -79,6 +80,11 @@ Deno.serve(async (req) => {
   if (verifyOwnerIdx > portalIdx && req.method === "POST") {
     const token = pathParts[portalIdx + 1];
     return handleVerifyOwner(req, token, corsHeaders);
+  }
+  
+  // GET /portal/my-projects - Get all projects owned by the logged-in user
+  if (myProjectsIdx > portalIdx && req.method === "GET") {
+    return handleMyProjects(req, corsHeaders);
   }
 
   if (req.method !== "GET") {
@@ -602,6 +608,65 @@ async function handleVerifyOwner(
     );
   } catch (error) {
     console.error("Verify owner error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+}
+
+// GET /portal/my-projects - Get all projects owned by the logged-in user
+async function handleMyProjects(
+  req: Request,
+  corsHeaders: Record<string, string>
+): Promise<Response> {
+  try {
+    // Extract user from JWT
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Verify JWT and get user
+    const jwt = authHeader.replace("Bearer ", "");
+    const { data: { user }, error: authError } = await supabase.auth.getUser(jwt);
+
+    if (authError || !user) {
+      return new Response(
+        JSON.stringify({ error: "Invalid or expired token" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Fetch all projects owned by this user
+    const { data: projects, error: fetchError } = await supabase
+      .from("projects")
+      .select("project_token, business_name, status")
+      .eq("owner_user_id", user.id)
+      .is("deleted_at", null)
+      .order("created_at", { ascending: false });
+
+    if (fetchError) {
+      console.error("Fetch projects error:", fetchError);
+      return new Response(
+        JSON.stringify({ error: "Database error" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    return new Response(
+      JSON.stringify({ projects: projects || [] }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  } catch (error) {
+    console.error("My projects error:", error);
     return new Response(
       JSON.stringify({ error: "Internal server error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
