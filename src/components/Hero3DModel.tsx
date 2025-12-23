@@ -15,7 +15,7 @@ function Model() {
 
   return (
     <Float speed={1.5} rotationIntensity={0.2} floatIntensity={0.5}>
-      <group ref={groupRef} scale={0.25} position={[0, -0.8, 0]}>
+      <group ref={groupRef} scale={0.15} position={[0, -0.5, 0]}>
         <primitive object={scene} />
       </group>
     </Float>
@@ -33,19 +33,29 @@ function LoadingFallback() {
 
 export function Hero3DModel() {
   return (
-    <div className="w-full h-[360px] md:h-[460px] lg:h-[520px]">
+    <div className="w-full h-[400px] md:h-[500px] lg:h-[560px]">
       <Canvas
-        camera={{ position: [0, 0.8, 7], fov: 35 }}
+        camera={{ position: [0, 1, 10], fov: 30 }}
         style={{ background: "transparent" }}
-        gl={{ alpha: true, antialias: true }}
+        gl={{ 
+          alpha: true, 
+          antialias: true,
+          outputColorSpace: THREE.SRGBColorSpace,
+          toneMapping: THREE.ACESFilmicToneMapping,
+        }}
       >
-        <ambientLight intensity={0.5} />
-        <directionalLight position={[10, 10, 5]} intensity={1} />
-        <pointLight position={[-10, -10, -5]} intensity={0.5} color="#7c3aed" />
+        {/* Soft base light */}
+        <ambientLight intensity={0.6} />
+        
+        {/* Main light (shape + highlights) */}
+        <directionalLight position={[5, 5, 5]} intensity={1.2} />
+        
+        {/* Rim light (separation from background) */}
+        <pointLight position={[-5, -5, -5]} intensity={0.8} color="#7c3aed" />
         
         <Suspense fallback={<LoadingFallback />}>
           <Model />
-          <Environment preset="city" />
+          <Environment preset="studio" />
         </Suspense>
         
         <OrbitControls
