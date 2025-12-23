@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, Lock, Mail, ArrowRight, Home, ExternalLink, Sparkles, User as UserIcon, RefreshCw } from "lucide-react";
+import { Loader2, Lock, Mail, ArrowRight, Home, ExternalLink, Sparkles, User as UserIcon, RefreshCw, Plus } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/hooks/use-toast";
 import type { User, Session } from "@supabase/supabase-js";
@@ -339,37 +339,46 @@ export default function PortalHub() {
               </div>
             ) : portals.length === 0 ? (
               <div className="space-y-6">
-                <Card>
+                {/* Primary CTA - Start a new project */}
+                <Card className="border-2 border-primary/20 bg-primary/5">
                   <CardContent className="py-8 text-center">
-                    <p className="font-medium text-foreground mb-2">
-                      No portals yet
-                    </p>
+                    <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                      <Plus className="h-6 w-6 text-primary" />
+                    </div>
+                    <h3 className="font-serif text-lg font-bold mb-2">Start a new project</h3>
                     <p className="text-sm text-muted-foreground max-w-sm mx-auto mb-4">
-                      Creating an account doesn't create a portal. You need a demo link to claim one.
+                      Set up your website in about 5 minutes. We'll guide you through the process.
                     </p>
-                    <p className="text-sm text-muted-foreground max-w-sm mx-auto">
-                      Paste a link above, or request a free demo below.
-                    </p>
-                  </CardContent>
-                </Card>
-
-                {/* See demos */}
-                <Card className="border-dashed">
-                  <CardContent className="py-6 text-center">
-                    <p className="text-sm text-muted-foreground mb-3">
-                      Want to see what we can build for you?
-                    </p>
-                    <Button asChild variant="outline" size="sm">
-                      <Link to="/get-demo">
+                    <Button asChild size="lg">
+                      <Link to="/portal/new">
                         <Sparkles className="mr-2 h-4 w-4" />
-                        Get a free demo
+                        Get started
                       </Link>
                     </Button>
                   </CardContent>
                 </Card>
+
+                <div className="text-center text-sm text-muted-foreground">
+                  Already have a demo link? Paste it above.
+                </div>
               </div>
             ) : (
               <div className="space-y-4">
+                {/* Start new project button at top when user has portals */}
+                <Card className="border-dashed">
+                  <CardContent className="py-4 flex items-center justify-between">
+                    <p className="text-sm text-muted-foreground">
+                      Ready for another project?
+                    </p>
+                    <Button asChild variant="outline" size="sm">
+                      <Link to="/portal/new">
+                        <Plus className="mr-2 h-4 w-4" />
+                        New project
+                      </Link>
+                    </Button>
+                  </CardContent>
+                </Card>
+
                 {portals.map((portal) => (
                   <Card key={portal.project_token} className="hover:border-accent/50 transition-colors">
                     <CardContent className="p-6 flex items-center justify-between">
