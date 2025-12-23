@@ -55,9 +55,9 @@ export function PortalAuthPage({ projectToken, businessName, onAuthSuccess }: Po
         return;
       }
 
-      if (data.user) {
-        // Link user to project
-        await linkUserToProject(data.user.id);
+      if (data.session) {
+        // Link user to project using JWT
+        await linkUserToProject(data.session.access_token);
         toast({
           title: "Account created!",
           description: "Welcome to your project portal.",
@@ -88,9 +88,9 @@ export function PortalAuthPage({ projectToken, businessName, onAuthSuccess }: Po
         return;
       }
 
-      if (data.user) {
+      if (data.session) {
         // Verify user owns this project or link if first time
-        const verified = await verifyOrLinkProject(data.user.id);
+        const verified = await verifyOrLinkProject(data.session.access_token);
         if (!verified) {
           setError("You don't have access to this portal.");
           await supabase.auth.signOut();
@@ -111,16 +111,17 @@ export function PortalAuthPage({ projectToken, businessName, onAuthSuccess }: Po
     }
   };
 
-  const linkUserToProject = async (userId: string) => {
+  // Use the user's JWT - server extracts user from token
+  const linkUserToProject = async (accessToken: string) => {
     try {
       const res = await fetch(`${SUPABASE_URL}/functions/v1/portal/${projectToken}/link-owner`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "apikey": SUPABASE_ANON_KEY,
-          "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+          "Authorization": `Bearer ${accessToken}`, // User's JWT
         },
-        body: JSON.stringify({ user_id: userId }),
+        body: JSON.stringify({}), // No user_id - server extracts from JWT
       });
 
       if (!res.ok) {
@@ -131,16 +132,16 @@ export function PortalAuthPage({ projectToken, businessName, onAuthSuccess }: Po
     }
   };
 
-  const verifyOrLinkProject = async (userId: string): Promise<boolean> => {
+  const verifyOrLinkProject = async (accessToken: string): Promise<boolean> => {
     try {
       const res = await fetch(`${SUPABASE_URL}/functions/v1/portal/${projectToken}/verify-owner`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "apikey": SUPABASE_ANON_KEY,
-          "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+          "Authorization": `Bearer ${accessToken}`, // User's JWT
         },
-        body: JSON.stringify({ user_id: userId }),
+        body: JSON.stringify({}), // No user_id - server extracts from JWT
       });
 
       const data = await res.json();
