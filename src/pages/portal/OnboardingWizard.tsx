@@ -79,6 +79,14 @@ const COLOR_PRESETS = [
   { id: "auto", label: "Choose for me", colors: ["#f0fdfa", "#2dd4bf", "#0f766e"] },
 ];
 
+// Curated demo style gallery
+const STYLE_DEMOS = [
+  { id: "clean-contractor", title: "Clean Contractor", styleVibe: "clean", colorPreset: "neutral", description: "Modern trades look" },
+  { id: "warm-local", title: "Warm & Local", styleVibe: "warm", colorPreset: "green", description: "Friendly neighborhood feel" },
+  { id: "bold-pro", title: "Bold Professional", styleVibe: "bold", colorPreset: "dark", description: "Premium high-end vibe" },
+  { id: "simple-service", title: "Simple Service", styleVibe: "simple", colorPreset: "blue", description: "No-frills & trustworthy" },
+];
+
 // Functionality options
 const FUNCTIONALITY_OPTIONS = [
   { id: "booking", label: "Let customers book appointments", icon: Calendar },
@@ -105,6 +113,7 @@ interface IntakeData {
   inspirationLinks: string;
   functionality: string[];
   hoursType: string;
+  selectedDemo: string;
 }
 
 export default function OnboardingWizard() {
@@ -121,6 +130,7 @@ export default function OnboardingWizard() {
     inspirationLinks: "",
     functionality: [],
     hoursType: "",
+    selectedDemo: "",
   });
 
   const stepProgress = ((currentStep + 1) / STEPS.length) * 100;
