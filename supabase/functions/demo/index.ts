@@ -279,7 +279,7 @@ async function handleClaimWithAuth(req: Request): Promise<Response> {
         lead_id: lead.id,
         channel: "web",
         status: "claimed",
-        message: JSON.stringify({ name, email, auth: true }),
+        message: JSON.stringify({ name, email: user.email, auth: true }),
       });
 
       await supabase
@@ -304,7 +304,7 @@ async function handleClaimWithAuth(req: Request): Promise<Response> {
       `🟢 <b>New Design Claim (Auth)</b>\n` +
       `• <b>Business:</b> ${project.business_name}\n` +
       `• <b>Name:</b> ${name || "—"}\n` +
-      `• <b>Email:</b> ${email || "—"}\n` +
+      `• <b>Email:</b> ${user.email || "—"}\n` +
       `• <b>Portal:</b> ${baseUrl}/p/${project_token}`;
     
     try { await notifyTelegram(telegramMsg); } catch (_) { /* fail silently */ }
