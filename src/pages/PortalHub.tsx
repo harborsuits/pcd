@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, Lock, Mail, ArrowRight, Home, ExternalLink, Sparkles, User } from "lucide-react";
+import { Loader2, Lock, Mail, ArrowRight, Home, ExternalLink, Sparkles, User as UserIcon } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import type { User, Session } from "@supabase/supabase-js";
 
@@ -401,7 +401,7 @@ export default function PortalHub() {
                   <div className="space-y-2">
                     <Label htmlFor="signup-name">Full Name</Label>
                     <div className="relative">
-                      <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
                         id="signup-name"
                         type="text"
