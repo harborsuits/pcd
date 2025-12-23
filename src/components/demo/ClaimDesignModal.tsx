@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Dialog,
   DialogContent,
@@ -8,8 +9,11 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Loader2, Check, ArrowRight, LayoutGrid } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import type { User, Session } from "@supabase/supabase-js";
 
 interface ClaimDesignModalProps {
   open: boolean;
@@ -18,209 +22,377 @@ interface ClaimDesignModalProps {
   projectToken: string;
 }
 
-const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-function normalizePhone(raw: string) {
-  return raw.replace(/[^\d]/g, "");
-}
-
-function isValidPhone(raw: string) {
-  const digits = normalizePhone(raw);
-  return digits.length === 10 || (digits.length === 11 && digits.startsWith("1"));
-}
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
 export function ClaimDesignModal({ open, onOpenChange, businessName, projectToken }: ClaimDesignModalProps) {
-  const [formData, setFormData] = useState({
-    name: "",
-    phone: "",
-    email: "",
-    notes: "",
-  });
-  const [submitted, setSubmitted] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
+  const navigate = useNavigate();
+  
+  // Auth state
+  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [authChecking, setAuthChecking] = useState(true);
+  
+  // Form state
+  const [mode, setMode] = useState<"login" | "signup">("signup");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [fullName, setFullName] = useState("");
+  
+  // Status
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [fieldErrors, setFieldErrors] = useState<{ phone?: string; email?: string; form?: string }>({});
+  const [info, setInfo] = useState<string | null>(null);
+  
+  // Flow state
+  const [claimSuccess, setClaimSuccess] = useState(false);
+  const [claiming, setClaiming] = useState(false);
 
-  const validate = () => {
-    const next: typeof fieldErrors = {};
-    const phone = formData.phone.trim();
-    const email = formData.email.trim();
+  // Check auth on mount
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      setAuthChecking(false);
+    });
 
-    if (!phone && !email) {
-      next.form = "Please provide at least a phone number or an email.";
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      setAuthChecking(false);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  // If user is logged in, try to claim automatically when modal opens
+  useEffect(() => {
+    if (open && user && session && !claimSuccess && !claiming) {
+      claimWithAuth(session.access_token);
     }
+  }, [open, user, session]);
 
-    if (email && !emailRegex.test(email)) {
-      next.email = "Please enter a valid email address.";
-    }
-
-    if (phone && !isValidPhone(phone)) {
-      next.phone = "Please enter a valid phone number (10 digits).";
-    }
-
-    setFieldErrors(next);
-    return Object.keys(next).length === 0;
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const claimWithAuth = async (accessToken: string) => {
+    setClaiming(true);
     setError(null);
-
-    if (!validate()) return;
-
-    setSubmitting(true);
+    
     try {
-      const baseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const clientKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-
-      if (!baseUrl || !clientKey) {
-        throw new Error("Missing Supabase env config");
-      }
-
-      const res = await fetch(`${baseUrl}/functions/v1/demo/claim`, {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/demo/claim-with-auth`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          apikey: clientKey,
-          Authorization: `Bearer ${clientKey}`,
+          "apikey": SUPABASE_ANON_KEY,
+          "Authorization": `Bearer ${accessToken}`,
         },
         body: JSON.stringify({
           project_token: projectToken,
-          name: formData.name.trim(),
-          phone: normalizePhone(formData.phone.trim()),
-          email: formData.email.trim(),
-          notes: formData.notes.trim(),
+          name: fullName || user?.user_metadata?.full_name || "",
         }),
       });
 
-      if (!res.ok) {
-        const text = await res.text().catch(() => "");
-        throw new Error(text || "Failed to submit");
+      if (res.ok) {
+        setClaimSuccess(true);
+      } else {
+        const data = await res.json().catch(() => ({}));
+        if (data.error === "Project already claimed") {
+          setError("This design has already been claimed by another account.");
+        } else {
+          setError(data.error || "Something went wrong. Please try again.");
+        }
       }
-
-      setSubmitted(true);
     } catch (err) {
-      console.error("Claim submission error:", err);
+      console.error("Claim error:", err);
       setError("Something went wrong. Please try again.");
     } finally {
-      setSubmitting(false);
+      setClaiming(false);
     }
   };
 
-  const handleChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-    // Clear field error on change
-    if (fieldErrors[field as keyof typeof fieldErrors]) {
-      setFieldErrors(prev => ({ ...prev, [field]: undefined, form: undefined }));
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setInfo(null);
+    setLoading(true);
+
+    try {
+      const { data, error: loginError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (loginError) {
+        setError(loginError.message);
+        return;
+      }
+
+      if (data.session) {
+        // Auth state listener will update, then claim will auto-trigger
+      }
+    } catch (err) {
+      console.error("Login error:", err);
+      setError("Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
     }
   };
 
-  const canSubmit = !submitting && (formData.phone.trim() || formData.email.trim());
+  const handleSignup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setInfo(null);
+    setLoading(true);
 
-  if (submitted) {
+    try {
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { full_name: fullName },
+          emailRedirectTo: `${window.location.origin}/portal`,
+        },
+      });
+
+      if (signUpError) {
+        if (signUpError.message.includes("already registered")) {
+          setError("This email is already registered. Try logging in instead.");
+          setMode("login");
+        } else {
+          setError(signUpError.message);
+        }
+        return;
+      }
+
+      if (!data.session) {
+        setInfo("Check your email to confirm your account, then come back and log in to claim your design.");
+        return;
+      }
+
+      // Session exists, claim will auto-trigger via useEffect
+    } catch (err) {
+      console.error("Signup error:", err);
+      setError("Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleOpenPortal = () => {
+    onOpenChange(false);
+    navigate(`/p/${projectToken}`);
+  };
+
+  const handleGoToHub = () => {
+    onOpenChange(false);
+    navigate("/portal");
+  };
+
+  // Loading auth check
+  if (authChecking) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="sm:max-w-md">
-          <div className="text-center py-8">
-            <div className="w-16 h-16 bg-accent/10 rounded-full flex items-center justify-center mx-auto mb-4">
-              <span className="text-accent text-3xl">✓</span>
-            </div>
-            <h3 className="text-xl font-semibold text-foreground mb-2">We Got It!</h3>
-            <p className="text-muted-foreground">
-              We'll reach out shortly to get your site live for {businessName}.
-            </p>
+          <div className="py-12 flex items-center justify-center">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
         </DialogContent>
       </Dialog>
     );
   }
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle className="text-xl">Claim This Design</DialogTitle>
-          <DialogDescription>
-            Love what you see? We'll help you get this live under your own domain.
-            No obligation, no pressure.
-          </DialogDescription>
-        </DialogHeader>
-        
-        <form onSubmit={handleSubmit} className="space-y-4 mt-4">
-          <div className="space-y-2">
-            <Label htmlFor="claim-name">Your Name</Label>
-            <Input
-              id="claim-name"
-              placeholder="Your name"
-              value={formData.name}
-              onChange={(e) => handleChange("name", e.target.value)}
-              required
-            />
-          </div>
-          
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="claim-phone">Phone (preferred)</Label>
-              <Input
-                id="claim-phone"
-                type="tel"
-                placeholder="(555) 123-4567"
-                value={formData.phone}
-                onChange={(e) => handleChange("phone", e.target.value)}
-                className={fieldErrors.phone ? "border-destructive" : ""}
-              />
-              {fieldErrors.phone && (
-                <p className="text-xs text-destructive">{fieldErrors.phone}</p>
-              )}
+  // Claim successful
+  if (claimSuccess) {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="sm:max-w-md">
+          <div className="text-center py-6">
+            <div className="w-16 h-16 bg-accent/10 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Check className="h-8 w-8 text-accent" />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="claim-email">Email</Label>
-              <Input
-                id="claim-email"
-                type="email"
-                placeholder="you@example.com"
-                value={formData.email}
-                onChange={(e) => handleChange("email", e.target.value)}
-                className={fieldErrors.email ? "border-destructive" : ""}
-              />
-              {fieldErrors.email && (
-                <p className="text-xs text-destructive">{fieldErrors.email}</p>
-              )}
+            <h3 className="text-xl font-serif font-bold text-foreground mb-2">It's Yours!</h3>
+            <p className="text-muted-foreground mb-6">
+              Your design for {businessName} is now linked to your account.
+            </p>
+            
+            <div className="space-y-3">
+              <Button onClick={handleOpenPortal} className="w-full group">
+                Open Your Portal
+                <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+              </Button>
+              <Button onClick={handleGoToHub} variant="outline" className="w-full">
+                <LayoutGrid className="mr-2 h-4 w-4" />
+                Go to My Portals
+              </Button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
-          {fieldErrors.form && (
-            <p className="text-sm text-destructive text-center">{fieldErrors.form}</p>
-          )}
-          
-          <div className="space-y-2">
-            <Label htmlFor="claim-notes">Anything we should know? (optional)</Label>
-            <Textarea
-              id="claim-notes"
-              placeholder="e.g., I'd like to add more photos, change the colors..."
-              value={formData.notes}
-              onChange={(e) => handleChange("notes", e.target.value)}
-              rows={3}
-            />
+  // If claiming in progress
+  if (claiming) {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="sm:max-w-md">
+          <div className="py-12 flex flex-col items-center justify-center gap-3">
+            <Loader2 className="h-6 w-6 animate-spin text-accent" />
+            <p className="text-muted-foreground">Claiming your design...</p>
           </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
+  // User logged in but claim hasn't triggered (edge case) - show manual trigger
+  if (user) {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-serif">Claim This Design</DialogTitle>
+            <DialogDescription>
+              You're signed in as {user.email}
+            </DialogDescription>
+          </DialogHeader>
+          
           {error && (
             <p className="text-sm text-destructive">{error}</p>
           )}
           
           <div className="pt-4 flex gap-3">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="flex-1">
-              Not Yet
+            <Button 
+              variant="outline" 
+              onClick={() => onOpenChange(false)} 
+              className="flex-1"
+            >
+              Cancel
             </Button>
-            <Button type="submit" className="flex-1" disabled={!canSubmit}>
-              {submitting ? "Submitting..." : "Make This Mine"}
+            <Button 
+              onClick={() => session && claimWithAuth(session.access_token)} 
+              className="flex-1"
+              disabled={claiming}
+            >
+              {claiming ? "Claiming..." : "Claim for My Account"}
             </Button>
           </div>
-          
-          <p className="text-xs text-muted-foreground text-center">
-            We handle everything: domain, hosting, setup. Just tell us you're interested.
-          </p>
-        </form>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  // Not logged in - show login/signup form
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="text-xl font-serif">Claim This Design</DialogTitle>
+          <DialogDescription>
+            Create an account or log in to claim your design for {businessName}
+          </DialogDescription>
+        </DialogHeader>
+        
+        <Tabs value={mode} onValueChange={(v) => { setMode(v as "login" | "signup"); setError(null); setInfo(null); }}>
+          <TabsList className="grid w-full grid-cols-2 mb-4">
+            <TabsTrigger value="signup">Sign Up</TabsTrigger>
+            <TabsTrigger value="login">Log In</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="signup">
+            <form onSubmit={handleSignup} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="claim-name">Your Name</Label>
+                <Input
+                  id="claim-name"
+                  placeholder="John Smith"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  required
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="claim-email">Email</Label>
+                <Input
+                  id="claim-email"
+                  type="email"
+                  placeholder="you@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="claim-password">Password</Label>
+                <Input
+                  id="claim-password"
+                  type="password"
+                  placeholder="At least 6 characters"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  minLength={6}
+                  required
+                />
+              </div>
+
+              {error && <p className="text-sm text-destructive">{error}</p>}
+              {info && <p className="text-sm text-accent">{info}</p>}
+
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Creating account...
+                  </>
+                ) : (
+                  "Create Account & Claim"
+                )}
+              </Button>
+            </form>
+          </TabsContent>
+
+          <TabsContent value="login">
+            <form onSubmit={handleLogin} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="login-email">Email</Label>
+                <Input
+                  id="login-email"
+                  type="email"
+                  placeholder="you@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="login-password">Password</Label>
+                <Input
+                  id="login-password"
+                  type="password"
+                  placeholder="Your password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                />
+              </div>
+
+              {error && <p className="text-sm text-destructive">{error}</p>}
+              {info && <p className="text-sm text-accent">{info}</p>}
+
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Logging in...
+                  </>
+                ) : (
+                  "Log In & Claim"
+                )}
+              </Button>
+            </form>
+          </TabsContent>
+        </Tabs>
       </DialogContent>
     </Dialog>
   );
