@@ -12,6 +12,7 @@ import { toast } from "@/hooks/use-toast";
 import { proxyMediaUrl, isImageType, getFileIcon } from "@/lib/media";
 import { WelcomeScreen } from "@/components/portal/WelcomeScreen";
 import { ReviewQueue } from "@/components/portal/ReviewQueue";
+import { ProjectStatusBanner } from "@/components/portal/ProjectStatusBanner";
 import { PortalAuthPage } from "./PortalAuthPage";
 import type { User, Session } from "@supabase/supabase-js";
 
@@ -729,6 +730,20 @@ export default function PortalPage() {
       </header>
 
       <div className="container mx-auto px-4 py-8 max-w-4xl">
+        {/* Status Banner */}
+        <ProjectStatusBanner
+          status={data.business.status}
+          businessName={data.business.name}
+          primaryActionLabel={data.business.status === "lead" ? "Upload logo/files" : "Send a message"}
+          onPrimaryAction={() => {
+            document.getElementById("files-section")?.scrollIntoView({ behavior: "smooth" });
+          }}
+          secondaryActionLabel="View messages"
+          onSecondaryAction={() => {
+            document.getElementById("messages-section")?.scrollIntoView({ behavior: "smooth" });
+          }}
+        />
+
         {/* Business Header */}
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-2">
@@ -749,7 +764,7 @@ export default function PortalPage() {
           )}
 
           {/* Messages Section */}
-          <Card>
+          <Card id="messages-section">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <MessageSquare className="h-5 w-5" />
@@ -830,7 +845,7 @@ export default function PortalPage() {
           </Card>
 
           {/* Files Section */}
-          <Card>
+          <Card id="files-section">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <FileText className="h-5 w-5" />
