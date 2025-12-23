@@ -450,7 +450,7 @@ async function handleCheckAuth(
   }
 }
 
-// Link a user to a project (set owner_user_id)
+// Link a user to a project (set owner_user_id) - extracts user from JWT
 async function handleLinkOwner(
   req: Request,
   token: string,
@@ -464,19 +464,29 @@ async function handleLinkOwner(
       );
     }
 
-    const body = await req.json();
-    const { user_id } = body;
-
-    if (!user_id) {
+    // Extract user from JWT
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
       return new Response(
-        JSON.stringify({ error: "user_id required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Verify JWT and get user
+    const jwt = authHeader.replace("Bearer ", "");
+    const { data: { user }, error: authError } = await supabase.auth.getUser(jwt);
+
+    if (authError || !user) {
+      return new Response(
+        JSON.stringify({ error: "Invalid or expired token" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     // Only link if not already owned
     const { data: project, error: fetchError } = await supabase
@@ -494,7 +504,7 @@ async function handleLinkOwner(
     }
 
     // If already owned by someone else, reject
-    if (project.owner_user_id && project.owner_user_id !== user_id) {
+    if (project.owner_user_id && project.owner_user_id !== user.id) {
       return new Response(
         JSON.stringify({ error: "Project already claimed by another user" }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -502,20 +512,12 @@ async function handleLinkOwner(
     }
 
     // Link the user
-    const { error: updateError } = await supabase
+    await supabase
       .from("projects")
-      .update({ owner_user_id: user_id })
+      .update({ owner_user_id: user.id })
       .eq("id", project.id);
 
-    if (updateError) {
-      console.error("Link owner error:", updateError);
-      return new Response(
-        JSON.stringify({ error: "Failed to link owner" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    console.log(`Linked user ${user_id} to project ${project.business_name}`);
+    console.log(`Linked user ${user.id} to project ${project.business_name}`);
 
     return new Response(
       JSON.stringify({ ok: true }),
@@ -530,7 +532,7 @@ async function handleLinkOwner(
   }
 }
 
-// Verify user owns the project (or link if unclaimed)
+// Verify user owns the project (or link if unclaimed) - extracts user from JWT
 async function handleVerifyOwner(
   req: Request,
   token: string,
@@ -544,19 +546,29 @@ async function handleVerifyOwner(
       );
     }
 
-    const body = await req.json();
-    const { user_id } = body;
-
-    if (!user_id) {
+    // Extract user from JWT
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
       return new Response(
-        JSON.stringify({ error: "user_id required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ ok: false, error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Verify JWT and get user
+    const jwt = authHeader.replace("Bearer ", "");
+    const { data: { user }, error: authError } = await supabase.auth.getUser(jwt);
+
+    if (authError || !user) {
+      return new Response(
+        JSON.stringify({ ok: false, error: "Invalid token" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     const { data: project, error: fetchError } = await supabase
       .from("projects")
@@ -576,7 +588,7 @@ async function handleVerifyOwner(
     if (!project.owner_user_id) {
       await supabase
         .from("projects")
-        .update({ owner_user_id: user_id })
+        .update({ owner_user_id: user.id })
         .eq("id", project.id);
       
       return new Response(
@@ -586,7 +598,7 @@ async function handleVerifyOwner(
     }
 
     // Check if user is the owner
-    const isOwner = project.owner_user_id === user_id;
+    const isOwner = project.owner_user_id === user.id;
 
     return new Response(
       JSON.stringify({ ok: isOwner }),

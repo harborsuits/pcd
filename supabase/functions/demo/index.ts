@@ -189,15 +189,39 @@ async function handleClaim(req: Request): Promise<Response> {
   }
 }
 
-// POST /demo/claim-with-auth - Handle authenticated claim
+// POST /demo/claim-with-auth - Handle authenticated claim (extracts user from JWT)
 async function handleClaimWithAuth(req: Request): Promise<Response> {
   try {
-    const body = await req.json();
-    const { project_token, user_id, name, email } = body;
-
-    if (!project_token || !user_id) {
+    // Extract user from JWT
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
       return new Response(
-        JSON.stringify({ error: "project_token and user_id required" }),
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Verify JWT and get user
+    const jwt = authHeader.replace("Bearer ", "");
+    const { data: { user }, error: authError } = await supabase.auth.getUser(jwt);
+
+    if (authError || !user) {
+      return new Response(
+        JSON.stringify({ error: "Invalid or expired token" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const body = await req.json();
+    const { project_token, name } = body;
+
+    if (!project_token) {
+      return new Response(
+        JSON.stringify({ error: "project_token required" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -208,10 +232,6 @@ async function handleClaimWithAuth(req: Request): Promise<Response> {
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
-
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Find the project
     const { data: project, error: projectError } = await supabase
@@ -229,7 +249,7 @@ async function handleClaimWithAuth(req: Request): Promise<Response> {
     }
 
     // Check if already claimed by someone else
-    if (project.owner_user_id && project.owner_user_id !== user_id) {
+    if (project.owner_user_id && project.owner_user_id !== user.id) {
       return new Response(
         JSON.stringify({ error: "Project already claimed" }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -241,9 +261,9 @@ async function handleClaimWithAuth(req: Request): Promise<Response> {
       .from("projects")
       .update({ 
         status: "interested",
-        owner_user_id: user_id,
+        owner_user_id: user.id,
         contact_name: name || null,
-        contact_email: email || null,
+        contact_email: user.email || null,
       })
       .eq("id", project.id);
 

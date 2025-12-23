@@ -68,9 +68,9 @@ export function ClaimAuthModal({
         return;
       }
 
-      if (data.user) {
-        // Link user to project and mark as claimed
-        await claimProject(data.user.id);
+      if (data.session) {
+        // Use the session's access token to claim the project
+        await claimProjectWithSession(data.session.access_token, name);
         setSuccess(true);
 
         toast({
@@ -78,7 +78,6 @@ export function ClaimAuthModal({
           description: "Your portal is ready.",
         });
 
-        // Redirect to portal after short delay
         setTimeout(() => {
           navigate(`/p/${projectToken}`);
         }, 1500);
@@ -107,9 +106,9 @@ export function ClaimAuthModal({
         return;
       }
 
-      if (data.user) {
-        // Link user to project and mark as claimed
-        await claimProject(data.user.id);
+      if (data.session) {
+        // Use the session's access token to claim the project
+        await claimProjectWithSession(data.session.access_token, name || email.split("@")[0]);
         setSuccess(true);
 
         toast({
@@ -117,7 +116,6 @@ export function ClaimAuthModal({
           description: "Your portal is ready.",
         });
 
-        // Redirect to portal
         setTimeout(() => {
           navigate(`/p/${projectToken}`);
         }, 1500);
@@ -130,29 +128,30 @@ export function ClaimAuthModal({
     }
   };
 
-  const claimProject = async (userId: string) => {
+  // Use the user's JWT to claim - server verifies identity from the token
+  const claimProjectWithSession = async (accessToken: string, userName: string) => {
     try {
       const res = await fetch(`${SUPABASE_URL}/functions/v1/demo/claim-with-auth`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "apikey": SUPABASE_ANON_KEY,
-          "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+          "Authorization": `Bearer ${accessToken}`, // User's JWT, not anon key
         },
         body: JSON.stringify({
           project_token: projectToken,
-          user_id: userId,
-          name: name || email.split("@")[0],
-          email,
+          name: userName,
         }),
       });
 
       if (!res.ok) {
-        const text = await res.text();
-        console.error("Claim error:", text);
+        const data = await res.json().catch(() => ({}));
+        console.error("Claim error:", data.error || res.status);
+        throw new Error(data.error || "Failed to claim");
       }
     } catch (err) {
       console.error("Claim project error:", err);
+      throw err;
     }
   };
 
