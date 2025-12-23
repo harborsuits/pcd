@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, Lock, Mail, ArrowRight, Home, ExternalLink, Sparkles, User as UserIcon } from "lucide-react";
+import { Loader2, Lock, Mail, ArrowRight, Home, ExternalLink, Sparkles, User as UserIcon, RefreshCw } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/hooks/use-toast";
 import type { User, Session } from "@supabase/supabase-js";
 
@@ -212,6 +213,40 @@ export default function PortalHub() {
     }
   };
 
+  const handleResendConfirmation = async () => {
+    if (!email) {
+      setError("Enter your email first, then click resend.");
+      return;
+    }
+
+    setError(null);
+    setInfo(null);
+    setLoading(true);
+
+    try {
+      const { error: resendError } = await supabase.auth.resend({
+        type: "signup",
+        email,
+      });
+
+      if (resendError) {
+        setError(resendError.message);
+        return;
+      }
+
+      setInfo("Confirmation email sent. Check your inbox (and spam).");
+      toast({
+        title: "Email sent",
+        description: "Check your inbox (and spam) for the confirmation link.",
+      });
+    } catch (err) {
+      console.error("Resend confirmation error:", err);
+      setError("Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleLogout = async () => {
     await supabase.auth.signOut();
     setPortals([]);
@@ -289,8 +324,18 @@ export default function PortalHub() {
             </Card>
 
             {loadingPortals ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              <div className="space-y-4">
+                <div className="flex items-center justify-between mb-2">
+                  <Skeleton className="h-5 w-32" />
+                </div>
+                {[0, 1, 2].map((i) => (
+                  <Card key={i}>
+                    <CardContent className="p-6 flex items-center justify-between">
+                      <Skeleton className="h-6 w-48" />
+                      <Skeleton className="h-9 w-28" />
+                    </CardContent>
+                  </Card>
+                ))}
               </div>
             ) : portals.length === 0 ? (
               <div className="space-y-6">
@@ -477,6 +522,15 @@ export default function PortalHub() {
                         "Log In"
                       )}
                     </Button>
+
+                    <button
+                      type="button"
+                      onClick={handleResendConfirmation}
+                      className="text-sm text-muted-foreground hover:text-foreground text-center w-full"
+                      disabled={loading}
+                    >
+                      Resend confirmation email
+                    </button>
                   </form>
                 )}
               </TabsContent>
