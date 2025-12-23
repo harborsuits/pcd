@@ -746,7 +746,7 @@ async function handleCreateProject(
     const projectToken = generateToken();
     const businessSlug = slugify(intake.businessName);
 
-    // Create the project
+    // Create the project with lightweight notes summary
     const { data: project, error: insertError } = await supabase
       .from("projects")
       .insert({
@@ -758,14 +758,12 @@ async function handleCreateProject(
         status: "lead",
         source: "onboarding",
         notes: JSON.stringify({
-          intake: {
+          intake_summary: {
             businessType: intake.businessType,
             mainGoal: intake.mainGoal,
             styleVibe: intake.styleVibe,
             colorPreset: intake.colorPreset,
-            inspirationLinks: intake.inspirationLinks,
-            functionality: intake.functionality,
-            hoursType: intake.hoursType,
+            selectedDemo: intake.selectedDemo,
           },
           createdAt: new Date().toISOString(),
         }),
@@ -782,6 +780,25 @@ async function handleCreateProject(
     }
 
     console.log(`Created project ${project.business_name} for user ${user.id}`);
+
+    // Save full structured intake into project_intakes table (v1)
+    const { error: intakeError } = await supabase
+      .from("project_intakes")
+      .insert({
+        project_id: project.id,
+        owner_user_id: user.id,
+        intake_version: 1,
+        intake_json: {
+          ...intake,
+          createdAt: new Date().toISOString(),
+          source: "onboarding",
+        },
+      });
+
+    if (intakeError) {
+      console.error("Failed to insert project_intakes:", intakeError);
+      // Don't hard-fail the project creation — but log it loudly
+    }
 
     // Send auto-welcome message
     await supabase.from("messages").insert({

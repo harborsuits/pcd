@@ -81,10 +81,10 @@ const COLOR_PRESETS = [
 
 // Curated demo style gallery
 const STYLE_DEMOS = [
-  { id: "clean-contractor", title: "Clean Contractor", styleVibe: "clean", colorPreset: "neutral", description: "Modern trades look" },
-  { id: "warm-local", title: "Warm & Local", styleVibe: "warm", colorPreset: "green", description: "Friendly neighborhood feel" },
-  { id: "bold-pro", title: "Bold Professional", styleVibe: "bold", colorPreset: "dark", description: "Premium high-end vibe" },
-  { id: "simple-service", title: "Simple Service", styleVibe: "simple", colorPreset: "blue", description: "No-frills & trustworthy" },
+  { id: "clean-contractor", title: "Clean Contractor", subtitle: "Modern trades look", styleVibe: "clean", colorPreset: "neutral" },
+  { id: "warm-local", title: "Warm & Local", subtitle: "Friendly neighborhood feel", styleVibe: "warm", colorPreset: "green" },
+  { id: "bold-pro", title: "Bold Professional", subtitle: "Premium high-end vibe", styleVibe: "bold", colorPreset: "dark" },
+  { id: "simple-service", title: "Simple Service", subtitle: "No-frills & trustworthy", styleVibe: "simple", colorPreset: "blue" },
 ];
 
 // Functionality options
@@ -139,8 +139,8 @@ export default function OnboardingWizard() {
     switch (currentStep) {
       case 0: // Basics
         return !!intake.businessName && !!intake.businessType && !!intake.mainGoal;
-      case 1: // Style
-        return !!intake.styleVibe && !!intake.colorPreset;
+      case 1: // Style - can proceed if they pick a demo OR manual style+color
+        return (!!intake.styleVibe && !!intake.colorPreset) || !!intake.selectedDemo;
       case 2: // Function
         return intake.functionality.length > 0 && !!intake.hoursType;
       case 3: // Review
@@ -286,16 +286,70 @@ export default function OnboardingWizard() {
       case 1:
         return (
           <div className="space-y-6">
+            {/* Demo gallery - pick a style reference */}
+            <div className="space-y-3">
+              <div>
+                <Label className="text-base">Pick a style demo (optional)</Label>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Choose something close to what you want — we'll customize it.
+                </p>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                {STYLE_DEMOS.map((demo) => {
+                  const isSelected = intake.selectedDemo === demo.id;
+                  return (
+                    <button
+                      key={demo.id}
+                      onClick={() => setIntake(prev => ({
+                        ...prev,
+                        selectedDemo: demo.id,
+                        styleVibe: demo.styleVibe ?? prev.styleVibe,
+                        colorPreset: demo.colorPreset ?? prev.colorPreset,
+                      }))}
+                      className={`group text-left rounded-xl border-2 p-4 transition-all ${
+                        isSelected 
+                          ? "border-primary bg-primary/5" 
+                          : "border-border hover:border-muted-foreground/30"
+                      }`}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <div className="font-medium">{demo.title}</div>
+                          <div className="text-sm text-muted-foreground">{demo.subtitle}</div>
+                        </div>
+                        {isSelected && (
+                          <CheckCircle2 className="h-5 w-5 text-primary shrink-0" />
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Don't worry — you can change this later in your portal.
+              </p>
+            </div>
+
+            {/* Divider */}
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-border" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-card px-2 text-muted-foreground">Or customize manually</span>
+              </div>
+            </div>
+
             {/* Style vibe */}
             <div className="space-y-3">
               <Label>What should this site feel like?</Label>
               <div className="grid grid-cols-1 gap-3">
                 {STYLE_VIBES.map((vibe) => {
-                  const isSelected = intake.styleVibe === vibe.id;
+                  const isSelected = intake.styleVibe === vibe.id && !intake.selectedDemo;
                   return (
                     <button
                       key={vibe.id}
-                      onClick={() => setIntake(prev => ({ ...prev, styleVibe: vibe.id }))}
+                      onClick={() => setIntake(prev => ({ ...prev, styleVibe: vibe.id, selectedDemo: "" }))}
                       className={`p-4 rounded-lg border-2 text-left transition-all ${vibe.color} ${
                         isSelected 
                           ? "ring-2 ring-primary ring-offset-2" 
@@ -317,11 +371,11 @@ export default function OnboardingWizard() {
               <Label>Color direction</Label>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {COLOR_PRESETS.map((preset) => {
-                  const isSelected = intake.colorPreset === preset.id;
+                  const isSelected = intake.colorPreset === preset.id && !intake.selectedDemo;
                   return (
                     <button
                       key={preset.id}
-                      onClick={() => setIntake(prev => ({ ...prev, colorPreset: preset.id }))}
+                      onClick={() => setIntake(prev => ({ ...prev, colorPreset: preset.id, selectedDemo: "" }))}
                       className={`p-3 rounded-lg border-2 text-left transition-all ${
                         isSelected 
                           ? "border-primary bg-primary/5" 
