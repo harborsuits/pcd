@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { ArrowRight, MessageSquare, FolderOpen, Sparkles, Shield, Smartphone, CreditCard, LogIn } from "lucide-react";
 import { Button } from "@/components/ui/button";
-
+import { Hero3DModel } from "@/components/Hero3DModel";
 const exampleDemos = [
   {
     name: "Roofer",
@@ -44,54 +44,62 @@ const Index = () => {
         </div>
       </header>
 
-      {/* Hero - teaches navigation */}
-      <section className="flex-1 flex flex-col justify-center py-24 md:py-32">
+      {/* Hero - with 3D model */}
+      <section className="flex-1 py-16 md:py-24">
         <div className="container mx-auto px-6">
-          <div className="max-w-3xl">
-            <h1 className="font-serif text-4xl md:text-5xl lg:text-6xl font-bold leading-tight mb-4">
-              Websites with a
-              <span className="block text-accent">built-in client portal.</span>
-            </h1>
-            
-            {/* Target audience subheadline */}
-            <p className="text-base md:text-lg text-accent/80 font-medium mb-4">
-              For contractors & local service businesses who want fewer calls, less email, and a cleaner process.
-            </p>
-            
-            <p className="text-lg md:text-xl text-muted-foreground leading-relaxed max-w-2xl mb-8">
-              We build your site. You manage everything in one place — messaging, files, payments. No email chaos.
-            </p>
-            
-            {/* 2-path CTAs */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-6">
-              <Button asChild size="lg" className="group">
-                <a href="#demos">
-                  See a Demo
-                  <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
-                </a>
-              </Button>
-              <Button asChild variant="outline" size="lg" className="group">
-                <Link to="/get-demo">
-                  Get My Demo
-                  <Sparkles className="ml-2 h-4 w-4" />
-                </Link>
-              </Button>
+          <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
+            {/* Left: Text content */}
+            <div className="order-2 lg:order-1">
+              <h1 className="font-serif text-4xl md:text-5xl lg:text-6xl font-bold leading-tight mb-4">
+                Websites with a
+                <span className="block text-accent">built-in client portal.</span>
+              </h1>
+              
+              {/* Target audience subheadline */}
+              <p className="text-base md:text-lg text-accent/80 font-medium mb-4">
+                For contractors & local service businesses who want fewer calls, less email, and a cleaner process.
+              </p>
+              
+              <p className="text-lg md:text-xl text-muted-foreground leading-relaxed max-w-2xl mb-8">
+                We build your site. You manage everything in one place — messaging, files, payments. No email chaos.
+              </p>
+              
+              {/* 2-path CTAs */}
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-6">
+                <Button asChild size="lg" className="group">
+                  <a href="#demos">
+                    See a Demo
+                    <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                  </a>
+                </Button>
+                <Button asChild variant="outline" size="lg" className="group">
+                  <Link to="/get-demo">
+                    Get My Demo
+                    <Sparkles className="ml-2 h-4 w-4" />
+                  </Link>
+                </Button>
+              </div>
+              
+              {/* Proof row */}
+              <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+                <div className="flex items-center gap-2">
+                  <Shield className="h-4 w-4 text-accent" />
+                  <span>Made for local businesses</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <MessageSquare className="h-4 w-4 text-accent" />
+                  <span>Messaging + files + payments</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Smartphone className="h-4 w-4 text-accent" />
+                  <span>Mobile-friendly</span>
+                </div>
+              </div>
             </div>
             
-            {/* Proof row */}
-            <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
-              <div className="flex items-center gap-2">
-                <Shield className="h-4 w-4 text-accent" />
-                <span>Made for local businesses</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <MessageSquare className="h-4 w-4 text-accent" />
-                <span>Messaging + files + payments</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Smartphone className="h-4 w-4 text-accent" />
-                <span>Mobile-friendly</span>
-              </div>
+            {/* Right: 3D Model */}
+            <div className="order-1 lg:order-2">
+              <Hero3DModel />
             </div>
           </div>
         </div>
