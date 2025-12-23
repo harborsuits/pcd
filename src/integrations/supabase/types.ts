@@ -460,6 +460,44 @@ export type Database = {
           },
         ]
       }
+      project_intakes: {
+        Row: {
+          created_at: string
+          id: string
+          intake_json: Json
+          intake_version: number
+          owner_user_id: string | null
+          project_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          intake_json?: Json
+          intake_version?: number
+          owner_user_id?: string | null
+          project_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          intake_json?: Json
+          intake_version?: number
+          owner_user_id?: string | null
+          project_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_intakes_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       projects: {
         Row: {
           address: string | null
