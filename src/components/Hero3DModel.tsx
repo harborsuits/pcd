@@ -15,7 +15,7 @@ function Model() {
 
   return (
     <Float speed={1.5} rotationIntensity={0.2} floatIntensity={0.5}>
-      <group ref={groupRef} scale={2.5} position={[0, -0.5, 0]}>
+      <group ref={groupRef} scale={0.25} position={[0, -0.8, 0]}>
         <primitive object={scene} />
       </group>
     </Float>
@@ -33,9 +33,9 @@ function LoadingFallback() {
 
 export function Hero3DModel() {
   return (
-    <div className="w-full h-full min-h-[400px] md:min-h-[500px]">
+    <div className="w-full h-[360px] md:h-[460px] lg:h-[520px]">
       <Canvas
-        camera={{ position: [0, 0, 5], fov: 45 }}
+        camera={{ position: [0, 0.8, 7], fov: 35 }}
         style={{ background: "transparent" }}
         gl={{ alpha: true, antialias: true }}
       >
