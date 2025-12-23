@@ -38,7 +38,7 @@ const Index = () => {
               <a href="#demos">See a Demo</a>
             </Button>
             <Button asChild variant="outline" size="sm">
-              <a href="#portal">Client Portal</a>
+              <Link to="/portal">Client Portal</Link>
             </Button>
           </nav>
         </div>
@@ -243,7 +243,7 @@ const Index = () => {
             Access your portal using the link we sent you, or log in below.
           </p>
           <Button asChild size="lg" variant="outline" className="group">
-            <Link to="/login">
+            <Link to="/portal">
               <LogIn className="mr-2 h-4 w-4" />
               Log in to your portal
             </Link>

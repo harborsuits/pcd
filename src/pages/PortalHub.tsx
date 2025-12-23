@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Lock, Mail, ArrowRight, Home } from "lucide-react";
+import { Loader2, Lock, Mail, ArrowRight, Home, ExternalLink, Sparkles } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import type { User, Session } from "@supabase/supabase-js";
 
@@ -17,7 +17,30 @@ interface Portal {
   business_name: string;
 }
 
-export default function LoginPage() {
+// Extract token from URL or raw token string
+function extractToken(input: string): string | null {
+  const trimmed = input.trim();
+  if (!trimmed) return null;
+  
+  // Try to parse as URL
+  try {
+    const url = new URL(trimmed);
+    // Match /p/:token or /d/:token/:slug
+    const match = url.pathname.match(/\/(?:p|d)\/([a-zA-Z0-9\-_]+)/);
+    if (match) return match[1];
+  } catch {
+    // Not a URL, check if it's a raw token
+  }
+  
+  // Check if it's a valid token format (alphanumeric + hyphens, 12+ chars)
+  if (/^[a-zA-Z0-9\-_]{12,128}$/.test(trimmed)) {
+    return trimmed;
+  }
+  
+  return null;
+}
+
+export default function PortalHub() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -30,6 +53,9 @@ export default function LoginPage() {
   
   const [portals, setPortals] = useState<Portal[]>([]);
   const [loadingPortals, setLoadingPortals] = useState(false);
+  
+  const [linkInput, setLinkInput] = useState("");
+  const [linkError, setLinkError] = useState<string | null>(null);
 
   // Check auth state on mount
   useEffect(() => {
@@ -149,16 +175,75 @@ export default function LoginPage() {
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
               </div>
             ) : portals.length === 0 ? (
-              <Card>
-                <CardContent className="py-12 text-center">
-                  <p className="text-muted-foreground mb-4">
-                    You don't have any portals yet.
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    When you claim a demo, it will appear here.
-                  </p>
-                </CardContent>
-              </Card>
+              <div className="space-y-6">
+                <Card>
+                  <CardContent className="py-8 text-center">
+                    <p className="text-muted-foreground mb-2">
+                      You don't have any portals yet.
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      When you claim a demo, it will appear here.
+                    </p>
+                  </CardContent>
+                </Card>
+                
+                {/* Open from link */}
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <ExternalLink className="h-4 w-4" />
+                      Open from a link
+                    </CardTitle>
+                    <CardDescription>
+                      Paste the link from your text message or email
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <form 
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        const token = extractToken(linkInput);
+                        if (token) {
+                          setLinkError(null);
+                          navigate(`/p/${token}`);
+                        } else {
+                          setLinkError("Please paste a valid portal link");
+                        }
+                      }}
+                      className="flex gap-2"
+                    >
+                      <Input
+                        placeholder="https://... or portal code"
+                        value={linkInput}
+                        onChange={(e) => {
+                          setLinkInput(e.target.value);
+                          setLinkError(null);
+                        }}
+                        className="flex-1"
+                      />
+                      <Button type="submit">Open</Button>
+                    </form>
+                    {linkError && (
+                      <p className="text-sm text-destructive mt-2">{linkError}</p>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* See demos */}
+                <Card className="border-dashed">
+                  <CardContent className="py-6 text-center">
+                    <p className="text-sm text-muted-foreground mb-3">
+                      Want to see what we can build for you?
+                    </p>
+                    <Button asChild variant="outline" size="sm">
+                      <Link to="/get-demo">
+                        <Sparkles className="mr-2 h-4 w-4" />
+                        Get a free demo
+                      </Link>
+                    </Button>
+                  </CardContent>
+                </Card>
+              </div>
             ) : (
               <div className="space-y-4">
                 {portals.map((portal) => (
