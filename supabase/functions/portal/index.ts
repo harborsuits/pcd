@@ -532,7 +532,8 @@ async function handleLinkOwner(
   }
 }
 
-// Verify user owns the project (or link if unclaimed) - extracts user from JWT
+// Verify user owns the project - ONLY CHECKS, does NOT auto-link
+// Use link-owner to explicitly link an unclaimed project
 async function handleVerifyOwner(
   req: Request,
   token: string,
@@ -584,15 +585,10 @@ async function handleVerifyOwner(
       );
     }
 
-    // If not claimed, link this user
+    // If not claimed, user does NOT own it - they must use link-owner or claim-with-auth
     if (!project.owner_user_id) {
-      await supabase
-        .from("projects")
-        .update({ owner_user_id: user.id })
-        .eq("id", project.id);
-      
       return new Response(
-        JSON.stringify({ ok: true }),
+        JSON.stringify({ ok: false, unclaimed: true }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
