@@ -58,11 +58,18 @@ Deno.serve(async (req) => {
   const verifyOwnerIdx = pathParts.indexOf("verify-owner");
   const createProjectIdx = pathParts.indexOf("create-project");
   const myProjectsIdx = pathParts.indexOf("my-projects");
+  const markDeliveredIdx = pathParts.indexOf("mark-delivered");
   
   if (reviewIdx > portalIdx && req.method === "POST") {
     const token = pathParts[portalIdx + 1];
     const itemId = pathParts[reviewIdx + 1];
     return handleReviewAction(req, token, itemId, corsHeaders);
+  }
+  
+  // POST /portal/:token/mark-delivered - Mark admin messages as delivered
+  if (markDeliveredIdx > portalIdx && req.method === "POST") {
+    const token = pathParts[portalIdx + 1];
+    return handleMarkDelivered(req, token, corsHeaders);
   }
   
   // GET /portal/:token/check-auth - Check if portal requires authentication
@@ -182,7 +189,7 @@ Deno.serve(async (req) => {
     // We fetch in ascending order so messages display oldest → newest
     let messagesQuery = supabase
       .from("messages")
-      .select("id, content, sender_type, created_at, read_at")
+      .select("id, content, sender_type, created_at, read_at, delivered_at")
       .eq("project_id", project.id)
       .order("created_at", { ascending: true })
       .limit(messagesLimit + 1);
@@ -251,6 +258,7 @@ Deno.serve(async (req) => {
         sender_type: m.sender_type,
         created_at: m.created_at,
         read_at: m.read_at,
+        delivered_at: m.delivered_at,
       })),
       files: (files || []).map((f) => ({
         id: f.id,
@@ -665,7 +673,86 @@ async function handleMyProjects(
         JSON.stringify({ error: "Database error" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
+}
+
+// POST /portal/:token/mark-delivered - Mark admin messages as delivered
+async function handleMarkDelivered(
+  req: Request,
+  token: string,
+  corsHeaders: Record<string, string>
+): Promise<Response> {
+  try {
+    if (!token || !isValidToken(token)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid token" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Get project by token
+    const { data: project, error: projectError } = await supabase
+      .from("projects")
+      .select("id")
+      .eq("project_token", token)
+      .is("deleted_at", null)
+      .maybeSingle();
+
+    if (projectError || !project) {
+      return new Response(
+        JSON.stringify({ error: "Project not found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Parse optional message_ids from body
+    let messageIds: string[] | undefined;
+    try {
+      const body = await req.json();
+      messageIds = body.message_ids;
+    } catch {
+      // Body is optional
+    }
+
+    // Mark admin messages as delivered (client portal receives admin messages)
+    let query = supabase
+      .from("messages")
+      .update({ delivered_at: new Date().toISOString() })
+      .eq("project_id", project.id)
+      .eq("sender_type", "admin")
+      .is("delivered_at", null);
+
+    if (Array.isArray(messageIds) && messageIds.length > 0) {
+      query = query.in("id", messageIds);
+    }
+
+    const { error: updateError, count } = await query;
+
+    if (updateError) {
+      console.error("Mark delivered error:", updateError);
+      return new Response(
+        JSON.stringify({ error: "Database error" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log(`Marked ${count ?? 0} messages as delivered for token: ${token.slice(0, 8)}...`);
+
+    return new Response(
+      JSON.stringify({ ok: true, marked_count: count ?? 0 }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  } catch (error) {
+    console.error("Mark delivered error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+}
 
     return new Response(
       JSON.stringify({ projects: projects || [] }),

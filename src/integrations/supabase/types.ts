@@ -308,6 +308,7 @@ export type Database = {
         Row: {
           content: string
           created_at: string
+          delivered_at: string | null
           id: string
           project_id: string
           project_token: string
@@ -317,6 +318,7 @@ export type Database = {
         Insert: {
           content: string
           created_at?: string
+          delivered_at?: string | null
           id?: string
           project_id: string
           project_token: string
@@ -326,6 +328,7 @@ export type Database = {
         Update: {
           content?: string
           created_at?: string
+          delivered_at?: string | null
           id?: string
           project_id?: string
           project_token?: string

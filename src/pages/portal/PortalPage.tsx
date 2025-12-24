@@ -25,6 +25,7 @@ interface PortalMessage {
   sender_type: string;
   created_at: string;
   read_at: string | null;
+  delivered_at: string | null;
 }
 
 interface PortalFile {
@@ -123,10 +124,14 @@ export default function PortalPage() {
   const [isDragging, setIsDragging] = useState(false);
   const [pdfPreview, setPdfPreview] = useState<{ url: string; name: string } | null>(null);
   const [showWelcome, setShowWelcome] = useState(false);
+  const [teamTyping, setTeamTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const originalTitle = useRef(document.title);
   const markReadInFlight = useRef(false);
+  const markDeliveredInFlight = useRef(false);
   const clearQueueTimeoutRef = useRef<number | null>(null);
+  const teamTypingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Scroll to bottom when new messages arrive (messages are oldest→newest)
   const scrollToBottom = useCallback(() => {
@@ -178,6 +183,7 @@ export default function PortalPage() {
         if (!data.requires_auth) {
           fetchPortalData(token);
           markAdminMessagesAsRead(token);
+          markAdminMessagesAsDelivered(token);
         }
       } catch (err) {
         console.error("Portal auth check error:", err);
@@ -196,6 +202,7 @@ export default function PortalPage() {
     if (requiresAuth && user) {
       fetchPortalData(token);
       markAdminMessagesAsRead(token);
+      markAdminMessagesAsDelivered(token);
     }
   }, [token, requiresAuth, user]);
 
@@ -209,6 +216,7 @@ export default function PortalPage() {
     if (token) {
       fetchPortalData(token);
       markAdminMessagesAsRead(token);
+      markAdminMessagesAsDelivered(token);
     }
   };
 
@@ -277,6 +285,7 @@ export default function PortalPage() {
                   sender_type: newMsg.sender_type,
                   created_at: newMsg.created_at,
                   read_at: newMsg.read_at,
+                  delivered_at: newMsg.sender_type === "admin" ? new Date().toISOString() : null,
                 },
               ],
             };
@@ -322,6 +331,58 @@ export default function PortalPage() {
       supabase.removeChannel(channel);
     };
   }, [token, data?.business.name, scrollToBottom]);
+
+  // Typing indicator channel
+  const typingChannel = useMemo(() => {
+    if (!token) return null;
+    return supabase.channel(`typing-${token}`);
+  }, [token]);
+
+  // Subscribe to typing events
+  useEffect(() => {
+    if (!typingChannel) return;
+
+    typingChannel
+      .on("broadcast", { event: "typing" }, ({ payload }) => {
+        if (payload?.who !== "admin") return;
+
+        setTeamTyping(!!payload.isTyping);
+
+        // Auto-clear after 2s if no "false" arrives
+        if (teamTypingTimeoutRef.current) clearTimeout(teamTypingTimeoutRef.current);
+        teamTypingTimeoutRef.current = setTimeout(() => setTeamTyping(false), 2000);
+      })
+      .subscribe((status) => {
+        console.log("📡 Typing channel status:", status);
+      });
+
+    return () => {
+      supabase.removeChannel(typingChannel);
+    };
+  }, [typingChannel]);
+
+  // Emit typing event (debounced)
+  const emitTyping = useCallback((isTyping: boolean) => {
+    if (!typingChannel) return;
+    typingChannel.send({
+      type: "broadcast",
+      event: "typing",
+      payload: { who: "client", isTyping, at: Date.now() },
+    });
+  }, [typingChannel]);
+
+  const handleMessageChange = (value: string) => {
+    setMessageContent(value);
+    
+    if (value.trim()) {
+      emitTyping(true);
+
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = setTimeout(() => {
+        emitTyping(false);
+      }, 1200);
+    }
+  };
 
   async function fetchPortalData(portalToken: string, messagesBefore?: string) {
     try {
@@ -428,6 +489,42 @@ export default function PortalPage() {
     }
   }
 
+  // Mark admin messages as delivered when client receives them
+  async function markAdminMessagesAsDelivered(portalToken: string) {
+    if (markDeliveredInFlight.current) return;
+    markDeliveredInFlight.current = true;
+
+    try {
+      console.log("📬 Marking admin messages as delivered...");
+      const res = await fetch(
+        `${SUPABASE_URL}/functions/v1/portal/${portalToken}/mark-delivered`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "apikey": SUPABASE_ANON_KEY,
+            "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+          },
+        }
+      );
+
+      const response = await res.json();
+
+      if (!res.ok) {
+        console.error("Mark delivered error:", response.error);
+        return;
+      }
+
+      if (response?.marked_count > 0) {
+        console.log(`Marked ${response.marked_count} admin messages as delivered`);
+      }
+    } catch (err) {
+      console.error("Mark delivered exception:", err);
+    } finally {
+      markDeliveredInFlight.current = false;
+    }
+  }
+
   function handleLoadOlderMessages() {
     if (!token || !data || data.messages.length === 0) return;
     // Oldest message is at the beginning (index 0)
@@ -489,6 +586,7 @@ export default function PortalPage() {
                 sender_type: response.message.sender_type,
                 created_at: response.message.created_at,
                 read_at: response.message.read_at,
+                delivered_at: null, // Client messages don't have delivered_at initially
               },
             ],
           };
@@ -804,7 +902,7 @@ export default function PortalPage() {
                 <Textarea
                   placeholder="Type your message..."
                   value={messageContent}
-                  onChange={(e) => setMessageContent(e.target.value)}
+                  onChange={(e) => handleMessageChange(e.target.value)}
                   disabled={sending}
                   className="min-h-[80px]"
                 />
@@ -853,7 +951,13 @@ export default function PortalPage() {
                     
                     return data.messages.map((msg, index) => {
                       const isLastClientMsg = msg.sender_type === "client" && index === lastClientMsgIndex;
-                      // Animate only when read_at exists (one-time pop via CSS)
+                      // Compute delivery status: Sent → Delivered → Seen
+                      const getDeliveryStatus = () => {
+                        if (msg.read_at) return `Seen ${formatDate(msg.read_at)}`;
+                        if (msg.delivered_at) return "Delivered";
+                        return "Sent";
+                      };
+                      // Animate when read_at exists (one-time pop via CSS)
                       const shouldAnimateSeen = isLastClientMsg && msg.read_at;
                       
                       return (
@@ -874,16 +978,26 @@ export default function PortalPage() {
                             </span>
                           </div>
                           <p className="text-sm">{msg.content}</p>
-                          {/* Read receipt for last client message */}
+                          {/* Delivery status for last client message: Sent → Delivered → Seen */}
                           {isLastClientMsg && (
                             <p className={`text-xs text-muted-foreground mt-2 text-right ${shouldAnimateSeen ? "receipt-pop" : ""}`}>
-                              {msg.read_at ? `Seen ${formatDate(msg.read_at)}` : "Sent"}
+                              {getDeliveryStatus()}
                             </p>
                           )}
                         </div>
                       );
                     });
                   })()}
+                  
+                  {/* Typing indicator */}
+                  {teamTyping && (
+                    <div className="p-4 rounded-lg bg-primary/10 border-l-4 border-primary">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="text-xs">Team</Badge>
+                        <span className="text-sm text-muted-foreground animate-pulse">is typing…</span>
+                      </div>
+                    </div>
+                  )}
                   
                   <div ref={messagesEndRef} />
                 </div>
