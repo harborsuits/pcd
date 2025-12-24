@@ -26,7 +26,7 @@ const exampleDemos = [
 const Index = () => {
 
   return (
-    <div className="min-h-screen flex flex-col bg-background text-foreground">
+    <div className="min-h-screen flex flex-col bg-emerald-50/50 text-foreground">
       {/* Header - minimal, two clear actions */}
       <header className="border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-6 py-4 flex items-center justify-between">
