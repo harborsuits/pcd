@@ -123,6 +123,7 @@ export default function PortalPage() {
   const [uploadDesc, setUploadDesc] = useState("");
   const [isDragging, setIsDragging] = useState(false);
   const [pdfPreview, setPdfPreview] = useState<{ url: string; name: string } | null>(null);
+  const [imgPreview, setImgPreview] = useState<{ url: string; name: string } | null>(null);
   const [showWelcome, setShowWelcome] = useState(false);
   const [teamTyping, setTeamTyping] = useState(false);
   const [showFilesPanel, setShowFilesPanel] = useState(false);
@@ -133,6 +134,24 @@ export default function PortalPage() {
   const clearQueueTimeoutRef = useRef<number | null>(null);
   const teamTypingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const seenMessageIds = useRef<Set<string>>(new Set());
+
+  // Notification sound for new admin messages
+  const playNotify = useCallback(() => {
+    try {
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      const ctx = new AudioCtx();
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.type = "sine";
+      o.frequency.value = 880;
+      g.gain.value = 0.03;
+      o.connect(g);
+      g.connect(ctx.destination);
+      o.start();
+      setTimeout(() => { o.stop(); ctx.close(); }, 90);
+    } catch {}
+  }, []);
 
   // Scroll to bottom when new messages arrive (messages are oldest→newest)
   const scrollToBottom = useCallback(() => {
@@ -259,8 +278,9 @@ export default function PortalPage() {
 
             console.log("✅ Adding new message to state");
             
-            // Show toast for admin messages
+            // Show toast + sound for admin messages
             if (newMsg.sender_type === "admin") {
+              playNotify();
               toast({
                 title: "New message from Team",
                 description: newMsg.content.slice(0, 50) + (newMsg.content.length > 50 ? "..." : ""),
@@ -934,12 +954,16 @@ export default function PortalPage() {
                   };
                   const shouldAnimateSeen = isLastClientMsg && msg.read_at;
 
+                  // Animate only new (unseen) messages
+                  const isNewMsg = !seenMessageIds.current.has(msg.id);
+                  if (isNewMsg) seenMessageIds.current.add(msg.id);
+
                   return (
                     <div
                       key={msg.id}
                       className={`flex w-full ${isClient ? "justify-end" : "justify-start"}`}
                     >
-                      <div className="max-w-[78%] sm:max-w-[70%]">
+                      <div className={`max-w-[78%] sm:max-w-[70%] ${isNewMsg ? "bubble-in" : ""}`}>
                         <div
                           className={[
                             "rounded-2xl px-4 py-2.5 text-sm leading-relaxed shadow-sm",
@@ -976,7 +1000,7 @@ export default function PortalPage() {
                   <div className="flex w-full justify-start">
                     <div className="max-w-[78%] sm:max-w-[70%]">
                       <div className="rounded-2xl rounded-bl-md bg-muted px-4 py-2.5 text-sm">
-                        <span className="text-muted-foreground animate-pulse">Team is typing…</span>
+                        <span className="typing-anim text-muted-foreground">Team is typing…</span>
                       </div>
                     </div>
                   </div>
@@ -1139,6 +1163,15 @@ export default function PortalPage() {
                             )}
                           </div>
                           <div className="flex items-center gap-1 shrink-0">
+                            {isImage && (
+                              <button
+                                onClick={() => setImgPreview({ url: fileUrl, name: file.file_name })}
+                                className="inline-flex items-center justify-center h-7 w-7 rounded-md hover:bg-background transition-colors"
+                                title="Preview image"
+                              >
+                                <Eye className="h-3.5 w-3.5" />
+                              </button>
+                            )}
                             {isPdf(file.file_type) && (
                               <button
                                 onClick={() => setPdfPreview({ url: fileUrl, name: file.file_name })}
@@ -1232,6 +1265,36 @@ export default function PortalPage() {
                 src={pdfPreview.url}
                 title={pdfPreview.name}
                 className="w-full h-[70vh] rounded border border-border"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Image Lightbox Modal */}
+      {imgPreview && (
+        <div 
+          className="fixed inset-0 z-50 bg-background/90 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={() => setImgPreview(null)}
+        >
+          <div 
+            className="relative max-w-4xl max-h-[90vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between p-3 bg-card/80 backdrop-blur-sm rounded-t-lg border border-border">
+              <h3 className="font-semibold truncate text-sm">{imgPreview.name}</h3>
+              <button
+                onClick={() => setImgPreview(null)}
+                className="inline-flex items-center justify-center h-8 w-8 rounded-md hover:bg-muted transition-colors"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="flex-1 min-h-0 bg-card/50 rounded-b-lg border border-t-0 border-border p-2">
+              <img
+                src={imgPreview.url}
+                alt={imgPreview.name}
+                className="max-w-full max-h-[75vh] object-contain mx-auto rounded"
               />
             </div>
           </div>

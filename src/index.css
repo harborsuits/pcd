@@ -123,3 +123,23 @@ All colors MUST be HSL.
 .receipt-pop {
   animation: receiptPop 180ms ease-out;
 }
+
+/* Chat bubble entrance animation */
+@keyframes bubbleInUp {
+  from { opacity: 0; transform: translateY(6px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.bubble-in {
+  animation: bubbleInUp 160ms ease-out;
+}
+
+/* Typing indicator animation */
+@keyframes typingPulse {
+  0%, 100% { opacity: 0.45; transform: translateY(0); }
+  50%      { opacity: 1; transform: translateY(-1px); }
+}
+
+.typing-anim {
+  animation: typingPulse 900ms ease-in-out infinite;
+}
