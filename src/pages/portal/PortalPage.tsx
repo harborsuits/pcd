@@ -1,5 +1,5 @@
 import { useParams, Link } from "react-router-dom";
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -844,41 +844,46 @@ export default function PortalPage() {
                     </Button>
                   )}
                   
-                  {data.messages.map((msg, index) => {
-                    // Find the last client message to show read receipt
+                  {(() => {
+                    // Compute last client message index once
                     const lastClientMsgIndex = data.messages
                       .map((m, i) => m.sender_type === "client" ? i : -1)
                       .filter(i => i !== -1)
                       .pop();
-                    const isLastClientMsg = msg.sender_type === "client" && index === lastClientMsgIndex;
                     
-                    return (
-                      <div
-                        key={msg.id}
-                        className={`p-4 rounded-lg ${
-                          msg.sender_type === "admin"
-                            ? "bg-primary/10 border-l-4 border-primary"
-                            : "bg-muted"
-                        }`}
-                      >
-                        <div className="flex justify-between items-start mb-2">
-                          <Badge variant="outline" className="text-xs">
-                            {msg.sender_type === "admin" ? "Team" : "You"}
-                          </Badge>
-                          <span className="text-xs text-muted-foreground">
-                            {formatDate(msg.created_at)}
-                          </span>
+                    return data.messages.map((msg, index) => {
+                      const isLastClientMsg = msg.sender_type === "client" && index === lastClientMsgIndex;
+                      // Animate only when read_at exists (one-time pop via CSS)
+                      const shouldAnimateSeen = isLastClientMsg && msg.read_at;
+                      
+                      return (
+                        <div
+                          key={msg.id}
+                          className={`p-4 rounded-lg ${
+                            msg.sender_type === "admin"
+                              ? "bg-primary/10 border-l-4 border-primary"
+                              : "bg-muted"
+                          }`}
+                        >
+                          <div className="flex justify-between items-start mb-2">
+                            <Badge variant="outline" className="text-xs">
+                              {msg.sender_type === "admin" ? "Team" : "You"}
+                            </Badge>
+                            <span className="text-xs text-muted-foreground">
+                              {formatDate(msg.created_at)}
+                            </span>
+                          </div>
+                          <p className="text-sm">{msg.content}</p>
+                          {/* Read receipt for last client message */}
+                          {isLastClientMsg && (
+                            <p className={`text-xs text-muted-foreground mt-2 text-right ${shouldAnimateSeen ? "receipt-pop" : ""}`}>
+                              {msg.read_at ? `Seen ${formatDate(msg.read_at)}` : "Sent"}
+                            </p>
+                          )}
                         </div>
-                        <p className="text-sm">{msg.content}</p>
-                        {/* Read receipt for last client message */}
-                        {isLastClientMsg && (
-                          <p className="text-xs text-muted-foreground mt-2 text-right">
-                            {msg.read_at ? `Seen ${formatDate(msg.read_at)}` : "Sent"}
-                          </p>
-                        )}
-                      </div>
-                    );
-                  })}
+                      );
+                    });
+                  })()}
                   
                   <div ref={messagesEndRef} />
                 </div>
