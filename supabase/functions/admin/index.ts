@@ -41,13 +41,13 @@ Deno.serve(async (req) => {
   }
 
   // Route: GET /admin/notes/:token
-  if (subPath.startsWith("notes/") && req.method === "GET") {
+  if (subPath.match(/^notes\/[^\/]+$/) && req.method === "GET") {
     const token = subPath.replace("notes/", "");
     return handleGetNotes(req, token);
   }
 
   // Route: POST /admin/notes/:token
-  if (subPath.startsWith("notes/") && req.method === "POST") {
+  if (subPath.match(/^notes\/[^\/]+$/) && req.method === "POST") {
     const token = subPath.replace("notes/", "");
     return handleCreateNote(req, token);
   }
@@ -78,6 +78,41 @@ Deno.serve(async (req) => {
     const parts = subPath.split("/");
     const token = parts[1];
     return handleUpdateProjectStatus(req, token);
+  }
+
+  // Route: GET /admin/checklist/:token
+  if (subPath.match(/^checklist\/[^\/]+$/) && req.method === "GET") {
+    const token = subPath.replace("checklist/", "");
+    return handleGetChecklist(req, token);
+  }
+
+  // Route: POST /admin/checklist/:token
+  if (subPath.match(/^checklist\/[^\/]+$/) && req.method === "POST") {
+    const token = subPath.replace("checklist/", "");
+    return handleCreateChecklistItem(req, token);
+  }
+
+  // Route: PATCH /admin/checklist/:token/:itemId
+  if (subPath.match(/^checklist\/[^\/]+\/[^\/]+$/) && req.method === "PATCH") {
+    const parts = subPath.split("/");
+    const token = parts[1];
+    const itemId = parts[2];
+    return handleUpdateChecklistItem(req, token, itemId);
+  }
+
+  // Route: DELETE /admin/checklist/:token/:itemId
+  if (subPath.match(/^checklist\/[^\/]+\/[^\/]+$/) && req.method === "DELETE") {
+    const parts = subPath.split("/");
+    const token = parts[1];
+    const itemId = parts[2];
+    return handleDeleteChecklistItem(req, token, itemId);
+  }
+
+  // Route: POST /admin/checklist/:token/defaults
+  if (subPath.match(/^checklist\/[^\/]+\/defaults$/) && req.method === "POST") {
+    const parts = subPath.split("/");
+    const token = parts[1];
+    return handleAddDefaultChecklist(req, token);
   }
 
   return new Response(
@@ -407,10 +442,10 @@ async function handleGetNotes(req: Request, token: string): Promise<Response> {
       );
     }
 
-    // Fetch notes
+    // Fetch notes from operator_notes table
     const { data: notes, error: notesError } = await supabase
-      .from("admin_notes")
-      .select("id, content, created_at, updated_at")
+      .from("operator_notes")
+      .select("id, content, created_by, created_at")
       .eq("project_id", project.id)
       .is("deleted_at", null)
       .order("created_at", { ascending: false });
@@ -494,15 +529,15 @@ async function handleCreateNote(req: Request, token: string): Promise<Response> 
       );
     }
 
-    // Insert note
+    // Insert note into operator_notes table
     const { data: note, error: insertError } = await supabase
-      .from("admin_notes")
+      .from("operator_notes")
       .insert({
         project_id: project.id,
         project_token: project.project_token,
         content: content,
       })
-      .select("id, content, created_at, updated_at")
+      .select("id, content, created_at")
       .single();
 
     if (insertError) {
@@ -553,25 +588,15 @@ async function handleUpdateNote(req: Request, token: string, noteId: string): Pr
     }
 
     const content = body.content?.trim();
-    if (!content || content.length === 0) {
+    if (!content) {
       return new Response(
         JSON.stringify({ error: "Content required" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    if (content.length > 10000) {
-      return new Response(
-        JSON.stringify({ error: "Content too long (max 10000 chars)" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    console.log(`Updating note ${noteId} for token: ${token.slice(0, 8)}...`);
-
     const supabase = getSupabaseClient();
 
-    // Verify project exists
     const { data: project, error: projectError } = await supabase
       .from("projects")
       .select("id")
@@ -586,35 +611,21 @@ async function handleUpdateNote(req: Request, token: string, noteId: string): Pr
       );
     }
 
-    // Update note
-    const { data: note, error: updateError } = await supabase
-      .from("admin_notes")
-      .update({ content, updated_at: new Date().toISOString() })
+    const { error: updateError } = await supabase
+      .from("operator_notes")
+      .update({ content })
       .eq("id", noteId)
-      .eq("project_id", project.id)
-      .is("deleted_at", null)
-      .select("id, content, created_at, updated_at")
-      .single();
+      .eq("project_id", project.id);
 
     if (updateError) {
-      console.error("Note update error:", updateError);
       return new Response(
         JSON.stringify({ error: "Failed to update note" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    if (!note) {
-      return new Response(
-        JSON.stringify({ error: "Note not found" }),
-        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    console.log("Note updated successfully");
-
     return new Response(
-      JSON.stringify({ ok: true, note }),
+      JSON.stringify({ ok: true }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
 
@@ -659,9 +670,9 @@ async function handleDeleteNote(req: Request, token: string, noteId: string): Pr
       );
     }
 
-    // Soft delete note
+    // Soft delete note from operator_notes
     const { error: deleteError } = await supabase
-      .from("admin_notes")
+      .from("operator_notes")
       .update({ deleted_at: new Date().toISOString() })
       .eq("id", noteId)
       .eq("project_id", project.id)
@@ -684,6 +695,391 @@ async function handleDeleteNote(req: Request, token: string, noteId: string): Pr
 
   } catch (error) {
     console.error("Delete note error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+}
+
+// GET /admin/checklist/:token - Get checklist items for a project
+async function handleGetChecklist(req: Request, token: string): Promise<Response> {
+  const authError = validateAdminKey(req);
+  if (authError) return authError;
+
+  if (!isValidToken(token)) {
+    return new Response(
+      JSON.stringify({ error: "Invalid token" }),
+      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  try {
+    console.log(`Fetching checklist for token: ${token.slice(0, 8)}...`);
+
+    const supabase = getSupabaseClient();
+
+    const { data: project, error: projectError } = await supabase
+      .from("projects")
+      .select("id")
+      .eq("project_token", token)
+      .is("deleted_at", null)
+      .maybeSingle();
+
+    if (projectError || !project) {
+      return new Response(
+        JSON.stringify({ error: "Project not found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const { data: items, error: itemsError } = await supabase
+      .from("project_checklist_items")
+      .select("id, label, is_done, sort_order, created_at, completed_at")
+      .eq("project_id", project.id)
+      .order("sort_order", { ascending: true });
+
+    if (itemsError) {
+      console.error("Checklist fetch error:", itemsError);
+      return new Response(
+        JSON.stringify({ error: "Database error" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    return new Response(
+      JSON.stringify({ items: items || [] }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+
+  } catch (error) {
+    console.error("Get checklist error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+}
+
+// POST /admin/checklist/:token - Create a checklist item
+async function handleCreateChecklistItem(req: Request, token: string): Promise<Response> {
+  const authError = validateAdminKey(req);
+  if (authError) return authError;
+
+  if (!isValidToken(token)) {
+    return new Response(
+      JSON.stringify({ error: "Invalid token" }),
+      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  try {
+    let body: { label?: string };
+    try {
+      body = await req.json();
+    } catch {
+      return new Response(
+        JSON.stringify({ error: "Invalid JSON body" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const label = body.label?.trim();
+    if (!label) {
+      return new Response(
+        JSON.stringify({ error: "Label required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log(`Creating checklist item for token: ${token.slice(0, 8)}...`);
+
+    const supabase = getSupabaseClient();
+
+    const { data: project, error: projectError } = await supabase
+      .from("projects")
+      .select("id, project_token")
+      .eq("project_token", token)
+      .is("deleted_at", null)
+      .maybeSingle();
+
+    if (projectError || !project) {
+      return new Response(
+        JSON.stringify({ error: "Project not found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Get max sort_order
+    const { data: maxItem } = await supabase
+      .from("project_checklist_items")
+      .select("sort_order")
+      .eq("project_id", project.id)
+      .order("sort_order", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const nextOrder = (maxItem?.sort_order ?? -1) + 1;
+
+    const { data: item, error: insertError } = await supabase
+      .from("project_checklist_items")
+      .insert({
+        project_id: project.id,
+        project_token: project.project_token,
+        label,
+        sort_order: nextOrder,
+      })
+      .select("id, label, is_done, sort_order, created_at")
+      .single();
+
+    if (insertError) {
+      console.error("Checklist insert error:", insertError);
+      return new Response(
+        JSON.stringify({ error: "Failed to create item" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    return new Response(
+      JSON.stringify({ ok: true, item }),
+      { status: 201, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+
+  } catch (error) {
+    console.error("Create checklist error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+}
+
+// PATCH /admin/checklist/:token/:itemId - Update a checklist item
+async function handleUpdateChecklistItem(req: Request, token: string, itemId: string): Promise<Response> {
+  const authError = validateAdminKey(req);
+  if (authError) return authError;
+
+  if (!isValidToken(token)) {
+    return new Response(
+      JSON.stringify({ error: "Invalid token" }),
+      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  try {
+    let body: { label?: string; is_done?: boolean };
+    try {
+      body = await req.json();
+    } catch {
+      return new Response(
+        JSON.stringify({ error: "Invalid JSON body" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log(`Updating checklist item ${itemId} for token: ${token.slice(0, 8)}...`);
+
+    const supabase = getSupabaseClient();
+
+    const { data: project, error: projectError } = await supabase
+      .from("projects")
+      .select("id")
+      .eq("project_token", token)
+      .is("deleted_at", null)
+      .maybeSingle();
+
+    if (projectError || !project) {
+      return new Response(
+        JSON.stringify({ error: "Project not found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const updates: Record<string, unknown> = {};
+    if (body.label !== undefined) updates.label = body.label.trim();
+    if (body.is_done !== undefined) {
+      updates.is_done = body.is_done;
+      updates.completed_at = body.is_done ? new Date().toISOString() : null;
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return new Response(
+        JSON.stringify({ error: "No updates provided" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const { data: item, error: updateError } = await supabase
+      .from("project_checklist_items")
+      .update(updates)
+      .eq("id", itemId)
+      .eq("project_id", project.id)
+      .select("id, label, is_done, sort_order, created_at, completed_at")
+      .single();
+
+    if (updateError) {
+      console.error("Checklist update error:", updateError);
+      return new Response(
+        JSON.stringify({ error: "Failed to update item" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    return new Response(
+      JSON.stringify({ ok: true, item }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+
+  } catch (error) {
+    console.error("Update checklist error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+}
+
+// DELETE /admin/checklist/:token/:itemId - Delete a checklist item
+async function handleDeleteChecklistItem(req: Request, token: string, itemId: string): Promise<Response> {
+  const authError = validateAdminKey(req);
+  if (authError) return authError;
+
+  if (!isValidToken(token)) {
+    return new Response(
+      JSON.stringify({ error: "Invalid token" }),
+      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  try {
+    console.log(`Deleting checklist item ${itemId} for token: ${token.slice(0, 8)}...`);
+
+    const supabase = getSupabaseClient();
+
+    const { data: project, error: projectError } = await supabase
+      .from("projects")
+      .select("id")
+      .eq("project_token", token)
+      .is("deleted_at", null)
+      .maybeSingle();
+
+    if (projectError || !project) {
+      return new Response(
+        JSON.stringify({ error: "Project not found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const { error: deleteError } = await supabase
+      .from("project_checklist_items")
+      .delete()
+      .eq("id", itemId)
+      .eq("project_id", project.id);
+
+    if (deleteError) {
+      console.error("Checklist delete error:", deleteError);
+      return new Response(
+        JSON.stringify({ error: "Failed to delete item" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    return new Response(
+      JSON.stringify({ ok: true }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+
+  } catch (error) {
+    console.error("Delete checklist error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+}
+
+// POST /admin/checklist/:token/defaults - Add default checklist items
+async function handleAddDefaultChecklist(req: Request, token: string): Promise<Response> {
+  const authError = validateAdminKey(req);
+  if (authError) return authError;
+
+  if (!isValidToken(token)) {
+    return new Response(
+      JSON.stringify({ error: "Invalid token" }),
+      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  try {
+    console.log(`Adding default checklist for token: ${token.slice(0, 8)}...`);
+
+    const supabase = getSupabaseClient();
+
+    const { data: project, error: projectError } = await supabase
+      .from("projects")
+      .select("id, project_token")
+      .eq("project_token", token)
+      .is("deleted_at", null)
+      .maybeSingle();
+
+    if (projectError || !project) {
+      return new Response(
+        JSON.stringify({ error: "Project not found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const defaultItems = [
+      "Intake received",
+      "Confirm domain access",
+      "Confirm primary CTA + routing",
+      "Collect logo + brand colors",
+      "Homepage draft",
+      "\"What We Build\" confirmed",
+      "Portal onboarding tested",
+      "Messaging widget tested",
+      "Mobile QA",
+      "Publish + DNS cutover",
+    ];
+
+    // Get max sort_order
+    const { data: maxItem } = await supabase
+      .from("project_checklist_items")
+      .select("sort_order")
+      .eq("project_id", project.id)
+      .order("sort_order", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    let nextOrder = (maxItem?.sort_order ?? -1) + 1;
+
+    const itemsToInsert = defaultItems.map((label) => ({
+      project_id: project.id,
+      project_token: project.project_token,
+      label,
+      sort_order: nextOrder++,
+    }));
+
+    const { data: items, error: insertError } = await supabase
+      .from("project_checklist_items")
+      .insert(itemsToInsert)
+      .select("id, label, is_done, sort_order, created_at");
+
+    if (insertError) {
+      console.error("Default checklist insert error:", insertError);
+      return new Response(
+        JSON.stringify({ error: "Failed to add defaults" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    return new Response(
+      JSON.stringify({ ok: true, items }),
+      { status: 201, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+
+  } catch (error) {
+    console.error("Add default checklist error:", error);
     return new Response(
       JSON.stringify({ error: "Internal server error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
