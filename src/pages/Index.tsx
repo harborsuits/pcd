@@ -45,7 +45,21 @@ const Index = () => {
       </header>
 
       {/* Hero - with 3D model */}
-      <section className="flex-1 py-16 md:py-24">
+      <section className="flex-1 py-16 md:py-24 relative overflow-hidden">
+        {/* Gradient background */}
+        <div 
+          className="absolute inset-0 -z-10"
+          style={{
+            background: `radial-gradient(ellipse 80% 60% at 60% 40%, hsl(var(--accent) / 0.15) 0%, hsl(var(--hero-gradient-mid)) 45%, hsl(var(--hero-gradient-end)) 100%)`
+          }}
+        />
+        {/* Vignette overlay */}
+        <div 
+          className="absolute inset-0 -z-10 pointer-events-none"
+          style={{
+            boxShadow: 'inset 0 0 200px hsl(var(--foreground) / 0.04)'
+          }}
+        />
         <div className="container mx-auto px-6">
           <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
             {/* Left: Text content */}

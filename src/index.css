@@ -52,6 +52,11 @@ All colors MUST be HSL.
     --sidebar-accent-foreground: 210 29% 18%;
     --sidebar-border: 210 22% 88%;
     --sidebar-ring: 175 35% 45%;
+
+    /* Hero gradient tokens */
+    --hero-gradient-start: 175 30% 85%;
+    --hero-gradient-mid: 210 33% 96%;
+    --hero-gradient-end: 210 25% 92%;
   }
 
   .dark {
@@ -91,6 +96,11 @@ All colors MUST be HSL.
     --sidebar-accent-foreground: 210 20% 94%;
     --sidebar-border: 210 25% 22%;
     --sidebar-ring: 175 40% 50%;
+
+    /* Hero gradient tokens (dark) */
+    --hero-gradient-start: 175 25% 18%;
+    --hero-gradient-mid: 210 29% 12%;
+    --hero-gradient-end: 210 25% 8%;
   }
 }
 
