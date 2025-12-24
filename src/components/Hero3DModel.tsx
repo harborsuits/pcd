@@ -26,13 +26,19 @@ const MATERIAL_PRESETS = {
     roughness: 0.35,
     envMapIntensity: 1.4,
   },
+  polishedSilver: {
+    color: '#C0C8D0',
+    metalness: 0.95,
+    roughness: 0.2,
+    envMapIntensity: 1.6,
+  },
 };
 
 // Hero model configurations
 const HERO_MODELS = [
   {
-    path: '/models/hero-model.glb',
-    preset: 'tealFrosted',
+    path: '/models/hero-model-silver.glb',
+    preset: 'polishedSilver',
     caption: 'Client portals & workflows',
   },
   {
