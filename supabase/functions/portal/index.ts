@@ -673,6 +673,19 @@ async function handleMyProjects(
         JSON.stringify({ error: "Database error" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
+    }
+
+    return new Response(
+      JSON.stringify({ projects: projects || [] }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  } catch (error) {
+    console.error("My projects error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
 }
 
 // POST /portal/:token/mark-delivered - Mark admin messages as delivered
@@ -747,19 +760,6 @@ async function handleMarkDelivered(
     );
   } catch (error) {
     console.error("Mark delivered error:", error);
-    return new Response(
-      JSON.stringify({ error: "Internal server error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
-  }
-}
-
-    return new Response(
-      JSON.stringify({ projects: projects || [] }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
-  } catch (error) {
-    console.error("My projects error:", error);
     return new Response(
       JSON.stringify({ error: "Internal server error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
