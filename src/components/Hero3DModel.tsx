@@ -15,8 +15,14 @@ const MATERIAL_PRESETS = {
   blueWhite: {
     color: '#3A6B99',
     metalness: 0.35,
-    roughness: 0.35, // Lower roughness for specular definition
+    roughness: 0.35,
     envMapIntensity: 1.2,
+  },
+  brushedGold: {
+    color: '#E6C76A',
+    metalness: 0.85,
+    roughness: 0.35,
+    envMapIntensity: 1.4,
   },
 };
 
@@ -31,6 +37,11 @@ const HERO_MODELS = [
     path: '/models/hero-model-2.glb',
     preset: 'blueWhite',
     caption: 'Booking & intake systems',
+  },
+  {
+    path: '/models/hero-model-3.glb',
+    preset: 'brushedGold',
+    caption: 'AI assistants & automation',
   },
 ];
 
@@ -173,8 +184,8 @@ function Scene({ activeIndex }: SceneProps) {
           preset={model.preset as keyof typeof MATERIAL_PRESETS} 
           opacity={1} 
         />
-        {/* HDRI environment for realistic reflections */}
-        <Environment preset="studio" background={false} />
+        {/* HDRI environment for realistic reflections - warehouse for gold contrast */}
+        <Environment preset="warehouse" background={false} />
         {/* Stronger contact shadows to ground the model */}
         <ContactShadows 
           position={[0, -1.5, 0]} 
