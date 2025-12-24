@@ -141,6 +141,12 @@ export default function PortalPage() {
     try {
       const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
       const ctx = new AudioCtx();
+      
+      // Attempt resume if suspended (browser autoplay policy)
+      if (ctx.state === "suspended") {
+        ctx.resume().catch(() => {});
+      }
+      
       const o = ctx.createOscillator();
       const g = ctx.createGain();
       o.type = "sine";
@@ -151,6 +157,20 @@ export default function PortalPage() {
       o.start();
       setTimeout(() => { o.stop(); ctx.close(); }, 90);
     } catch {}
+  }, []);
+  
+  // Unlock audio on first user interaction (browser autoplay policy)
+  useEffect(() => {
+    const unlock = () => {
+      try {
+        const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+        const ctx = new AudioCtx();
+        ctx.resume().finally(() => ctx.close());
+      } catch {}
+      window.removeEventListener("pointerdown", unlock);
+    };
+    window.addEventListener("pointerdown", unlock);
+    return () => window.removeEventListener("pointerdown", unlock);
   }, []);
 
   // Scroll to bottom when new messages arrive (messages are oldest→newest)
