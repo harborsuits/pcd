@@ -46,33 +46,38 @@ const Index = () => {
 
       {/* Hero - with 3D model */}
       <section className="flex-1 py-16 md:py-24 relative overflow-hidden">
-        {/* Gradient background */}
-        <div className="pointer-events-none absolute inset-0 -z-10">
-          {/* Soft radial glow (brand green) */}
+        {/* Background layers */}
+        <div className="absolute inset-0 -z-10">
+          {/* Base tint so it never looks pure white */}
+          <div className="absolute inset-0 bg-emerald-50/40" />
+
+          {/* Brand glow */}
           <div
             className="absolute inset-0"
             style={{
               background:
-                "radial-gradient(900px circle at 70% 35%, rgba(16,185,129,0.28) 0%, rgba(16,185,129,0.18) 22%, rgba(16,185,129,0.10) 40%, rgba(255,255,255,0) 65%)",
+                "radial-gradient(900px circle at 70% 35%, rgba(16,185,129,0.35) 0%, rgba(16,185,129,0.18) 30%, rgba(255,255,255,0) 65%)",
             }}
           />
-          {/* Gentle vertical wash */}
+
+          {/* Soft wash */}
           <div
             className="absolute inset-0"
             style={{
               background:
-                "linear-gradient(180deg, rgba(16,185,129,0.12) 0%, rgba(16,185,129,0.06) 30%, rgba(255,255,255,0) 70%)",
+                "linear-gradient(180deg, rgba(16,185,129,0.14) 0%, rgba(255,255,255,0) 70%)",
+            }}
+          />
+
+          {/* Vignette */}
+          <div
+            className="absolute inset-0 opacity-40"
+            style={{
+              background:
+                "radial-gradient(1200px circle at 50% 40%, rgba(255,255,255,0) 55%, rgba(0,0,0,0.06) 100%)",
             }}
           />
         </div>
-        {/* Vignette overlay */}
-        <div
-          className="pointer-events-none absolute inset-0 -z-10 opacity-35"
-          style={{
-            background:
-              "radial-gradient(1200px circle at 50% 40%, rgba(255,255,255,0) 55%, rgba(0,0,0,0.06) 100%)",
-          }}
-        />
         <div className="container mx-auto px-6">
           <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
             {/* Left: Text content */}
