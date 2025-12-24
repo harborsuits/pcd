@@ -13,7 +13,7 @@ const MATERIAL_PRESETS = {
     envMapIntensity: 0.7,
   },
   blueWhite: {
-    color: '#5B8DBE',
+    color: '#3A6B99',
     metalness: 0.3,
     roughness: 0.5,
     envMapIntensity: 0.8,
