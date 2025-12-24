@@ -35,6 +35,9 @@ const Index = () => {
           </Link>
           <nav className="flex items-center gap-4">
             <Button asChild variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
+              <Link to="/pricing">Pricing</Link>
+            </Button>
+            <Button asChild variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
               <a href="#demos">See a Demo</a>
             </Button>
             <Button asChild variant="outline" size="sm">
