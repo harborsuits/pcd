@@ -212,7 +212,7 @@ export default function PortalPage() {
     }
   };
 
-  // Real-time subscription for new messages
+  // Real-time subscription for new messages and read receipt updates
   useEffect(() => {
     if (!token || !data) return;
 
@@ -284,6 +284,33 @@ export default function PortalPage() {
 
           // Auto-scroll to bottom for new messages
           setTimeout(scrollToBottom, 100);
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "messages",
+          filter: `project_token=eq.${token}`,
+        },
+        (payload) => {
+          console.log("📖 Message updated (read receipt):", payload);
+          const updatedMsg = payload.new as {
+            id: string;
+            read_at: string | null;
+          };
+
+          // Update the read_at for this message in state
+          setData((prev) => {
+            if (!prev) return prev;
+            return {
+              ...prev,
+              messages: prev.messages.map((m) =>
+                m.id === updatedMsg.id ? { ...m, read_at: updatedMsg.read_at } : m
+              ),
+            };
+          });
         }
       )
       .subscribe((status) => {
