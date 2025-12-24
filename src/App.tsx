@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Index from "./pages/Index";
 import GetDemo from "./pages/GetDemo";
 import Pricing from "./pages/Pricing";
+import WhatWeBuild from "./pages/WhatWeBuild";
 import NotFound from "./pages/NotFound";
 import DemoPage from "./pages/demo/DemoPage";
 import PortalPage from "./pages/portal/PortalPage";
@@ -25,6 +26,7 @@ const App = () => (
           {/* Marketing / Landing */}
           <Route path="/" element={<Index />} />
           <Route path="/pricing" element={<Pricing />} />
+          <Route path="/what-we-build" element={<WhatWeBuild />} />
           <Route path="/get-demo" element={<GetDemo />} />
           <Route path="/portal" element={<PortalHub />} />
           <Route path="/portal/new" element={<OnboardingWizard />} />
