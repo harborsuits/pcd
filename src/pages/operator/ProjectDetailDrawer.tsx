@@ -416,14 +416,6 @@ export function ProjectDetailDrawer({ project, open, onClose, onStatusChange }: 
               <span>{[project.city, project.state].filter(Boolean).join(", ")}</span>
             </div>
           )}
-          <div className="pt-2">
-            <Button variant="outline" size="sm" asChild>
-              <a href={`/p/${project.project_token}`} target="_blank" rel="noopener noreferrer">
-                <ExternalLink className="h-4 w-4 mr-2" />
-                Open Client Portal
-              </a>
-            </Button>
-          </div>
         </div>
 
         {/* Tabs: Intake / Messages / Notes / Checklist */}

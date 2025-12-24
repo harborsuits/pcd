@@ -82,7 +82,12 @@ Deno.serve(async (req) => {
     return handlePortalMarkRead(token, corsHeaders);
   }
 
-  // Route: POST /messages/:token - Send a client message
+  // Route: GET /messages/:token - Fetch messages for operator (admin key required)
+  if (req.method === "GET" && !action) {
+    return handleGetMessages(req, token, corsHeaders);
+  }
+
+  // Route: POST /messages/:token - Send a message (client or admin)
   if (req.method === "POST" && !action) {
     return handleSendMessage(req, token, corsHeaders);
   }
@@ -98,6 +103,87 @@ function getSupabaseClient() {
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   return createClient(supabaseUrl, supabaseServiceKey);
+}
+
+// Validate admin key for operator endpoints
+function validateAdminKey(req: Request): boolean {
+  const adminKey = req.headers.get("x-admin-key");
+  const expectedKey = Deno.env.get("ADMIN_KEY");
+  return !!expectedKey && adminKey === expectedKey;
+}
+
+// GET /messages/:token - Fetch messages for operator (admin key required)
+async function handleGetMessages(
+  req: Request,
+  token: string,
+  corsHeaders: Record<string, string>
+): Promise<Response> {
+  try {
+    // Require admin key for reading messages
+    if (!validateAdminKey(req)) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log(`Fetching messages for token: ${token.slice(0, 8)}...`);
+
+    const supabase = getSupabaseClient();
+
+    // Resolve project by token
+    const { data: project, error: projectError } = await supabase
+      .from("projects")
+      .select("id")
+      .eq("project_token", token)
+      .is("deleted_at", null)
+      .maybeSingle();
+
+    if (projectError) {
+      console.error("Project query error:", projectError);
+      return new Response(
+        JSON.stringify({ error: "Database error" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (!project) {
+      return new Response(
+        JSON.stringify({ error: "Project not found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Fetch messages ordered oldest to newest
+    const { data: messages, error: messagesError } = await supabase
+      .from("messages")
+      .select("id, content, sender_type, created_at, read_at")
+      .eq("project_id", project.id)
+      .order("created_at", { ascending: true })
+      .limit(200);
+
+    if (messagesError) {
+      console.error("Messages query error:", messagesError);
+      return new Response(
+        JSON.stringify({ error: "Database error" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log(`Fetched ${messages?.length || 0} messages`);
+
+    return new Response(
+      JSON.stringify({ messages: messages || [] }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+
+  } catch (error) {
+    console.error("Get messages error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
 }
 
 // POST /messages/:token - Send a client message
