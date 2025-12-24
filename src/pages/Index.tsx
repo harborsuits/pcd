@@ -47,17 +47,38 @@ const Index = () => {
       {/* Hero - with 3D model */}
       <section className="flex-1 py-16 md:py-24 relative overflow-hidden">
         {/* Gradient background */}
-        <div 
-          className="absolute inset-0 -z-10"
+        <div className="pointer-events-none absolute inset-0 -z-10">
+          {/* Soft radial glow (brand green) */}
+          <div
+            className="absolute inset-0 opacity-60"
+            style={{
+              background:
+                "radial-gradient(900px circle at 70% 35%, rgba(16,185,129,0.16) 0%, rgba(16,185,129,0.08) 28%, rgba(255,255,255,0) 62%)",
+            }}
+          />
+          {/* Gentle vertical wash */}
+          <div
+            className="absolute inset-0 opacity-70"
+            style={{
+              background:
+                "linear-gradient(180deg, rgba(16,185,129,0.06) 0%, rgba(16,185,129,0.02) 35%, rgba(255,255,255,0) 100%)",
+            }}
+          />
+        </div>
+        {/* Vignette overlay */}
+        <div
+          className="pointer-events-none absolute inset-0 -z-10 opacity-40"
           style={{
-            background: `radial-gradient(ellipse 80% 60% at 60% 40%, hsl(var(--accent) / 0.15) 0%, hsl(var(--hero-gradient-mid)) 45%, hsl(var(--hero-gradient-end)) 100%)`
+            background:
+              "radial-gradient(1200px circle at 50% 40%, rgba(255,255,255,0) 55%, rgba(0,0,0,0.06) 100%)",
           }}
         />
-        {/* Vignette overlay */}
-        <div 
-          className="absolute inset-0 -z-10 pointer-events-none"
+        {/* Subtle noise texture */}
+        <div
+          className="pointer-events-none absolute inset-0 -z-10 opacity-[0.045] mix-blend-multiply"
           style={{
-            boxShadow: 'inset 0 0 200px hsl(var(--foreground) / 0.04)'
+            backgroundImage:
+              "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='.35'/%3E%3C/svg%3E\")",
           }}
         />
         <div className="container mx-auto px-6">
