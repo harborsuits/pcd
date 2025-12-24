@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
@@ -95,7 +96,60 @@ export function ProjectDetailDrawer({ project, open, onClose, onStatusChange }: 
   const [newNote, setNewNote] = useState("");
   const [newChecklistItem, setNewChecklistItem] = useState("");
   const [activeTab, setActiveTab] = useState<"intake" | "messages" | "notes" | "checklist">("intake");
+  const [clientTyping, setClientTyping] = useState(false);
   const queryClient = useQueryClient();
+  const clientTypingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Typing channel for real-time typing indicators
+  const typingChannel = useMemo(() => {
+    if (!project?.project_token) return null;
+    return supabase.channel(`typing-${project.project_token}`);
+  }, [project?.project_token]);
+
+  // Subscribe to typing events from client
+  useEffect(() => {
+    if (!typingChannel || !open) return;
+
+    typingChannel
+      .on("broadcast", { event: "typing" }, ({ payload }) => {
+        if (payload?.who !== "client") return;
+
+        setClientTyping(!!payload.isTyping);
+
+        // Auto-clear after 2s if no "false" arrives
+        if (clientTypingTimeoutRef.current) clearTimeout(clientTypingTimeoutRef.current);
+        clientTypingTimeoutRef.current = setTimeout(() => setClientTyping(false), 2000);
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(typingChannel);
+    };
+  }, [typingChannel, open]);
+
+  // Emit typing event (debounced)
+  const emitTyping = useCallback((isTyping: boolean) => {
+    if (!typingChannel) return;
+    typingChannel.send({
+      type: "broadcast",
+      event: "typing",
+      payload: { who: "admin", isTyping, at: Date.now() },
+    });
+  }, [typingChannel]);
+
+  const handleReplyChange = (value: string) => {
+    setReplyContent(value);
+    
+    if (value.trim()) {
+      emitTyping(true);
+
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = setTimeout(() => {
+        emitTyping(false);
+      }, 1200);
+    }
+  };
 
   // Reset state when project changes
   useEffect(() => {
@@ -104,6 +158,7 @@ export function ProjectDetailDrawer({ project, open, onClose, onStatusChange }: 
       setNewNote("");
       setNewChecklistItem("");
       setActiveTab(project.intake ? "intake" : "messages");
+      setClientTyping(false);
     }
   }, [project?.id]);
 
@@ -611,6 +666,13 @@ export function ProjectDetailDrawer({ project, open, onClose, onStatusChange }: 
                       <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
                     </div>
                   ))}
+                  {/* Typing indicator */}
+                  {clientTyping && (
+                    <div className="p-3 rounded-lg bg-muted mr-8">
+                      <span className="text-xs font-medium">Client</span>
+                      <p className="text-sm text-muted-foreground animate-pulse">is typing…</p>
+                    </div>
+                  )}
                 </div>
               )}
             </ScrollArea>
@@ -620,7 +682,7 @@ export function ProjectDetailDrawer({ project, open, onClose, onStatusChange }: 
               <Textarea
                 placeholder="Type a message..."
                 value={replyContent}
-                onChange={(e) => setReplyContent(e.target.value)}
+                onChange={(e) => handleReplyChange(e.target.value)}
                 className="min-h-[80px]"
               />
               <Button
