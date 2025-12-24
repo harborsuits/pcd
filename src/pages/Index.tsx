@@ -82,15 +82,14 @@ const Index = () => {
               {/* 2-path CTAs */}
               <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-6">
                 <Button asChild size="lg" className="group">
-                  <a href="#demos">
-                    See a Demo
-                    <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
-                  </a>
-                </Button>
-                <Button asChild variant="outline" size="lg" className="group">
                   <Link to="/get-demo">
-                    Get My Demo
-                    <Sparkles className="ml-2 h-4 w-4" />
+                    Get a Demo
+                    <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                  </Link>
+                </Button>
+                <Button asChild variant="outline" size="lg">
+                  <Link to="/portal">
+                    Client Portal
                   </Link>
                 </Button>
               </div>
