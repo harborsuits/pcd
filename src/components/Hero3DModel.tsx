@@ -1,6 +1,7 @@
 import { Suspense, useRef, useEffect, useState } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { useGLTF, Environment, Float, ContactShadows } from "@react-three/drei";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import * as THREE from "three";
 
 // Material presets - procedural materials for texture-less models
@@ -149,12 +150,16 @@ function Scene({ activeIndex }: SceneProps) {
   
   return (
     <>
-      {/* Soft studio lighting setup */}
-      <ambientLight intensity={0.4} />
-      <directionalLight position={[-3, 5, 4]} intensity={1.2} castShadow />
-      <directionalLight position={[4, 3, -3]} intensity={0.5} />
-      <directionalLight position={[0, 2, -5]} intensity={0.3} />
-      <pointLight position={[0, -3, 2]} intensity={0.25} color="#4FA3A8" />
+      {/* Studio lighting: ambient (low), key, fill, rim, accent */}
+      <ambientLight intensity={0.25} />
+      {/* Key light - main sculpting, top-left */}
+      <directionalLight position={[-4, 6, 4]} intensity={0.9} castShadow />
+      {/* Fill light - opposite side, softer */}
+      <directionalLight position={[4, 2, 3]} intensity={0.35} />
+      {/* Rim light - separates model from background */}
+      <directionalLight position={[0, 4, -6]} intensity={0.6} />
+      {/* Accent light - subtle brand tint from below */}
+      <pointLight position={[0, -2, 2]} intensity={0.25} color="#7fbfb7" />
       
       <Suspense fallback={<LoadingFallback />}>
         <Model 
@@ -202,8 +207,58 @@ export function Hero3DModel() {
     }, 300);
   };
 
+  const handlePrev = () => {
+    if (isTransitioning) return;
+    setIsTransitioning(true);
+    setTimeout(() => {
+      setActiveIndex((prev) => (prev - 1 + HERO_MODELS.length) % HERO_MODELS.length);
+      setIsTransitioning(false);
+    }, 300);
+  };
+
+  const handleNext = () => {
+    if (isTransitioning) return;
+    setIsTransitioning(true);
+    setTimeout(() => {
+      setActiveIndex((prev) => (prev + 1) % HERO_MODELS.length);
+      setIsTransitioning(false);
+    }, 300);
+  };
+
   return (
     <div className="relative w-full">
+      {/* Left arrow */}
+      <button
+        onClick={handlePrev}
+        className="absolute left-2 md:left-4 top-1/2 -translate-y-1/2 z-10
+          w-10 h-10 rounded-full
+          bg-accent/20 hover:bg-accent/40
+          text-accent-foreground
+          backdrop-blur-sm
+          transition-all duration-200
+          hover:scale-110
+          flex items-center justify-center"
+        aria-label="Previous model"
+      >
+        <ChevronLeft className="w-5 h-5" />
+      </button>
+
+      {/* Right arrow */}
+      <button
+        onClick={handleNext}
+        className="absolute right-2 md:right-4 top-1/2 -translate-y-1/2 z-10
+          w-10 h-10 rounded-full
+          bg-accent/20 hover:bg-accent/40
+          text-accent-foreground
+          backdrop-blur-sm
+          transition-all duration-200
+          hover:scale-110
+          flex items-center justify-center"
+        aria-label="Next model"
+      >
+        <ChevronRight className="w-5 h-5" />
+      </button>
+
       {/* 3D Canvas */}
       <div 
         className={`w-full h-[400px] md:h-[500px] lg:h-[560px] transition-opacity duration-300 ${
