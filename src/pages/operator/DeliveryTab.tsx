@@ -52,7 +52,25 @@ export function DeliveryTab() {
         headers: { "x-admin-key": adminKey },
       });
       if (!res.ok) throw new Error("Failed to fetch inbox");
-      return res.json() as Promise<{ conversations: InboxItem[] }>;
+      const data = await res.json();
+      // API returns array directly with different field names
+      return (data || []).map((item: {
+        project_id?: string;
+        project_token: string;
+        business_name: string;
+        status: string;
+        last_message?: { content: string; sender_type: string; created_at: string } | null;
+        unread_count: number;
+      }) => ({
+        project_id: item.project_id || item.project_token,
+        project_token: item.project_token,
+        business_name: item.business_name,
+        status: item.status,
+        last_message_content: item.last_message?.content || "",
+        last_message_sender_type: item.last_message?.sender_type || "",
+        last_message_created_at: item.last_message?.created_at || "",
+        unread_count: item.unread_count || 0,
+      })) as InboxItem[];
     },
     refetchInterval: 30000,
   });
@@ -100,7 +118,7 @@ export function DeliveryTab() {
     },
   });
 
-  const inbox = inboxData?.conversations || [];
+  const inbox = inboxData || [];
   const projects = projectsData?.projects || [];
   const unreadCount = inbox.filter(i => i.unread_count > 0).length;
 
