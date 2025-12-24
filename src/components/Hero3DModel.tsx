@@ -1,8 +1,10 @@
-import { Suspense, useRef, useEffect, useState } from "react";
+import { Suspense, useRef, useEffect, useState, useCallback } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { useGLTF, Environment, Float, ContactShadows } from "@react-three/drei";
+import { useGLTF, Environment, Float, ContactShadows, OrbitControls } from "@react-three/drei";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import * as THREE from "three";
+
+const AUTO_ADVANCE_MS = 10000; // 10 seconds between auto-transitions
 
 // Material presets - procedural materials for texture-less models
 const MATERIAL_PRESETS = {
@@ -97,12 +99,7 @@ function Model({ path, preset, opacity }: ModelProps) {
     clonedScene.current = scene.clone(true);
   }, [scene]);
 
-  // Gentle rotation
-  useFrame((state) => {
-    if (groupRef.current) {
-      groupRef.current.rotation.y = state.clock.elapsedTime * 0.12;
-    }
-  });
+  // Removed auto-rotation - user controls rotation via OrbitControls now
 
   // Apply material preset
   useEffect(() => {
@@ -154,10 +151,20 @@ function LoadingFallback() {
 
 interface SceneProps {
   activeIndex: number;
+  controlsRef: React.RefObject<any>;
+  onInteractionStart: () => void;
+  onInteractionEnd: () => void;
 }
 
-function Scene({ activeIndex }: SceneProps) {
+function Scene({ activeIndex, controlsRef, onInteractionStart, onInteractionEnd }: SceneProps) {
   const model = HERO_MODELS[activeIndex];
+  
+  // Reset OrbitControls when slide changes
+  useEffect(() => {
+    if (controlsRef.current) {
+      controlsRef.current.reset();
+    }
+  }, [activeIndex, controlsRef]);
   
   return (
     <>
@@ -177,6 +184,20 @@ function Scene({ activeIndex }: SceneProps) {
       <directionalLight position={[0, 4, -6]} intensity={0.8} />
       {/* Accent light - subtle brand tint from below */}
       <pointLight position={[0, -2, 2]} intensity={0.15} color="#7fbfb7" />
+      
+      {/* OrbitControls for drag-to-rotate */}
+      <OrbitControls
+        ref={controlsRef}
+        enableZoom={false}
+        enablePan={false}
+        enableDamping={true}
+        dampingFactor={0.05}
+        rotateSpeed={0.8}
+        minPolarAngle={Math.PI / 4}
+        maxPolarAngle={Math.PI / 1.5}
+        onStart={onInteractionStart}
+        onEnd={onInteractionEnd}
+      />
       
       <Suspense fallback={<LoadingFallback />}>
         <Model 
@@ -202,9 +223,21 @@ function Scene({ activeIndex }: SceneProps) {
 export function Hero3DModel() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [isInteracting, setIsInteracting] = useState(false);
+  const controlsRef = useRef<any>(null);
 
-  // Auto-advance every 7 seconds
+  const handleInteractionStart = useCallback(() => {
+    setIsInteracting(true);
+  }, []);
+
+  const handleInteractionEnd = useCallback(() => {
+    setIsInteracting(false);
+  }, []);
+
+  // Auto-advance every 10 seconds - pauses while user is interacting
   useEffect(() => {
+    if (isInteracting) return; // Don't auto-advance while dragging
+
     const interval = setInterval(() => {
       if (!isTransitioning) {
         setIsTransitioning(true);
@@ -213,10 +246,10 @@ export function Hero3DModel() {
           setIsTransitioning(false);
         }, 300);
       }
-    }, 7000);
+    }, AUTO_ADVANCE_MS);
 
     return () => clearInterval(interval);
-  }, [isTransitioning]);
+  }, [isTransitioning, isInteracting]);
 
   const handleDotClick = (index: number) => {
     if (index === activeIndex || isTransitioning) return;
@@ -297,7 +330,12 @@ export function Hero3DModel() {
             toneMappingExposure: 1.2,
           }}
         >
-          <Scene activeIndex={activeIndex} />
+          <Scene 
+            activeIndex={activeIndex} 
+            controlsRef={controlsRef}
+            onInteractionStart={handleInteractionStart}
+            onInteractionEnd={handleInteractionEnd}
+          />
         </Canvas>
       </div>
 
