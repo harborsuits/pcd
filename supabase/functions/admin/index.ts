@@ -1132,8 +1132,10 @@ async function handleProjects(req: Request): Promise<Response> {
     // Fetch intake data for all projects
     const projectIds = (projects || []).map(p => p.id);
     let intakesMap: Record<string, unknown> = {};
+    let unreadCountsMap: Record<string, number> = {};
     
     if (projectIds.length > 0) {
+      // Fetch intakes
       const { data: intakes, error: intakesError } = await supabase
         .from("project_intakes")
         .select("project_id, intake_json, intake_version, created_at")
@@ -1141,19 +1143,36 @@ async function handleProjects(req: Request): Promise<Response> {
 
       if (intakesError) {
         console.error("Intakes fetch error:", intakesError);
-        // Continue without intakes rather than failing
       } else {
         intakesMap = (intakes || []).reduce((acc: Record<string, unknown>, intake) => {
           acc[intake.project_id] = intake;
           return acc;
         }, {});
       }
+
+      // Fetch unread client messages count per project
+      const { data: unreadCounts, error: unreadError } = await supabase
+        .from("messages")
+        .select("project_id")
+        .in("project_id", projectIds)
+        .eq("sender_type", "client")
+        .is("read_at", null);
+
+      if (unreadError) {
+        console.error("Unread counts fetch error:", unreadError);
+      } else {
+        // Count messages per project
+        (unreadCounts || []).forEach(msg => {
+          unreadCountsMap[msg.project_id] = (unreadCountsMap[msg.project_id] || 0) + 1;
+        });
+      }
     }
 
-    // Combine projects with their intakes
+    // Combine projects with their intakes and unread counts
     const projectsWithIntakes = (projects || []).map(project => ({
       ...project,
       intake: intakesMap[project.id] || null,
+      unread_count: unreadCountsMap[project.id] || 0,
     }));
 
     console.log(`Projects fetched: ${projectsWithIntakes.length}`);
