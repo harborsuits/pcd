@@ -9,14 +9,14 @@ const MATERIAL_PRESETS = {
   tealFrosted: {
     color: '#4FA3A8',
     metalness: 0.4,
-    roughness: 0.6,
-    envMapIntensity: 0.7,
+    roughness: 0.55,
+    envMapIntensity: 1.0,
   },
   blueWhite: {
     color: '#3A6B99',
-    metalness: 0.3,
-    roughness: 0.5,
-    envMapIntensity: 0.8,
+    metalness: 0.35,
+    roughness: 0.35, // Lower roughness for specular definition
+    envMapIntensity: 1.2,
   },
 };
 
@@ -150,16 +150,22 @@ function Scene({ activeIndex }: SceneProps) {
   
   return (
     <>
-      {/* Studio lighting: ambient (low), key, fill, rim, accent */}
-      <ambientLight intensity={0.25} />
-      {/* Key light - main sculpting, top-left */}
-      <directionalLight position={[-4, 6, 4]} intensity={0.9} castShadow />
-      {/* Fill light - opposite side, softer */}
-      <directionalLight position={[4, 2, 3]} intensity={0.35} />
-      {/* Rim light - separates model from background */}
-      <directionalLight position={[0, 4, -6]} intensity={0.6} />
+      {/* Refined studio lighting */}
+      {/* Very low ambient - prevents crushed shadows */}
+      <ambientLight intensity={0.12} />
+      {/* Strong key light - main sculpting, top-left */}
+      <directionalLight 
+        position={[-4, 6, 4]} 
+        intensity={1.2} 
+        castShadow 
+        shadow-mapSize={[1024, 1024]}
+      />
+      {/* Weak fill - opposite side */}
+      <directionalLight position={[4, 2, 3]} intensity={0.2} />
+      {/* Strong rim light - outlines silhouette */}
+      <directionalLight position={[0, 4, -6]} intensity={0.8} />
       {/* Accent light - subtle brand tint from below */}
-      <pointLight position={[0, -2, 2]} intensity={0.25} color="#7fbfb7" />
+      <pointLight position={[0, -2, 2]} intensity={0.15} color="#7fbfb7" />
       
       <Suspense fallback={<LoadingFallback />}>
         <Model 
@@ -167,12 +173,15 @@ function Scene({ activeIndex }: SceneProps) {
           preset={model.preset as keyof typeof MATERIAL_PRESETS} 
           opacity={1} 
         />
-        <Environment preset="studio" />
+        {/* HDRI environment for realistic reflections */}
+        <Environment preset="studio" background={false} />
+        {/* Stronger contact shadows to ground the model */}
         <ContactShadows 
           position={[0, -1.5, 0]} 
-          opacity={0.4} 
-          scale={10} 
-          blur={2} 
+          opacity={0.65} 
+          scale={8} 
+          blur={1.5}
+          far={4}
         />
       </Suspense>
     </>
