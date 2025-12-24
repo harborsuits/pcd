@@ -342,6 +342,44 @@ export type Database = {
           },
         ]
       }
+      operator_notes: {
+        Row: {
+          content: string
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          id: string
+          project_id: string
+          project_token: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          id?: string
+          project_id: string
+          project_token: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          id?: string
+          project_id?: string
+          project_token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "operator_notes_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       outreach_events: {
         Row: {
           channel: string
@@ -453,6 +491,47 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "payments_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_checklist_items: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          id: string
+          is_done: boolean
+          label: string
+          project_id: string
+          project_token: string
+          sort_order: number
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          is_done?: boolean
+          label: string
+          project_id: string
+          project_token: string
+          sort_order?: number
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          is_done?: boolean
+          label?: string
+          project_id?: string
+          project_token?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_checklist_items_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
