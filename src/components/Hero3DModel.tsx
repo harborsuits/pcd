@@ -50,7 +50,7 @@ function Model() {
     }
   });
 
-  // Improve material response (even without textures, makes "clay" look good)
+  // Apply frosted teal metal material
   useEffect(() => {
     scene.traverse((obj: THREE.Object3D) => {
       if ((obj as THREE.Mesh).isMesh) {
@@ -58,13 +58,16 @@ function Model() {
         mesh.castShadow = true;
         mesh.receiveShadow = true;
 
-        const mat = mesh.material as THREE.MeshStandardMaterial;
-        if (mat) {
-          mat.metalness = mat.metalness ?? 0.1;
-          mat.roughness = mat.roughness ?? 0.6;
-          mat.side = THREE.DoubleSide;
-          mat.needsUpdate = true;
-        }
+        // Create frosted teal metal material
+        const tealMaterial = new THREE.MeshStandardMaterial({
+          color: new THREE.Color('#4FA3A8'), // Desaturated teal
+          metalness: 0.4,
+          roughness: 0.6,
+          side: THREE.DoubleSide,
+          envMapIntensity: 0.7, // Soft reflections
+        });
+
+        mesh.material = tealMaterial;
       }
     });
   }, [scene]);
