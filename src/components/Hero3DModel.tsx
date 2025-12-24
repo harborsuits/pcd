@@ -47,11 +47,12 @@ const HERO_MODELS = [
   },
 ];
 
-function FitCameraToObject({ object }: { object: THREE.Object3D }) {
+function FitCameraToObject({ object, onReady }: { object: THREE.Object3D; onReady?: () => void }) {
   const { camera } = useThree();
+  const hasFramed = useRef(false);
 
   useEffect(() => {
-    if (!object) return;
+    if (!object || hasFramed.current) return;
 
     const box = new THREE.Box3().setFromObject(object);
     const size = new THREE.Vector3();
@@ -78,7 +79,14 @@ function FitCameraToObject({ object }: { object: THREE.Object3D }) {
     camera.near = cameraZ / 100;
     camera.far = cameraZ * 100;
     camera.updateProjectionMatrix();
-  }, [object, camera]);
+    
+    hasFramed.current = true;
+    
+    // Signal that framing is complete
+    requestAnimationFrame(() => {
+      onReady?.();
+    });
+  }, [object, camera, onReady]);
 
   return null;
 }
@@ -87,27 +95,26 @@ interface ModelProps {
   path: string;
   preset: keyof typeof MATERIAL_PRESETS;
   opacity: number;
+  onCameraReady?: () => void;
 }
 
-function Model({ path, preset, opacity }: ModelProps) {
+function Model({ path, preset, opacity, onCameraReady }: ModelProps) {
   const groupRef = useRef<THREE.Group>(null);
   const { scene } = useGLTF(path);
-  const clonedScene = useRef<THREE.Group | null>(null);
+  const [clonedScene, setClonedScene] = useState<THREE.Group | null>(null);
 
   // Clone the scene to avoid shared state between models
   useEffect(() => {
-    clonedScene.current = scene.clone(true);
+    setClonedScene(scene.clone(true));
   }, [scene]);
-
-  // Removed auto-rotation - user controls rotation via OrbitControls now
 
   // Apply material preset
   useEffect(() => {
-    if (!clonedScene.current) return;
+    if (!clonedScene) return;
     
     const materialConfig = MATERIAL_PRESETS[preset];
     
-    clonedScene.current.traverse((obj: THREE.Object3D) => {
+    clonedScene.traverse((obj: THREE.Object3D) => {
       if ((obj as THREE.Mesh).isMesh) {
         const mesh = obj as THREE.Mesh;
         mesh.castShadow = true;
@@ -126,15 +133,15 @@ function Model({ path, preset, opacity }: ModelProps) {
         mesh.material = material;
       }
     });
-  }, [preset, opacity]);
+  }, [clonedScene, preset, opacity]);
 
-  if (!clonedScene.current) return null;
+  if (!clonedScene) return null;
 
   return (
     <Float speed={1.5} rotationIntensity={0.2} floatIntensity={0.5}>
       <group ref={groupRef}>
-        <primitive object={clonedScene.current} />
-        <FitCameraToObject object={clonedScene.current} />
+        <primitive object={clonedScene} />
+        <FitCameraToObject object={clonedScene} onReady={onCameraReady} />
       </group>
     </Float>
   );
@@ -154,17 +161,24 @@ interface SceneProps {
   controlsRef: React.RefObject<any>;
   onInteractionStart: () => void;
   onInteractionEnd: () => void;
+  onModelReady: () => void;
 }
 
-function Scene({ activeIndex, controlsRef, onInteractionStart, onInteractionEnd }: SceneProps) {
+function Scene({ activeIndex, controlsRef, onInteractionStart, onInteractionEnd, onModelReady }: SceneProps) {
   const model = HERO_MODELS[activeIndex];
+  const { camera } = useThree();
   
-  // Reset OrbitControls when slide changes
+  // Reset camera and OrbitControls when slide changes
   useEffect(() => {
+    // Reset camera to default position first
+    camera.position.set(0, 1, 8);
+    camera.lookAt(0, 0, 0);
+    camera.updateProjectionMatrix();
+    
     if (controlsRef.current) {
       controlsRef.current.reset();
     }
-  }, [activeIndex, controlsRef]);
+  }, [activeIndex, controlsRef, camera]);
   
   return (
     <>
@@ -200,10 +214,13 @@ function Scene({ activeIndex, controlsRef, onInteractionStart, onInteractionEnd 
       />
       
       <Suspense fallback={<LoadingFallback />}>
+        {/* Key forces remount when activeIndex changes, ensuring fresh camera fit */}
         <Model 
+          key={activeIndex}
           path={model.path} 
           preset={model.preset as keyof typeof MATERIAL_PRESETS} 
-          opacity={1} 
+          opacity={1}
+          onCameraReady={onModelReady}
         />
         {/* HDRI environment for realistic reflections - warehouse for gold contrast */}
         <Environment preset="warehouse" background={false} />
@@ -224,6 +241,7 @@ export function Hero3DModel() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [isInteracting, setIsInteracting] = useState(false);
+  const [isModelReady, setIsModelReady] = useState(true);
   const controlsRef = useRef<any>(null);
 
   const handleInteractionStart = useCallback(() => {
@@ -234,13 +252,21 @@ export function Hero3DModel() {
     setIsInteracting(false);
   }, []);
 
+  const handleModelReady = useCallback(() => {
+    // Small delay to ensure camera has fully positioned
+    setTimeout(() => {
+      setIsModelReady(true);
+    }, 50);
+  }, []);
+
   // Auto-advance every 10 seconds - pauses while user is interacting
   useEffect(() => {
     if (isInteracting) return; // Don't auto-advance while dragging
 
     const interval = setInterval(() => {
-      if (!isTransitioning) {
+      if (!isTransitioning && isModelReady) {
         setIsTransitioning(true);
+        setIsModelReady(false);
         setTimeout(() => {
           setActiveIndex((prev) => (prev + 1) % HERO_MODELS.length);
           setIsTransitioning(false);
@@ -249,11 +275,12 @@ export function Hero3DModel() {
     }, AUTO_ADVANCE_MS);
 
     return () => clearInterval(interval);
-  }, [isTransitioning, isInteracting]);
+  }, [isTransitioning, isInteracting, isModelReady]);
 
   const handleDotClick = (index: number) => {
     if (index === activeIndex || isTransitioning) return;
     setIsTransitioning(true);
+    setIsModelReady(false);
     setTimeout(() => {
       setActiveIndex(index);
       setIsTransitioning(false);
@@ -263,6 +290,7 @@ export function Hero3DModel() {
   const handlePrev = () => {
     if (isTransitioning) return;
     setIsTransitioning(true);
+    setIsModelReady(false);
     setTimeout(() => {
       setActiveIndex((prev) => (prev - 1 + HERO_MODELS.length) % HERO_MODELS.length);
       setIsTransitioning(false);
@@ -272,6 +300,7 @@ export function Hero3DModel() {
   const handleNext = () => {
     if (isTransitioning) return;
     setIsTransitioning(true);
+    setIsModelReady(false);
     setTimeout(() => {
       setActiveIndex((prev) => (prev + 1) % HERO_MODELS.length);
       setIsTransitioning(false);
@@ -315,7 +344,7 @@ export function Hero3DModel() {
       {/* 3D Canvas */}
       <div 
         className={`w-full h-[400px] md:h-[500px] lg:h-[560px] transition-opacity duration-300 ${
-          isTransitioning ? 'opacity-0' : 'opacity-100'
+          isTransitioning || !isModelReady ? 'opacity-0' : 'opacity-100'
         }`}
       >
         <Canvas
@@ -335,6 +364,7 @@ export function Hero3DModel() {
             controlsRef={controlsRef}
             onInteractionStart={handleInteractionStart}
             onInteractionEnd={handleInteractionEnd}
+            onModelReady={handleModelReady}
           />
         </Canvas>
       </div>
