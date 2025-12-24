@@ -147,9 +147,11 @@ export function ProjectDetailDrawer({ project, open, onClose, onStatusChange }: 
 
   // Mark messages as read when messages tab is viewed
   useEffect(() => {
-    if (project && open && activeTab === "messages") {
-      markReadMutation.mutate(project.project_token);
-    }
+    if (!project || !open) return;
+    if (activeTab !== "messages") return;
+    if (markReadMutation.isPending) return;
+
+    markReadMutation.mutate(project.project_token);
   }, [project?.project_token, open, activeTab]);
 
   // Fetch notes
