@@ -106,11 +106,16 @@ export function Hero3DModel() {
           toneMappingExposure: 1.2,
         }}
       >
-        {/* Lighting that makes "clay" models look good */}
-        <ambientLight intensity={0.8} />
-        <directionalLight position={[5, 5, 5]} intensity={1.5} castShadow />
-        <directionalLight position={[-5, 5, -5]} intensity={0.8} />
-        <pointLight position={[0, -5, 0]} intensity={0.5} color="#7c3aed" />
+        {/* Soft studio lighting setup */}
+        <ambientLight intensity={0.4} />
+        {/* Key light - top left, soft */}
+        <directionalLight position={[-3, 5, 4]} intensity={1.2} castShadow />
+        {/* Fill light - opposite side, lower intensity */}
+        <directionalLight position={[4, 3, -3]} intensity={0.5} />
+        {/* Rim light - behind for edge definition */}
+        <directionalLight position={[0, 2, -5]} intensity={0.3} />
+        {/* Subtle teal accent from below */}
+        <pointLight position={[0, -3, 2]} intensity={0.25} color="#4FA3A8" />
         
         <Suspense fallback={<LoadingFallback />}>
           <Model />
