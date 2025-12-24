@@ -69,7 +69,7 @@ const Index = () => {
               
               {/* Target audience subheadline */}
               <p className="text-base md:text-lg text-accent/80 font-medium mb-4">
-                For contractors & local service businesses who want fewer calls, less email, and a cleaner process.
+                For local service businesses who want fewer calls, less email, and a clearer way to work with clients.
               </p>
               
               <p className="text-lg md:text-xl text-muted-foreground leading-relaxed max-w-2xl mb-8">
