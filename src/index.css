@@ -113,3 +113,13 @@ All colors MUST be HSL.
     @apply bg-background text-foreground;
   }
 }
+
+/* Read receipt animation */
+@keyframes receiptPop {
+  0% { opacity: 0; transform: translateY(2px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+.receipt-pop {
+  animation: receiptPop 180ms ease-out;
+}
