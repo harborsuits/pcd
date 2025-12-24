@@ -107,6 +107,28 @@ export function ProjectDetailDrawer({ project, open, onClose, onStatusChange }: 
     }
   }, [project?.id]);
 
+  // Mark messages as read mutation
+  const markReadMutation = useMutation({
+    mutationFn: async (token: string) => {
+      const adminKey = localStorage.getItem("admin_key") || "";
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/admin/messages/mark-read`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-admin-key": adminKey,
+        },
+        body: JSON.stringify({ project_token: token }),
+      });
+      if (!res.ok) throw new Error("Failed to mark messages as read");
+      return res.json();
+    },
+    onSuccess: () => {
+      // Refresh counts in projects list and inbox
+      queryClient.invalidateQueries({ queryKey: ["admin-projects"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-inbox"] });
+    },
+  });
+
   // Fetch messages for this project
   const { data: messagesData, isLoading: messagesLoading } = useQuery({
     queryKey: ["project-messages", project?.project_token],
@@ -122,6 +144,13 @@ export function ProjectDetailDrawer({ project, open, onClose, onStatusChange }: 
     enabled: !!project && open,
     refetchInterval: 10000,
   });
+
+  // Mark messages as read when messages tab is viewed
+  useEffect(() => {
+    if (project && open && activeTab === "messages") {
+      markReadMutation.mutate(project.project_token);
+    }
+  }, [project?.project_token, open, activeTab]);
 
   // Fetch notes
   const { data: notesData, isLoading: notesLoading } = useQuery({
