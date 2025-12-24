@@ -37,13 +37,13 @@ const MATERIAL_PRESETS = {
 // Hero model configurations
 const HERO_MODELS = [
   {
-    path: '/models/hero-model-silver.glb',
-    preset: 'polishedSilver',
+    path: '/models/hero-model.glb',
+    preset: 'tealFrosted',
     caption: 'Client portals & workflows',
   },
   {
-    path: '/models/hero-model-2.glb',
-    preset: 'blueWhite',
+    path: '/models/hero-model-silver.glb',
+    preset: 'polishedSilver',
     caption: 'Booking & intake systems',
   },
   {
