@@ -1,8 +1,7 @@
 import { Suspense, useRef, useEffect } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { useGLTF, OrbitControls, ContactShadows } from "@react-three/drei";
+import { useGLTF, OrbitControls, Environment, Float, ContactShadows } from "@react-three/drei";
 import * as THREE from "three";
-import waterBg from "@/assets/water-bg.jpeg";
 
 function FitCameraToObject({ object }: { object: THREE.Object3D }) {
   const { camera } = useThree();
@@ -27,7 +26,7 @@ function FitCameraToObject({ object }: { object: THREE.Object3D }) {
     const fov = (camera as THREE.PerspectiveCamera).fov * (Math.PI / 180);
     let cameraZ = Math.abs((maxDim / 2) / Math.tan(fov / 2));
 
-    cameraZ *= 1.5; // padding factor
+    cameraZ *= 1.5; // padding factor (bigger = smaller model on screen)
 
     camera.position.set(0, maxDim * 0.15, cameraZ);
     camera.lookAt(0, 0, 0);
@@ -44,16 +43,14 @@ function Model() {
   const groupRef = useRef<THREE.Group>(null);
   const { scene } = useGLTF("/models/hero-model.glb");
 
-  // Slow rotation with gentle bobbing for underwater feel
+  // Gentle rotation
   useFrame((state) => {
     if (groupRef.current) {
-      const t = state.clock.elapsedTime;
-      groupRef.current.rotation.y = t * 0.08;
-      groupRef.current.position.y = Math.sin(t * 0.5) * 0.05;
+      groupRef.current.rotation.y = state.clock.elapsedTime * 0.12;
     }
   });
 
-  // Apply blue tint and water-appropriate materials
+  // Improve material response (even without textures, makes "clay" look good)
   useEffect(() => {
     scene.traverse((obj: THREE.Object3D) => {
       if ((obj as THREE.Mesh).isMesh) {
@@ -63,9 +60,8 @@ function Model() {
 
         const mat = mesh.material as THREE.MeshStandardMaterial;
         if (mat) {
-          mat.color.set("#e6f4ff"); // Slight blue tint
-          mat.metalness = 0.05;
-          mat.roughness = 0.35;
+          mat.metalness = mat.metalness ?? 0.1;
+          mat.roughness = mat.roughness ?? 0.6;
           mat.side = THREE.DoubleSide;
           mat.needsUpdate = true;
         }
@@ -74,10 +70,12 @@ function Model() {
   }, [scene]);
 
   return (
-    <group ref={groupRef}>
-      <primitive object={scene} />
-      <FitCameraToObject object={scene} />
-    </group>
+    <Float speed={1.5} rotationIntensity={0.2} floatIntensity={0.5}>
+      <group ref={groupRef}>
+        <primitive object={scene} />
+        <FitCameraToObject object={scene} />
+      </group>
+    </Float>
   );
 }
 
@@ -85,10 +83,12 @@ function LoadingFallback() {
   return (
     <mesh>
       <boxGeometry args={[1, 1, 1]} />
-      <meshStandardMaterial color="#e6f4ff" wireframe />
+      <meshStandardMaterial color="hsl(var(--accent))" wireframe />
     </mesh>
   );
 }
+
+import waterBg from "@/assets/water-bg.jpeg";
 
 export function Hero3DModel() {
   return (
@@ -98,32 +98,6 @@ export function Hero3DModel() {
         src={waterBg} 
         alt="" 
         className="absolute inset-0 w-full h-full object-cover"
-      />
-      
-      {/* Radial depth fade overlay - mimics underwater light absorption */}
-      <div 
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          background: `
-            radial-gradient(
-              circle at center,
-              rgba(255,255,255,0.08) 0%,
-              rgba(0,0,0,0.25) 55%,
-              rgba(0,0,0,0.45) 100%
-            )
-          `,
-        }}
-      />
-      
-      {/* Top/bottom vignette for focus */}
-      <div 
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          background: `
-            linear-gradient(to bottom, rgba(0,0,0,0.25), transparent 30%),
-            linear-gradient(to top, rgba(0,0,0,0.35), transparent 40%)
-          `,
-        }}
       />
       
       <Canvas
@@ -138,27 +112,20 @@ export function Hero3DModel() {
           toneMappingExposure: 1.2,
         }}
       >
-        {/* Underwater fog for depth blending */}
-        <fog attach="fog" args={["#0b2a3a", 6, 14]} />
-        
-        {/* Matched lighting - top-down like water photo */}
-        <ambientLight intensity={0.35} />
-        <directionalLight 
-          position={[2, 6, 4]} 
-          intensity={1.2} 
-          color="#d6f1ff"
-          castShadow 
-        />
-        <directionalLight position={[-3, 4, -2]} intensity={0.5} color="#a8d4f0" />
+        {/* Lighting that makes "clay" models look good */}
+        <ambientLight intensity={0.8} />
+        <directionalLight position={[5, 5, 5]} intensity={1.5} castShadow />
+        <directionalLight position={[-5, 5, -5]} intensity={0.8} />
+        <pointLight position={[0, -5, 0]} intensity={0.5} color="#7c3aed" />
         
         <Suspense fallback={<LoadingFallback />}>
           <Model />
-          {/* Contact shadow for grounding */}
+          <Environment preset="studio" />
           <ContactShadows 
-            position={[0, -1.1, 0]} 
-            opacity={0.35} 
-            scale={6} 
-            blur={2.5} 
+            position={[0, -1.5, 0]} 
+            opacity={0.4} 
+            scale={10} 
+            blur={2} 
           />
         </Suspense>
         
