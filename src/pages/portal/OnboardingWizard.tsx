@@ -52,13 +52,22 @@ const BUSINESS_TYPES = [
   { id: "other", label: "Other", icon: Users, description: "Something else" },
 ];
 
-// Main goals
+// Main goals (multi-select)
 const GOALS = [
-  { id: "calls", label: "Get more calls" },
-  { id: "appointments", label: "Book appointments" },
-  { id: "professional", label: "Look more professional" },
-  { id: "replace_phone", label: "Replace answering the phone" },
-  { id: "all", label: "All of the above" },
+  { id: "calls", label: "Get more calls / leads" },
+  { id: "booking", label: "Online booking / scheduling" },
+  { id: "professional", label: "Improve credibility / modernize site" },
+  { id: "reviews", label: "Better reviews / reputation" },
+  { id: "payments", label: "Take payments / deposits" },
+  { id: "automations", label: "Automations / follow-ups" },
+];
+
+// Timeline options
+const TIMELINE_OPTIONS = [
+  { id: "asap", label: "ASAP — I need something live now" },
+  { id: "1-2_weeks", label: "1–2 weeks" },
+  { id: "30_days", label: "Within 30 days" },
+  { id: "browsing", label: "Just browsing / planning" },
 ];
 
 // Style vibes
@@ -107,13 +116,21 @@ const HOURS_OPTIONS = [
 interface IntakeData {
   businessName: string;
   businessType: string;
-  mainGoal: string;
+  goals: string[];
+  hasWebsite: boolean;
+  websiteUrl: string;
+  timeline: string;
+  contactName: string;
+  contactPhone: string;
+  contactEmail: string;
+  serviceArea: string;
   styleVibe: string;
   colorPreset: string;
   inspirationLinks: string;
   functionality: string[];
   hoursType: string;
   selectedDemo: string;
+  notes: string;
 }
 
 export default function OnboardingWizard() {
@@ -124,13 +141,21 @@ export default function OnboardingWizard() {
   const [intake, setIntake] = useState<IntakeData>({
     businessName: "",
     businessType: "",
-    mainGoal: "",
+    goals: [],
+    hasWebsite: false,
+    websiteUrl: "",
+    timeline: "",
+    contactName: "",
+    contactPhone: "",
+    contactEmail: "",
+    serviceArea: "",
     styleVibe: "",
     colorPreset: "",
     inspirationLinks: "",
     functionality: [],
     hoursType: "",
     selectedDemo: "",
+    notes: "",
   });
 
   const stepProgress = ((currentStep + 1) / STEPS.length) * 100;
@@ -138,7 +163,7 @@ export default function OnboardingWizard() {
   const canProceed = (): boolean => {
     switch (currentStep) {
       case 0: // Basics
-        return !!intake.businessName && !!intake.businessType && !!intake.mainGoal;
+        return !!intake.businessName && !!intake.businessType && intake.goals.length > 0 && !!intake.timeline;
       case 1: // Style - can proceed if they pick a demo OR manual style+color
         return (!!intake.styleVibe && !!intake.colorPreset) || !!intake.selectedDemo;
       case 2: // Function
@@ -264,21 +289,103 @@ export default function OnboardingWizard() {
               </div>
             </div>
 
-            {/* Main goal */}
+            {/* Goals (multi-select) */}
             <div className="space-y-3">
-              <Label>What's your main goal for this website?</Label>
+              <Label>What are you trying to accomplish? (select all that apply)</Label>
+              <div className="grid grid-cols-2 gap-2">
+                {GOALS.map((goal) => {
+                  const isChecked = intake.goals.includes(goal.id);
+                  return (
+                    <button
+                      key={goal.id}
+                      onClick={() => setIntake(prev => ({
+                        ...prev,
+                        goals: isChecked 
+                          ? prev.goals.filter(g => g !== goal.id)
+                          : [...prev.goals, goal.id]
+                      }))}
+                      className={`p-3 rounded-lg border-2 text-left transition-all flex items-center gap-2 ${
+                        isChecked 
+                          ? "border-primary bg-primary/5" 
+                          : "border-border hover:border-muted-foreground/30"
+                      }`}
+                    >
+                      <Checkbox checked={isChecked} className="pointer-events-none" />
+                      <span className="text-sm">{goal.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Do you have a website? */}
+            <div className="space-y-3">
+              <Label>Do you currently have a website?</Label>
               <RadioGroup
-                value={intake.mainGoal}
-                onValueChange={(value) => setIntake(prev => ({ ...prev, mainGoal: value }))}
+                value={intake.hasWebsite ? "yes" : "no"}
+                onValueChange={(value) => setIntake(prev => ({ 
+                  ...prev, 
+                  hasWebsite: value === "yes",
+                  websiteUrl: value === "no" ? "" : prev.websiteUrl
+                }))}
+                className="flex gap-4"
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="yes" id="has-website-yes" />
+                  <Label htmlFor="has-website-yes" className="cursor-pointer">Yes</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="no" id="has-website-no" />
+                  <Label htmlFor="has-website-no" className="cursor-pointer">No</Label>
+                </div>
+              </RadioGroup>
+              
+              {intake.hasWebsite && (
+                <Input
+                  placeholder="https://yoursite.com (optional)"
+                  value={intake.websiteUrl}
+                  onChange={(e) => setIntake(prev => ({ ...prev, websiteUrl: e.target.value }))}
+                />
+              )}
+            </div>
+
+            {/* Timeline */}
+            <div className="space-y-3">
+              <Label>When do you want to start?</Label>
+              <RadioGroup
+                value={intake.timeline}
+                onValueChange={(value) => setIntake(prev => ({ ...prev, timeline: value }))}
                 className="space-y-2"
               >
-                {GOALS.map((goal) => (
-                  <div key={goal.id} className="flex items-center space-x-3">
-                    <RadioGroupItem value={goal.id} id={goal.id} />
-                    <Label htmlFor={goal.id} className="cursor-pointer">{goal.label}</Label>
+                {TIMELINE_OPTIONS.map((opt) => (
+                  <div key={opt.id} className="flex items-center space-x-3">
+                    <RadioGroupItem value={opt.id} id={`timeline-${opt.id}`} />
+                    <Label htmlFor={`timeline-${opt.id}`} className="cursor-pointer">{opt.label}</Label>
                   </div>
                 ))}
               </RadioGroup>
+            </div>
+
+            {/* Contact info (optional but helpful) */}
+            <div className="space-y-3">
+              <Label className="text-muted-foreground">Contact info (optional — helps us reach you faster)</Label>
+              <div className="grid grid-cols-2 gap-3">
+                <Input
+                  placeholder="Your name"
+                  value={intake.contactName}
+                  onChange={(e) => setIntake(prev => ({ ...prev, contactName: e.target.value }))}
+                />
+                <Input
+                  placeholder="Phone"
+                  value={intake.contactPhone}
+                  onChange={(e) => setIntake(prev => ({ ...prev, contactPhone: e.target.value }))}
+                />
+              </div>
+              <Input
+                placeholder="Service area (towns, counties, etc.)"
+                value={intake.serviceArea}
+                onChange={(e) => setIntake(prev => ({ ...prev, serviceArea: e.target.value }))}
+              />
             </div>
           </div>
         );
@@ -477,9 +584,19 @@ export default function OnboardingWizard() {
                 <CardContent>
                   <p className="font-semibold">{intake.businessName || "—"}</p>
                   <p className="text-sm text-muted-foreground">
-                    {BUSINESS_TYPES.find(t => t.id === intake.businessType)?.label || "—"} · 
-                    {" "}{GOALS.find(g => g.id === intake.mainGoal)?.label || "—"}
+                    {BUSINESS_TYPES.find(t => t.id === intake.businessType)?.label || "—"}
+                    {intake.goals.length > 0 && ` · ${intake.goals.map(g => GOALS.find(goal => goal.id === g)?.label).filter(Boolean).join(", ")}`}
                   </p>
+                  {intake.timeline && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Timeline: {TIMELINE_OPTIONS.find(t => t.id === intake.timeline)?.label || intake.timeline}
+                    </p>
+                  )}
+                  {intake.hasWebsite && intake.websiteUrl && (
+                    <p className="text-xs text-muted-foreground">
+                      Current site: {intake.websiteUrl}
+                    </p>
+                  )}
                 </CardContent>
               </Card>
 

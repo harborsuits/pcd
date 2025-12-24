@@ -1,18 +1,14 @@
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Button } from "@/components/ui/button";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Textarea } from "@/components/ui/textarea";
 import { 
-  Inbox, FolderOpen, Users, ExternalLink, Send, 
-  Loader2, MessageSquare, Clock, CheckCircle
+  Inbox, Users, 
+  Loader2, MessageSquare, ChevronRight
 } from "lucide-react";
-import { toast } from "sonner";
 import { format } from "date-fns";
-import { supabase } from "@/integrations/supabase/client";
+import { ProjectDetailDrawer } from "./ProjectDetailDrawer";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 
@@ -27,24 +23,40 @@ interface InboxItem {
   unread_count: number;
 }
 
+interface ProjectIntake {
+  project_id: string;
+  intake_json: Record<string, unknown>;
+  intake_version: number;
+  created_at: string;
+}
+
 interface Project {
   id: string;
   business_name: string;
   business_slug: string;
   project_token: string;
   status: string;
+  contact_name: string | null;
   contact_phone: string | null;
   contact_email: string | null;
+  address: string | null;
+  city: string | null;
+  state: string | null;
+  zip: string | null;
+  source: string;
+  owner_user_id: string | null;
   created_at: string;
+  updated_at: string;
+  intake: ProjectIntake | null;
+  unread_count: number;
 }
 
 export function DeliveryTab() {
-  const [selectedProject, setSelectedProject] = useState<string | null>(null);
-  const [replyContent, setReplyContent] = useState("");
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const queryClient = useQueryClient();
 
   // Fetch inbox
-  const { data: inboxData, isLoading: inboxLoading } = useQuery({
+  const { data: inboxData, isLoading: inboxLoading, refetch: refetchInbox } = useQuery({
     queryKey: ["admin-inbox"],
     queryFn: async () => {
       const adminKey = localStorage.getItem("admin_key") || "";
@@ -53,7 +65,6 @@ export function DeliveryTab() {
       });
       if (!res.ok) throw new Error("Failed to fetch inbox");
       const data = await res.json();
-      // API returns array directly with different field names
       return (data || []).map((item: {
         project_id?: string;
         project_token: string;
@@ -72,11 +83,11 @@ export function DeliveryTab() {
         unread_count: item.unread_count || 0,
       })) as InboxItem[];
     },
-    refetchInterval: 30000,
+    refetchInterval: 15000,
   });
 
-  // Fetch all projects
-  const { data: projectsData, isLoading: projectsLoading } = useQuery({
+  // Fetch all projects (to get full project data for drawer)
+  const { data: projectsData } = useQuery({
     queryKey: ["admin-projects"],
     queryFn: async () => {
       const adminKey = localStorage.getItem("admin_key") || "";
@@ -89,47 +100,24 @@ export function DeliveryTab() {
     refetchInterval: 60000,
   });
 
-  // Send reply mutation
-  const sendReplyMutation = useMutation({
-    mutationFn: async ({ projectToken, content }: { projectToken: string; content: string }) => {
-      const adminKey = localStorage.getItem("admin_key") || "";
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/messages/${projectToken}`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-admin-key": adminKey,
-        },
-        body: JSON.stringify({ content, sender_type: "admin" }),
-      });
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || "Failed to send");
-      }
-      return res.json();
-    },
-    onSuccess: () => {
-      toast.success("Reply sent");
-      setReplyContent("");
-      setSelectedProject(null);
-      queryClient.invalidateQueries({ queryKey: ["admin-inbox"] });
-    },
-    onError: (error: Error) => {
-      toast.error(error.message);
-    },
-  });
-
   const inbox = inboxData || [];
   const projects = projectsData?.projects || [];
   const unreadCount = inbox.filter(i => i.unread_count > 0).length;
+  
+  // Find project by token for drawer
+  const findProject = (token: string): Project | null => {
+    return projects.find(p => p.project_token === token) || null;
+  };
 
-  const activeProjects = projects.filter(p => 
-    ["interested", "client"].includes(p.status)
-  );
-  const leadProjects = projects.filter(p => 
-    ["lead", "contacted"].includes(p.status)
-  );
+  const handleOpenProject = (token: string) => {
+    const project = findProject(token);
+    if (project) {
+      setSelectedProject(project);
+    }
+  };
 
   function formatDate(dateStr: string) {
+    if (!dateStr) return "";
     const date = new Date(dateStr);
     const now = new Date();
     const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
@@ -141,12 +129,12 @@ export function DeliveryTab() {
   }
 
   return (
-    <div className="space-y-6">
+    <>
       {/* Stats */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-4 mb-6">
         <Badge variant="outline" className="gap-1">
           <Users className="h-3 w-3" />
-          {activeProjects.length} active
+          {inbox.length} conversations
         </Badge>
         <Badge variant={unreadCount > 0 ? "default" : "outline"} className="gap-1">
           <MessageSquare className="h-3 w-3" />
@@ -154,201 +142,91 @@ export function DeliveryTab() {
         </Badge>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Inbox */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Inbox className="h-5 w-5" />
-              Inbox
-              {unreadCount > 0 && (
-                <Badge variant="destructive" className="ml-auto">
-                  {unreadCount}
-                </Badge>
-              )}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            <ScrollArea className="h-[400px]">
-              {inboxLoading ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                </div>
-              ) : inbox.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  No messages yet
-                </div>
-              ) : (
-                <div className="divide-y">
-                  {inbox.map((item) => (
-                    <div
-                      key={item.project_id}
-                      className={`p-4 hover:bg-muted/50 cursor-pointer transition-colors ${
-                        selectedProject === item.project_token ? "bg-muted" : ""
-                      } ${item.unread_count > 0 ? "border-l-2 border-l-primary" : ""}`}
-                      onClick={() => setSelectedProject(
-                        selectedProject === item.project_token ? null : item.project_token
-                      )}
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium truncate">{item.business_name}</span>
-                            {item.unread_count > 0 && (
-                              <Badge variant="secondary" className="text-xs">
-                                {item.unread_count}
-                              </Badge>
-                            )}
-                          </div>
-                          <p className="text-sm text-muted-foreground truncate mt-1">
-                            {item.last_message_sender_type === "admin" && "You: "}
-                            {item.last_message_content}
-                          </p>
-                        </div>
-                        <div className="text-xs text-muted-foreground whitespace-nowrap">
-                          {formatDate(item.last_message_created_at)}
-                        </div>
-                      </div>
-
-                      {/* Reply form */}
-                      {selectedProject === item.project_token && (
-                        <div className="mt-4 space-y-2" onClick={(e) => e.stopPropagation()}>
-                          <Textarea
-                            placeholder="Type your reply..."
-                            value={replyContent}
-                            onChange={(e) => setReplyContent(e.target.value)}
-                            className="min-h-[80px]"
-                          />
-                          <div className="flex gap-2">
-                            <Button
-                              size="sm"
-                              onClick={() => sendReplyMutation.mutate({
-                                projectToken: item.project_token,
-                                content: replyContent,
-                              })}
-                              disabled={!replyContent.trim() || sendReplyMutation.isPending}
-                            >
-                              {sendReplyMutation.isPending ? (
-                                <Loader2 className="h-4 w-4 animate-spin mr-1" />
-                              ) : (
-                                <Send className="h-4 w-4 mr-1" />
-                              )}
-                              Send
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              asChild
-                            >
-                              <a href={`/p/${item.project_token}`} target="_blank" rel="noopener noreferrer">
-                                <ExternalLink className="h-4 w-4 mr-1" />
-                                Open Portal
-                              </a>
-                            </Button>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </ScrollArea>
-          </CardContent>
-        </Card>
-
-        {/* Projects */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <FolderOpen className="h-5 w-5" />
-              Projects
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            <Tabs defaultValue="active">
-              <div className="px-4">
-                <TabsList className="w-full">
-                  <TabsTrigger value="active" className="flex-1">
-                    Active ({activeProjects.length})
-                  </TabsTrigger>
-                  <TabsTrigger value="leads" className="flex-1">
-                    Leads ({leadProjects.length})
-                  </TabsTrigger>
-                </TabsList>
+      {/* Inbox */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Inbox className="h-5 w-5" />
+            Message Inbox
+            {unreadCount > 0 && (
+              <Badge variant="destructive" className="ml-auto">
+                {unreadCount}
+              </Badge>
+            )}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          <ScrollArea className="h-[calc(100vh-280px)]">
+            {inboxLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
               </div>
-              
-              <TabsContent value="active" className="mt-0">
-                <ScrollArea className="h-[340px]">
-                  {projectsLoading ? (
-                    <div className="flex items-center justify-center py-8">
-                      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                    </div>
-                  ) : activeProjects.length === 0 ? (
-                    <div className="text-center py-8 text-muted-foreground">
-                      No active projects
-                    </div>
-                  ) : (
-                    <div className="divide-y">
-                      {activeProjects.map((project) => (
-                        <div key={project.id} className="p-4">
-                          <div className="flex items-start justify-between">
-                            <div>
-                              <div className="font-medium">{project.business_name}</div>
-                              <div className="text-sm text-muted-foreground">
-                                {project.contact_phone || project.contact_email || "No contact"}
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Badge variant={project.status === "client" ? "default" : "secondary"}>
-                                {project.status}
-                              </Badge>
-                              <Button variant="ghost" size="sm" asChild>
-                                <a href={`/p/${project.project_token}`} target="_blank" rel="noopener noreferrer">
-                                  <ExternalLink className="h-4 w-4" />
-                                </a>
-                              </Button>
-                            </div>
-                          </div>
+            ) : inbox.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">
+                <Inbox className="h-10 w-10 mx-auto mb-3 opacity-50" />
+                <p>No messages yet</p>
+                <p className="text-sm mt-1">Client messages will appear here</p>
+              </div>
+            ) : (
+              <div className="divide-y">
+                {inbox.map((item) => (
+                  <div
+                    key={item.project_id}
+                    className={`p-4 hover:bg-muted/50 cursor-pointer transition-colors group ${
+                      item.unread_count > 0 ? "border-l-2 border-l-primary bg-primary/5" : ""
+                    }`}
+                    onClick={() => handleOpenProject(item.project_token)}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-medium truncate">
+                            {item.business_name}
+                          </span>
+                          {item.unread_count > 0 && (
+                            <Badge variant="secondary" className="text-xs">
+                              {item.unread_count} new
+                            </Badge>
+                          )}
+                          <Badge variant="outline" className="text-xs">
+                            {item.status}
+                          </Badge>
                         </div>
-                      ))}
+                        <p className="text-sm text-muted-foreground truncate">
+                          {item.last_message_sender_type === "admin" && (
+                            <span className="text-primary">You: </span>
+                          )}
+                          {item.last_message_content || "No messages"}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground whitespace-nowrap">
+                          {formatDate(item.last_message_created_at)}
+                        </span>
+                        <ChevronRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </div>
                     </div>
-                  )}
-                </ScrollArea>
-              </TabsContent>
+                  </div>
+                ))}
+              </div>
+            )}
+          </ScrollArea>
+        </CardContent>
+      </Card>
 
-              <TabsContent value="leads" className="mt-0">
-                <ScrollArea className="h-[340px]">
-                  {projectsLoading ? (
-                    <div className="flex items-center justify-center py-8">
-                      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                    </div>
-                  ) : leadProjects.length === 0 ? (
-                    <div className="text-center py-8 text-muted-foreground">
-                      No leads
-                    </div>
-                  ) : (
-                    <div className="divide-y">
-                      {leadProjects.map((project) => (
-                        <div key={project.id} className="p-4">
-                          <div className="flex items-start justify-between">
-                            <div>
-                              <div className="font-medium">{project.business_name}</div>
-                              <div className="text-xs text-muted-foreground">
-                                {format(new Date(project.created_at), "MMM d, yyyy")}
-                              </div>
-                            </div>
-                            <Badge variant="outline">{project.status}</Badge>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </ScrollArea>
-              </TabsContent>
-            </Tabs>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
+      {/* Project Detail Drawer */}
+      <ProjectDetailDrawer
+        project={selectedProject}
+        open={!!selectedProject}
+        onClose={() => {
+          setSelectedProject(null);
+          refetchInbox();
+        }}
+        onStatusChange={() => {
+          queryClient.invalidateQueries({ queryKey: ["admin-projects"] });
+          refetchInbox();
+        }}
+      />
+    </>
   );
 }

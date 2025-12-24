@@ -39,6 +39,7 @@ interface Project {
   created_at: string;
   updated_at: string;
   intake: ProjectIntake | null;
+  unread_count: number;
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -173,10 +174,16 @@ export function ProjectsTab() {
                                 <Clock className="h-3 w-3" />
                                 {formatDate(project.created_at)}
                               </span>
+                              {project.unread_count > 0 && (
+                                <span className="flex items-center gap-1 text-primary font-medium">
+                                  <MessageSquare className="h-3 w-3" />
+                                  {project.unread_count} unread
+                                </span>
+                              )}
                               {project.intake && (
                                 <span className="flex items-center gap-1 text-green-600">
                                   <FileText className="h-3 w-3" />
-                                  Intake complete
+                                  Intake
                                 </span>
                               )}
                               {project.contact_email && (
