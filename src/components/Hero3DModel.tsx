@@ -90,7 +90,42 @@ function LoadingFallback() {
 
 export function Hero3DModel() {
   return (
-    <div className="w-full h-[400px] md:h-[500px] lg:h-[560px] rounded-xl bg-gradient-to-b from-[hsl(200,60%,50%)] via-[hsl(195,70%,40%)] to-[hsl(210,80%,25%)]">
+    <div className="relative w-full h-[400px] md:h-[500px] lg:h-[560px] rounded-xl overflow-hidden">
+      {/* Ocean background layers */}
+      <div className="absolute inset-0 bg-gradient-to-b from-[hsl(200,70%,45%)] via-[hsl(200,75%,35%)] to-[hsl(210,85%,18%)]" />
+      
+      {/* Animated wave layers */}
+      <div 
+        className="absolute inset-0 opacity-30"
+        style={{
+          background: `
+            radial-gradient(ellipse 80% 50% at 50% 100%, hsl(195, 90%, 55%) 0%, transparent 60%),
+            radial-gradient(ellipse 60% 40% at 30% 80%, hsl(190, 85%, 50%) 0%, transparent 50%),
+            radial-gradient(ellipse 70% 35% at 70% 90%, hsl(200, 80%, 45%) 0%, transparent 55%)
+          `,
+        }}
+      />
+      
+      {/* Light rays / caustics effect */}
+      <div 
+        className="absolute inset-0 opacity-20 animate-pulse"
+        style={{
+          background: `
+            linear-gradient(180deg, transparent 0%, hsl(195, 100%, 70%) 30%, transparent 60%),
+            radial-gradient(ellipse 100% 60% at 50% 0%, hsl(200, 90%, 60%) 0%, transparent 70%)
+          `,
+          animation: 'pulse 4s ease-in-out infinite',
+        }}
+      />
+      
+      {/* Subtle foam/bubbles at top */}
+      <div 
+        className="absolute top-0 left-0 right-0 h-20 opacity-10"
+        style={{
+          background: 'linear-gradient(180deg, hsl(200, 100%, 90%) 0%, transparent 100%)',
+        }}
+      />
+      
       <Canvas
         camera={{ position: [0, 1, 8], fov: 35 }}
         shadows
