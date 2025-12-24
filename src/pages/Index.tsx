@@ -1,11 +1,12 @@
 import { Link } from "react-router-dom";
-import { ArrowRight, MessageSquare, FolderOpen, Sparkles, Shield, Smartphone, CreditCard, LogIn } from "lucide-react";
+import { ArrowRight, MessageSquare, FolderOpen, Sparkles, Shield, Smartphone, CreditCard, LogIn, Globe, CalendarCheck, Zap, Bot, Clock, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Hero3DModel } from "@/components/Hero3DModel";
+
 const exampleDemos = [
   {
     name: "Roofer",
-    category: "Service Business",
+    category: "Contractor",
     token: "test-acme-plumbing-2024",
     slug: "acme-plumbing",
   },
@@ -23,11 +24,43 @@ const exampleDemos = [
   },
 ];
 
-const Index = () => {
+const capabilities = [
+  {
+    icon: Globe,
+    title: "Websites",
+    description: "Fast, modern, mobile-first — built to convert.",
+  },
+  {
+    icon: FolderOpen,
+    title: "Client Portal",
+    description: "Messages, files, approvals — all in one place.",
+  },
+  {
+    icon: CalendarCheck,
+    title: "Booking + Intake",
+    description: "Forms, scheduling, and smart routing.",
+  },
+  {
+    icon: CreditCard,
+    title: "Payments",
+    description: "Invoices, deposits, and payment links.",
+  },
+  {
+    icon: Zap,
+    title: "Automations",
+    description: "Follow-ups, reminders, and lead capture.",
+  },
+  {
+    icon: Bot,
+    title: "AI Receptionist",
+    description: "Optional add-on — never miss a call again.",
+  },
+];
 
+const Index = () => {
   return (
     <div className="min-h-screen flex flex-col bg-emerald-100/60 text-foreground">
-      {/* Header - minimal, two clear actions */}
+      {/* Header */}
       <header className="border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-6 py-4 flex items-center justify-between">
           <Link to="/" className="font-serif text-xl font-bold tracking-tight text-foreground">
@@ -38,7 +71,7 @@ const Index = () => {
               <Link to="/pricing">Pricing</Link>
             </Button>
             <Button asChild variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
-              <a href="#demos">See a Demo</a>
+              <a href="#demos">See Demos</a>
             </Button>
             <Button asChild variant="outline" size="sm">
               <Link to="/portal">Client Portal</Link>
@@ -47,122 +80,113 @@ const Index = () => {
         </div>
       </header>
 
-      {/* Hero - with 3D model */}
-      <section className="flex-1 py-16 md:py-24 relative overflow-hidden bg-emerald-50/50">
+      {/* Hero - Text first, then 3D carousel as proof */}
+      <section className="py-16 md:py-20 relative overflow-hidden bg-emerald-50/50">
         {/* Background layers */}
         <div className="absolute inset-0 pointer-events-none">
-          {/* Radial brand glow blobs */}
           <div className="absolute -top-32 -right-32 h-[520px] w-[520px] rounded-full bg-emerald-400/25 blur-3xl" />
           <div className="absolute -bottom-40 -left-40 h-[620px] w-[620px] rounded-full bg-emerald-300/20 blur-3xl" />
-
-          {/* Soft vertical wash */}
           <div className="absolute inset-0 bg-gradient-to-b from-emerald-50/0 via-emerald-50/40 to-emerald-100/50" />
-
-          {/* Vignette */}
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(0,0,0,0)_0%,rgba(0,0,0,0.08)_100%)]" />
         </div>
+        
         <div className="relative container mx-auto px-6">
-          <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
-            {/* Left: Text content */}
-            <div className="order-2 lg:order-1">
-              <h1 className="font-serif text-4xl md:text-5xl lg:text-6xl font-bold leading-tight mb-4">
-                Websites with a
-                <span className="block text-accent">built-in client portal.</span>
-              </h1>
-              
-              {/* Target audience subheadline */}
-              <p className="text-base md:text-lg text-accent/80 font-medium mb-4">
-                For local service businesses who want fewer calls, less email, and a clearer way to work with clients.
-              </p>
-              
-              <p className="text-lg md:text-xl text-muted-foreground leading-relaxed max-w-2xl mb-8">
-                We build your site. You manage everything in one place — messaging, files, payments. No email chaos.
-              </p>
-              
-              {/* 2-path CTAs */}
-              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-6">
-                <Button asChild size="lg" className="group">
-                  <Link to="/get-demo">
-                    Get a Demo
-                    <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
-                  </Link>
-                </Button>
-                <Button asChild variant="outline" size="lg">
-                  <Link to="/portal">
-                    Client Portal
-                  </Link>
-                </Button>
-              </div>
-              
-              {/* Proof row */}
-              <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
-                <div className="flex items-center gap-2">
-                  <Shield className="h-4 w-4 text-accent" />
-                  <span>Made for local businesses</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <MessageSquare className="h-4 w-4 text-accent" />
-                  <span>Messaging + files + payments</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Smartphone className="h-4 w-4 text-accent" />
-                  <span>Mobile-friendly</span>
-                </div>
-              </div>
+          {/* Hero Text - Centered */}
+          <div className="text-center max-w-3xl mx-auto mb-12">
+            <h1 className="font-serif text-4xl md:text-5xl lg:text-6xl font-bold leading-tight mb-4">
+              Websites with a
+              <span className="block text-accent">built-in client portal.</span>
+            </h1>
+            
+            <p className="text-base md:text-lg text-accent/80 font-medium mb-4">
+              For local service businesses who want fewer calls, less email, and a clearer way to work with clients.
+            </p>
+            
+            <p className="text-lg md:text-xl text-muted-foreground leading-relaxed mb-8">
+              We build your site. You manage everything in one place — messaging, files, payments.
+            </p>
+            
+            {/* CTAs */}
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8">
+              <Button asChild size="lg" className="group">
+                <a href="#demos">
+                  Get a Demo
+                  <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                </a>
+              </Button>
+              <Button asChild variant="outline" size="lg">
+                <Link to="/portal">
+                  Client Portal
+                </Link>
+              </Button>
             </div>
             
-            {/* Right: 3D Model */}
-            <div className="order-1 lg:order-2">
-              <Hero3DModel />
+            {/* Trust row */}
+            <div className="flex flex-wrap items-center justify-center gap-6 text-sm text-muted-foreground">
+              <div className="flex items-center gap-2">
+                <Shield className="h-4 w-4 text-accent" />
+                <span>Made for local businesses</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <MessageSquare className="h-4 w-4 text-accent" />
+                <span>Portal + messaging</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Smartphone className="h-4 w-4 text-accent" />
+                <span>Mobile-friendly</span>
+              </div>
             </div>
+          </div>
+          
+          {/* 3D Carousel - as proof gallery */}
+          <div className="max-w-2xl mx-auto">
+            <p className="text-center text-sm text-muted-foreground mb-4">
+              A few portal styles we can build <span className="text-accent">(interactive)</span>
+            </p>
+            <Hero3DModel />
           </div>
         </div>
       </section>
 
-      {/* How it works - 3 steps */}
-      <section className="py-12 border-t border-border bg-secondary/30">
+      {/* What We Build - Capabilities Grid */}
+      <section className="py-16 border-t border-border bg-card">
         <div className="container mx-auto px-6">
-          <p className="text-sm font-medium text-muted-foreground uppercase tracking-wide mb-6">How it works</p>
-          <div className="grid md:grid-cols-3 gap-8">
-            <div className="flex items-start gap-4">
-              <span className="flex-shrink-0 w-8 h-8 rounded-full bg-accent/10 text-accent font-bold flex items-center justify-center text-sm">1</span>
-              <div>
-                <p className="font-medium text-foreground">We build your site</p>
-                <p className="text-sm text-muted-foreground mt-1">Custom design, no templates.</p>
+          <div className="text-center mb-12">
+            <h2 className="font-serif text-3xl md:text-4xl font-bold mb-3">
+              What We Build
+            </h2>
+            <p className="text-muted-foreground max-w-xl mx-auto">
+              Everything a local service business needs to look professional and run smoothly.
+            </p>
+          </div>
+          
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-4xl mx-auto">
+            {capabilities.map((cap) => (
+              <div
+                key={cap.title}
+                className="bg-secondary/30 border border-border rounded-lg p-5 hover:border-accent/30 hover:bg-secondary/50 transition-all"
+              >
+                <cap.icon className="h-6 w-6 text-accent mb-3" />
+                <h3 className="font-medium text-foreground mb-1">{cap.title}</h3>
+                <p className="text-sm text-muted-foreground">{cap.description}</p>
               </div>
-            </div>
-            <div className="flex items-start gap-4">
-              <span className="flex-shrink-0 w-8 h-8 rounded-full bg-accent/10 text-accent font-bold flex items-center justify-center text-sm">2</span>
-              <div>
-                <p className="font-medium text-foreground">You get a private portal</p>
-                <p className="text-sm text-muted-foreground mt-1">Message us, view files, track progress.</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-4">
-              <span className="flex-shrink-0 w-8 h-8 rounded-full bg-accent/10 text-accent font-bold flex items-center justify-center text-sm">3</span>
-              <div>
-                <p className="font-medium text-foreground">No email chaos</p>
-                <p className="text-sm text-muted-foreground mt-1">Everything in one place, forever.</p>
-              </div>
-            </div>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* Example Demos - safer framing */}
-      <section id="demos" className="py-20 border-t border-border">
+      {/* Featured Demos */}
+      <section id="demos" className="py-16 border-t border-border bg-secondary/20">
         <div className="container mx-auto px-6">
-          <div className="flex items-end justify-between mb-12">
-            <div>
-              <h2 className="font-serif text-3xl md:text-4xl font-bold mb-2">
-                Example Demos
-              </h2>
-              <p className="text-muted-foreground">
-                Click any demo to explore — no commitment, just a preview.
-              </p>
-            </div>
+          <div className="text-center mb-10">
+            <h2 className="font-serif text-3xl md:text-4xl font-bold mb-3">
+              Featured Demos
+            </h2>
+            <p className="text-muted-foreground">
+              Click any demo to explore — no commitment, just a preview.
+            </p>
           </div>
-          <div className="grid md:grid-cols-3 gap-6">
+          
+          <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
             {exampleDemos.map((project) => (
               <Link
                 key={project.name}
@@ -170,7 +194,7 @@ const Index = () => {
                 className="group block bg-card border border-border rounded-lg overflow-hidden hover:shadow-lg hover:border-accent/30 transition-all"
               >
                 <div className="aspect-[4/3] bg-secondary/50 flex items-center justify-center">
-                  <span className="font-serif text-2xl text-muted-foreground/50 group-hover:text-accent transition-colors">
+                  <span className="font-serif text-3xl text-muted-foreground/40 group-hover:text-accent transition-colors">
                     {project.name.charAt(0)}
                   </span>
                 </div>
@@ -181,106 +205,113 @@ const Index = () => {
                   <h3 className="font-serif text-lg font-bold group-hover:text-accent transition-colors">
                     {project.name}
                   </h3>
-                  <Button variant="ghost" size="sm" className="mt-3 px-0 text-muted-foreground group-hover:text-accent">
+                  <span className="inline-flex items-center mt-3 text-sm text-muted-foreground group-hover:text-accent">
                     View Demo
                     <ArrowRight className="ml-1 h-3 w-3 group-hover:translate-x-1 transition-transform" />
-                  </Button>
+                  </span>
                 </div>
               </Link>
             ))}
           </div>
+          
+          <div className="text-center mt-8">
+            <Button asChild variant="outline">
+              <Link to="/get-demo">
+                Request a Custom Demo
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
+            </Button>
+          </div>
         </div>
       </section>
 
-      {/* Features */}
-      <section id="about" className="py-20 bg-secondary/50">
+      {/* AI Receptionist Callout - Optional Add-on */}
+      <section className="py-12 border-t border-border bg-accent/5">
         <div className="container mx-auto px-6">
-          <div className="text-center mb-16">
-            <h2 className="font-serif text-3xl md:text-4xl font-bold mb-4">
-              Everything in one place
-            </h2>
-            <p className="text-muted-foreground max-w-xl mx-auto">
-              No more scattered emails, Dropbox links, or missed updates. 
-              Your project lives in a single, beautiful space.
-            </p>
-          </div>
-          <div className="grid md:grid-cols-3 gap-8">
-            <FeatureCard
-              icon={<MessageSquare className="h-6 w-6" />}
-              title="Real-Time Messaging"
-              description="Chat directly with your designer. Questions, feedback, approvals — all in one thread."
-            />
-            <FeatureCard
-              icon={<FolderOpen className="h-6 w-6" />}
-              title="File Delivery"
-              description="Receive your designs, assets, and documents in an organized gallery. Download anytime."
-            />
-            <FeatureCard
-              icon={<Sparkles className="h-6 w-6" />}
-              title="Live Previews"
-              description="See your website come together in real-time. Review, comment, and approve — before launch."
-            />
+          <div className="max-w-3xl mx-auto flex flex-col md:flex-row items-center gap-6 md:gap-8">
+            <div className="flex-shrink-0 w-14 h-14 rounded-full bg-accent/10 flex items-center justify-center">
+              <Bot className="h-7 w-7 text-accent" />
+            </div>
+            <div className="text-center md:text-left flex-1">
+              <h3 className="font-serif text-xl font-bold mb-1">
+                Optional: AI Receptionist
+              </h3>
+              <p className="text-muted-foreground">
+                For businesses that want fewer interruptions. Auto-replies, missed call follow-ups, and smart routing — without replacing your personal touch.
+              </p>
+            </div>
+            <Button asChild variant="outline" size="sm">
+              <Link to="/get-demo">Learn More</Link>
+            </Button>
           </div>
         </div>
       </section>
 
-      {/* Portal Screenshot Strip */}
-      <section className="py-16 border-t border-border">
+      {/* How It Works - 4 Steps */}
+      <section className="py-16 border-t border-border bg-card">
         <div className="container mx-auto px-6">
           <div className="text-center mb-10">
             <h2 className="font-serif text-2xl md:text-3xl font-bold mb-2">
-              Your portal, at a glance
+              How It Works
             </h2>
             <p className="text-muted-foreground">
-              Messages, files, and payments — all in one private space.
+              From first call to live site — simple and stress-free.
             </p>
           </div>
-          <div className="grid grid-cols-3 gap-4 max-w-3xl mx-auto">
-            <div className="aspect-[4/3] bg-card border border-border rounded-lg flex flex-col items-center justify-center p-4 hover:border-accent/30 transition-colors">
-              <MessageSquare className="h-8 w-8 text-accent mb-2" />
-              <span className="text-sm font-medium text-foreground">Messages</span>
-              <span className="text-xs text-muted-foreground">Direct chat</span>
+          
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 max-w-4xl mx-auto">
+            <div className="text-center">
+              <div className="w-10 h-10 rounded-full bg-accent/10 text-accent font-bold flex items-center justify-center mx-auto mb-3">
+                1
+              </div>
+              <h4 className="font-medium text-foreground mb-1">Quick call</h4>
+              <p className="text-sm text-muted-foreground">15 minutes to understand your business.</p>
             </div>
-            <div className="aspect-[4/3] bg-card border border-border rounded-lg flex flex-col items-center justify-center p-4 hover:border-accent/30 transition-colors">
-              <FolderOpen className="h-8 w-8 text-accent mb-2" />
-              <span className="text-sm font-medium text-foreground">Files</span>
-              <span className="text-xs text-muted-foreground">Organized gallery</span>
+            <div className="text-center">
+              <div className="w-10 h-10 rounded-full bg-accent/10 text-accent font-bold flex items-center justify-center mx-auto mb-3">
+                2
+              </div>
+              <h4 className="font-medium text-foreground mb-1">We build</h4>
+              <p className="text-sm text-muted-foreground">Custom site + portal, no templates.</p>
             </div>
-            <div className="aspect-[4/3] bg-card border border-border rounded-lg flex flex-col items-center justify-center p-4 hover:border-accent/30 transition-colors">
-              <CreditCard className="h-8 w-8 text-accent mb-2" />
-              <span className="text-sm font-medium text-foreground">Payments</span>
-              <span className="text-xs text-muted-foreground">One-click invoices</span>
+            <div className="text-center">
+              <div className="w-10 h-10 rounded-full bg-accent/10 text-accent font-bold flex items-center justify-center mx-auto mb-3">
+                3
+              </div>
+              <h4 className="font-medium text-foreground mb-1">You review</h4>
+              <p className="text-sm text-muted-foreground">Preview, feedback, approve — in your portal.</p>
+            </div>
+            <div className="text-center">
+              <div className="w-10 h-10 rounded-full bg-accent/10 text-accent font-bold flex items-center justify-center mx-auto mb-3">
+                4
+              </div>
+              <h4 className="font-medium text-foreground mb-1">Go live</h4>
+              <p className="text-sm text-muted-foreground">Launch + ongoing support included.</p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Client Portal Entry - simplified, no code needed */}
-      <section id="portal" className="py-20 bg-secondary/30">
+      {/* Already a Client */}
+      <section className="py-12 border-t border-border bg-secondary/30">
         <div className="container mx-auto px-6 text-center">
-          <h2 className="font-serif text-3xl md:text-4xl font-bold mb-4">
+          <h2 className="font-serif text-2xl font-bold mb-2">
             Already a client?
           </h2>
-          <p className="text-muted-foreground max-w-lg mx-auto mb-8">
+          <p className="text-muted-foreground max-w-md mx-auto mb-6">
             Access your portal using the link we sent you, or log in below.
           </p>
-          <Button asChild size="lg" variant="outline" className="group">
+          <Button asChild variant="outline">
             <Link to="/portal">
               <LogIn className="mr-2 h-4 w-4" />
               Log in to your portal
             </Link>
           </Button>
-          <p className="text-sm text-muted-foreground mt-6">
-            Not a client yet?{" "}
-            <Link to="/get-demo" className="text-accent hover:underline">
-              Get a free demo
-            </Link>
-          </p>
         </div>
       </section>
 
-      {/* Footer - Admin hidden */}
-      <footer className="border-t border-border py-8">
+      {/* Footer */}
+      <footer className="border-t border-border py-8 bg-card">
         <div className="container mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4">
           <p className="font-serif text-sm text-muted-foreground">
             © {new Date().getFullYear()} Pleasant Cove Design
@@ -298,21 +329,5 @@ const Index = () => {
     </div>
   );
 };
-
-interface FeatureCardProps {
-  icon: React.ReactNode;
-  title: string;
-  description: string;
-}
-
-const FeatureCard = ({ icon, title, description }: FeatureCardProps) => (
-  <div className="bg-card border border-border rounded-lg p-6 hover:shadow-lg transition-shadow">
-    <div className="w-12 h-12 bg-accent/10 text-accent rounded-lg flex items-center justify-center mb-4">
-      {icon}
-    </div>
-    <h3 className="font-serif text-xl font-bold mb-2">{title}</h3>
-    <p className="text-muted-foreground text-sm leading-relaxed">{description}</p>
-  </div>
-);
 
 export default Index;
