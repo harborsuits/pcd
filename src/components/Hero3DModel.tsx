@@ -90,7 +90,7 @@ function LoadingFallback() {
 
 export function Hero3DModel() {
   return (
-    <div className="w-full h-[400px] md:h-[500px] lg:h-[560px] bg-primary rounded-xl">
+    <div className="w-full h-[400px] md:h-[500px] lg:h-[560px] rounded-xl bg-gradient-to-b from-[hsl(200,60%,50%)] via-[hsl(195,70%,40%)] to-[hsl(210,80%,25%)]">
       <Canvas
         camera={{ position: [0, 1, 8], fov: 35 }}
         shadows
