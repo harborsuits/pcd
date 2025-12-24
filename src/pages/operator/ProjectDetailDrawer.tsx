@@ -438,6 +438,14 @@ export function ProjectDetailDrawer({ project, open, onClose, onStatusChange }: 
   const messages = messagesData?.messages || [];
   const notes = notesData?.notes || [];
   const checklistItems = checklistData?.items || [];
+
+  // Find last admin message index for read receipt display
+  const lastAdminMsgIndex = useMemo(() => {
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].sender_type === "admin") return i;
+    }
+    return -1;
+  }, [messages]);
   const intake = project.intake?.intake_json || {};
 
   // Parse intake sections
@@ -646,26 +654,43 @@ export function ProjectDetailDrawer({ project, open, onClose, onStatusChange }: 
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {messages.map((msg) => (
-                    <div
-                      key={msg.id}
-                      className={`p-3 rounded-lg ${
-                        msg.sender_type === "admin"
-                          ? "bg-primary/10 ml-8"
-                          : "bg-muted mr-8"
-                      }`}
-                    >
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs font-medium">
-                          {msg.sender_type === "admin" ? "You" : "Client"}
-                        </span>
-                        <span className="text-xs text-muted-foreground">
-                          {format(new Date(msg.created_at), "MMM d, h:mm a")}
-                        </span>
+                  {messages.map((msg, index) => {
+                    const isAdmin = msg.sender_type === "admin";
+                    const isLastAdminMsg = isAdmin && index === lastAdminMsgIndex;
+                    
+                    const getStatus = () => {
+                      if (msg.read_at) return `Seen ${format(new Date(msg.read_at), "h:mm a")}`;
+                      return "Sent";
+                    };
+                    
+                    return (
+                      <div
+                        key={msg.id}
+                        className={`flex ${isAdmin ? "justify-end" : "justify-start"}`}
+                      >
+                        <div className={`max-w-[78%] rounded-2xl px-4 py-2 ${
+                          isAdmin 
+                            ? "bg-primary text-primary-foreground rounded-br-md" 
+                            : "bg-muted rounded-bl-md"
+                        }`}>
+                          <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                          <div className={`mt-1 flex items-center gap-2 text-[11px] ${
+                            isAdmin ? "opacity-80 justify-end" : "text-muted-foreground justify-start"
+                          }`}>
+                            <span>{format(new Date(msg.created_at), "h:mm a")}</span>
+                          </div>
+                          {/* Read receipt for last admin message */}
+                          {isLastAdminMsg && (
+                            <div className={`mt-0.5 text-[11px] text-right ${
+                              msg.read_at ? "text-green-500" : "opacity-70"
+                            }`}>
+                              {getStatus()}
+                            </div>
+                          )}
+                        </div>
                       </div>
-                      <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
-                    </div>
-                  ))}
+                    );
+                  })}
                   {/* Typing indicator */}
                   {clientTyping && (
                     <div className="p-3 rounded-lg bg-muted mr-8">
