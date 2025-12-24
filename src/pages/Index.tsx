@@ -140,7 +140,7 @@ const Index = () => {
           {/* 3D Carousel - as proof gallery */}
           <div className="max-w-2xl mx-auto">
             <p className="text-center text-sm text-muted-foreground mb-4">
-              A few portal styles we can build <span className="text-accent">(interactive)</span>
+              A few examples of logos we can provide <span className="text-accent">(interactive)</span>
             </p>
             <Hero3DModel />
           </div>
