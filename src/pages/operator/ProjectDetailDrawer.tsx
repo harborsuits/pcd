@@ -3,7 +3,9 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Sheet,
@@ -13,9 +15,9 @@ import {
 } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
-  User, Mail, Phone, MapPin, Calendar, FileText, 
+  User, Mail, Phone, MapPin, FileText, 
   MessageSquare, Send, Loader2, ExternalLink, Building2,
-  Palette, Settings, CheckCircle
+  Palette, Settings, CheckCircle, StickyNote, ListTodo, Trash2
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -57,6 +59,21 @@ interface Message {
   read_at: string | null;
 }
 
+interface Note {
+  id: string;
+  content: string;
+  created_at: string;
+}
+
+interface ChecklistItem {
+  id: string;
+  label: string;
+  is_done: boolean;
+  sort_order: number;
+  created_at: string;
+  completed_at: string | null;
+}
+
 const STATUS_OPTIONS = [
   { value: "lead", label: "Lead" },
   { value: "contacted", label: "Contacted" },
@@ -75,13 +92,17 @@ interface ProjectDetailDrawerProps {
 
 export function ProjectDetailDrawer({ project, open, onClose, onStatusChange }: ProjectDetailDrawerProps) {
   const [replyContent, setReplyContent] = useState("");
-  const [activeTab, setActiveTab] = useState<"intake" | "messages">("intake");
+  const [newNote, setNewNote] = useState("");
+  const [newChecklistItem, setNewChecklistItem] = useState("");
+  const [activeTab, setActiveTab] = useState<"intake" | "messages" | "notes" | "checklist">("intake");
   const queryClient = useQueryClient();
 
   // Reset state when project changes
   useEffect(() => {
     if (project) {
       setReplyContent("");
+      setNewNote("");
+      setNewChecklistItem("");
       setActiveTab(project.intake ? "intake" : "messages");
     }
   }, [project?.id]);
@@ -98,8 +119,38 @@ export function ProjectDetailDrawer({ project, open, onClose, onStatusChange }: 
       if (!res.ok) throw new Error("Failed to fetch messages");
       return res.json() as Promise<{ messages: Message[] }>;
     },
-    enabled: !!project,
+    enabled: !!project && open,
     refetchInterval: 10000,
+  });
+
+  // Fetch notes
+  const { data: notesData, isLoading: notesLoading } = useQuery({
+    queryKey: ["project-notes", project?.project_token],
+    queryFn: async () => {
+      if (!project) return { notes: [] };
+      const adminKey = localStorage.getItem("admin_key") || "";
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/admin/notes/${project.project_token}`, {
+        headers: { "x-admin-key": adminKey },
+      });
+      if (!res.ok) throw new Error("Failed to fetch notes");
+      return res.json() as Promise<{ notes: Note[] }>;
+    },
+    enabled: !!project && open,
+  });
+
+  // Fetch checklist
+  const { data: checklistData, isLoading: checklistLoading } = useQuery({
+    queryKey: ["project-checklist", project?.project_token],
+    queryFn: async () => {
+      if (!project) return { items: [] };
+      const adminKey = localStorage.getItem("admin_key") || "";
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/admin/checklist/${project.project_token}`, {
+        headers: { "x-admin-key": adminKey },
+      });
+      if (!res.ok) throw new Error("Failed to fetch checklist");
+      return res.json() as Promise<{ items: ChecklistItem[] }>;
+    },
+    enabled: !!project && open,
   });
 
   // Update status mutation
@@ -155,15 +206,155 @@ export function ProjectDetailDrawer({ project, open, onClose, onStatusChange }: 
     },
   });
 
+  // Add note mutation
+  const addNoteMutation = useMutation({
+    mutationFn: async (content: string) => {
+      if (!project) throw new Error("No project");
+      const adminKey = localStorage.getItem("admin_key") || "";
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/admin/notes/${project.project_token}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-admin-key": adminKey,
+        },
+        body: JSON.stringify({ content }),
+      });
+      if (!res.ok) throw new Error("Failed to add note");
+      return res.json();
+    },
+    onSuccess: () => {
+      toast.success("Note added");
+      setNewNote("");
+      queryClient.invalidateQueries({ queryKey: ["project-notes", project?.project_token] });
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
+    },
+  });
+
+  // Delete note mutation
+  const deleteNoteMutation = useMutation({
+    mutationFn: async (noteId: string) => {
+      if (!project) throw new Error("No project");
+      const adminKey = localStorage.getItem("admin_key") || "";
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/admin/notes/${project.project_token}/${noteId}`, {
+        method: "DELETE",
+        headers: { "x-admin-key": adminKey },
+      });
+      if (!res.ok) throw new Error("Failed to delete note");
+    },
+    onSuccess: () => {
+      toast.success("Note deleted");
+      queryClient.invalidateQueries({ queryKey: ["project-notes", project?.project_token] });
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
+    },
+  });
+
+  // Add checklist item mutation
+  const addChecklistMutation = useMutation({
+    mutationFn: async (label: string) => {
+      if (!project) throw new Error("No project");
+      const adminKey = localStorage.getItem("admin_key") || "";
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/admin/checklist/${project.project_token}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-admin-key": adminKey,
+        },
+        body: JSON.stringify({ label }),
+      });
+      if (!res.ok) throw new Error("Failed to add task");
+      return res.json();
+    },
+    onSuccess: () => {
+      toast.success("Task added");
+      setNewChecklistItem("");
+      queryClient.invalidateQueries({ queryKey: ["project-checklist", project?.project_token] });
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
+    },
+  });
+
+  // Toggle checklist item mutation
+  const toggleChecklistMutation = useMutation({
+    mutationFn: async ({ itemId, is_done }: { itemId: string; is_done: boolean }) => {
+      if (!project) throw new Error("No project");
+      const adminKey = localStorage.getItem("admin_key") || "";
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/admin/checklist/${project.project_token}/${itemId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "x-admin-key": adminKey,
+        },
+        body: JSON.stringify({ is_done }),
+      });
+      if (!res.ok) throw new Error("Failed to update task");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["project-checklist", project?.project_token] });
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
+    },
+  });
+
+  // Delete checklist item mutation
+  const deleteChecklistMutation = useMutation({
+    mutationFn: async (itemId: string) => {
+      if (!project) throw new Error("No project");
+      const adminKey = localStorage.getItem("admin_key") || "";
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/admin/checklist/${project.project_token}/${itemId}`, {
+        method: "DELETE",
+        headers: { "x-admin-key": adminKey },
+      });
+      if (!res.ok) throw new Error("Failed to delete task");
+    },
+    onSuccess: () => {
+      toast.success("Task deleted");
+      queryClient.invalidateQueries({ queryKey: ["project-checklist", project?.project_token] });
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
+    },
+  });
+
+  // Add default checklist mutation
+  const addDefaultsMutation = useMutation({
+    mutationFn: async () => {
+      if (!project) throw new Error("No project");
+      const adminKey = localStorage.getItem("admin_key") || "";
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/admin/checklist/${project.project_token}/defaults`, {
+        method: "POST",
+        headers: { "x-admin-key": adminKey },
+      });
+      if (!res.ok) throw new Error("Failed to add defaults");
+    },
+    onSuccess: () => {
+      toast.success("Default checklist added");
+      queryClient.invalidateQueries({ queryKey: ["project-checklist", project?.project_token] });
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
+    },
+  });
+
   if (!project) return null;
 
   const messages = messagesData?.messages || [];
+  const notes = notesData?.notes || [];
+  const checklistItems = checklistData?.items || [];
   const intake = project.intake?.intake_json || {};
 
   // Parse intake sections
   const basics = intake.basics as Record<string, unknown> | undefined;
   const style = intake.style as Record<string, unknown> | undefined;
   const functionality = intake.functionality as Record<string, unknown> | undefined;
+
+  const completedCount = checklistItems.filter((i) => i.is_done).length;
+  const totalCount = checklistItems.length;
 
   return (
     <Sheet open={open} onOpenChange={() => onClose()}>
@@ -235,23 +426,37 @@ export function ProjectDetailDrawer({ project, open, onClose, onStatusChange }: 
           </div>
         </div>
 
-        {/* Tabs: Intake / Messages */}
+        {/* Tabs: Intake / Messages / Notes / Checklist */}
         <Tabs 
           value={activeTab} 
           onValueChange={(v) => setActiveTab(v as typeof activeTab)}
           className="flex-1 flex flex-col overflow-hidden"
         >
-          <TabsList className="flex-shrink-0 w-full">
-            <TabsTrigger value="intake" className="flex-1 gap-2">
-              <FileText className="h-4 w-4" />
+          <TabsList className="flex-shrink-0 w-full grid grid-cols-4">
+            <TabsTrigger value="intake" className="gap-1 text-xs px-2">
+              <FileText className="h-3 w-3" />
               Intake
-              {project.intake && <CheckCircle className="h-3 w-3 text-green-500" />}
+              {project.intake && <CheckCircle className="h-2.5 w-2.5 text-green-500" />}
             </TabsTrigger>
-            <TabsTrigger value="messages" className="flex-1 gap-2">
-              <MessageSquare className="h-4 w-4" />
-              Messages
+            <TabsTrigger value="messages" className="gap-1 text-xs px-2">
+              <MessageSquare className="h-3 w-3" />
+              Msgs
               {messages.length > 0 && (
-                <Badge variant="secondary" className="text-xs">{messages.length}</Badge>
+                <Badge variant="secondary" className="text-[10px] px-1 py-0">{messages.length}</Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="notes" className="gap-1 text-xs px-2">
+              <StickyNote className="h-3 w-3" />
+              Notes
+              {notes.length > 0 && (
+                <Badge variant="secondary" className="text-[10px] px-1 py-0">{notes.length}</Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="checklist" className="gap-1 text-xs px-2">
+              <ListTodo className="h-3 w-3" />
+              Tasks
+              {totalCount > 0 && (
+                <Badge variant="secondary" className="text-[10px] px-1 py-0">{completedCount}/{totalCount}</Badge>
               )}
             </TabsTrigger>
           </TabsList>
@@ -401,6 +606,169 @@ export function ProjectDetailDrawer({ project, open, onClose, onStatusChange }: 
                 )}
                 Send Message
               </Button>
+            </div>
+          </TabsContent>
+
+          {/* Notes Tab */}
+          <TabsContent value="notes" className="flex-1 flex flex-col overflow-hidden mt-4">
+            <ScrollArea className="flex-1 pr-4">
+              {notesLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : notes.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <StickyNote className="h-10 w-10 mx-auto mb-3 opacity-50" />
+                  <p>No internal notes yet</p>
+                  <p className="text-sm mt-1">Add notes the client won't see</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {notes.map((note) => (
+                    <div key={note.id} className="border border-border rounded-lg p-3 group">
+                      <div className="flex items-start justify-between mb-2">
+                        <span className="text-xs text-muted-foreground">
+                          {format(new Date(note.created_at), "MMM d, h:mm a")}
+                        </span>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={() => deleteNoteMutation.mutate(note.id)}
+                          disabled={deleteNoteMutation.isPending}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
+                      <p className="text-sm whitespace-pre-wrap">{note.content}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </ScrollArea>
+
+            {/* Add Note Input */}
+            <div className="flex-shrink-0 pt-4 border-t mt-4 space-y-2">
+              <Textarea
+                placeholder="Add internal note..."
+                value={newNote}
+                onChange={(e) => setNewNote(e.target.value)}
+                className="min-h-[80px]"
+              />
+              <Button
+                className="w-full"
+                onClick={() => addNoteMutation.mutate(newNote)}
+                disabled={!newNote.trim() || addNoteMutation.isPending}
+              >
+                {addNoteMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  <StickyNote className="h-4 w-4 mr-2" />
+                )}
+                Add Note
+              </Button>
+            </div>
+          </TabsContent>
+
+          {/* Checklist Tab */}
+          <TabsContent value="checklist" className="flex-1 flex flex-col overflow-hidden mt-4">
+            <ScrollArea className="flex-1 pr-4">
+              {checklistLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : checklistItems.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <ListTodo className="h-10 w-10 mx-auto mb-3 opacity-50" />
+                  <p>No tasks yet</p>
+                  <p className="text-sm mt-1 mb-4">Start with the default checklist</p>
+                  <Button
+                    onClick={() => addDefaultsMutation.mutate()}
+                    disabled={addDefaultsMutation.isPending}
+                    variant="outline"
+                  >
+                    {addDefaultsMutation.isPending ? (
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    ) : (
+                      <ListTodo className="h-4 w-4 mr-2" />
+                    )}
+                    Add Default Checklist
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-1">
+                  {checklistItems.map((item) => (
+                    <div
+                      key={item.id}
+                      className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 group"
+                    >
+                      <Checkbox
+                        checked={item.is_done}
+                        onCheckedChange={(checked) =>
+                          toggleChecklistMutation.mutate({
+                            itemId: item.id,
+                            is_done: Boolean(checked),
+                          })
+                        }
+                      />
+                      <span
+                        className={`flex-1 text-sm ${
+                          item.is_done ? "line-through text-muted-foreground" : ""
+                        }`}
+                      >
+                        {item.label}
+                      </span>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={() => deleteChecklistMutation.mutate(item.id)}
+                        disabled={deleteChecklistMutation.isPending}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </ScrollArea>
+
+            {/* Add Task Input */}
+            <div className="flex-shrink-0 pt-4 border-t mt-4 space-y-2">
+              <div className="flex gap-2">
+                <Input
+                  value={newChecklistItem}
+                  onChange={(e) => setNewChecklistItem(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && newChecklistItem.trim()) {
+                      addChecklistMutation.mutate(newChecklistItem);
+                    }
+                  }}
+                  placeholder="New task..."
+                  className="flex-1"
+                />
+                <Button
+                  onClick={() => addChecklistMutation.mutate(newChecklistItem)}
+                  disabled={!newChecklistItem.trim() || addChecklistMutation.isPending}
+                >
+                  {addChecklistMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    "Add"
+                  )}
+                </Button>
+              </div>
+              {checklistItems.length > 0 && (
+                <Button
+                  onClick={() => addDefaultsMutation.mutate()}
+                  disabled={addDefaultsMutation.isPending}
+                  variant="ghost"
+                  size="sm"
+                  className="text-xs"
+                >
+                  + Add default items
+                </Button>
+              )}
             </div>
           </TabsContent>
         </Tabs>
