@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, FileText, MessageSquare, CreditCard, AlertCircle, Send, Home, Download, Image as ImageIcon, Upload, Eye, X, LogOut } from "lucide-react";
+import { Loader2, FileText, MessageSquare, CreditCard, AlertCircle, Send, Home, Download, Image as ImageIcon, Upload, Eye, X, LogOut, ChevronDown, Paperclip } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
@@ -125,6 +125,7 @@ export default function PortalPage() {
   const [pdfPreview, setPdfPreview] = useState<{ url: string; name: string } | null>(null);
   const [showWelcome, setShowWelcome] = useState(false);
   const [teamTyping, setTeamTyping] = useState(false);
+  const [showFilesPanel, setShowFilesPanel] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const originalTitle = useRef(document.title);
   const markReadInFlight = useRef(false);
@@ -337,6 +338,15 @@ export default function PortalPage() {
     if (!token) return null;
     return supabase.channel(`typing-${token}`);
   }, [token]);
+
+  // Compute last client message index once
+  const lastClientMsgIndex = useMemo(() => {
+    if (!data?.messages?.length) return -1;
+    for (let i = data.messages.length - 1; i >= 0; i--) {
+      if (data.messages[i].sender_type === "client") return i;
+    }
+    return -1;
+  }, [data?.messages]);
 
   // Subscribe to typing events
   useEffect(() => {
@@ -854,355 +864,349 @@ export default function PortalPage() {
         </div>
       </header>
 
-      <div className="container mx-auto px-4 py-8 max-w-4xl">
-        {/* Status Banner */}
-        <ProjectStatusBanner
-          status={data.business.status}
-          businessName={data.business.name}
-          primaryActionLabel={data.business.status === "lead" ? "Upload logo/files" : "Send a message"}
-          onPrimaryAction={() => {
-            document.getElementById("files-section")?.scrollIntoView({ behavior: "smooth" });
-          }}
-          secondaryActionLabel="View messages"
-          onSecondaryAction={() => {
-            document.getElementById("messages-section")?.scrollIntoView({ behavior: "smooth" });
-          }}
-        />
-
-        {/* Business Header */}
-        <div className="mb-8">
-          <div className="flex items-center gap-3 mb-2">
-            <h1 className="text-3xl font-bold">{data.business.name}</h1>
-            <StatusBadge status={data.business.status} />
+      {/* Main Chat Layout */}
+      <div className="flex flex-col h-[calc(100vh-57px)]">
+        {/* Header Area (scrolls with content on mobile, fixed height) */}
+        <div className="shrink-0 border-b border-border bg-card/50 p-4">
+          <div className="container mx-auto max-w-2xl">
+            {/* Business Header */}
+            <div className="flex items-center gap-3">
+              <h1 className="text-xl font-bold">{data.business.name}</h1>
+              <StatusBadge status={data.business.status} />
+            </div>
+            <p className="text-sm text-muted-foreground">Your Project Workspace</p>
           </div>
-          <p className="text-muted-foreground">Your Project Workspace</p>
         </div>
 
-        <div className="grid gap-6">
-          {/* Review Queue - Show first if there are pending items */}
-          {data.review_items && data.review_items.length > 0 && (
-            <ReviewQueue 
-              items={data.review_items} 
-              token={token!} 
-              onItemUpdated={handleReviewItemUpdated}
-            />
-          )}
+        {/* Review Queue - Show above messages if there are pending items */}
+        {data.review_items && data.review_items.length > 0 && (
+          <div className="shrink-0 border-b border-border bg-card p-4">
+            <div className="container mx-auto max-w-2xl">
+              <ReviewQueue 
+                items={data.review_items} 
+                token={token!} 
+                onItemUpdated={handleReviewItemUpdated}
+              />
+            </div>
+          </div>
+        )}
 
-          {/* Messages Section */}
-          <Card id="messages-section">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <MessageSquare className="h-5 w-5" />
-                Messages ({data.messages.length})
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {/* Message Composer */}
-              <div className="mb-6 space-y-2">
-                <Textarea
-                  placeholder="Type your message..."
-                  value={messageContent}
-                  onChange={(e) => handleMessageChange(e.target.value)}
-                  disabled={sending}
-                  className="min-h-[80px]"
-                />
-                {sendError && (
-                  <p className="text-sm text-destructive">{sendError}</p>
-                )}
+        {/* Messages Area (scrollable) */}
+        <div className="flex-1 overflow-y-auto p-4" id="messages-section">
+          <div className="container mx-auto max-w-2xl space-y-3">
+            {/* Load more button at top */}
+            {data.pagination.has_more_messages && (
+              <div className="flex justify-center">
                 <Button
-                  onClick={handleSendMessage}
-                  disabled={sending || !messageContent.trim()}
-                  className="w-full sm:w-auto"
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleLoadOlderMessages}
+                  disabled={loadingMore}
+                  className="text-xs"
                 >
-                  {sending ? (
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  ) : (
-                    <Send className="h-4 w-4 mr-2" />
-                  )}
-                  Send Message
+                  {loadingMore ? (
+                    <Loader2 className="h-3 w-3 animate-spin mr-2" />
+                  ) : null}
+                  Load older messages
                 </Button>
               </div>
+            )}
 
-              {/* Messages List (oldest→newest, with load more at top) */}
-              {data.messages.length === 0 ? (
-                <p className="text-muted-foreground text-center py-4">No messages yet</p>
-              ) : (
-                <div className="space-y-4">
-                  {data.pagination.has_more_messages && (
-                    <Button
-                      variant="outline"
-                      className="w-full"
-                      onClick={handleLoadOlderMessages}
-                      disabled={loadingMore}
-                    >
-                      {loadingMore ? (
-                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                      ) : null}
-                      Load older messages
-                    </Button>
-                  )}
+            {/* Empty state */}
+            {data.messages.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <MessageSquare className="h-12 w-12 text-muted-foreground/30 mb-4" />
+                <p className="text-muted-foreground">No messages yet</p>
+                <p className="text-sm text-muted-foreground/70">Send a message to get started</p>
+              </div>
+            ) : (
+              <>
+                {/* Chat bubbles */}
+                {data.messages.map((msg, index) => {
+                  const isClient = msg.sender_type === "client";
+                  const isLastClientMsg = isClient && index === lastClientMsgIndex;
                   
-                  {(() => {
-                    // Compute last client message index once
-                    const lastClientMsgIndex = data.messages
-                      .map((m, i) => m.sender_type === "client" ? i : -1)
-                      .filter(i => i !== -1)
-                      .pop();
-                    
-                    return data.messages.map((msg, index) => {
-                      const isLastClientMsg = msg.sender_type === "client" && index === lastClientMsgIndex;
-                      // Compute delivery status: Sent → Delivered → Seen
-                      const getDeliveryStatus = () => {
-                        if (msg.read_at) return `Seen ${formatDate(msg.read_at)}`;
-                        if (msg.delivered_at) return "Delivered";
-                        return "Sent";
-                      };
-                      // Animate when read_at exists (one-time pop via CSS)
-                      const shouldAnimateSeen = isLastClientMsg && msg.read_at;
-                      
-                      return (
+                  // Compute delivery status
+                  const getDeliveryStatus = () => {
+                    if (msg.read_at) return `Seen ${formatDate(msg.read_at)}`;
+                    if (msg.delivered_at) return "Delivered";
+                    return "Sent";
+                  };
+                  const shouldAnimateSeen = isLastClientMsg && msg.read_at;
+
+                  return (
+                    <div
+                      key={msg.id}
+                      className={`flex w-full ${isClient ? "justify-end" : "justify-start"}`}
+                    >
+                      <div className="max-w-[78%] sm:max-w-[70%]">
                         <div
-                          key={msg.id}
-                          className={`p-4 rounded-lg ${
-                            msg.sender_type === "admin"
-                              ? "bg-primary/10 border-l-4 border-primary"
-                              : "bg-muted"
-                          }`}
+                          className={[
+                            "rounded-2xl px-4 py-2.5 text-sm leading-relaxed shadow-sm",
+                            isClient
+                              ? "bg-primary text-primary-foreground rounded-br-md"
+                              : "bg-muted text-foreground rounded-bl-md",
+                          ].join(" ")}
                         >
-                          <div className="flex justify-between items-start mb-2">
-                            <Badge variant="outline" className="text-xs">
-                              {msg.sender_type === "admin" ? "Team" : "You"}
-                            </Badge>
-                            <span className="text-xs text-muted-foreground">
-                              {formatDate(msg.created_at)}
-                            </span>
-                          </div>
-                          <p className="text-sm">{msg.content}</p>
-                          {/* Delivery status for last client message: Sent → Delivered → Seen */}
+                          {msg.content}
+                        </div>
+                        
+                        <div
+                          className={[
+                            "mt-1 flex items-center gap-2 text-[11px] text-muted-foreground",
+                            isClient ? "justify-end" : "justify-start",
+                          ].join(" ")}
+                        >
+                          <span>{formatDate(msg.created_at)}</span>
+                          
+                          {/* Delivery status for last client message */}
                           {isLastClientMsg && (
-                            <p className={`text-xs text-muted-foreground mt-2 text-right ${shouldAnimateSeen ? "receipt-pop" : ""}`}>
+                            <span className={shouldAnimateSeen ? "receipt-pop" : ""}>
                               {getDeliveryStatus()}
-                            </p>
+                            </span>
                           )}
                         </div>
-                      );
-                    });
-                  })()}
-                  
-                  {/* Typing indicator */}
-                  {teamTyping && (
-                    <div className="p-4 rounded-lg bg-primary/10 border-l-4 border-primary">
-                      <div className="flex items-center gap-2">
-                        <Badge variant="outline" className="text-xs">Team</Badge>
-                        <span className="text-sm text-muted-foreground animate-pulse">is typing…</span>
                       </div>
+                    </div>
+                  );
+                })}
+
+                {/* Typing indicator as a bubble */}
+                {teamTyping && (
+                  <div className="flex w-full justify-start">
+                    <div className="max-w-[78%] sm:max-w-[70%]">
+                      <div className="rounded-2xl rounded-bl-md bg-muted px-4 py-2.5 text-sm">
+                        <span className="text-muted-foreground animate-pulse">Team is typing…</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+
+            <div ref={messagesEndRef} />
+          </div>
+        </div>
+
+        {/* Bottom Composer Area (fixed) */}
+        <div className="shrink-0 border-t border-border bg-card p-4">
+          <div className="container mx-auto max-w-2xl space-y-3">
+            {/* Composer */}
+            <div className="flex gap-2">
+              <Textarea
+                placeholder="Type your message..."
+                value={messageContent}
+                onChange={(e) => handleMessageChange(e.target.value)}
+                disabled={sending}
+                className="min-h-[44px] max-h-[120px] resize-none flex-1"
+                rows={1}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    if (messageContent.trim() && !sending) {
+                      handleSendMessage();
+                    }
+                  }
+                }}
+              />
+              <Button
+                onClick={handleSendMessage}
+                disabled={sending || !messageContent.trim()}
+                size="icon"
+                className="h-[44px] w-[44px] shrink-0"
+              >
+                {sending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4" />
+                )}
+              </Button>
+            </div>
+            
+            {sendError && (
+              <p className="text-sm text-destructive">{sendError}</p>
+            )}
+
+            {/* Collapsible Files Toggle */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowFilesPanel(!showFilesPanel)}
+              className="w-full justify-between text-muted-foreground"
+            >
+              <span className="flex items-center gap-2">
+                <Paperclip className="h-4 w-4" />
+                Attach files {data.files.length > 0 && `(${data.files.length})`}
+              </span>
+              <ChevronDown className={`h-4 w-4 transition-transform ${showFilesPanel ? "rotate-180" : ""}`} />
+            </Button>
+
+            {/* Collapsible Files Panel */}
+            {showFilesPanel && (
+              <div className="rounded-xl border border-border bg-background p-3 space-y-3" id="files-section">
+                {/* Upload Form with Drag & Drop */}
+                <div 
+                  className={`p-3 border-2 border-dashed rounded-lg space-y-2 transition-colors ${
+                    isDragging 
+                      ? "border-primary bg-primary/5" 
+                      : "border-border"
+                  } ${uploading ? "opacity-50 pointer-events-none" : ""}`}
+                  onDragOver={handleDragOver}
+                  onDragEnter={handleDragEnter}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                >
+                  <div className="flex items-center gap-2 text-sm">
+                    <Upload className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-medium">
+                      {isDragging ? "Drop file here" : "Upload files"}
+                    </span>
+                  </div>
+                  
+                  {!isDragging && (
+                    <>
+                      <div className="flex gap-2">
+                        <Input
+                          id="file-upload"
+                          type="file"
+                          accept="image/*,application/pdf"
+                          multiple
+                          onChange={(e) => {
+                            const files = e.target.files;
+                            if (files && files.length > 0) {
+                              handleMultiFileUpload(files);
+                            }
+                            e.currentTarget.value = "";
+                          }}
+                          disabled={uploading}
+                          className="cursor-pointer text-sm"
+                        />
+                      </div>
+                      
+                      <Input
+                        value={uploadDesc}
+                        onChange={(e) => setUploadDesc(e.target.value)}
+                        placeholder="Description (optional)"
+                        disabled={uploading}
+                        className="text-sm"
+                      />
+                    </>
+                  )}
+                  
+                  {/* Upload Queue Status */}
+                  {uploadQueue.length > 0 && (
+                    <div className="space-y-1">
+                      {uploadQueue.map((item, idx) => (
+                        <div key={idx} className="flex items-center gap-2 text-xs">
+                          {item.status === 'uploading' && <Loader2 className="h-3 w-3 animate-spin" />}
+                          {item.status === 'done' && <span className="text-green-500">✓</span>}
+                          {item.status === 'error' && <span className="text-destructive">✗</span>}
+                          {item.status === 'pending' && <span className="text-muted-foreground">○</span>}
+                          <span className={item.status === 'error' ? 'text-destructive' : 'text-muted-foreground'}>
+                            {item.name}
+                            {item.error && ` - ${item.error}`}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {uploading && uploadQueue.length === 0 && (
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                      Uploading...
                     </div>
                   )}
                   
-                  <div ref={messagesEndRef} />
+                  <p className="text-[10px] text-muted-foreground">
+                    {isDragging ? "Release to upload" : "Drag & drop • Images + PDF • Max 10MB"}
+                  </p>
                 </div>
-              )}
-            </CardContent>
-          </Card>
 
-          {/* Files Section */}
-          <Card id="files-section">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileText className="h-5 w-5" />
-                Files ({data.files.length})
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {/* Upload Form with Drag & Drop */}
-              <div 
-                className={`mb-6 p-4 border-2 border-dashed rounded-lg space-y-3 transition-colors ${
-                  isDragging 
-                    ? "border-primary bg-primary/5" 
-                    : "border-border"
-                } ${uploading ? "opacity-50 pointer-events-none" : ""}`}
-                onDragOver={handleDragOver}
-                onDragEnter={handleDragEnter}
-                onDragLeave={handleDragLeave}
-                onDrop={handleDrop}
-              >
-                <div className="flex items-center gap-2">
-                  <Upload className="h-5 w-5 text-muted-foreground" />
-                  <span className="font-medium">
-                    {isDragging ? "Drop file here" : "Upload a file"}
-                  </span>
-                </div>
-                
-                {!isDragging && (
-                  <>
-                    <div className="space-y-2">
-                      <Label htmlFor="file-upload" className="sr-only">Choose file</Label>
-                      <Input
-                        id="file-upload"
-                        type="file"
-                        accept="image/*,application/pdf"
-                        multiple
-                        onChange={(e) => {
-                          const files = e.target.files;
-                          if (files && files.length > 0) {
-                            handleMultiFileUpload(files);
-                          }
-                          e.currentTarget.value = "";
-                        }}
-                        disabled={uploading}
-                        className="cursor-pointer"
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="file-desc">Description (optional)</Label>
-                      <Input
-                        id="file-desc"
-                        value={uploadDesc}
-                        onChange={(e) => setUploadDesc(e.target.value)}
-                        placeholder="e.g., Floor plan PDF, inspiration image..."
-                        disabled={uploading}
-                      />
-                    </div>
-                  </>
-                )}
-                
-                {/* Upload Queue Status */}
-                {uploadQueue.length > 0 && (
-                  <div className="space-y-1">
-                    {uploadQueue.map((item, idx) => (
-                      <div key={idx} className="flex items-center gap-2 text-sm">
-                        {item.status === 'uploading' && <Loader2 className="h-3 w-3 animate-spin" />}
-                        {item.status === 'done' && <span className="text-green-500">✓</span>}
-                        {item.status === 'error' && <span className="text-destructive">✗</span>}
-                        {item.status === 'pending' && <span className="text-muted-foreground">○</span>}
-                        <span className={item.status === 'error' ? 'text-destructive' : 'text-muted-foreground'}>
-                          {item.name}
-                          {item.error && ` - ${item.error}`}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                {uploading && uploadQueue.length === 0 && (
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Uploading...
-                  </div>
-                )}
-                
-                <p className="text-xs text-muted-foreground">
-                  {isDragging ? "Release to upload" : "Drag & drop or choose files • Images + PDF • Max 10MB each"}
-                </p>
-              </div>
-
-              {data.files.length === 0 ? (
-                <p className="text-muted-foreground text-center py-4">No files uploaded yet</p>
-              ) : (
-                <div className="space-y-3">
-                  {data.files.map((file) => {
-                    const fileUrl = proxyMediaUrl(file.id, token);
-                    const isImage = isImageType(file.file_type);
-                    
-                    return (
-                      <div key={file.id} className="p-3 bg-muted rounded-lg space-y-2">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <span className="text-lg">{getFileIcon(file.file_type)}</span>
-                            <div>
-                              <p className="font-medium">{file.file_name}</p>
-                              {file.description && (
-                                <p className="text-sm text-muted-foreground">{file.description}</p>
-                              )}
-                            </div>
+                {/* Existing Files */}
+                {data.files.length > 0 && (
+                  <div className="space-y-2 max-h-[200px] overflow-y-auto">
+                    {data.files.map((file) => {
+                      const fileUrl = proxyMediaUrl(file.id, token);
+                      const isImage = isImageType(file.file_type);
+                      
+                      return (
+                        <div key={file.id} className="flex items-center gap-2 p-2 bg-muted rounded-lg text-sm">
+                          <span>{getFileIcon(file.file_type)}</span>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium truncate">{file.file_name}</p>
+                            {file.description && (
+                              <p className="text-xs text-muted-foreground truncate">{file.description}</p>
+                            )}
                           </div>
-                          <div className="flex items-center gap-1">
-                            <Badge variant="outline" className="text-xs">{file.file_type.split('/')[1] || file.file_type}</Badge>
+                          <div className="flex items-center gap-1 shrink-0">
                             {isPdf(file.file_type) && (
                               <button
                                 onClick={() => setPdfPreview({ url: fileUrl, name: file.file_name })}
-                                className="inline-flex items-center justify-center h-8 w-8 rounded-md hover:bg-background transition-colors"
+                                className="inline-flex items-center justify-center h-7 w-7 rounded-md hover:bg-background transition-colors"
                                 title="Preview PDF"
                               >
-                                <Eye className="h-4 w-4" />
+                                <Eye className="h-3.5 w-3.5" />
                               </button>
                             )}
                             <a
                               href={fileUrl}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="inline-flex items-center justify-center h-8 w-8 rounded-md hover:bg-background transition-colors"
+                              className="inline-flex items-center justify-center h-7 w-7 rounded-md hover:bg-background transition-colors"
                               title="Download"
                             >
-                              <Download className="h-4 w-4" />
+                              <Download className="h-3.5 w-3.5" />
                             </a>
                           </div>
                         </div>
-                        
-                        {/* Image preview */}
-                        {isImage && (
-                          <a href={fileUrl} target="_blank" rel="noopener noreferrer" className="block">
-                            <img
-                              src={fileUrl}
-                              alt={file.file_name}
-                              className="max-h-48 rounded-md border border-border object-contain"
-                              loading="lazy"
-                            />
-                          </a>
-                        )}
-                        
-                        <p className="text-xs text-muted-foreground">
-                          {formatDate(file.created_at)}
-                        </p>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Payments Section - Only show if there are payments */}
-          {data.payments.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <CreditCard className="h-5 w-5" />
-                  Payments ({data.payments.length})
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {data.payments.map((payment, idx) => (
-                    <div key={idx} className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                      <div>
-                        <p className="font-medium">{formatCurrency(payment.amount_cents)}</p>
-                        <p className="text-sm text-muted-foreground">{payment.payment_type}</p>
-                      </div>
-                      <div className="text-right">
-                        <Badge
-                          variant={
-                            payment.status === "completed"
-                              ? "default"
-                              : payment.status === "pending"
-                              ? "secondary"
-                              : "destructive"
-                          }
-                        >
-                          {payment.status}
-                        </Badge>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {formatDate(payment.created_at)}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </div>
+
+      {/* Payments Section - Show if there are payments */}
+      {data.payments.length > 0 && (
+        <div className="border-t border-border p-4 bg-card">
+          <div className="container mx-auto max-w-2xl">
+            <div className="flex items-center gap-2 mb-3">
+              <CreditCard className="h-4 w-4 text-muted-foreground" />
+              <span className="font-medium text-sm">Payments ({data.payments.length})</span>
+            </div>
+            <div className="space-y-2">
+              {data.payments.map((payment, idx) => (
+                <div key={idx} className="flex items-center justify-between p-2 bg-muted rounded-lg text-sm">
+                  <div>
+                    <p className="font-medium">{formatCurrency(payment.amount_cents)}</p>
+                    <p className="text-xs text-muted-foreground">{payment.payment_type}</p>
+                  </div>
+                  <div className="text-right">
+                    <Badge
+                      variant={
+                        payment.status === "completed"
+                          ? "default"
+                          : payment.status === "pending"
+                          ? "secondary"
+                          : "destructive"
+                      }
+                      className="text-xs"
+                    >
+                      {payment.status}
+                    </Badge>
+                    <p className="text-[10px] text-muted-foreground mt-1">
+                      {formatDate(payment.created_at)}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* PDF Preview Modal */}
       {pdfPreview && (
