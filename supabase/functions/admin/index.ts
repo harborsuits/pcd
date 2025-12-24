@@ -68,6 +68,11 @@ Deno.serve(async (req) => {
     return handleDeleteNote(req, token, noteId);
   }
 
+  // Route: GET /admin/projects
+  if (subPath === "projects" && req.method === "GET") {
+    return handleProjects(req);
+  }
+
   return new Response(
     JSON.stringify({ error: "Not found" }),
     { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -672,6 +677,91 @@ async function handleDeleteNote(req: Request, token: string, noteId: string): Pr
 
   } catch (error) {
     console.error("Delete note error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+}
+
+// GET /admin/projects - List all projects with intake data
+async function handleProjects(req: Request): Promise<Response> {
+  const authError = validateAdminKey(req);
+  if (authError) return authError;
+
+  try {
+    console.log("Fetching all projects for operator...");
+
+    const supabase = getSupabaseClient();
+
+    // Fetch all projects with their intake data
+    const { data: projects, error: projectsError } = await supabase
+      .from("projects")
+      .select(`
+        id,
+        business_name,
+        business_slug,
+        project_token,
+        status,
+        contact_name,
+        contact_phone,
+        contact_email,
+        address,
+        city,
+        state,
+        zip,
+        source,
+        owner_user_id,
+        created_at,
+        updated_at
+      `)
+      .is("deleted_at", null)
+      .order("created_at", { ascending: false });
+
+    if (projectsError) {
+      console.error("Projects fetch error:", projectsError);
+      return new Response(
+        JSON.stringify({ error: "Database error" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Fetch intake data for all projects
+    const projectIds = (projects || []).map(p => p.id);
+    let intakesMap: Record<string, unknown> = {};
+    
+    if (projectIds.length > 0) {
+      const { data: intakes, error: intakesError } = await supabase
+        .from("project_intakes")
+        .select("project_id, intake_json, intake_version, created_at")
+        .in("project_id", projectIds);
+
+      if (intakesError) {
+        console.error("Intakes fetch error:", intakesError);
+        // Continue without intakes rather than failing
+      } else {
+        intakesMap = (intakes || []).reduce((acc: Record<string, unknown>, intake) => {
+          acc[intake.project_id] = intake;
+          return acc;
+        }, {});
+      }
+    }
+
+    // Combine projects with their intakes
+    const projectsWithIntakes = (projects || []).map(project => ({
+      ...project,
+      intake: intakesMap[project.id] || null,
+    }));
+
+    console.log(`Projects fetched: ${projectsWithIntakes.length}`);
+
+    return new Response(
+      JSON.stringify({ projects: projectsWithIntakes }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+
+  } catch (error) {
+    console.error("Projects fetch error:", error);
     return new Response(
       JSON.stringify({ error: "Internal server error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
