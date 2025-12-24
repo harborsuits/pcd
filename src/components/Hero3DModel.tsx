@@ -88,18 +88,9 @@ function LoadingFallback() {
   );
 }
 
-import waterBg from "@/assets/water-bg.jpeg";
-
 export function Hero3DModel() {
   return (
-    <div className="relative w-full h-[400px] md:h-[500px] lg:h-[560px] rounded-xl overflow-hidden">
-      {/* Water background image */}
-      <img 
-        src={waterBg} 
-        alt="" 
-        className="absolute inset-0 w-full h-full object-cover"
-      />
-      
+    <div className="w-full h-[400px] md:h-[500px] lg:h-[560px]">
       <Canvas
         camera={{ position: [0, 1, 8], fov: 35 }}
         shadows
