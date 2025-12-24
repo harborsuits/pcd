@@ -98,7 +98,7 @@ const Index = () => {
             </h1>
             
             <p className="text-base md:text-lg text-accent/80 font-medium mb-4">
-              For local service businesses who want fewer calls, less email, and a clearer way to work with clients.
+              For modern service businesses that want fewer emails, fewer calls, and a cleaner way to work with clients.
             </p>
             
             <p className="text-lg md:text-xl text-muted-foreground leading-relaxed mb-8">
@@ -139,9 +139,10 @@ const Index = () => {
           
           {/* 3D Carousel - as proof gallery */}
           <div className="max-w-2xl mx-auto">
-            <p className="text-center text-sm text-muted-foreground mb-4">
-              A few examples of logos we can provide <span className="text-accent">(interactive)</span>
-            </p>
+            <div className="text-center mb-4">
+              <p className="text-sm text-muted-foreground">Examples of branded client portals</p>
+              <p className="text-xs text-accent">Different industries. Same system.</p>
+            </div>
             <Hero3DModel />
           </div>
         </div>
