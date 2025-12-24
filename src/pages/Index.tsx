@@ -68,10 +68,13 @@ const Index = () => {
           </Link>
           <nav className="flex items-center gap-4">
             <Button asChild variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
+              <Link to="/what-we-build">What We Build</Link>
+            </Button>
+            <Button asChild variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
               <Link to="/pricing">Pricing</Link>
             </Button>
             <Button asChild variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
-              <a href="#demos">See Demos</a>
+              <a href="#demos">Demos</a>
             </Button>
             <Button asChild variant="outline" size="sm">
               <Link to="/portal">Client Portal</Link>
