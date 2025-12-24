@@ -50,35 +50,27 @@ const Index = () => {
         <div className="pointer-events-none absolute inset-0 -z-10">
           {/* Soft radial glow (brand green) */}
           <div
-            className="absolute inset-0 opacity-60"
+            className="absolute inset-0"
             style={{
               background:
-                "radial-gradient(900px circle at 70% 35%, rgba(16,185,129,0.16) 0%, rgba(16,185,129,0.08) 28%, rgba(255,255,255,0) 62%)",
+                "radial-gradient(900px circle at 70% 35%, rgba(16,185,129,0.28) 0%, rgba(16,185,129,0.18) 22%, rgba(16,185,129,0.10) 40%, rgba(255,255,255,0) 65%)",
             }}
           />
           {/* Gentle vertical wash */}
           <div
-            className="absolute inset-0 opacity-70"
+            className="absolute inset-0"
             style={{
               background:
-                "linear-gradient(180deg, rgba(16,185,129,0.06) 0%, rgba(16,185,129,0.02) 35%, rgba(255,255,255,0) 100%)",
+                "linear-gradient(180deg, rgba(16,185,129,0.12) 0%, rgba(16,185,129,0.06) 30%, rgba(255,255,255,0) 70%)",
             }}
           />
         </div>
         {/* Vignette overlay */}
         <div
-          className="pointer-events-none absolute inset-0 -z-10 opacity-40"
+          className="pointer-events-none absolute inset-0 -z-10 opacity-35"
           style={{
             background:
               "radial-gradient(1200px circle at 50% 40%, rgba(255,255,255,0) 55%, rgba(0,0,0,0.06) 100%)",
-          }}
-        />
-        {/* Subtle noise texture */}
-        <div
-          className="pointer-events-none absolute inset-0 -z-10 opacity-[0.045] mix-blend-multiply"
-          style={{
-            backgroundImage:
-              "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='.35'/%3E%3C/svg%3E\")",
           }}
         />
         <div className="container mx-auto px-6">
