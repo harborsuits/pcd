@@ -73,6 +73,13 @@ Deno.serve(async (req) => {
     return handleProjects(req);
   }
 
+  // Route: PATCH /admin/projects/:token/status
+  if (subPath.match(/^projects\/[^\/]+\/status$/) && req.method === "PATCH") {
+    const parts = subPath.split("/");
+    const token = parts[1];
+    return handleUpdateProjectStatus(req, token);
+  }
+
   return new Response(
     JSON.stringify({ error: "Not found" }),
     { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -762,6 +769,73 @@ async function handleProjects(req: Request): Promise<Response> {
 
   } catch (error) {
     console.error("Projects fetch error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+}
+
+// PATCH /admin/projects/:token/status - Update project status
+async function handleUpdateProjectStatus(req: Request, token: string): Promise<Response> {
+  const authError = validateAdminKey(req);
+  if (authError) return authError;
+
+  if (!isValidToken(token)) {
+    return new Response(
+      JSON.stringify({ error: "Invalid token format" }),
+      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  try {
+    const body = await req.json();
+    const { status } = body;
+
+    const validStatuses = ["lead", "contacted", "interested", "client", "completed", "archived"];
+    if (!status || !validStatuses.includes(status)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid status value" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log(`Updating project ${token} status to: ${status}`);
+
+    const supabase = getSupabaseClient();
+
+    const { data, error } = await supabase
+      .from("projects")
+      .update({ status, updated_at: new Date().toISOString() })
+      .eq("project_token", token)
+      .is("deleted_at", null)
+      .select("id, project_token, status")
+      .single();
+
+    if (error) {
+      console.error("Status update error:", error);
+      return new Response(
+        JSON.stringify({ error: "Database error" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (!data) {
+      return new Response(
+        JSON.stringify({ error: "Project not found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log(`Project ${token} status updated to ${status}`);
+
+    return new Response(
+      JSON.stringify({ success: true, project: data }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+
+  } catch (error) {
+    console.error("Status update error:", error);
     return new Response(
       JSON.stringify({ error: "Internal server error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }

@@ -1,12 +1,13 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Activity, Rocket, Package, LogOut } from "lucide-react";
+import { Activity, Rocket, LogOut, FolderOpen, Inbox, Send } from "lucide-react";
 import { toast } from "sonner";
 import { AcquisitionTab } from "./AcquisitionTab";
 import { DeliveryTab } from "./DeliveryTab";
+import { ProjectsTab } from "./ProjectsTab";
 
 export default function OperatorLayout() {
   const [adminKey, setAdminKey] = useState(() => localStorage.getItem("admin_key") || "");
@@ -76,24 +77,47 @@ export default function OperatorLayout() {
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-6">
-        <Tabs defaultValue="acquisition" className="space-y-6">
-          <TabsList className="grid w-full max-w-md grid-cols-2">
-            <TabsTrigger value="acquisition" className="gap-2">
-              <Rocket className="h-4 w-4" />
-              Acquisition
+        <Tabs defaultValue="projects" className="space-y-6">
+          <TabsList className="grid w-full max-w-2xl grid-cols-4">
+            <TabsTrigger value="projects" className="gap-2">
+              <FolderOpen className="h-4 w-4" />
+              Projects
             </TabsTrigger>
-            <TabsTrigger value="delivery" className="gap-2">
-              <Package className="h-4 w-4" />
-              Delivery
+            <TabsTrigger value="inbox" className="gap-2">
+              <Inbox className="h-4 w-4" />
+              Inbox
+            </TabsTrigger>
+            <TabsTrigger value="leads" className="gap-2">
+              <Rocket className="h-4 w-4" />
+              Leads
+            </TabsTrigger>
+            <TabsTrigger value="outreach" className="gap-2">
+              <Send className="h-4 w-4" />
+              Outreach
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="acquisition">
+          <TabsContent value="projects">
+            <ProjectsTab />
+          </TabsContent>
+
+          <TabsContent value="inbox">
+            <DeliveryTab />
+          </TabsContent>
+
+          <TabsContent value="leads">
             <AcquisitionTab />
           </TabsContent>
 
-          <TabsContent value="delivery">
-            <DeliveryTab />
+          <TabsContent value="outreach">
+            <Card>
+              <CardHeader>
+                <CardTitle>Outreach</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground">Outreach tracking coming soon. View leads tab for current outreach controls.</p>
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </main>
