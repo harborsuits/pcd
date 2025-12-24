@@ -145,14 +145,20 @@ export function ProjectDetailDrawer({ project, open, onClose, onStatusChange }: 
     refetchInterval: 10000,
   });
 
-  // Mark messages as read when messages tab is viewed
+  // Mark messages as read when messages tab is viewed (only if there are unread messages)
   useEffect(() => {
     if (!project || !open) return;
     if (activeTab !== "messages") return;
     if (markReadMutation.isPending) return;
+    
+    // Only call mark-read if there are actually unread client messages
+    const hasUnreadClient = messagesData?.messages?.some(
+      (m: Message) => m.sender_type === "client" && !m.read_at
+    );
+    if (!hasUnreadClient) return;
 
     markReadMutation.mutate(project.project_token);
-  }, [project?.project_token, open, activeTab]);
+  }, [project?.project_token, open, activeTab, messagesData?.messages]);
 
   // Fetch notes
   const { data: notesData, isLoading: notesLoading } = useQuery({
