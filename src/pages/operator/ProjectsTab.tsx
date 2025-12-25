@@ -11,8 +11,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { ProjectWorkSurface } from "./ProjectWorkSurface";
-
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+import { adminFetch } from "@/lib/adminFetch";
 
 interface ProjectIntake {
   project_id: string;
@@ -59,10 +58,7 @@ export function ProjectsTab() {
   const { data: projectsData, isLoading, refetch } = useQuery({
     queryKey: ["admin-projects"],
     queryFn: async () => {
-      const adminKey = localStorage.getItem("admin_key") || "";
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/admin/projects`, {
-        headers: { "x-admin-key": adminKey },
-      });
+      const res = await adminFetch("/admin/projects");
       if (!res.ok) throw new Error("Failed to fetch projects");
       return res.json() as Promise<{ projects: Project[] }>;
     },

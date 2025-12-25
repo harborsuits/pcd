@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,21 +8,51 @@ import { toast } from "sonner";
 import { AcquisitionTab } from "./AcquisitionTab";
 import { DeliveryTab } from "./DeliveryTab";
 import { ProjectsTab } from "./ProjectsTab";
+import { AdminAuthError, clearAdminKey, setAdminKey as saveAdminKey } from "@/lib/adminFetch";
 
 export default function OperatorLayout() {
   const [adminKey, setAdminKey] = useState(() => localStorage.getItem("admin_key") || "");
   const [isAuthed, setIsAuthed] = useState(() => !!localStorage.getItem("admin_key"));
 
+  // Listen for AdminAuthError events globally
+  useEffect(() => {
+    const handleError = (event: ErrorEvent) => {
+      if (event.error instanceof AdminAuthError || event.message?.includes("Admin key invalid")) {
+        clearAdminKey();
+        setAdminKey("");
+        setIsAuthed(false);
+        toast.error("Session expired. Please re-enter your admin key.");
+      }
+    };
+
+    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+      if (event.reason instanceof AdminAuthError || event.reason?.message?.includes("Admin key invalid")) {
+        clearAdminKey();
+        setAdminKey("");
+        setIsAuthed(false);
+        toast.error("Session expired. Please re-enter your admin key.");
+      }
+    };
+
+    window.addEventListener("error", handleError);
+    window.addEventListener("unhandledrejection", handleUnhandledRejection);
+    
+    return () => {
+      window.removeEventListener("error", handleError);
+      window.removeEventListener("unhandledrejection", handleUnhandledRejection);
+    };
+  }, []);
+
   const handleSetAdminKey = () => {
     if (adminKey.trim()) {
-      localStorage.setItem("admin_key", adminKey.trim());
+      saveAdminKey(adminKey.trim());
       setIsAuthed(true);
       toast.success("Admin key saved");
     }
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("admin_key");
+    clearAdminKey();
     setAdminKey("");
     setIsAuthed(false);
     toast.success("Logged out");

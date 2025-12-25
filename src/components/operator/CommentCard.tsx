@@ -7,8 +7,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
-
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+import { adminFetch } from "@/lib/adminFetch";
 
 interface PrototypeComment {
   id: string;
@@ -58,11 +57,7 @@ export function CommentCard({
   const { data: attachmentsData, isLoading: attachmentsLoading } = useQuery({
     queryKey: ["comment-attachments", projectToken, comment.id],
     queryFn: async () => {
-      const adminKey = localStorage.getItem("admin_key") || "";
-      const res = await fetch(
-        `${SUPABASE_URL}/functions/v1/admin/comments/${projectToken}/${comment.id}/attachments`,
-        { headers: { "x-admin-key": adminKey } }
-      );
+      const res = await adminFetch(`/admin/comments/${projectToken}/${comment.id}/attachments`);
       if (!res.ok) throw new Error("Failed to fetch attachments");
       return res.json() as Promise<{ attachments: Attachment[] }>;
     },
@@ -72,17 +67,12 @@ export function CommentCard({
   // Upload attachment mutation
   const uploadMutation = useMutation({
     mutationFn: async (file: File) => {
-      const adminKey = localStorage.getItem("admin_key") || "";
       const formData = new FormData();
       formData.append("file", file);
-      const res = await fetch(
-        `${SUPABASE_URL}/functions/v1/admin/comments/${projectToken}/${comment.id}/attachments`,
-        {
-          method: "POST",
-          headers: { "x-admin-key": adminKey },
-          body: formData,
-        }
-      );
+      const res = await adminFetch(`/admin/comments/${projectToken}/${comment.id}/attachments`, {
+        method: "POST",
+        body: formData,
+      });
       if (!res.ok) throw new Error("Failed to upload attachment");
       return res.json();
     },
@@ -96,14 +86,9 @@ export function CommentCard({
   // Delete attachment mutation
   const deleteMutation = useMutation({
     mutationFn: async (attachmentId: string) => {
-      const adminKey = localStorage.getItem("admin_key") || "";
-      const res = await fetch(
-        `${SUPABASE_URL}/functions/v1/admin/comments/${projectToken}/${comment.id}/attachments/${attachmentId}`,
-        {
-          method: "DELETE",
-          headers: { "x-admin-key": adminKey },
-        }
-      );
+      const res = await adminFetch(`/admin/comments/${projectToken}/${comment.id}/attachments/${attachmentId}`, {
+        method: "DELETE",
+      });
       if (!res.ok) throw new Error("Failed to delete attachment");
     },
     onSuccess: () => {
