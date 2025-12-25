@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, FileText, CreditCard, AlertCircle, Home, Download, Image as ImageIcon, Upload, Eye, X, LogOut, ChevronDown, Paperclip, Bell, BellOff, MessageCircle, ChevronRight, ChevronLeft } from "lucide-react";
+import { Loader2, FileText, CreditCard, AlertCircle, Home, Download, Image as ImageIcon, Upload, Eye, X, LogOut, ChevronDown, Paperclip, Bell, BellOff, MessageCircle } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/hooks/use-toast";
 import { proxyMediaUrl, isImageType, getFileIcon } from "@/lib/media";
@@ -13,7 +13,7 @@ import { ReviewQueue } from "@/components/portal/ReviewQueue";
 import { ProjectStatusBanner } from "@/components/portal/ProjectStatusBanner";
 import { FloatingChatOrb } from "@/components/portal/FloatingChatOrb";
 import { PrototypeViewer, type Prototype, type PrototypeComment } from "@/components/portal/PrototypeViewer";
-import { CommentsSidebar } from "@/components/portal/CommentsSidebar";
+
 import { PortalAuthPage } from "./PortalAuthPage";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import type { User, Session } from "@supabase/supabase-js";
@@ -128,7 +128,7 @@ export default function PortalPage() {
   const [showFilesPanel, setShowFilesPanel] = useState(false);
   const [prototypes, setPrototypes] = useState<Prototype[]>([]);
   const [prototypeComments, setPrototypeComments] = useState<PrototypeComment[]>([]);
-  const [showCommentsSidebar, setShowCommentsSidebar] = useState(true);
+  
   const originalTitle = useRef(document.title);
   const markReadInFlight = useRef(false);
   const markDeliveredInFlight = useRef(false);
@@ -1056,42 +1056,15 @@ export default function PortalPage() {
         {/* Prototype Viewer Section */}
         {prototypes.length > 0 && (
           <div className="border-b border-border">
-            <div className="flex">
-              {/* Prototype Viewer */}
-              <div className={`flex-1 ${showCommentsSidebar ? "" : ""}`}>
-                <PrototypeViewer
-                  prototype={prototypes[0]}
-                  comments={prototypeComments}
-                  onAddComment={handleAddComment}
-                  onResolveComment={handleResolveComment}
-                  onUnresolveComment={handleUnresolveComment}
-                  onRefresh={handleRefreshPrototype}
-                />
-              </div>
-
-              {/* Comments Sidebar */}
-              {showCommentsSidebar && (
-                <div className="w-80 border-l border-border bg-card hidden lg:block">
-                  <CommentsSidebar
-                    comments={prototypeComments}
-                    onResolveComment={handleResolveComment}
-                    onUnresolveComment={handleUnresolveComment}
-                  />
-                </div>
-              )}
-            </div>
-
-            {/* Toggle sidebar button */}
-            <div className="hidden lg:block absolute right-0 top-1/2 -translate-y-1/2">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowCommentsSidebar(!showCommentsSidebar)}
-                className="h-8 w-8 p-0"
-              >
-                {showCommentsSidebar ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
-              </Button>
-            </div>
+            <PrototypeViewer
+              prototype={prototypes[0]}
+              comments={prototypeComments}
+              token={token!}
+              onAddComment={handleAddComment}
+              onResolveComment={handleResolveComment}
+              onUnresolveComment={handleUnresolveComment}
+              onRefresh={handleRefreshPrototype}
+            />
           </div>
         )}
 
