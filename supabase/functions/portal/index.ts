@@ -903,13 +903,14 @@ async function handleCreateProject(
 
     console.log(`Created project ${project.business_name} for user ${user.id}`);
 
-    // Save full structured intake into project_intakes table (v1)
+    // Save full structured intake into project_intakes table (v1) with status 'submitted'
     const { error: intakeError } = await supabase
       .from("project_intakes")
       .insert({
         project_id: project.id,
         owner_user_id: user.id,
         intake_version: 1,
+        intake_status: 'submitted',
         intake_json: {
           ...intake,
           createdAt: new Date().toISOString(),

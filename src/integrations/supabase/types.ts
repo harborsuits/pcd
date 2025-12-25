@@ -547,6 +547,7 @@ export type Database = {
           created_at: string
           id: string
           intake_json: Json
+          intake_status: string
           intake_version: number
           owner_user_id: string | null
           project_id: string
@@ -556,6 +557,7 @@ export type Database = {
           created_at?: string
           id?: string
           intake_json?: Json
+          intake_status?: string
           intake_version?: number
           owner_user_id?: string | null
           project_id: string
@@ -565,6 +567,7 @@ export type Database = {
           created_at?: string
           id?: string
           intake_json?: Json
+          intake_status?: string
           intake_version?: number
           owner_user_id?: string | null
           project_id?: string
