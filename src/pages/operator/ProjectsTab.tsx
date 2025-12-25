@@ -54,13 +54,20 @@ const STATUS_COLORS: Record<string, string> = {
 export function ProjectsTab() {
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [activeTab, setActiveTab] = useState<"new" | "active" | "completed">("new");
-  const { setCurrentProjectToken } = useOperatorContext();
+  const { setCurrentProjectToken, setCurrentProjectName, registerCloseProject } = useOperatorContext();
 
-  // Sync selected project token to context for global Alt+R
+  // Sync selected project to context for global shortcuts
   useEffect(() => {
     setCurrentProjectToken(selectedProject?.project_token ?? null);
-    return () => setCurrentProjectToken(null);
-  }, [selectedProject, setCurrentProjectToken]);
+    setCurrentProjectName(selectedProject?.business_name ?? null);
+    registerCloseProject(() => setSelectedProject(null));
+    
+    return () => {
+      setCurrentProjectToken(null);
+      setCurrentProjectName(null);
+      registerCloseProject(() => {});
+    };
+  }, [selectedProject, setCurrentProjectToken, setCurrentProjectName, registerCloseProject]);
 
   // Fetch all projects with intake data
   const { data: projectsData, isLoading, refetch } = useQuery({
