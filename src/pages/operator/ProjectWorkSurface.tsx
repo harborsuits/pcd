@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { CommentCard } from "@/components/operator/CommentCard";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 
@@ -687,42 +688,18 @@ export function ProjectWorkSurface({ project, onBack, onStatusChange }: ProjectW
                 ) : (
                   <div className="space-y-2 pr-2">
                     {filteredComments.map((comment, idx) => (
-                      <div
+                      <CommentCard
                         key={comment.id}
-                        className={`p-3 rounded-lg border cursor-pointer transition-colors ${
-                          highlightedPinId === comment.id ? "border-primary bg-primary/5" : "border-border hover:bg-muted/50"
-                        }`}
-                        onClick={() => handleJumpToPin(comment)}
-                      >
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex items-start gap-2 min-w-0">
-                            <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0 ${
-                              comment.resolved_at ? "bg-muted text-muted-foreground" : "bg-primary text-primary-foreground"
-                            }`}>
-                              {idx + 1}
-                            </div>
-                            <div className="min-w-0">
-                              <p className="text-sm line-clamp-2">{comment.body}</p>
-                              <p className="text-[10px] text-muted-foreground mt-1">
-                                {comment.author_type === "client" ? "Client" : "Admin"} • {format(new Date(comment.created_at), "MMM d, h:mm a")}
-                              </p>
-                            </div>
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6 flex-shrink-0"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              resolveCommentMutation.mutate({ commentId: comment.id, resolve: !comment.resolved_at });
-                            }}
-                            disabled={resolveCommentMutation.isPending}
-                            title={comment.resolved_at ? "Reopen" : "Resolve"}
-                          >
-                            {comment.resolved_at ? <Circle className="h-3 w-3" /> : <CheckCircle className="h-3 w-3" />}
-                          </Button>
-                        </div>
-                      </div>
+                        comment={comment}
+                        index={idx}
+                        projectToken={project.project_token}
+                        isHighlighted={highlightedPinId === comment.id}
+                        onJumpToPin={handleJumpToPin}
+                        onResolveToggle={(commentId, resolve) => 
+                          resolveCommentMutation.mutate({ commentId, resolve })
+                        }
+                        isResolving={resolveCommentMutation.isPending}
+                      />
                     ))}
                   </div>
                 )}
