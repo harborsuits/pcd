@@ -30,6 +30,7 @@ import {
   HelpCircle,
   Sparkles
 } from "lucide-react";
+import { IntakeSubmittedScreen } from "@/components/portal/IntakeSubmittedScreen";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -137,6 +138,7 @@ export default function OnboardingWizard() {
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [submittedProject, setSubmittedProject] = useState<{ businessName: string; projectToken: string } | null>(null);
   
   const [intake, setIntake] = useState<IntakeData>({
     businessName: "",
@@ -228,13 +230,11 @@ export default function OnboardingWizard() {
         throw new Error(data.error || "Failed to create project");
       }
 
-      toast({
-        title: "Project created!",
-        description: "Your project setup is complete. Welcome to your portal.",
+      // Show confirmation screen instead of navigating directly
+      setSubmittedProject({
+        businessName: intake.businessName,
+        projectToken: data.project_token,
       });
-
-      // Navigate to the new portal
-      navigate(`/p/${data.project_token}`);
     } catch (err) {
       console.error("Create project error:", err);
       toast({
@@ -673,6 +673,16 @@ export default function OnboardingWizard() {
         return null;
     }
   };
+
+  // Show confirmation screen after successful submission
+  if (submittedProject) {
+    return (
+      <IntakeSubmittedScreen
+        businessName={submittedProject.businessName}
+        projectToken={submittedProject.projectToken}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
