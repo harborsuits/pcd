@@ -220,7 +220,18 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Fetch messages (paginated, oldest first for proper ordering) - include id for deduplication
+    // Fetch intake status for roadmap
+    const { data: intake, error: intakeError } = await supabase
+      .from("project_intakes")
+      .select("intake_status")
+      .eq("project_id", project.id)
+      .maybeSingle();
+
+    if (intakeError) {
+      console.error("Intake query error:", intakeError);
+      // Non-fatal, continue without intake status
+    }
+
     // We fetch in ascending order so messages display oldest → newest
     let messagesQuery = supabase
       .from("messages")
@@ -287,6 +298,7 @@ Deno.serve(async (req) => {
         slug: project.business_slug,
         status: project.status,
       },
+      intake_status: intake?.intake_status || null,
       messages: (messages || []).map((m) => ({
         id: m.id,
         content: m.content,

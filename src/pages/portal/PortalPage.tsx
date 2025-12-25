@@ -13,6 +13,7 @@ import { ReviewQueue } from "@/components/portal/ReviewQueue";
 import { ProjectStatusBanner } from "@/components/portal/ProjectStatusBanner";
 import { FloatingChatOrb } from "@/components/portal/FloatingChatOrb";
 import { PrototypeViewer, type Prototype, type PrototypeComment } from "@/components/portal/PrototypeViewer";
+import { ProjectRoadmap, computeRoadmapSteps } from "@/components/portal/ProjectRoadmap";
 
 import { PortalAuthPage } from "./PortalAuthPage";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
@@ -64,6 +65,7 @@ interface PortalData {
     slug: string;
     status: string;
   };
+  intake_status: 'draft' | 'submitted' | 'approved' | null;
   messages: PortalMessage[];
   files: PortalFile[];
   payments: PortalPayment[];
@@ -1053,7 +1055,21 @@ export default function PortalPage() {
           </div>
         </div>
 
-        {/* Prototype Viewer Section */}
+        {/* Project Roadmap */}
+        <div className="border-b border-border bg-muted/30 p-6">
+          <div className="container mx-auto max-w-4xl">
+            <ProjectRoadmap 
+              steps={computeRoadmapSteps({
+                intakeStatus: data.intake_status ?? undefined,
+                hasPrototype: prototypes.length > 0,
+                openCommentsCount: prototypeComments.filter(c => !c.resolved_at).length,
+                resolvedCommentsCount: prototypeComments.filter(c => c.resolved_at).length,
+                projectStatus: data.business.status,
+                prototypeUrl: prototypes[0]?.url,
+              })}
+            />
+          </div>
+        </div>
         {prototypes.length > 0 && (
           <div className="border-b border-border">
             <PrototypeViewer
