@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import {
 import { format } from "date-fns";
 import { ProjectWorkSurface } from "./ProjectWorkSurface";
 import { adminFetch } from "@/lib/adminFetch";
+import { useOperatorContext } from "./OperatorLayout";
 
 interface ProjectIntake {
   project_id: string;
@@ -53,6 +54,13 @@ const STATUS_COLORS: Record<string, string> = {
 export function ProjectsTab() {
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [activeTab, setActiveTab] = useState<"new" | "active" | "completed">("new");
+  const { setCurrentProjectToken } = useOperatorContext();
+
+  // Sync selected project token to context for global Alt+R
+  useEffect(() => {
+    setCurrentProjectToken(selectedProject?.project_token ?? null);
+    return () => setCurrentProjectToken(null);
+  }, [selectedProject, setCurrentProjectToken]);
 
   // Fetch all projects with intake data
   const { data: projectsData, isLoading, refetch } = useQuery({
