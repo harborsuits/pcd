@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, FileText, MessageSquare, CreditCard, AlertCircle, Send, Home, Download, Image as ImageIcon, Upload, Eye, X, LogOut, ChevronDown, Paperclip } from "lucide-react";
+import { Loader2, FileText, MessageSquare, CreditCard, AlertCircle, Send, Home, Download, Image as ImageIcon, Upload, Eye, X, LogOut, ChevronDown, Paperclip, Bell, BellOff } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
@@ -14,6 +14,7 @@ import { WelcomeScreen } from "@/components/portal/WelcomeScreen";
 import { ReviewQueue } from "@/components/portal/ReviewQueue";
 import { ProjectStatusBanner } from "@/components/portal/ProjectStatusBanner";
 import { PortalAuthPage } from "./PortalAuthPage";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
 import type { User, Session } from "@supabase/supabase-js";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
@@ -136,7 +137,9 @@ export default function PortalPage() {
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const seenMessageIds = useRef<Set<string>>(new Set());
 
-  // Notification sound for new admin messages
+  // Push notifications
+  const { isSupported: pushSupported, isSubscribed: pushSubscribed, isLoading: pushLoading, subscribe: subscribePush, unsubscribe: unsubscribePush } = usePushNotifications(token);
+
   const playNotify = useCallback(() => {
     try {
       const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
@@ -910,9 +913,42 @@ export default function PortalPage() {
         <div className="shrink-0 border-b border-border bg-card/50 p-4">
           <div className="container mx-auto max-w-2xl">
             {/* Business Header */}
-            <div className="flex items-center gap-3">
-              <h1 className="text-xl font-bold">{data.business.name}</h1>
-              <StatusBadge status={data.business.status} />
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <h1 className="text-xl font-bold">{data.business.name}</h1>
+                <StatusBadge status={data.business.status} />
+              </div>
+              {/* Push Notification Toggle */}
+              {pushSupported && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={async () => {
+                    if (pushSubscribed) {
+                      const ok = await unsubscribePush();
+                      if (ok) toast({ title: "Notifications disabled" });
+                    } else {
+                      const ok = await subscribePush();
+                      if (ok) {
+                        toast({ title: "Notifications enabled", description: "You'll be notified when you receive a message." });
+                      } else {
+                        toast({ title: "Could not enable notifications", description: "Please allow notifications in your browser settings.", variant: "destructive" });
+                      }
+                    }
+                  }}
+                  disabled={pushLoading}
+                  className="text-muted-foreground"
+                  title={pushSubscribed ? "Disable notifications" : "Enable notifications"}
+                >
+                  {pushLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : pushSubscribed ? (
+                    <Bell className="h-4 w-4 text-primary" />
+                  ) : (
+                    <BellOff className="h-4 w-4" />
+                  )}
+                </Button>
+              )}
             </div>
             <p className="text-sm text-muted-foreground">Your Project Workspace</p>
           </div>
