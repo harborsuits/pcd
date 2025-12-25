@@ -1,4 +1,4 @@
-import { useState, useEffect, createContext, useContext } from "react";
+import { useState, useEffect, createContext, useContext, useRef, useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,15 +23,23 @@ import {
   getLast401At
 } from "@/lib/adminFetch";
 
-// Context to track currently open project token for global shortcuts
+// Context to track currently open project for global shortcuts
 interface OperatorContextValue {
   currentProjectToken: string | null;
+  currentProjectName: string | null;
   setCurrentProjectToken: (token: string | null) => void;
+  setCurrentProjectName: (name: string | null) => void;
+  registerCloseProject: (fn: () => void) => void;
+  closeProject: () => void;
 }
 
 const OperatorContext = createContext<OperatorContextValue>({
   currentProjectToken: null,
+  currentProjectName: null,
   setCurrentProjectToken: () => {},
+  setCurrentProjectName: () => {},
+  registerCloseProject: () => {},
+  closeProject: () => {},
 });
 
 export const useOperatorContext = () => useContext(OperatorContext);
@@ -51,7 +59,17 @@ export default function OperatorLayout() {
   const [isAuthed, setIsAuthed] = useState(() => !!getAdminKey());
   const [rememberMe, setRememberMe] = useState(() => getAdminKeyStorageMode() === "local");
   const [currentProjectToken, setCurrentProjectToken] = useState<string | null>(null);
+  const [currentProjectName, setCurrentProjectName] = useState<string | null>(null);
+  const closeProjectRef = useRef<() => void>(() => {});
   const queryClient = useQueryClient();
+
+  const registerCloseProject = useCallback((fn: () => void) => {
+    closeProjectRef.current = fn;
+  }, []);
+
+  const closeProject = useCallback(() => {
+    closeProjectRef.current?.();
+  }, []);
 
   // Listen for AdminAuthError events globally
   useEffect(() => {
@@ -81,6 +99,29 @@ export default function OperatorLayout() {
       window.removeEventListener("unhandledrejection", handleUnhandledRejection);
     };
   }, []);
+
+  // Escape key to close current project
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+
+      const el = document.activeElement as HTMLElement | null;
+      const isTyping =
+        el?.tagName === "INPUT" ||
+        el?.tagName === "TEXTAREA" ||
+        el?.getAttribute("contenteditable") === "true";
+      if (isTyping) return;
+
+      if (currentProjectToken) {
+        e.preventDefault();
+        closeProject();
+        toast.success("Closed project");
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [currentProjectToken, closeProject]);
 
   // Global Alt+R keyboard shortcut for refresh
   useEffect(() => {
@@ -178,7 +219,14 @@ export default function OperatorLayout() {
   const last401At = getLast401At();
 
   return (
-    <OperatorContext.Provider value={{ currentProjectToken, setCurrentProjectToken }}>
+    <OperatorContext.Provider value={{ 
+      currentProjectToken, 
+      currentProjectName,
+      setCurrentProjectToken, 
+      setCurrentProjectName,
+      registerCloseProject,
+      closeProject 
+    }}>
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="border-b border-border bg-card sticky top-0 z-10">
@@ -186,6 +234,11 @@ export default function OperatorLayout() {
           <div className="flex items-center gap-3">
             <Activity className="h-6 w-6 text-primary" />
             <h1 className="text-xl font-bold">Operator Console</h1>
+            {currentProjectToken && (
+              <Badge variant="secondary" className="text-xs font-normal">
+                {currentProjectName || `Project • ${currentProjectToken.slice(0, 6)}…`}
+              </Badge>
+            )}
           </div>
           <div className="flex items-center gap-3">
             {/* Data freshness indicator */}
