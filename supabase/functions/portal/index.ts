@@ -61,6 +61,7 @@ Deno.serve(async (req) => {
   const markDeliveredIdx = pathParts.indexOf("mark-delivered");
   const prototypesIdx = pathParts.indexOf("prototypes");
   const commentsIdx = pathParts.indexOf("comments");
+  const attachmentsIdx = pathParts.indexOf("attachments");
   
   if (reviewIdx > portalIdx && req.method === "POST") {
     const token = pathParts[portalIdx + 1];
@@ -80,9 +81,22 @@ Deno.serve(async (req) => {
     return handleGetPrototypes(token, corsHeaders);
   }
 
+  // Comment attachments: /portal/:token/comments/:commentId/attachments
+  if (attachmentsIdx > commentsIdx && commentsIdx > portalIdx) {
+    const token = pathParts[portalIdx + 1];
+    const commentId = pathParts[commentsIdx + 1];
+    
+    if (req.method === "GET") {
+      return handleGetCommentAttachments(token, commentId, corsHeaders);
+    }
+    if (req.method === "POST") {
+      return handleUploadCommentAttachment(req, token, commentId, corsHeaders);
+    }
+  }
+
   // GET /portal/:token/comments - Get comments for prototype
   // POST /portal/:token/comments - Create/update/resolve comments
-  if (commentsIdx > portalIdx) {
+  if (commentsIdx > portalIdx && attachmentsIdx === -1) {
     const token = pathParts[portalIdx + 1];
     if (req.method === "GET") {
       const prototypeId = new URL(req.url).searchParams.get("prototype_id");
@@ -1187,6 +1201,207 @@ async function handleCommentAction(
     );
   } catch (error) {
     console.error("Comment action error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+}
+
+// GET /portal/:token/comments/:commentId/attachments - Get attachments for a comment
+async function handleGetCommentAttachments(
+  token: string,
+  commentId: string,
+  corsHeaders: Record<string, string>
+): Promise<Response> {
+  try {
+    if (!token || !isValidToken(token)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid token" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Verify comment belongs to project
+    const { data: comment, error: commentError } = await supabase
+      .from("prototype_comments")
+      .select("id, prototype_id")
+      .eq("id", commentId)
+      .eq("project_token", token)
+      .maybeSingle();
+
+    if (commentError || !comment) {
+      return new Response(
+        JSON.stringify({ error: "Comment not found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Fetch attachments
+    const { data: attachments, error } = await supabase
+      .from("prototype_comment_media")
+      .select("id, filename, mime_type, size_bytes, uploader_type, created_at, storage_path")
+      .eq("comment_id", commentId)
+      .eq("project_token", token)
+      .order("created_at", { ascending: true });
+
+    if (error) {
+      console.error("Get attachments error:", error);
+      return new Response(
+        JSON.stringify({ error: "Database error" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Generate signed URLs
+    const attachmentsWithUrls = await Promise.all((attachments || []).map(async (item) => {
+      const { data: signedData } = await supabase.storage
+        .from("project-media")
+        .createSignedUrl(item.storage_path, 3600);
+
+      return {
+        id: item.id,
+        filename: item.filename,
+        mime_type: item.mime_type,
+        size_bytes: item.size_bytes,
+        uploader_type: item.uploader_type,
+        created_at: item.created_at,
+        signed_url: signedData?.signedUrl || null,
+      };
+    }));
+
+    return new Response(
+      JSON.stringify({ attachments: attachmentsWithUrls }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  } catch (error) {
+    console.error("Get attachments error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+}
+
+// POST /portal/:token/comments/:commentId/attachments - Upload attachment for a comment
+async function handleUploadCommentAttachment(
+  req: Request,
+  token: string,
+  commentId: string,
+  corsHeaders: Record<string, string>
+): Promise<Response> {
+  try {
+    if (!token || !isValidToken(token)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid token" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Verify comment belongs to project and get prototype_id
+    const { data: comment, error: commentError } = await supabase
+      .from("prototype_comments")
+      .select("id, prototype_id")
+      .eq("id", commentId)
+      .eq("project_token", token)
+      .maybeSingle();
+
+    if (commentError || !comment) {
+      return new Response(
+        JSON.stringify({ error: "Comment not found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Parse multipart form data
+    const formData = await req.formData();
+    const file = formData.get("file") as File | null;
+
+    if (!file) {
+      return new Response(
+        JSON.stringify({ error: "No file provided" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const filename = file.name;
+    const mimeType = file.type || "application/octet-stream";
+    const sizeBytes = file.size;
+
+    // Generate storage path
+    const storagePath = `${token}/comments/${commentId}/${Date.now()}-${filename}`;
+
+    // Upload to storage
+    const { error: uploadError } = await supabase.storage
+      .from("project-media")
+      .upload(storagePath, file, { contentType: mimeType });
+
+    if (uploadError) {
+      console.error("Storage upload error:", uploadError);
+      return new Response(
+        JSON.stringify({ error: "Failed to upload file" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Create media record
+    const { data: mediaRecord, error: insertError } = await supabase
+      .from("prototype_comment_media")
+      .insert({
+        project_token: token,
+        prototype_id: comment.prototype_id,
+        comment_id: commentId,
+        uploader_type: "client",
+        storage_path: storagePath,
+        filename,
+        mime_type: mimeType,
+        size_bytes: sizeBytes,
+      })
+      .select()
+      .single();
+
+    if (insertError) {
+      console.error("Media record insert error:", insertError);
+      // Clean up uploaded file
+      await supabase.storage.from("project-media").remove([storagePath]);
+      return new Response(
+        JSON.stringify({ error: "Failed to create attachment record" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Generate signed URL
+    const { data: signedData } = await supabase.storage
+      .from("project-media")
+      .createSignedUrl(storagePath, 3600);
+
+    console.log(`Attachment uploaded for comment ${commentId}`);
+
+    return new Response(
+      JSON.stringify({
+        ok: true,
+        attachment: {
+          id: mediaRecord.id,
+          filename: mediaRecord.filename,
+          mime_type: mediaRecord.mime_type,
+          size_bytes: mediaRecord.size_bytes,
+          uploader_type: mediaRecord.uploader_type,
+          created_at: mediaRecord.created_at,
+          signed_url: signedData?.signedUrl || null,
+        },
+      }),
+      { status: 201, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  } catch (error) {
+    console.error("Upload attachment error:", error);
     return new Response(
       JSON.stringify({ error: "Internal server error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }

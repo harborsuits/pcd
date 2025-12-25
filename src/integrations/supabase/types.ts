@@ -693,6 +693,63 @@ export type Database = {
         }
         Relationships: []
       }
+      prototype_comment_media: {
+        Row: {
+          comment_id: string
+          created_at: string
+          filename: string
+          id: string
+          mime_type: string
+          project_token: string
+          prototype_id: string
+          size_bytes: number
+          storage_path: string
+          uploader_type: string
+          uploader_user_id: string | null
+        }
+        Insert: {
+          comment_id: string
+          created_at?: string
+          filename: string
+          id?: string
+          mime_type: string
+          project_token: string
+          prototype_id: string
+          size_bytes: number
+          storage_path: string
+          uploader_type: string
+          uploader_user_id?: string | null
+        }
+        Update: {
+          comment_id?: string
+          created_at?: string
+          filename?: string
+          id?: string
+          mime_type?: string
+          project_token?: string
+          prototype_id?: string
+          size_bytes?: number
+          storage_path?: string
+          uploader_type?: string
+          uploader_user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prototype_comment_media_comment_id_fkey"
+            columns: ["comment_id"]
+            isOneToOne: false
+            referencedRelation: "prototype_comments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prototype_comment_media_prototype_id_fkey"
+            columns: ["prototype_id"]
+            isOneToOne: false
+            referencedRelation: "prototypes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       prototype_comments: {
         Row: {
           author_type: string

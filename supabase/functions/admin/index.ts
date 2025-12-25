@@ -156,11 +156,36 @@ Deno.serve(async (req) => {
   }
 
   // Route: PATCH /admin/comments/:token/:commentId
-  if (subPath.match(/^comments\/[^\/]+\/[^\/]+$/) && req.method === "PATCH") {
+  if (subPath.match(/^comments\/[^\/]+\/[^\/]+$/) && req.method === "PATCH" && !subPath.includes("attachments")) {
     const parts = subPath.split("/");
     const token = parts[1];
     const commentId = parts[2];
     return handleUpdateComment(req, token, commentId);
+  }
+
+  // Route: GET /admin/comments/:token/:commentId/attachments
+  if (subPath.match(/^comments\/[^\/]+\/[^\/]+\/attachments$/) && req.method === "GET") {
+    const parts = subPath.split("/");
+    const token = parts[1];
+    const commentId = parts[2];
+    return handleGetCommentAttachments(req, token, commentId);
+  }
+
+  // Route: POST /admin/comments/:token/:commentId/attachments
+  if (subPath.match(/^comments\/[^\/]+\/[^\/]+\/attachments$/) && req.method === "POST") {
+    const parts = subPath.split("/");
+    const token = parts[1];
+    const commentId = parts[2];
+    return handleUploadCommentAttachment(req, token, commentId);
+  }
+
+  // Route: DELETE /admin/comments/:token/:commentId/attachments/:attachmentId
+  if (subPath.match(/^comments\/[^\/]+\/[^\/]+\/attachments\/[^\/]+$/) && req.method === "DELETE") {
+    const parts = subPath.split("/");
+    const token = parts[1];
+    const commentId = parts[2];
+    const attachmentId = parts[4];
+    return handleDeleteCommentAttachment(req, token, commentId, attachmentId);
   }
 
   // Route: GET /admin/media/:token
@@ -2080,6 +2105,277 @@ async function handleDeleteMedia(req: Request, token: string, mediaId: string): 
 
   } catch (error) {
     console.error("Delete media error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+}
+
+// GET /admin/comments/:token/:commentId/attachments - Get attachments for a comment
+async function handleGetCommentAttachments(req: Request, token: string, commentId: string): Promise<Response> {
+  const authError = validateAdminKey(req);
+  if (authError) return authError;
+
+  if (!isValidToken(token)) {
+    return new Response(
+      JSON.stringify({ error: "Invalid token" }),
+      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  try {
+    console.log(`Fetching attachments for comment ${commentId}...`);
+
+    const supabase = getSupabaseClient();
+
+    // Verify comment belongs to project
+    const { data: comment, error: commentError } = await supabase
+      .from("prototype_comments")
+      .select("id, prototype_id")
+      .eq("id", commentId)
+      .eq("project_token", token)
+      .maybeSingle();
+
+    if (commentError || !comment) {
+      return new Response(
+        JSON.stringify({ error: "Comment not found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Fetch attachments
+    const { data: attachments, error } = await supabase
+      .from("prototype_comment_media")
+      .select("id, filename, mime_type, size_bytes, uploader_type, created_at, storage_path")
+      .eq("comment_id", commentId)
+      .eq("project_token", token)
+      .order("created_at", { ascending: true });
+
+    if (error) {
+      console.error("Get attachments error:", error);
+      return new Response(
+        JSON.stringify({ error: "Database error" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Generate signed URLs
+    const attachmentsWithUrls = await Promise.all((attachments || []).map(async (item) => {
+      const { data: signedData } = await supabase.storage
+        .from("project-media")
+        .createSignedUrl(item.storage_path, 3600);
+
+      return {
+        id: item.id,
+        filename: item.filename,
+        mime_type: item.mime_type,
+        size_bytes: item.size_bytes,
+        uploader_type: item.uploader_type,
+        created_at: item.created_at,
+        signed_url: signedData?.signedUrl || null,
+      };
+    }));
+
+    return new Response(
+      JSON.stringify({ attachments: attachmentsWithUrls }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+
+  } catch (error) {
+    console.error("Get attachments error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+}
+
+// POST /admin/comments/:token/:commentId/attachments - Upload attachment for a comment
+async function handleUploadCommentAttachment(req: Request, token: string, commentId: string): Promise<Response> {
+  const authError = validateAdminKey(req);
+  if (authError) return authError;
+
+  if (!isValidToken(token)) {
+    return new Response(
+      JSON.stringify({ error: "Invalid token" }),
+      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  try {
+    const supabase = getSupabaseClient();
+
+    // Verify comment belongs to project and get prototype_id
+    const { data: comment, error: commentError } = await supabase
+      .from("prototype_comments")
+      .select("id, prototype_id")
+      .eq("id", commentId)
+      .eq("project_token", token)
+      .maybeSingle();
+
+    if (commentError || !comment) {
+      return new Response(
+        JSON.stringify({ error: "Comment not found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Parse multipart form data
+    const formData = await req.formData();
+    const file = formData.get("file") as File | null;
+
+    if (!file) {
+      return new Response(
+        JSON.stringify({ error: "No file provided" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const filename = file.name;
+    const mimeType = file.type || "application/octet-stream";
+    const sizeBytes = file.size;
+
+    // Generate storage path
+    const storagePath = `${token}/comments/${commentId}/${Date.now()}-${filename}`;
+
+    // Upload to storage
+    const { error: uploadError } = await supabase.storage
+      .from("project-media")
+      .upload(storagePath, file, { contentType: mimeType });
+
+    if (uploadError) {
+      console.error("Storage upload error:", uploadError);
+      return new Response(
+        JSON.stringify({ error: "Failed to upload file" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Create media record
+    const { data: mediaRecord, error: insertError } = await supabase
+      .from("prototype_comment_media")
+      .insert({
+        project_token: token,
+        prototype_id: comment.prototype_id,
+        comment_id: commentId,
+        uploader_type: "admin",
+        storage_path: storagePath,
+        filename,
+        mime_type: mimeType,
+        size_bytes: sizeBytes,
+      })
+      .select()
+      .single();
+
+    if (insertError) {
+      console.error("Media record insert error:", insertError);
+      // Clean up uploaded file
+      await supabase.storage.from("project-media").remove([storagePath]);
+      return new Response(
+        JSON.stringify({ error: "Failed to create attachment record" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Generate signed URL
+    const { data: signedData } = await supabase.storage
+      .from("project-media")
+      .createSignedUrl(storagePath, 3600);
+
+    console.log(`Attachment uploaded for comment ${commentId}`);
+
+    return new Response(
+      JSON.stringify({
+        ok: true,
+        attachment: {
+          id: mediaRecord.id,
+          filename: mediaRecord.filename,
+          mime_type: mediaRecord.mime_type,
+          size_bytes: mediaRecord.size_bytes,
+          uploader_type: mediaRecord.uploader_type,
+          created_at: mediaRecord.created_at,
+          signed_url: signedData?.signedUrl || null,
+        },
+      }),
+      { status: 201, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+
+  } catch (error) {
+    console.error("Upload attachment error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+}
+
+// DELETE /admin/comments/:token/:commentId/attachments/:attachmentId - Delete an attachment
+async function handleDeleteCommentAttachment(req: Request, token: string, commentId: string, attachmentId: string): Promise<Response> {
+  const authError = validateAdminKey(req);
+  if (authError) return authError;
+
+  if (!isValidToken(token)) {
+    return new Response(
+      JSON.stringify({ error: "Invalid token" }),
+      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  try {
+    console.log(`Deleting attachment ${attachmentId} for comment ${commentId}...`);
+
+    const supabase = getSupabaseClient();
+
+    // Get the attachment record
+    const { data: attachment, error: fetchError } = await supabase
+      .from("prototype_comment_media")
+      .select("storage_path")
+      .eq("id", attachmentId)
+      .eq("comment_id", commentId)
+      .eq("project_token", token)
+      .single();
+
+    if (fetchError || !attachment) {
+      return new Response(
+        JSON.stringify({ error: "Attachment not found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Delete from storage
+    const { error: storageError } = await supabase.storage
+      .from("project-media")
+      .remove([attachment.storage_path]);
+
+    if (storageError) {
+      console.error("Storage delete error:", storageError);
+    }
+
+    // Delete record
+    const { error: deleteError } = await supabase
+      .from("prototype_comment_media")
+      .delete()
+      .eq("id", attachmentId)
+      .eq("project_token", token);
+
+    if (deleteError) {
+      console.error("Attachment delete error:", deleteError);
+      return new Response(
+        JSON.stringify({ error: "Failed to delete attachment" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log("Attachment deleted successfully");
+
+    return new Response(
+      JSON.stringify({ ok: true }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+
+  } catch (error) {
+    console.error("Delete attachment error:", error);
     return new Response(
       JSON.stringify({ error: "Internal server error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
