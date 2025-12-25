@@ -155,6 +155,14 @@ Deno.serve(async (req) => {
     return handleCreateComment(req, token);
   }
 
+  // Route: PATCH /admin/comments/:token/:commentId
+  if (subPath.match(/^comments\/[^\/]+\/[^\/]+$/) && req.method === "PATCH") {
+    const parts = subPath.split("/");
+    const token = parts[1];
+    const commentId = parts[2];
+    return handleUpdateComment(req, token, commentId);
+  }
+
   return new Response(
     JSON.stringify({ error: "Not found" }),
     { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -1548,6 +1556,22 @@ async function handleDeletePrototype(req: Request, token: string, prototypeId: s
         JSON.stringify({ error: "Failed to delete prototype" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
+    }
+
+    console.log("Prototype deleted successfully");
+
+    return new Response(
+      JSON.stringify({ ok: true }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+
+  } catch (error) {
+    console.error("Delete prototype error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
 }
 
 // GET /admin/comments/:token - Get comments for a project
@@ -1673,15 +1697,63 @@ async function handleCreateComment(req: Request, token: string): Promise<Respons
   }
 }
 
-    console.log("Prototype deleted successfully");
+// PATCH /admin/comments/:token/:commentId - Update a comment (resolve/unresolve)
+async function handleUpdateComment(req: Request, token: string, commentId: string): Promise<Response> {
+  const authError = validateAdminKey(req);
+  if (authError) return authError;
+
+  if (!isValidToken(token)) {
+    return new Response(
+      JSON.stringify({ error: "Invalid token" }),
+      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  try {
+    let body: { resolved?: boolean };
+    try {
+      body = await req.json();
+    } catch {
+      return new Response(
+        JSON.stringify({ error: "Invalid JSON body" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log(`Updating comment ${commentId} for token: ${token.slice(0, 8)}...`);
+
+    const supabase = getSupabaseClient();
+
+    const updateData: { resolved_at?: string | null } = {};
+    if (typeof body.resolved === "boolean") {
+      updateData.resolved_at = body.resolved ? new Date().toISOString() : null;
+    }
+
+    const { data: comment, error: updateError } = await supabase
+      .from("prototype_comments")
+      .update(updateData)
+      .eq("id", commentId)
+      .eq("project_token", token)
+      .select()
+      .single();
+
+    if (updateError) {
+      console.error("Comment update error:", updateError);
+      return new Response(
+        JSON.stringify({ error: "Failed to update comment" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log("Comment updated successfully");
 
     return new Response(
-      JSON.stringify({ ok: true }),
+      JSON.stringify({ ok: true, comment }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
 
   } catch (error) {
-    console.error("Delete prototype error:", error);
+    console.error("Update comment error:", error);
     return new Response(
       JSON.stringify({ error: "Internal server error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
