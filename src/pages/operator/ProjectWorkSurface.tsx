@@ -18,6 +18,7 @@ import {
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { CommentCard } from "@/components/operator/CommentCard";
+import { DataFreshnessPill } from "@/components/operator/DataFreshnessPill";
 import { adminFetch, AdminAuthError } from "@/lib/adminFetch";
 
 interface Project {
@@ -140,6 +141,30 @@ export function ProjectWorkSurface({ project, onBack, onStatusChange }: ProjectW
       supabase.removeChannel(typingChannel);
     };
   }, [typingChannel]);
+
+  // Alt+R keyboard shortcut to refresh project data
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.altKey && e.key.toLowerCase() === "r") {
+        const el = document.activeElement as HTMLElement | null;
+        const isTyping =
+          el?.tagName === "INPUT" ||
+          el?.tagName === "TEXTAREA" ||
+          el?.getAttribute("contenteditable") === "true";
+        if (isTyping) return;
+
+        e.preventDefault();
+        queryClient.invalidateQueries({ queryKey: ["project-messages", project.project_token] });
+        queryClient.invalidateQueries({ queryKey: ["project-comments", project.project_token] });
+        queryClient.invalidateQueries({ queryKey: ["project-media", project.project_token] });
+        queryClient.invalidateQueries({ queryKey: ["project-prototypes", project.project_token] });
+        toast.success("Project data refreshed");
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [queryClient, project.project_token]);
 
   // Emit typing event (debounced)
   const emitTyping = useCallback((isTyping: boolean) => {
@@ -440,6 +465,15 @@ export function ProjectWorkSurface({ project, onBack, onStatusChange }: ProjectW
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <DataFreshnessPill
+            staleAfterSeconds={30}
+            queryKeys={[
+              ["project-messages", project.project_token],
+              ["project-comments", project.project_token],
+              ["project-media", project.project_token],
+              ["project-prototypes", project.project_token],
+            ]}
+          />
           <Select value={project.status} onValueChange={(v) => updateStatusMutation.mutate(v)} disabled={updateStatusMutation.isPending}>
             <SelectTrigger className="w-[120px] h-8 text-xs">
               <SelectValue />
