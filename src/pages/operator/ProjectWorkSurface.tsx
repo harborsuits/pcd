@@ -655,7 +655,7 @@ export function ProjectWorkSurface({ project, onBack, onStatusChange }: ProjectW
         {/* Right: Sidebar Panel */}
         <div className="w-[400px] flex flex-col bg-card overflow-hidden">
           <Tabs value={activePanel} onValueChange={(v) => setActivePanel(v as typeof activePanel)} className="flex-1 flex flex-col overflow-hidden">
-            <TabsList className="flex-shrink-0 w-full grid grid-cols-4 p-1 m-2 mb-0">
+            <TabsList className="flex-shrink-0 w-full grid grid-cols-5 p-1 m-2 mb-0">
               <TabsTrigger value="overview" className="text-xs gap-1">
                 <Building2 className="h-3 w-3" />
                 Overview
