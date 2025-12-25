@@ -19,7 +19,7 @@ import {
   User, Mail, Phone, MapPin, FileText, 
   MessageSquare, Send, Loader2, ExternalLink, Building2,
   Palette, Settings, CheckCircle, StickyNote, ListTodo, Trash2,
-  Link, Plus, Eye, MessageCirclePlus, X
+  Link, Plus, Eye, MessageCirclePlus, X, MessageSquareDot
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -83,6 +83,15 @@ interface Prototype {
   status: string;
   created_at: string;
   updated_at: string;
+}
+
+interface PrototypeComment {
+  id: string;
+  source_message_id: string | null;
+  body: string;
+  pin_x: number | null;
+  pin_y: number | null;
+  resolved_at: string | null;
 }
 
 const STATUS_OPTIONS = [
@@ -272,6 +281,21 @@ export function ProjectDetailDrawer({ project, open, onClose, onStatusChange }: 
       });
       if (!res.ok) throw new Error("Failed to fetch prototypes");
       return res.json() as Promise<{ prototypes: Prototype[] }>;
+    },
+    enabled: !!project && open,
+  });
+
+  // Fetch comments (to track which messages have been linked)
+  const { data: commentsData } = useQuery({
+    queryKey: ["project-comments", project?.project_token],
+    queryFn: async () => {
+      if (!project) return { comments: [] };
+      const adminKey = localStorage.getItem("admin_key") || "";
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/admin/comments/${project.project_token}`, {
+        headers: { "x-admin-key": adminKey },
+      });
+      if (!res.ok) throw new Error("Failed to fetch comments");
+      return res.json() as Promise<{ comments: PrototypeComment[] }>;
     },
     enabled: !!project && open,
   });
@@ -568,6 +592,7 @@ export function ProjectDetailDrawer({ project, open, onClose, onStatusChange }: 
       toast.success("Comment created from message");
       setPendingCommentMessage(null);
       setPendingPin(null);
+      queryClient.invalidateQueries({ queryKey: ["project-comments", project?.project_token] });
     },
     onError: (error: Error) => {
       toast.error(error.message);
@@ -578,6 +603,16 @@ export function ProjectDetailDrawer({ project, open, onClose, onStatusChange }: 
   const notes = notesData?.notes || [];
   const checklistItems = checklistData?.items || [];
   const prototypes = prototypesData?.prototypes || [];
+  const comments = commentsData?.comments || [];
+
+  // Set of message IDs that have been linked to comments
+  const linkedMessageIds = useMemo(() => {
+    const ids = new Set<string>();
+    comments.forEach((c) => {
+      if (c.source_message_id) ids.add(c.source_message_id);
+    });
+    return ids;
+  }, [comments]);
 
   // Find last admin message index for read receipt display
   const lastAdminMsgIndex = useMemo(() => {
@@ -806,6 +841,7 @@ export function ProjectDetailDrawer({ project, open, onClose, onStatusChange }: 
                   {messages.map((msg, index) => {
                     const isAdmin = msg.sender_type === "admin";
                     const isLastAdminMsg = isAdmin && index === lastAdminMsgIndex;
+                    const isLinkedToComment = linkedMessageIds.has(msg.id);
                     
                     const getStatus = () => {
                       if (msg.read_at) return `Seen ${format(new Date(msg.read_at), "h:mm a")}`;
@@ -818,8 +854,8 @@ export function ProjectDetailDrawer({ project, open, onClose, onStatusChange }: 
                         className={`flex group ${isAdmin ? "justify-end" : "justify-start"}`}
                       >
                         <div className="flex items-start gap-1">
-                          {/* Turn into comment button - only for client messages when prototypes exist */}
-                          {!isAdmin && prototypes.length > 0 && (
+                          {/* Turn into comment button - only for client messages when prototypes exist & not already linked */}
+                          {!isAdmin && prototypes.length > 0 && !isLinkedToComment && (
                             <Button
                               variant="ghost"
                               size="icon"
@@ -833,16 +869,30 @@ export function ProjectDetailDrawer({ project, open, onClose, onStatusChange }: 
                               <MessageCirclePlus className="h-3.5 w-3.5" />
                             </Button>
                           )}
+                          {/* Linked to comment indicator */}
+                          {!isAdmin && isLinkedToComment && (
+                            <div 
+                              className="h-6 w-6 flex items-center justify-center flex-shrink-0 mt-1"
+                              title="Linked to prototype comment"
+                            >
+                              <MessageSquareDot className="h-3.5 w-3.5 text-primary" />
+                            </div>
+                          )}
                           <div className={`max-w-[78%] rounded-2xl px-4 py-2 ${
                             isAdmin 
                               ? "bg-primary text-primary-foreground rounded-br-md" 
-                              : "bg-muted rounded-bl-md"
+                              : isLinkedToComment
+                                ? "bg-muted rounded-bl-md ring-1 ring-primary/30"
+                                : "bg-muted rounded-bl-md"
                           }`}>
                             <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
                             <div className={`mt-1 flex items-center gap-2 text-[11px] ${
                               isAdmin ? "opacity-80 justify-end" : "text-muted-foreground justify-start"
                             }`}>
                               <span>{format(new Date(msg.created_at), "h:mm a")}</span>
+                              {isLinkedToComment && (
+                                <span className="text-primary">• Pinned</span>
+                              )}
                             </div>
                             {/* Read receipt for last admin message */}
                             {isLastAdminMsg && (
