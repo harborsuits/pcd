@@ -163,6 +163,26 @@ Deno.serve(async (req) => {
     return handleUpdateComment(req, token, commentId);
   }
 
+  // Route: GET /admin/media/:token
+  if (subPath.match(/^media\/[^\/]+$/) && req.method === "GET") {
+    const token = subPath.replace("media/", "");
+    return handleGetMedia(req, token);
+  }
+
+  // Route: POST /admin/media/:token
+  if (subPath.match(/^media\/[^\/]+$/) && req.method === "POST") {
+    const token = subPath.replace("media/", "");
+    return handleCreateMedia(req, token);
+  }
+
+  // Route: DELETE /admin/media/:token/:mediaId
+  if (subPath.match(/^media\/[^\/]+\/[^\/]+$/) && req.method === "DELETE") {
+    const parts = subPath.split("/");
+    const token = parts[1];
+    const mediaId = parts[2];
+    return handleDeleteMedia(req, token, mediaId);
+  }
+
   return new Response(
     JSON.stringify({ error: "Not found" }),
     { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -1754,6 +1774,312 @@ async function handleUpdateComment(req: Request, token: string, commentId: strin
 
   } catch (error) {
     console.error("Update comment error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+}
+
+// GET /admin/media/:token - List media for a project
+async function handleGetMedia(req: Request, token: string): Promise<Response> {
+  const authError = validateAdminKey(req);
+  if (authError) return authError;
+
+  if (!isValidToken(token)) {
+    return new Response(
+      JSON.stringify({ error: "Invalid token" }),
+      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  try {
+    console.log(`Fetching media for token: ${token.slice(0, 8)}...`);
+
+    const supabase = getSupabaseClient();
+
+    // Verify project exists
+    const { data: project, error: projectError } = await supabase
+      .from("projects")
+      .select("id")
+      .eq("project_token", token)
+      .is("deleted_at", null)
+      .maybeSingle();
+
+    if (projectError || !project) {
+      return new Response(
+        JSON.stringify({ error: "Project not found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Fetch media items
+    const { data: media, error: mediaError } = await supabase
+      .from("project_media")
+      .select("*")
+      .eq("project_id", project.id)
+      .order("created_at", { ascending: false });
+
+    if (mediaError) {
+      console.error("Media fetch error:", mediaError);
+      return new Response(
+        JSON.stringify({ error: "Failed to fetch media" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Generate signed URLs for each media item
+    const mediaWithUrls = await Promise.all((media || []).map(async (item) => {
+      const { data: signedData } = await supabase.storage
+        .from("project-media")
+        .createSignedUrl(item.storage_path, 3600); // 1 hour expiry
+
+      return {
+        ...item,
+        signed_url: signedData?.signedUrl || null,
+      };
+    }));
+
+    return new Response(
+      JSON.stringify({ media: mediaWithUrls }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+
+  } catch (error) {
+    console.error("Get media error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+}
+
+// POST /admin/media/:token - Create a media record after upload
+async function handleCreateMedia(req: Request, token: string): Promise<Response> {
+  const authError = validateAdminKey(req);
+  if (authError) return authError;
+
+  if (!isValidToken(token)) {
+    return new Response(
+      JSON.stringify({ error: "Invalid token" }),
+      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  try {
+    const supabase = getSupabaseClient();
+
+    // Verify project exists
+    const { data: project, error: projectError } = await supabase
+      .from("projects")
+      .select("id")
+      .eq("project_token", token)
+      .is("deleted_at", null)
+      .maybeSingle();
+
+    if (projectError || !project) {
+      return new Response(
+        JSON.stringify({ error: "Project not found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Check content type for file upload
+    const contentType = req.headers.get("content-type") || "";
+    
+    if (contentType.includes("multipart/form-data")) {
+      // Handle file upload
+      const formData = await req.formData();
+      const file = formData.get("file") as File | null;
+      
+      if (!file) {
+        return new Response(
+          JSON.stringify({ error: "No file provided" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const filename = file.name;
+      const mimeType = file.type || "application/octet-stream";
+      const sizeBytes = file.size;
+
+      // Generate storage path
+      const storagePath = `${token}/${Date.now()}-${filename}`;
+
+      // Upload to storage
+      const { error: uploadError } = await supabase.storage
+        .from("project-media")
+        .upload(storagePath, file, { contentType: mimeType });
+
+      if (uploadError) {
+        console.error("Storage upload error:", uploadError);
+        return new Response(
+          JSON.stringify({ error: "Failed to upload file" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Create media record
+      const { data: mediaRecord, error: insertError } = await supabase
+        .from("project_media")
+        .insert({
+          project_token: token,
+          project_id: project.id,
+          uploader_type: "admin",
+          storage_path: storagePath,
+          filename,
+          mime_type: mimeType,
+          size_bytes: sizeBytes,
+        })
+        .select()
+        .single();
+
+      if (insertError) {
+        console.error("Media record insert error:", insertError);
+        // Try to clean up the uploaded file
+        await supabase.storage.from("project-media").remove([storagePath]);
+        return new Response(
+          JSON.stringify({ error: "Failed to create media record" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Generate signed URL
+      const { data: signedData } = await supabase.storage
+        .from("project-media")
+        .createSignedUrl(storagePath, 3600);
+
+      console.log("Media uploaded successfully");
+
+      return new Response(
+        JSON.stringify({ 
+          ok: true, 
+          media: { ...mediaRecord, signed_url: signedData?.signedUrl || null } 
+        }),
+        { status: 201, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    } else {
+      // Handle JSON body (record creation only)
+      let body: { storage_path: string; filename: string; mime_type: string; size_bytes: number };
+      try {
+        body = await req.json();
+      } catch {
+        return new Response(
+          JSON.stringify({ error: "Invalid JSON body" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      if (!body.storage_path || !body.filename || !body.mime_type) {
+        return new Response(
+          JSON.stringify({ error: "storage_path, filename, and mime_type are required" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const { data: mediaRecord, error: insertError } = await supabase
+        .from("project_media")
+        .insert({
+          project_token: token,
+          project_id: project.id,
+          uploader_type: "admin",
+          storage_path: body.storage_path,
+          filename: body.filename,
+          mime_type: body.mime_type,
+          size_bytes: body.size_bytes || 0,
+        })
+        .select()
+        .single();
+
+      if (insertError) {
+        console.error("Media record insert error:", insertError);
+        return new Response(
+          JSON.stringify({ error: "Failed to create media record" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      return new Response(
+        JSON.stringify({ ok: true, media: mediaRecord }),
+        { status: 201, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+  } catch (error) {
+    console.error("Create media error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+}
+
+// DELETE /admin/media/:token/:mediaId - Delete a media item
+async function handleDeleteMedia(req: Request, token: string, mediaId: string): Promise<Response> {
+  const authError = validateAdminKey(req);
+  if (authError) return authError;
+
+  if (!isValidToken(token)) {
+    return new Response(
+      JSON.stringify({ error: "Invalid token" }),
+      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  try {
+    console.log(`Deleting media ${mediaId} for token: ${token.slice(0, 8)}...`);
+
+    const supabase = getSupabaseClient();
+
+    // Get the media record first to get storage path
+    const { data: media, error: fetchError } = await supabase
+      .from("project_media")
+      .select("storage_path")
+      .eq("id", mediaId)
+      .eq("project_token", token)
+      .single();
+
+    if (fetchError || !media) {
+      return new Response(
+        JSON.stringify({ error: "Media not found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Delete from storage
+    const { error: storageError } = await supabase.storage
+      .from("project-media")
+      .remove([media.storage_path]);
+
+    if (storageError) {
+      console.error("Storage delete error:", storageError);
+      // Continue to delete record anyway
+    }
+
+    // Delete record
+    const { error: deleteError } = await supabase
+      .from("project_media")
+      .delete()
+      .eq("id", mediaId)
+      .eq("project_token", token);
+
+    if (deleteError) {
+      console.error("Media delete error:", deleteError);
+      return new Response(
+        JSON.stringify({ error: "Failed to delete media" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log("Media deleted successfully");
+
+    return new Response(
+      JSON.stringify({ ok: true }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+
+  } catch (error) {
+    console.error("Delete media error:", error);
     return new Response(
       JSON.stringify({ error: "Internal server error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }

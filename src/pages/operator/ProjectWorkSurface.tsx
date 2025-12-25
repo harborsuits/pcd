@@ -11,8 +11,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   ArrowLeft, Mail, Phone, ExternalLink,
   MessageSquare, Send, Loader2, CheckCircle,
-  StickyNote, Trash2, Plus, Eye, MessageCirclePlus,
-  X, MessageSquareDot, Filter, Check, Circle
+  Trash2, Plus, Eye, MessageCirclePlus,
+  X, MessageSquareDot, Filter, Check, Circle,
+  ImageIcon, FileIcon, Upload, Download, Copy, Link2
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -52,11 +53,6 @@ interface Message {
   read_at: string | null;
 }
 
-interface Note {
-  id: string;
-  content: string;
-  created_at: string;
-}
 
 interface Prototype {
   id: string;
@@ -78,6 +74,16 @@ interface PrototypeComment {
   author_type: string;
 }
 
+interface MediaItem {
+  id: string;
+  filename: string;
+  mime_type: string;
+  size_bytes: number;
+  uploader_type: string;
+  created_at: string;
+  signed_url: string | null;
+}
+
 const STATUS_OPTIONS = [
   { value: "lead", label: "Lead" },
   { value: "contacted", label: "Contacted" },
@@ -95,8 +101,9 @@ interface ProjectWorkSurfaceProps {
 
 export function ProjectWorkSurface({ project, onBack, onStatusChange }: ProjectWorkSurfaceProps) {
   const [replyContent, setReplyContent] = useState("");
-  const [newNote, setNewNote] = useState("");
-  const [activePanel, setActivePanel] = useState<"comments" | "chat" | "notes">("comments");
+  const [activePanel, setActivePanel] = useState<"comments" | "chat" | "media">("comments");
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [commentFilter, setCommentFilter] = useState<"open" | "resolved" | "all">("open");
   const [clientTyping, setClientTyping] = useState(false);
   const [newPrototypeUrl, setNewPrototypeUrl] = useState("");
@@ -167,16 +174,16 @@ export function ProjectWorkSurface({ project, onBack, onStatusChange }: ProjectW
     refetchInterval: 10000,
   });
 
-  // Fetch notes
-  const { data: notesData, isLoading: notesLoading } = useQuery({
-    queryKey: ["project-notes", project.project_token],
+  // Fetch media
+  const { data: mediaData, isLoading: mediaLoading } = useQuery({
+    queryKey: ["project-media", project.project_token],
     queryFn: async () => {
       const adminKey = localStorage.getItem("admin_key") || "";
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/admin/notes/${project.project_token}`, {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/admin/media/${project.project_token}`, {
         headers: { "x-admin-key": adminKey },
       });
-      if (!res.ok) throw new Error("Failed to fetch notes");
-      return res.json() as Promise<{ notes: Note[] }>;
+      if (!res.ok) throw new Error("Failed to fetch media");
+      return res.json() as Promise<{ media: MediaItem[] }>;
     },
   });
 
@@ -247,39 +254,40 @@ export function ProjectWorkSurface({ project, onBack, onStatusChange }: ProjectW
     onError: (error: Error) => toast.error(error.message),
   });
 
-  // Add note mutation
-  const addNoteMutation = useMutation({
-    mutationFn: async (content: string) => {
+  // Upload media mutation
+  const uploadMediaMutation = useMutation({
+    mutationFn: async (file: File) => {
       const adminKey = localStorage.getItem("admin_key") || "";
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/admin/notes/${project.project_token}`, {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/admin/media/${project.project_token}`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", "x-admin-key": adminKey },
-        body: JSON.stringify({ content }),
+        headers: { "x-admin-key": adminKey },
+        body: formData,
       });
-      if (!res.ok) throw new Error("Failed to add note");
+      if (!res.ok) throw new Error("Failed to upload media");
       return res.json();
     },
     onSuccess: () => {
-      toast.success("Note added");
-      setNewNote("");
-      queryClient.invalidateQueries({ queryKey: ["project-notes", project.project_token] });
+      toast.success("Media uploaded");
+      queryClient.invalidateQueries({ queryKey: ["project-media", project.project_token] });
     },
     onError: (error: Error) => toast.error(error.message),
   });
 
-  // Delete note mutation
-  const deleteNoteMutation = useMutation({
-    mutationFn: async (noteId: string) => {
+  // Delete media mutation
+  const deleteMediaMutation = useMutation({
+    mutationFn: async (mediaId: string) => {
       const adminKey = localStorage.getItem("admin_key") || "";
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/admin/notes/${project.project_token}/${noteId}`, {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/admin/media/${project.project_token}/${mediaId}`, {
         method: "DELETE",
         headers: { "x-admin-key": adminKey },
       });
-      if (!res.ok) throw new Error("Failed to delete note");
+      if (!res.ok) throw new Error("Failed to delete media");
     },
     onSuccess: () => {
-      toast.success("Note deleted");
-      queryClient.invalidateQueries({ queryKey: ["project-notes", project.project_token] });
+      toast.success("Media deleted");
+      queryClient.invalidateQueries({ queryKey: ["project-media", project.project_token] });
     },
     onError: (error: Error) => toast.error(error.message),
   });
@@ -347,10 +355,46 @@ export function ProjectWorkSurface({ project, onBack, onStatusChange }: ProjectW
   });
 
   const messages = messagesData?.messages || [];
-  const notes = notesData?.notes || [];
+  const media = mediaData?.media || [];
   const prototypes = prototypesData?.prototypes || [];
   const comments = commentsData?.comments || [];
   const currentPrototype = prototypes[0];
+
+  // File upload handlers
+  const handleFileSelect = useCallback((files: FileList | null) => {
+    if (!files) return;
+    Array.from(files).forEach(file => {
+      uploadMediaMutation.mutate(file);
+    });
+  }, [uploadMediaMutation]);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    handleFileSelect(e.dataTransfer.files);
+  }, [handleFileSelect]);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  }, []);
+
+  const copyMediaLink = useCallback((url: string) => {
+    navigator.clipboard.writeText(url);
+    toast.success("Link copied");
+  }, []);
+
+  const isImageMime = (mimeType: string) => mimeType.startsWith("image/");
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
 
   // Filter comments
   const filteredComments = useMemo(() => {
@@ -593,9 +637,10 @@ export function ProjectWorkSurface({ project, onBack, onStatusChange }: ProjectW
                 Chat
                 {messages.length > 0 && <Badge variant="secondary" className="text-[10px] px-1 py-0 ml-1">{messages.length}</Badge>}
               </TabsTrigger>
-              <TabsTrigger value="notes" className="text-xs gap-1">
-                <StickyNote className="h-3 w-3" />
-                Notes
+              <TabsTrigger value="media" className="text-xs gap-1">
+                <ImageIcon className="h-3 w-3" />
+                Media
+                {media.length > 0 && <Badge variant="secondary" className="text-[10px] px-1 py-0 ml-1">{media.length}</Badge>}
               </TabsTrigger>
             </TabsList>
 
@@ -781,59 +826,126 @@ export function ProjectWorkSurface({ project, onBack, onStatusChange }: ProjectW
               </div>
             </TabsContent>
 
-            {/* Notes */}
-            <TabsContent value="notes" className="flex-1 flex flex-col overflow-hidden m-0 p-2">
+            {/* Media */}
+            <TabsContent value="media" className="flex-1 flex flex-col overflow-hidden m-0 p-2">
+              {/* Hidden file input */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                className="hidden"
+                onChange={(e) => handleFileSelect(e.target.files)}
+              />
+              
+              {/* Upload area */}
+              <div
+                className={`flex-shrink-0 mb-2 border-2 border-dashed rounded-lg p-4 text-center transition-colors cursor-pointer ${
+                  isDragging ? "border-primary bg-primary/10" : "border-border hover:border-primary/50"
+                }`}
+                onClick={() => fileInputRef.current?.click()}
+                onDrop={handleDrop}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+              >
+                {uploadMediaMutation.isPending ? (
+                  <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Uploading...
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center gap-1 text-sm text-muted-foreground">
+                    <Upload className="h-5 w-5" />
+                    <span>Drop files or click to upload</span>
+                  </div>
+                )}
+              </div>
+
               <ScrollArea className="flex-1">
-                {notesLoading ? (
+                {mediaLoading ? (
                   <div className="flex items-center justify-center py-8">
                     <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                   </div>
-                ) : notes.length === 0 ? (
+                ) : media.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
-                    <StickyNote className="h-10 w-10 mx-auto mb-3 opacity-50" />
-                    <p className="text-sm">No notes yet</p>
+                    <ImageIcon className="h-10 w-10 mx-auto mb-3 opacity-50" />
+                    <p className="text-sm">No media yet</p>
                   </div>
                 ) : (
-                  <div className="space-y-2 pr-2">
-                    {notes.map((note) => (
-                      <div key={note.id} className="p-3 rounded-lg border border-border bg-muted/30 group">
-                        <p className="text-sm whitespace-pre-wrap">{note.content}</p>
-                        <div className="flex items-center justify-between mt-2">
-                          <p className="text-[10px] text-muted-foreground">{format(new Date(note.created_at), "MMM d, h:mm a")}</p>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity text-destructive"
-                            onClick={() => deleteNoteMutation.mutate(note.id)}
-                            disabled={deleteNoteMutation.isPending}
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
+                  <div className="grid grid-cols-2 gap-2 pr-2">
+                    {media.map((item) => (
+                      <div key={item.id} className="border border-border rounded-lg overflow-hidden group">
+                        {/* Preview */}
+                        <div className="aspect-square bg-muted/50 relative">
+                          {isImageMime(item.mime_type) && item.signed_url ? (
+                            <img 
+                              src={item.signed_url} 
+                              alt={item.filename}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center">
+                              <FileIcon className="h-10 w-10 text-muted-foreground" />
+                            </div>
+                          )}
+                          {/* Actions overlay */}
+                          <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1">
+                            {item.signed_url && (
+                              <>
+                                <Button
+                                  variant="secondary"
+                                  size="icon"
+                                  className="h-7 w-7"
+                                  onClick={() => window.open(item.signed_url!, "_blank")}
+                                  title="Open"
+                                >
+                                  <ExternalLink className="h-3 w-3" />
+                                </Button>
+                                <Button
+                                  variant="secondary"
+                                  size="icon"
+                                  className="h-7 w-7"
+                                  onClick={() => copyMediaLink(item.signed_url!)}
+                                  title="Copy link"
+                                >
+                                  <Link2 className="h-3 w-3" />
+                                </Button>
+                                <a href={item.signed_url} download={item.filename}>
+                                  <Button
+                                    variant="secondary"
+                                    size="icon"
+                                    className="h-7 w-7"
+                                    title="Download"
+                                  >
+                                    <Download className="h-3 w-3" />
+                                  </Button>
+                                </a>
+                              </>
+                            )}
+                            <Button
+                              variant="destructive"
+                              size="icon"
+                              className="h-7 w-7"
+                              onClick={() => deleteMediaMutation.mutate(item.id)}
+                              disabled={deleteMediaMutation.isPending}
+                              title="Delete"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+                        {/* Info */}
+                        <div className="p-2">
+                          <p className="text-xs font-medium truncate" title={item.filename}>{item.filename}</p>
+                          <p className="text-[10px] text-muted-foreground flex items-center justify-between">
+                            <span>{item.uploader_type === "client" ? "Client" : "Admin"}</span>
+                            <span>{formatFileSize(item.size_bytes)}</span>
+                          </p>
                         </div>
                       </div>
                     ))}
                   </div>
                 )}
               </ScrollArea>
-
-              {/* Add note input */}
-              <div className="flex-shrink-0 pt-2 border-t border-border mt-2 space-y-2">
-                <Textarea
-                  value={newNote}
-                  onChange={(e) => setNewNote(e.target.value)}
-                  placeholder="Add a note..."
-                  className="min-h-[60px] resize-none text-sm"
-                />
-                <Button
-                  className="w-full"
-                  onClick={() => addNoteMutation.mutate(newNote)}
-                  disabled={!newNote.trim() || addNoteMutation.isPending}
-                  size="sm"
-                >
-                  {addNoteMutation.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}
-                  Add Note
-                </Button>
-              </div>
             </TabsContent>
           </Tabs>
         </div>
