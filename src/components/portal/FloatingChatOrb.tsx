@@ -25,6 +25,9 @@ interface FloatingChatOrbProps {
   unreadCount?: number;
 }
 
+const STORAGE_KEY = "floating-chat-position";
+const DEFAULT_OFFSET = { right: 24, bottom: 24 };
+
 function formatDate(dateStr: string) {
   return new Date(dateStr).toLocaleDateString("en-US", {
     month: "short",
@@ -32,6 +35,25 @@ function formatDate(dateStr: string) {
     hour: "numeric",
     minute: "2-digit",
   });
+}
+
+function loadSavedPosition(): { right: number; bottom: number } {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (typeof parsed.right === "number" && typeof parsed.bottom === "number") {
+        return parsed;
+      }
+    }
+  } catch {}
+  return DEFAULT_OFFSET;
+}
+
+function savePosition(offset: { right: number; bottom: number }) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(offset));
+  } catch {}
 }
 
 export function FloatingChatOrb({
@@ -49,20 +71,22 @@ export function FloatingChatOrb({
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [messageContent, setMessageContent] = useState("");
-  const [position, setPosition] = useState({ x: 24, y: 24 }); // bottom-right offset
+
+  // Store offsets from bottom-right (feels "anchored")
+  const [offset, setOffset] = useState(loadSavedPosition);
+
   const [isDragging, setIsDragging] = useState(false);
-  const dragStart = useRef({ x: 0, y: 0, posX: 0, posY: 0 });
+  const dragStart = useRef({ x: 0, y: 0, right: 24, bottom: 24 });
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const orbRef = useRef<HTMLDivElement>(null);
-  const panelRef = useRef<HTMLDivElement>(null);
   const seenMessageIds = useRef<Set<string>>(new Set());
 
   // Scroll to bottom when messages change or panel opens
   useEffect(() => {
     if (isOpen && !isMinimized) {
-      setTimeout(() => {
+      const t = window.setTimeout(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-      }, 100);
+      }, 80);
+      return () => window.clearTimeout(t);
     }
   }, [isOpen, isMinimized, messages.length]);
 
@@ -74,86 +98,11 @@ export function FloatingChatOrb({
     return -1;
   }, [messages]);
 
-  // Drag handlers
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    if ((e.target as HTMLElement).closest('button, textarea, input')) return;
-    e.preventDefault();
-    setIsDragging(true);
-    dragStart.current = {
-      x: e.clientX,
-      y: e.clientY,
-      posX: position.x,
-      posY: position.y,
-    };
-  }, [position]);
-
-  const handleMouseMove = useCallback((e: MouseEvent) => {
-    if (!isDragging) return;
-    
-    const deltaX = dragStart.current.x - e.clientX;
-    const deltaY = dragStart.current.y - e.clientY;
-    
-    const newX = Math.max(0, Math.min(window.innerWidth - 80, dragStart.current.posX + deltaX));
-    const newY = Math.max(0, Math.min(window.innerHeight - 80, dragStart.current.posY + deltaY));
-    
-    setPosition({ x: newX, y: newY });
-  }, [isDragging]);
-
-  const handleMouseUp = useCallback(() => {
-    setIsDragging(false);
-  }, []);
-
-  useEffect(() => {
-    if (isDragging) {
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
-      return () => {
-        document.removeEventListener('mousemove', handleMouseMove);
-        document.removeEventListener('mouseup', handleMouseUp);
-      };
-    }
-  }, [isDragging, handleMouseMove, handleMouseUp]);
-
-  // Touch handlers for mobile
-  const handleTouchStart = useCallback((e: React.TouchEvent) => {
-    if ((e.target as HTMLElement).closest('button, textarea, input')) return;
-    const touch = e.touches[0];
-    setIsDragging(true);
-    dragStart.current = {
-      x: touch.clientX,
-      y: touch.clientY,
-      posX: position.x,
-      posY: position.y,
-    };
-  }, [position]);
-
-  const handleTouchMove = useCallback((e: TouchEvent) => {
-    if (!isDragging) return;
-    const touch = e.touches[0];
-    
-    const deltaX = dragStart.current.x - touch.clientX;
-    const deltaY = dragStart.current.y - touch.clientY;
-    
-    const newX = Math.max(0, Math.min(window.innerWidth - 80, dragStart.current.posX + deltaX));
-    const newY = Math.max(0, Math.min(window.innerHeight - 80, dragStart.current.posY + deltaY));
-    
-    setPosition({ x: newX, y: newY });
-  }, [isDragging]);
-
-  const handleTouchEnd = useCallback(() => {
-    setIsDragging(false);
-  }, []);
-
-  useEffect(() => {
-    if (isDragging) {
-      document.addEventListener('touchmove', handleTouchMove, { passive: false });
-      document.addEventListener('touchend', handleTouchEnd);
-      return () => {
-        document.removeEventListener('touchmove', handleTouchMove);
-        document.removeEventListener('touchend', handleTouchEnd);
-      };
-    }
-  }, [isDragging, handleTouchMove, handleTouchEnd]);
+  const getDeliveryStatus = (msg: ChatMessage) => {
+    if (msg.read_at) return "Seen";
+    if (msg.delivered_at) return "Delivered";
+    return "Sent";
+  };
 
   const handleSend = async () => {
     if (!messageContent.trim() || sending) return;
@@ -167,25 +116,129 @@ export function FloatingChatOrb({
     onTyping(value);
   };
 
-  const getDeliveryStatus = (msg: ChatMessage) => {
-    if (msg.read_at) return `Seen`;
-    if (msg.delivered_at) return "Delivered";
-    return "Sent";
+  // Drag handlers using right/bottom offsets
+  const beginDrag = useCallback((clientX: number, clientY: number) => {
+    setIsDragging(true);
+    dragStart.current = {
+      x: clientX,
+      y: clientY,
+      right: offset.right,
+      bottom: offset.bottom,
+    };
+  }, [offset.right, offset.bottom]);
+
+  const moveDrag = useCallback((clientX: number, clientY: number) => {
+    const dx = dragStart.current.x - clientX;
+    const dy = dragStart.current.y - clientY;
+
+    // Since we're storing right/bottom offsets:
+    // moving mouse LEFT increases right offset, moving DOWN decreases bottom offset
+    const nextRight = dragStart.current.right + dx;
+    const nextBottom = dragStart.current.bottom + dy;
+
+    const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
+
+    // Keep it on-screen
+    const maxRight = window.innerWidth - 60;
+    const maxBottom = window.innerHeight - 60;
+
+    setOffset({
+      right: clamp(nextRight, 8, maxRight),
+      bottom: clamp(nextBottom, 8, maxBottom),
+    });
+  }, []);
+
+  const endDrag = useCallback(() => {
+    setIsDragging(false);
+
+    // Snap to edges
+    const snapThreshold = 48;
+    let snappedOffset = { ...offset };
+
+    // Snap to right edge
+    if (offset.right < snapThreshold) {
+      snappedOffset.right = 16;
+    }
+    // Snap to left edge (when right offset is large = orb is on the left)
+    if (offset.right > window.innerWidth - 100) {
+      snappedOffset.right = window.innerWidth - 80;
+    }
+    // Snap to bottom
+    if (offset.bottom < snapThreshold) {
+      snappedOffset.bottom = 16;
+    }
+    // Snap to top (when bottom offset is large)
+    if (offset.bottom > window.innerHeight - 100) {
+      snappedOffset.bottom = window.innerHeight - 80;
+    }
+
+    setOffset(snappedOffset);
+    savePosition(snappedOffset);
+  }, [offset]);
+
+  // Mouse events
+  const onMouseDown = useCallback((e: React.MouseEvent) => {
+    if ((e.target as HTMLElement).closest("button, textarea, input")) return;
+    e.preventDefault();
+    beginDrag(e.clientX, e.clientY);
+  }, [beginDrag]);
+
+  useEffect(() => {
+    if (!isDragging) return;
+
+    const onMove = (e: MouseEvent) => moveDrag(e.clientX, e.clientY);
+    const onUp = () => endDrag();
+
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+    return () => {
+      document.removeEventListener("mousemove", onMove);
+      document.removeEventListener("mouseup", onUp);
+    };
+  }, [isDragging, moveDrag, endDrag]);
+
+  // Touch events
+  const onTouchStart = useCallback((e: React.TouchEvent) => {
+    if ((e.target as HTMLElement).closest("button, textarea, input")) return;
+    const touch = e.touches[0];
+    beginDrag(touch.clientX, touch.clientY);
+  }, [beginDrag]);
+
+  useEffect(() => {
+    if (!isDragging) return;
+
+    const onMove = (e: TouchEvent) => {
+      const touch = e.touches[0];
+      if (!touch) return;
+      moveDrag(touch.clientX, touch.clientY);
+    };
+    const onEnd = () => endDrag();
+
+    document.addEventListener("touchmove", onMove, { passive: true });
+    document.addEventListener("touchend", onEnd);
+    return () => {
+      document.removeEventListener("touchmove", onMove);
+      document.removeEventListener("touchend", onEnd);
+    };
+  }, [isDragging, moveDrag, endDrag]);
+
+  // Common wrapper style
+  const wrapperStyle: React.CSSProperties = {
+    position: "fixed",
+    right: offset.right,
+    bottom: offset.bottom,
+    zIndex: 60,
+    touchAction: "none",
   };
 
-  // Collapsed orb state
+  // COLLAPSED ORB
   if (!isOpen) {
     return (
       <div
-        ref={orbRef}
-        className="fixed z-50 cursor-pointer select-none"
-        style={{ 
-          right: position.x, 
-          bottom: position.y,
-          touchAction: 'none',
-        }}
-        onMouseDown={handleMouseDown}
-        onTouchStart={handleTouchStart}
+        style={wrapperStyle}
+        className="cursor-pointer select-none"
+        onMouseDown={onMouseDown}
+        onTouchStart={onTouchStart}
       >
         <button
           onClick={() => setIsOpen(true)}
@@ -196,33 +249,28 @@ export function FloatingChatOrb({
           
           {/* Unread badge */}
           {unreadCount > 0 && (
-            <span className="absolute -top-1 -right-1 w-5 h-5 bg-destructive text-destructive-foreground text-xs font-bold rounded-full flex items-center justify-center animate-pulse">
+            <span className="absolute -top-1 -right-1 w-5 h-5 bg-destructive text-destructive-foreground text-xs font-bold rounded-full flex items-center justify-center">
               {unreadCount > 9 ? "9+" : unreadCount}
             </span>
           )}
           
-          {/* Subtle pulse ring when there are unread messages */}
+          {/* Subtle pulse ring */}
           {unreadCount > 0 && (
-            <span className="absolute inset-0 rounded-full bg-primary/30 animate-ping" />
+            <span className="absolute inset-0 rounded-full bg-primary/30 animate-ping pointer-events-none" />
           )}
         </button>
       </div>
     );
   }
 
-  // Minimized header bar
+  // MINIMIZED BAR
   if (isMinimized) {
     return (
       <div
-        ref={panelRef}
-        className="fixed z-50 cursor-move select-none"
-        style={{ 
-          right: position.x, 
-          bottom: position.y,
-          touchAction: 'none',
-        }}
-        onMouseDown={handleMouseDown}
-        onTouchStart={handleTouchStart}
+        style={wrapperStyle}
+        className="cursor-move select-none"
+        onMouseDown={onMouseDown}
+        onTouchStart={onTouchStart}
       >
         <div className="w-72 bg-card/95 backdrop-blur-xl border border-border rounded-2xl shadow-2xl overflow-hidden">
           <div className="flex items-center justify-between px-4 py-3 bg-primary/5 border-b border-border">
@@ -231,7 +279,7 @@ export function FloatingChatOrb({
               <span className="font-medium text-sm">Messages</span>
               {unreadCount > 0 && (
                 <span className="px-1.5 py-0.5 bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full">
-                  {unreadCount}
+                  {unreadCount > 9 ? "9+" : unreadCount}
                 </span>
               )}
             </div>
@@ -259,23 +307,15 @@ export function FloatingChatOrb({
     );
   }
 
-  // Expanded panel
+  // EXPANDED PANEL
   return (
-    <div
-      ref={panelRef}
-      className="fixed z-50 select-none"
-      style={{ 
-        right: position.x, 
-        bottom: position.y,
-        touchAction: 'none',
-      }}
-    >
+    <div style={wrapperStyle} className="select-none">
       <div className="w-80 sm:w-96 h-[480px] sm:h-[520px] bg-card/95 backdrop-blur-xl border border-border rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-scale-in">
         {/* Header - draggable */}
         <div 
           className="flex items-center justify-between px-4 py-3 bg-primary/5 border-b border-border cursor-move shrink-0"
-          onMouseDown={handleMouseDown}
-          onTouchStart={handleTouchStart}
+          onMouseDown={onMouseDown}
+          onTouchStart={onTouchStart}
         >
           <div className="flex items-center gap-2">
             <MessageSquare className="h-4 w-4 text-primary" />
@@ -313,9 +353,7 @@ export function FloatingChatOrb({
                 disabled={loadingMore}
                 className="text-xs h-7"
               >
-                {loadingMore ? (
-                  <Loader2 className="h-3 w-3 animate-spin mr-1" />
-                ) : null}
+                {loadingMore && <Loader2 className="h-3 w-3 animate-spin mr-1" />}
                 Load older
               </Button>
             </div>
