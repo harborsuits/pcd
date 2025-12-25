@@ -369,10 +369,32 @@ export function ProjectWorkSurface({ project, onBack, onStatusChange }: ProjectW
     return ids;
   }, [comments]);
 
+  // Map message ID to comment for quick lookup
+  const messageToComment = useMemo(() => {
+    const map = new Map<string, PrototypeComment>();
+    comments.forEach((c) => { if (c.source_message_id) map.set(c.source_message_id, c); });
+    return map;
+  }, [comments]);
+
   // Jump to pin highlight
   const handleJumpToPin = (comment: PrototypeComment) => {
     setHighlightedPinId(comment.id);
     setTimeout(() => setHighlightedPinId(null), 2000);
+  };
+
+  // Jump from pinned message to comment
+  const handleJumpFromMessage = (messageId: string) => {
+    const comment = messageToComment.get(messageId);
+    if (!comment) return;
+    
+    // Switch to comments panel
+    setActivePanel("comments");
+    // If comment is resolved but we're filtering to "open", switch to "all"
+    if (comment.resolved_at && commentFilter === "open") {
+      setCommentFilter("all");
+    }
+    // Highlight the pin
+    handleJumpToPin(comment);
   };
 
   return (
@@ -694,17 +716,28 @@ export function ProjectWorkSurface({ project, onBack, onStatusChange }: ProjectW
                               </Button>
                             )}
                             {!isAdmin && isLinkedToComment && (
-                              <div className="h-5 w-5 flex items-center justify-center flex-shrink-0 mt-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-5 w-5 flex-shrink-0 mt-1"
+                                title="Jump to pinned comment"
+                                onClick={() => handleJumpFromMessage(msg.id)}
+                              >
                                 <MessageSquareDot className="h-3 w-3 text-primary" />
-                              </div>
+                              </Button>
                             )}
-                            <div className={`rounded-xl px-3 py-2 text-sm ${
-                              isAdmin ? "bg-primary text-primary-foreground rounded-br-sm" : "bg-muted rounded-bl-sm"
-                            }`}>
+                            <div 
+                              className={`rounded-xl px-3 py-2 text-sm ${
+                                isAdmin ? "bg-primary text-primary-foreground rounded-br-sm" : "bg-muted rounded-bl-sm"
+                              } ${isLinkedToComment && !isAdmin ? "cursor-pointer hover:ring-1 hover:ring-primary/30" : ""}`}
+                              onClick={isLinkedToComment && !isAdmin ? () => handleJumpFromMessage(msg.id) : undefined}
+                            >
                               <p className="whitespace-pre-wrap">{msg.content}</p>
                               <p className={`text-[10px] mt-1 ${isAdmin ? "opacity-70" : "text-muted-foreground"}`}>
                                 {format(new Date(msg.created_at), "h:mm a")}
-                                {isLinkedToComment && <span className="text-primary ml-1">• Pinned</span>}
+                                {isLinkedToComment && (
+                                  <span className="text-primary ml-1 hover:underline">• Pinned ↗</span>
+                                )}
                               </p>
                             </div>
                           </div>
