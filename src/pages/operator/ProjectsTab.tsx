@@ -10,7 +10,7 @@ import {
   MessageSquare, ExternalLink, ChevronRight 
 } from "lucide-react";
 import { format } from "date-fns";
-import { ProjectDetailDrawer } from "./ProjectDetailDrawer";
+import { ProjectWorkSurface } from "./ProjectWorkSurface";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 
@@ -98,133 +98,134 @@ export function ProjectsTab() {
 
   const displayProjects = getDisplayProjects();
 
-  return (
-    <>
-      <Card>
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <FolderOpen className="h-5 w-5" />
-              Projects
-            </CardTitle>
-            <div className="flex gap-2">
-              <Badge variant="outline">{projects.length} total</Badge>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="p-0">
-          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)}>
-            <div className="px-4 border-b">
-              <TabsList className="w-full justify-start h-auto p-0 bg-transparent">
-                <TabsTrigger 
-                  value="new" 
-                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 py-2"
-                >
-                  New ({newProjects.length})
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="active"
-                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 py-2"
-                >
-                  Active ({activeProjects.length})
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="completed"
-                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 py-2"
-                >
-                  Completed ({completedProjects.length})
-                </TabsTrigger>
-              </TabsList>
-            </div>
-
-            <TabsContent value={activeTab} className="mt-0">
-              <ScrollArea className="h-[calc(100vh-280px)]">
-                {isLoading ? (
-                  <div className="flex items-center justify-center py-12">
-                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                  </div>
-                ) : displayProjects.length === 0 ? (
-                  <div className="text-center py-12 text-muted-foreground">
-                    <FolderOpen className="h-10 w-10 mx-auto mb-3 opacity-50" />
-                    <p>No {activeTab} projects</p>
-                  </div>
-                ) : (
-                  <div className="divide-y">
-                    {displayProjects.map((project) => (
-                      <div
-                        key={project.id}
-                        className="p-4 hover:bg-muted/50 cursor-pointer transition-colors group"
-                        onClick={() => setSelectedProject(project)}
-                      >
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="font-medium truncate">
-                                {project.business_name}
-                              </span>
-                              <Badge 
-                                variant="secondary" 
-                                className={`text-xs ${STATUS_COLORS[project.status] || ""}`}
-                              >
-                                {project.status}
-                              </Badge>
-                            </div>
-                            <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                              <span className="flex items-center gap-1">
-                                <Clock className="h-3 w-3" />
-                                {formatDate(project.created_at)}
-                              </span>
-                              {project.unread_count > 0 && (
-                                <span className="flex items-center gap-1 text-primary font-medium">
-                                  <MessageSquare className="h-3 w-3" />
-                                  {project.unread_count} unread
-                                </span>
-                              )}
-                              {project.intake && (
-                                <span className="flex items-center gap-1 text-green-600">
-                                  <FileText className="h-3 w-3" />
-                                  Intake
-                                </span>
-                              )}
-                              {project.contact_email && (
-                                <span className="truncate max-w-[200px]">
-                                  {project.contact_email}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="opacity-0 group-hover:opacity-100 transition-opacity"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                window.open(`/p/${project.project_token}`, "_blank");
-                              }}
-                            >
-                              <ExternalLink className="h-4 w-4" />
-                            </Button>
-                            <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </ScrollArea>
-            </TabsContent>
-          </Tabs>
-        </CardContent>
-      </Card>
-
-      {/* Project Detail Drawer */}
-      <ProjectDetailDrawer
+  // Show full-page work surface when a project is selected
+  if (selectedProject) {
+    return (
+      <ProjectWorkSurface
         project={selectedProject}
-        open={!!selectedProject}
-        onClose={() => setSelectedProject(null)}
+        onBack={() => setSelectedProject(null)}
         onStatusChange={() => refetch()}
       />
-    </>
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-lg flex items-center gap-2">
+            <FolderOpen className="h-5 w-5" />
+            Projects
+          </CardTitle>
+          <div className="flex gap-2">
+            <Badge variant="outline">{projects.length} total</Badge>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="p-0">
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)}>
+          <div className="px-4 border-b">
+            <TabsList className="w-full justify-start h-auto p-0 bg-transparent">
+              <TabsTrigger 
+                value="new" 
+                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 py-2"
+              >
+                New ({newProjects.length})
+              </TabsTrigger>
+              <TabsTrigger 
+                value="active"
+                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 py-2"
+              >
+                Active ({activeProjects.length})
+              </TabsTrigger>
+              <TabsTrigger 
+                value="completed"
+                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 py-2"
+              >
+                Completed ({completedProjects.length})
+              </TabsTrigger>
+            </TabsList>
+          </div>
+
+          <TabsContent value={activeTab} className="mt-0">
+            <ScrollArea className="h-[calc(100vh-280px)]">
+              {isLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : displayProjects.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  <FolderOpen className="h-10 w-10 mx-auto mb-3 opacity-50" />
+                  <p>No {activeTab} projects</p>
+                </div>
+              ) : (
+                <div className="divide-y">
+                  {displayProjects.map((project) => (
+                    <div
+                      key={project.id}
+                      className="p-4 hover:bg-muted/50 cursor-pointer transition-colors group"
+                      onClick={() => setSelectedProject(project)}
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="font-medium truncate">
+                              {project.business_name}
+                            </span>
+                            <Badge 
+                              variant="secondary" 
+                              className={`text-xs ${STATUS_COLORS[project.status] || ""}`}
+                            >
+                              {project.status}
+                            </Badge>
+                          </div>
+                          <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                            <span className="flex items-center gap-1">
+                              <Clock className="h-3 w-3" />
+                              {formatDate(project.created_at)}
+                            </span>
+                            {project.unread_count > 0 && (
+                              <span className="flex items-center gap-1 text-primary font-medium">
+                                <MessageSquare className="h-3 w-3" />
+                                {project.unread_count} unread
+                              </span>
+                            )}
+                            {project.intake && (
+                              <span className="flex items-center gap-1 text-green-600">
+                                <FileText className="h-3 w-3" />
+                                Intake
+                              </span>
+                            )}
+                            {project.contact_email && (
+                              <span className="truncate max-w-[200px]">
+                                {project.contact_email}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              window.open(`/p/${project.project_token}`, "_blank");
+                            }}
+                          >
+                            <ExternalLink className="h-4 w-4" />
+                          </Button>
+                          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </ScrollArea>
+          </TabsContent>
+        </Tabs>
+      </CardContent>
+    </Card>
   );
 }
