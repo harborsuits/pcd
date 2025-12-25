@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, FileText, CreditCard, AlertCircle, Home, Download, Image as ImageIcon, Upload, Eye, X, LogOut, ChevronDown, Paperclip, Bell, BellOff } from "lucide-react";
+import { Loader2, FileText, CreditCard, AlertCircle, Home, Download, Image as ImageIcon, Upload, Eye, X, LogOut, ChevronDown, Paperclip, Bell, BellOff, MessageCircle, ChevronRight, ChevronLeft } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/hooks/use-toast";
 import { proxyMediaUrl, isImageType, getFileIcon } from "@/lib/media";
@@ -12,6 +12,8 @@ import { WelcomeScreen } from "@/components/portal/WelcomeScreen";
 import { ReviewQueue } from "@/components/portal/ReviewQueue";
 import { ProjectStatusBanner } from "@/components/portal/ProjectStatusBanner";
 import { FloatingChatOrb } from "@/components/portal/FloatingChatOrb";
+import { PrototypeViewer, type Prototype, type PrototypeComment } from "@/components/portal/PrototypeViewer";
+import { CommentsSidebar } from "@/components/portal/CommentsSidebar";
 import { PortalAuthPage } from "./PortalAuthPage";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import type { User, Session } from "@supabase/supabase-js";
@@ -124,6 +126,9 @@ export default function PortalPage() {
   const [showWelcome, setShowWelcome] = useState(false);
   const [teamTyping, setTeamTyping] = useState(false);
   const [showFilesPanel, setShowFilesPanel] = useState(false);
+  const [prototypes, setPrototypes] = useState<Prototype[]>([]);
+  const [prototypeComments, setPrototypeComments] = useState<PrototypeComment[]>([]);
+  const [showCommentsSidebar, setShowCommentsSidebar] = useState(true);
   const originalTitle = useRef(document.title);
   const markReadInFlight = useRef(false);
   const markDeliveredInFlight = useRef(false);
@@ -239,6 +244,12 @@ export default function PortalPage() {
     }
   }, [token, requiresAuth, user]);
 
+  // Fetch prototypes and comments when portal data is loaded
+  useEffect(() => {
+    if (!token || !data) return;
+    fetchPrototypes(token);
+  }, [token, data]);
+
   const handleLogout = async () => {
     await supabase.auth.signOut();
     toast({ title: "Logged out", description: "You've been signed out." });
@@ -251,6 +262,147 @@ export default function PortalPage() {
       markAdminMessagesAsDelivered(token);
     }
   };
+
+  async function fetchPrototypes(portalToken: string) {
+    try {
+      const res = await fetch(
+        `${SUPABASE_URL}/functions/v1/portal/${portalToken}/prototypes`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            "apikey": SUPABASE_ANON_KEY,
+            "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+          },
+        }
+      );
+
+      const response = await res.json();
+      if (res.ok && response.prototypes) {
+        setPrototypes(response.prototypes);
+        // Fetch comments for the first (latest) prototype
+        if (response.prototypes.length > 0) {
+          fetchComments(portalToken, response.prototypes[0].id);
+        }
+      }
+    } catch (err) {
+      console.error("Fetch prototypes error:", err);
+    }
+  }
+
+  async function fetchComments(portalToken: string, prototypeId?: string) {
+    try {
+      const url = prototypeId
+        ? `${SUPABASE_URL}/functions/v1/portal/${portalToken}/comments?prototype_id=${prototypeId}`
+        : `${SUPABASE_URL}/functions/v1/portal/${portalToken}/comments`;
+
+      const res = await fetch(url, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": SUPABASE_ANON_KEY,
+          "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+        },
+      });
+
+      const response = await res.json();
+      if (res.ok && response.comments) {
+        setPrototypeComments(response.comments);
+      }
+    } catch (err) {
+      console.error("Fetch comments error:", err);
+    }
+  }
+
+  async function handleAddComment(body: string, pinX: number, pinY: number) {
+    if (!token || prototypes.length === 0) return;
+
+    const res = await fetch(
+      `${SUPABASE_URL}/functions/v1/portal/${token}/comments`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": SUPABASE_ANON_KEY,
+          "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({
+          action: "create",
+          prototype_id: prototypes[0].id,
+          body,
+          pin_x: pinX,
+          pin_y: pinY,
+          author_type: "client",
+        }),
+      }
+    );
+
+    const response = await res.json();
+    if (res.ok && response.comment) {
+      setPrototypeComments((prev) => [...prev, response.comment]);
+      toast({ title: "Comment added", description: "Your feedback has been saved." });
+    }
+  }
+
+  async function handleResolveComment(commentId: string) {
+    if (!token) return;
+
+    const res = await fetch(
+      `${SUPABASE_URL}/functions/v1/portal/${token}/comments`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": SUPABASE_ANON_KEY,
+          "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({
+          action: "resolve",
+          comment_id: commentId,
+        }),
+      }
+    );
+
+    if (res.ok) {
+      setPrototypeComments((prev) =>
+        prev.map((c) =>
+          c.id === commentId ? { ...c, resolved_at: new Date().toISOString() } : c
+        )
+      );
+    }
+  }
+
+  async function handleUnresolveComment(commentId: string) {
+    if (!token) return;
+
+    const res = await fetch(
+      `${SUPABASE_URL}/functions/v1/portal/${token}/comments`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": SUPABASE_ANON_KEY,
+          "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({
+          action: "unresolve",
+          comment_id: commentId,
+        }),
+      }
+    );
+
+    if (res.ok) {
+      setPrototypeComments((prev) =>
+        prev.map((c) => (c.id === commentId ? { ...c, resolved_at: null } : c))
+      );
+    }
+  }
+
+  function handleRefreshPrototype() {
+    if (token) {
+      fetchPrototypes(token);
+    }
+  }
 
   // Real-time subscription for new messages and read receipt updates
   useEffect(() => {
@@ -900,6 +1052,48 @@ export default function PortalPage() {
             <p className="text-sm text-muted-foreground mt-1">Your Project Workspace</p>
           </div>
         </div>
+
+        {/* Prototype Viewer Section */}
+        {prototypes.length > 0 && (
+          <div className="border-b border-border">
+            <div className="flex">
+              {/* Prototype Viewer */}
+              <div className={`flex-1 ${showCommentsSidebar ? "" : ""}`}>
+                <PrototypeViewer
+                  prototype={prototypes[0]}
+                  comments={prototypeComments}
+                  onAddComment={handleAddComment}
+                  onResolveComment={handleResolveComment}
+                  onUnresolveComment={handleUnresolveComment}
+                  onRefresh={handleRefreshPrototype}
+                />
+              </div>
+
+              {/* Comments Sidebar */}
+              {showCommentsSidebar && (
+                <div className="w-80 border-l border-border bg-card hidden lg:block">
+                  <CommentsSidebar
+                    comments={prototypeComments}
+                    onResolveComment={handleResolveComment}
+                    onUnresolveComment={handleUnresolveComment}
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Toggle sidebar button */}
+            <div className="hidden lg:block absolute right-0 top-1/2 -translate-y-1/2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowCommentsSidebar(!showCommentsSidebar)}
+                className="h-8 w-8 p-0"
+              >
+                {showCommentsSidebar ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+              </Button>
+            </div>
+          </div>
+        )}
 
         {/* Review Queue - Show above files if there are pending items */}
         {data.review_items && data.review_items.length > 0 && (

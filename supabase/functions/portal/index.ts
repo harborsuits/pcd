@@ -59,6 +59,8 @@ Deno.serve(async (req) => {
   const createProjectIdx = pathParts.indexOf("create-project");
   const myProjectsIdx = pathParts.indexOf("my-projects");
   const markDeliveredIdx = pathParts.indexOf("mark-delivered");
+  const prototypesIdx = pathParts.indexOf("prototypes");
+  const commentsIdx = pathParts.indexOf("comments");
   
   if (reviewIdx > portalIdx && req.method === "POST") {
     const token = pathParts[portalIdx + 1];
@@ -70,6 +72,25 @@ Deno.serve(async (req) => {
   if (markDeliveredIdx > portalIdx && req.method === "POST") {
     const token = pathParts[portalIdx + 1];
     return handleMarkDelivered(req, token, corsHeaders);
+  }
+
+  // GET /portal/:token/prototypes - Get prototypes for project
+  if (prototypesIdx > portalIdx && req.method === "GET") {
+    const token = pathParts[portalIdx + 1];
+    return handleGetPrototypes(token, corsHeaders);
+  }
+
+  // GET /portal/:token/comments - Get comments for prototype
+  // POST /portal/:token/comments - Create/update/resolve comments
+  if (commentsIdx > portalIdx) {
+    const token = pathParts[portalIdx + 1];
+    if (req.method === "GET") {
+      const prototypeId = new URL(req.url).searchParams.get("prototype_id");
+      return handleGetComments(token, prototypeId, corsHeaders);
+    }
+    if (req.method === "POST") {
+      return handleCommentAction(req, token, corsHeaders);
+    }
   }
   
   // GET /portal/:token/check-auth - Check if portal requires authentication
@@ -933,6 +954,239 @@ async function handleCreateProject(
     );
   } catch (error) {
     console.error("Create project error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+}
+async function handleGetPrototypes(
+  token: string,
+  corsHeaders: Record<string, string>
+): Promise<Response> {
+  try {
+    if (!token || !isValidToken(token)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid token" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Fetch prototypes for this project
+    const { data: prototypes, error } = await supabase
+      .from("prototypes")
+      .select("id, url, version_label, status, created_at, updated_at")
+      .eq("project_token", token)
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("Get prototypes error:", error);
+      return new Response(
+        JSON.stringify({ error: "Database error" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    return new Response(
+      JSON.stringify({ prototypes: prototypes || [] }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  } catch (error) {
+    console.error("Get prototypes error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+}
+
+// GET /portal/:token/comments - Get comments for prototype
+async function handleGetComments(
+  token: string,
+  prototypeId: string | null,
+  corsHeaders: Record<string, string>
+): Promise<Response> {
+  try {
+    if (!token || !isValidToken(token)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid token" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    let query = supabase
+      .from("prototype_comments")
+      .select("id, prototype_id, author_type, body, pin_x, pin_y, resolved_at, source_message_id, created_at")
+      .eq("project_token", token)
+      .order("created_at", { ascending: true });
+
+    if (prototypeId) {
+      query = query.eq("prototype_id", prototypeId);
+    }
+
+    const { data: comments, error } = await query;
+
+    if (error) {
+      console.error("Get comments error:", error);
+      return new Response(
+        JSON.stringify({ error: "Database error" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    return new Response(
+      JSON.stringify({ comments: comments || [] }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  } catch (error) {
+    console.error("Get comments error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+}
+
+// POST /portal/:token/comments - Create, resolve, or unresolve comment
+async function handleCommentAction(
+  req: Request,
+  token: string,
+  corsHeaders: Record<string, string>
+): Promise<Response> {
+  try {
+    if (!token || !isValidToken(token)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid token" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const body = await req.json();
+    const { action, comment_id, prototype_id, body: commentBody, pin_x, pin_y, author_type, source_message_id } = body;
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Verify project exists
+    const { data: project, error: projectError } = await supabase
+      .from("projects")
+      .select("id")
+      .eq("project_token", token)
+      .is("deleted_at", null)
+      .maybeSingle();
+
+    if (projectError || !project) {
+      return new Response(
+        JSON.stringify({ error: "Project not found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (action === "create") {
+      if (!prototype_id || !commentBody) {
+        return new Response(
+          JSON.stringify({ error: "prototype_id and body are required" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const { data: comment, error: insertError } = await supabase
+        .from("prototype_comments")
+        .insert({
+          prototype_id,
+          project_token: token,
+          author_type: author_type || "client",
+          body: commentBody,
+          pin_x: pin_x ?? null,
+          pin_y: pin_y ?? null,
+          source_message_id: source_message_id || null,
+        })
+        .select()
+        .single();
+
+      if (insertError) {
+        console.error("Create comment error:", insertError);
+        return new Response(
+          JSON.stringify({ error: "Failed to create comment" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Send Telegram notification for new comment
+      const telegramBotToken = Deno.env.get("TELEGRAM_BOT_TOKEN");
+      const telegramChatId = Deno.env.get("TELEGRAM_CHAT_ID");
+      if (telegramBotToken && telegramChatId) {
+        const msg = `💬 <b>New Prototype Comment</b>\n` +
+          `• <b>From:</b> ${author_type || "client"}\n` +
+          `• <b>Comment:</b> ${commentBody.slice(0, 100)}${commentBody.length > 100 ? "..." : ""}\n` +
+          `• <b>Token:</b> <code>${token.slice(0, 12)}...</code>`;
+
+        try {
+          await fetch(`https://api.telegram.org/bot${telegramBotToken}/sendMessage`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              chat_id: telegramChatId,
+              text: msg,
+              parse_mode: "HTML",
+            }),
+          });
+        } catch (e) {
+          console.error("Telegram notification failed:", e);
+        }
+      }
+
+      return new Response(
+        JSON.stringify({ ok: true, comment }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (action === "resolve" || action === "unresolve") {
+      if (!comment_id) {
+        return new Response(
+          JSON.stringify({ error: "comment_id is required" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const resolved_at = action === "resolve" ? new Date().toISOString() : null;
+
+      const { error: updateError } = await supabase
+        .from("prototype_comments")
+        .update({ resolved_at })
+        .eq("id", comment_id)
+        .eq("project_token", token);
+
+      if (updateError) {
+        console.error("Update comment error:", updateError);
+        return new Response(
+          JSON.stringify({ error: "Failed to update comment" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      return new Response(
+        JSON.stringify({ ok: true, resolved: action === "resolve" }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    return new Response(
+      JSON.stringify({ error: "Invalid action" }),
+      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  } catch (error) {
+    console.error("Comment action error:", error);
     return new Response(
       JSON.stringify({ error: "Internal server error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
