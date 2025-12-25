@@ -1,5 +1,6 @@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { 
   Building2, 
   Target, 
@@ -9,7 +10,9 @@ import {
   Globe, 
   Clock,
   FileText,
-  Sparkles
+  Sparkles,
+  CheckCircle2,
+  Loader2
 } from "lucide-react";
 
 interface IntakeData {
@@ -35,6 +38,9 @@ interface IntakeData {
 interface IntakeOverviewPanelProps {
   intake: IntakeData | null | undefined;
   intakeCreatedAt?: string;
+  intakeStatus?: 'draft' | 'submitted' | 'approved';
+  onApproveIntake?: () => void;
+  isApproving?: boolean;
 }
 
 const BUSINESS_TYPE_LABELS: Record<string, string> = {
@@ -105,7 +111,7 @@ function Section({ icon: Icon, title, children }: { icon: React.ComponentType<{ 
   );
 }
 
-export function IntakeOverviewPanel({ intake, intakeCreatedAt }: IntakeOverviewPanelProps) {
+export function IntakeOverviewPanel({ intake, intakeCreatedAt, intakeStatus, onApproveIntake, isApproving }: IntakeOverviewPanelProps) {
   if (!intake) {
     return (
       <div className="flex-1 flex items-center justify-center text-muted-foreground p-4">
@@ -118,16 +124,51 @@ export function IntakeOverviewPanel({ intake, intakeCreatedAt }: IntakeOverviewP
     );
   }
 
+  const statusConfig = {
+    draft: { label: "Draft", variant: "outline" as const, color: "text-muted-foreground" },
+    submitted: { label: "Submitted", variant: "secondary" as const, color: "text-amber-600" },
+    approved: { label: "Approved", variant: "default" as const, color: "text-green-600" },
+  };
+
+  const status = intakeStatus || 'submitted';
+  const { label, variant, color } = statusConfig[status];
+
   return (
     <ScrollArea className="flex-1">
       <div className="p-4 space-y-5">
-        {/* Intake status */}
-        {intakeCreatedAt && (
-          <div className="flex items-center gap-2 text-xs text-muted-foreground border-b border-border pb-3">
-            <Sparkles className="h-3 w-3" />
-            Intake submitted {new Date(intakeCreatedAt).toLocaleDateString()}
+        {/* Intake status header */}
+        <div className="flex items-center justify-between border-b border-border pb-3">
+          <div className="flex items-center gap-2">
+            <Badge variant={variant} className={color}>
+              {status === 'approved' && <CheckCircle2 className="h-3 w-3 mr-1" />}
+              {label}
+            </Badge>
+            {intakeCreatedAt && (
+              <span className="text-xs text-muted-foreground">
+                {new Date(intakeCreatedAt).toLocaleDateString()}
+              </span>
+            )}
           </div>
-        )}
+          {status === 'submitted' && onApproveIntake && (
+            <Button 
+              size="sm" 
+              onClick={onApproveIntake}
+              disabled={isApproving}
+            >
+              {isApproving ? (
+                <>
+                  <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                  Approving...
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 className="h-3 w-3 mr-1" />
+                  Approve Intake
+                </>
+              )}
+            </Button>
+          )}
+        </div>
 
         {/* Business Snapshot */}
         <Section icon={Building2} title="Business">

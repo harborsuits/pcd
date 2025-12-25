@@ -15,9 +15,11 @@ import { adminFetch } from "@/lib/adminFetch";
 import { useOperatorContext } from "./OperatorLayout";
 
 interface ProjectIntake {
+  id: string;
   project_id: string;
   intake_json: Record<string, unknown>;
   intake_version: number;
+  intake_status: 'draft' | 'submitted' | 'approved';
   created_at: string;
 }
 

@@ -40,9 +40,11 @@ interface Project {
   created_at: string;
   updated_at: string;
   intake?: {
+    id: string;
     project_id: string;
     intake_json: Record<string, unknown>;
     intake_version: number;
+    intake_status: 'draft' | 'submitted' | 'approved';
     created_at: string;
   } | null;
 }
@@ -239,6 +241,23 @@ export function ProjectWorkSurface({ project, onBack, onStatusChange }: ProjectW
     },
     onSuccess: () => {
       toast.success("Status updated");
+      queryClient.invalidateQueries({ queryKey: ["admin-projects"] });
+      onStatusChange();
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
+  // Approve intake mutation
+  const approveIntakeMut = useMutation({
+    mutationFn: async (intakeId: string) => {
+      const res = await adminFetch(`/admin/intake/${intakeId}/approve`, {
+        method: "PATCH",
+      });
+      if (!res.ok) throw new Error("Failed to approve intake");
+      return res.json();
+    },
+    onSuccess: () => {
+      toast.success("Intake approved");
       queryClient.invalidateQueries({ queryKey: ["admin-projects"] });
       onStatusChange();
     },
@@ -662,6 +681,9 @@ export function ProjectWorkSurface({ project, onBack, onStatusChange }: ProjectW
               <IntakeOverviewPanel 
                 intake={project.intake?.intake_json as Record<string, unknown> | null} 
                 intakeCreatedAt={project.intake?.created_at}
+                intakeStatus={project.intake?.intake_status}
+                onApproveIntake={project.intake?.id ? () => approveIntakeMut.mutate(project.intake!.id) : undefined}
+                isApproving={approveIntakeMut.isPending}
               />
             </TabsContent>
 

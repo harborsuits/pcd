@@ -80,6 +80,13 @@ Deno.serve(async (req) => {
     return handleUpdateProjectStatus(req, token);
   }
 
+  // Route: PATCH /admin/intake/:intakeId/approve
+  if (subPath.match(/^intake\/[^\/]+\/approve$/) && req.method === "PATCH") {
+    const parts = subPath.split("/");
+    const intakeId = parts[1];
+    return handleApproveIntake(req, intakeId);
+  }
+
   // Route: GET /admin/checklist/:token
   if (subPath.match(/^checklist\/[^\/]+$/) && req.method === "GET") {
     const token = subPath.replace("checklist/", "");
@@ -1228,10 +1235,10 @@ async function handleProjects(req: Request): Promise<Response> {
     let unreadCountsMap: Record<string, number> = {};
     
     if (projectIds.length > 0) {
-      // Fetch intakes
+      // Fetch intakes (including id and intake_status)
       const { data: intakes, error: intakesError } = await supabase
         .from("project_intakes")
-        .select("project_id, intake_json, intake_version, created_at")
+        .select("id, project_id, intake_json, intake_version, intake_status, created_at")
         .in("project_id", projectIds);
 
       if (intakesError) {
@@ -1351,7 +1358,62 @@ async function handleUpdateProjectStatus(req: Request, token: string): Promise<R
   }
 }
 
-// GET /admin/prototypes/:token - Get prototypes for a project
+// PATCH /admin/intake/:intakeId/approve - Approve an intake
+async function handleApproveIntake(req: Request, intakeId: string): Promise<Response> {
+  const authError = validateAdminKey(req);
+  if (authError) return authError;
+
+  if (!intakeId) {
+    return new Response(
+      JSON.stringify({ error: "Intake ID required" }),
+      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  try {
+    console.log(`Approving intake: ${intakeId}`);
+
+    const supabase = getSupabaseClient();
+
+    const { data, error } = await supabase
+      .from("project_intakes")
+      .update({ intake_status: 'approved', updated_at: new Date().toISOString() })
+      .eq("id", intakeId)
+      .select("id, project_id, intake_status")
+      .single();
+
+    if (error) {
+      console.error("Intake approval error:", error);
+      return new Response(
+        JSON.stringify({ error: "Database error" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (!data) {
+      return new Response(
+        JSON.stringify({ error: "Intake not found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log(`Intake ${intakeId} approved`);
+
+    return new Response(
+      JSON.stringify({ success: true, intake: data }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+
+  } catch (error) {
+    console.error("Intake approval error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+}
+
+
 async function handleGetPrototypes(req: Request, token: string): Promise<Response> {
   const authError = validateAdminKey(req);
   if (authError) return authError;
