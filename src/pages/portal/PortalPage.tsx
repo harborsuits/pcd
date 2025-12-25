@@ -64,6 +64,7 @@ interface PortalData {
     name: string;
     slug: string;
     status: string;
+    final_approved_at: string | null;
   };
   intake_status: 'draft' | 'submitted' | 'approved' | null;
   messages: PortalMessage[];
@@ -130,6 +131,7 @@ export default function PortalPage() {
   const [showFilesPanel, setShowFilesPanel] = useState(false);
   const [prototypes, setPrototypes] = useState<Prototype[]>([]);
   const [prototypeComments, setPrototypeComments] = useState<PrototypeComment[]>([]);
+  const [approvingFinal, setApprovingFinal] = useState(false);
   
   const originalTitle = useRef(document.title);
   const markReadInFlight = useRef(false);
@@ -403,6 +405,56 @@ export default function PortalPage() {
   function handleRefreshPrototype() {
     if (token) {
       fetchPrototypes(token);
+    }
+  }
+
+  // Handle client final approval
+  async function handleApproveFinal() {
+    if (!token || approvingFinal) return;
+    
+    setApprovingFinal(true);
+    try {
+      const res = await fetch(
+        `${SUPABASE_URL}/functions/v1/portal/${token}/approve-final`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "apikey": SUPABASE_ANON_KEY,
+            "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+          },
+        }
+      );
+
+      const response = await res.json();
+      if (res.ok && response.ok) {
+        toast({ 
+          title: "Final version approved!", 
+          description: "Thank you for your approval. We'll proceed with launch preparations." 
+        });
+        // Update local state
+        setData((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            business: {
+              ...prev.business,
+              final_approved_at: response.final_approved_at,
+            },
+          };
+        });
+      } else {
+        toast({ 
+          title: "Approval failed", 
+          description: response.error || "Please try again.",
+          variant: "destructive" 
+        });
+      }
+    } catch (err) {
+      console.error("Approve final error:", err);
+      toast({ title: "Error", description: "Could not approve. Please try again.", variant: "destructive" });
+    } finally {
+      setApprovingFinal(false);
     }
   }
 
@@ -1066,6 +1118,8 @@ export default function PortalPage() {
                 resolvedCommentsCount: prototypeComments.filter(c => c.resolved_at).length,
                 projectStatus: data.business.status,
                 prototypeUrl: prototypes[0]?.url,
+                finalApprovedAt: data.business.final_approved_at,
+                onApproveFinal: handleApproveFinal,
               })}
             />
           </div>
