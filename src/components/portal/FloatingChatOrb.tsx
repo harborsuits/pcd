@@ -25,8 +25,10 @@ interface FloatingChatOrbProps {
   unreadCount?: number;
 }
 
-const STORAGE_KEY = "floating-chat-position";
+const STORAGE_KEY = "floating-chat-position-v1";
 const DEFAULT_OFFSET = { right: 24, bottom: 24 };
+const SNAP_THRESHOLD = 56;
+const SNAP_PADDING = 16;
 
 function formatDate(dateStr: string) {
   return new Date(dateStr).toLocaleDateString("en-US", {
@@ -37,23 +39,37 @@ function formatDate(dateStr: string) {
   });
 }
 
-function loadSavedPosition(): { right: number; bottom: number } {
+function safeParsePosition(): { right: number; bottom: number } | null {
   try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      if (typeof parsed.right === "number" && typeof parsed.bottom === "number") {
-        return parsed;
-      }
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (typeof parsed?.right === "number" && typeof parsed?.bottom === "number") {
+      return { right: parsed.right, bottom: parsed.bottom };
     }
-  } catch {}
-  return DEFAULT_OFFSET;
+    return null;
+  } catch {
+    return null;
+  }
 }
 
-function savePosition(offset: { right: number; bottom: number }) {
+function savePosition(pos: { right: number; bottom: number }) {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(offset));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(pos));
   } catch {}
+}
+
+// Convert right/bottom offsets <-> top-left coordinates
+function toTopLeft(right: number, bottom: number, elW: number, elH: number) {
+  const left = window.innerWidth - elW - right;
+  const top = window.innerHeight - elH - bottom;
+  return { left, top };
+}
+
+function toRightBottom(left: number, top: number, elW: number, elH: number) {
+  const right = window.innerWidth - elW - left;
+  const bottom = window.innerHeight - elH - top;
+  return { right, bottom };
 }
 
 export function FloatingChatOrb({
@@ -71,26 +87,32 @@ export function FloatingChatOrb({
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [messageContent, setMessageContent] = useState("");
+  const [offset, setOffset] = useState<{ right: number; bottom: number }>(() => {
+    return safeParsePosition() ?? DEFAULT_OFFSET;
+  });
 
-  // Store offsets from bottom-right (feels "anchored")
-  const [offset, setOffset] = useState(loadSavedPosition);
-
-  const [isDragging, setIsDragging] = useState(false);
-  const dragStart = useRef({ x: 0, y: 0, right: 24, bottom: 24 });
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const seenMessageIds = useRef<Set<string>>(new Set());
 
-  // Scroll to bottom when messages change or panel opens
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStart = useRef({
+    x: 0,
+    y: 0,
+    right: DEFAULT_OFFSET.right,
+    bottom: DEFAULT_OFFSET.bottom,
+  });
+
+  // Scroll to bottom when open and messages change
   useEffect(() => {
-    if (isOpen && !isMinimized) {
-      const t = window.setTimeout(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-      }, 80);
-      return () => window.clearTimeout(t);
-    }
+    if (!isOpen || isMinimized) return;
+    const t = window.setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, 80);
+    return () => window.clearTimeout(t);
   }, [isOpen, isMinimized, messages.length]);
 
-  // Compute last client message index
+  // Last client message index for delivery status
   const lastClientMsgIndex = useMemo(() => {
     for (let i = messages.length - 1; i >= 0; i--) {
       if (messages[i].sender_type === "client") return i;
@@ -104,85 +126,115 @@ export function FloatingChatOrb({
     return "Sent";
   };
 
-  const handleSend = async () => {
+  const handleSend = useCallback(async () => {
     if (!messageContent.trim() || sending) return;
-    const content = messageContent;
+    const content = messageContent.trim();
     setMessageContent("");
     await onSendMessage(content);
-  };
+  }, [messageContent, onSendMessage, sending]);
 
   const handleMessageChange = (value: string) => {
     setMessageContent(value);
     onTyping(value);
   };
 
-  // Drag handlers using right/bottom offsets
-  const beginDrag = useCallback((clientX: number, clientY: number) => {
-    setIsDragging(true);
-    dragStart.current = {
-      x: clientX,
-      y: clientY,
-      right: offset.right,
-      bottom: offset.bottom,
-    };
-  }, [offset.right, offset.bottom]);
+  // Clamp using actual element size
+  const clampOffset = useCallback((pos: { right: number; bottom: number }) => {
+    const el = rootRef.current;
+    const elW = el?.offsetWidth ?? 56;
+    const elH = el?.offsetHeight ?? 56;
 
-  const moveDrag = useCallback((clientX: number, clientY: number) => {
-    const dx = dragStart.current.x - clientX;
-    const dy = dragStart.current.y - clientY;
-
-    // Since we're storing right/bottom offsets:
-    // moving mouse LEFT increases right offset, moving DOWN decreases bottom offset
-    const nextRight = dragStart.current.right + dx;
-    const nextBottom = dragStart.current.bottom + dy;
+    const maxRight = Math.max(SNAP_PADDING, window.innerWidth - elW - SNAP_PADDING);
+    const maxBottom = Math.max(SNAP_PADDING, window.innerHeight - elH - SNAP_PADDING);
 
     const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
 
-    // Keep it on-screen
-    const maxRight = window.innerWidth - 60;
-    const maxBottom = window.innerHeight - 60;
-
-    setOffset({
-      right: clamp(nextRight, 8, maxRight),
-      bottom: clamp(nextBottom, 8, maxBottom),
-    });
+    return {
+      right: clamp(pos.right, SNAP_PADDING, maxRight),
+      bottom: clamp(pos.bottom, SNAP_PADDING, maxBottom),
+    };
   }, []);
+
+  const beginDrag = useCallback(
+    (clientX: number, clientY: number) => {
+      setIsDragging(true);
+      dragStart.current = {
+        x: clientX,
+        y: clientY,
+        right: offset.right,
+        bottom: offset.bottom,
+      };
+    },
+    [offset.right, offset.bottom]
+  );
+
+  const moveDrag = useCallback(
+    (clientX: number, clientY: number) => {
+      // For right/bottom offsets: moving left increases right, moving up increases bottom
+      const dx = dragStart.current.x - clientX;
+      const dy = dragStart.current.y - clientY;
+
+      const next = clampOffset({
+        right: dragStart.current.right + dx,
+        bottom: dragStart.current.bottom + dy,
+      });
+
+      setOffset(next);
+    },
+    [clampOffset]
+  );
+
+  const snapToNearestEdge = useCallback(
+    (pos: { right: number; bottom: number }) => {
+      const el = rootRef.current;
+      const elW = el?.offsetWidth ?? 56;
+      const elH = el?.offsetHeight ?? 56;
+
+      // Convert to top-left for proximity calculation
+      const { left, top } = toTopLeft(pos.right, pos.bottom, elW, elH);
+
+      const distLeft = left;
+      const distRight = window.innerWidth - (left + elW);
+      const distTop = top;
+      const distBottom = window.innerHeight - (top + elH);
+
+      // Find closest edge
+      const candidates = [
+        { edge: "left" as const, d: distLeft },
+        { edge: "right" as const, d: distRight },
+        { edge: "top" as const, d: distTop },
+        { edge: "bottom" as const, d: distBottom },
+      ].sort((a, b) => a.d - b.d);
+
+      let snappedLeft = left;
+      let snappedTop = top;
+
+      const closest = candidates[0];
+
+      // Only snap if within threshold
+      if (closest.d <= SNAP_THRESHOLD) {
+        if (closest.edge === "left") snappedLeft = SNAP_PADDING;
+        if (closest.edge === "right") snappedLeft = window.innerWidth - elW - SNAP_PADDING;
+        if (closest.edge === "top") snappedTop = SNAP_PADDING;
+        if (closest.edge === "bottom") snappedTop = window.innerHeight - elH - SNAP_PADDING;
+      }
+
+      const snapped = toRightBottom(snappedLeft, snappedTop, elW, elH);
+      return clampOffset(snapped);
+    },
+    [clampOffset]
+  );
 
   const endDrag = useCallback(() => {
     setIsDragging(false);
+    setOffset((prev) => {
+      const snapped = snapToNearestEdge(prev);
+      savePosition(snapped);
+      return snapped;
+    });
+  }, [snapToNearestEdge]);
 
-    // Snap to edges
-    const snapThreshold = 48;
-    let snappedOffset = { ...offset };
-
-    // Snap to right edge
-    if (offset.right < snapThreshold) {
-      snappedOffset.right = 16;
-    }
-    // Snap to left edge (when right offset is large = orb is on the left)
-    if (offset.right > window.innerWidth - 100) {
-      snappedOffset.right = window.innerWidth - 80;
-    }
-    // Snap to bottom
-    if (offset.bottom < snapThreshold) {
-      snappedOffset.bottom = 16;
-    }
-    // Snap to top (when bottom offset is large)
-    if (offset.bottom > window.innerHeight - 100) {
-      snappedOffset.bottom = window.innerHeight - 80;
-    }
-
-    setOffset(snappedOffset);
-    savePosition(snappedOffset);
-  }, [offset]);
-
-  // Mouse events
-  const onMouseDown = useCallback((e: React.MouseEvent) => {
-    if ((e.target as HTMLElement).closest("button, textarea, input")) return;
-    e.preventDefault();
-    beginDrag(e.clientX, e.clientY);
-  }, [beginDrag]);
-
+  // Mouse listeners
   useEffect(() => {
     if (!isDragging) return;
 
@@ -197,20 +249,14 @@ export function FloatingChatOrb({
     };
   }, [isDragging, moveDrag, endDrag]);
 
-  // Touch events
-  const onTouchStart = useCallback((e: React.TouchEvent) => {
-    if ((e.target as HTMLElement).closest("button, textarea, input")) return;
-    const touch = e.touches[0];
-    beginDrag(touch.clientX, touch.clientY);
-  }, [beginDrag]);
-
+  // Touch listeners
   useEffect(() => {
     if (!isDragging) return;
 
     const onMove = (e: TouchEvent) => {
-      const touch = e.touches[0];
-      if (!touch) return;
-      moveDrag(touch.clientX, touch.clientY);
+      const t = e.touches[0];
+      if (!t) return;
+      moveDrag(t.clientX, t.clientY);
     };
     const onEnd = () => endDrag();
 
@@ -222,7 +268,19 @@ export function FloatingChatOrb({
     };
   }, [isDragging, moveDrag, endDrag]);
 
-  // Common wrapper style
+  // Keep on-screen on window resize
+  useEffect(() => {
+    const onResize = () => {
+      setOffset((prev) => {
+        const next = clampOffset(prev);
+        savePosition(next);
+        return next;
+      });
+    };
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, [clampOffset]);
+
   const wrapperStyle: React.CSSProperties = {
     position: "fixed",
     right: offset.right,
@@ -231,13 +289,27 @@ export function FloatingChatOrb({
     touchAction: "none",
   };
 
+  const onMouseDown = (e: React.MouseEvent) => {
+    if ((e.target as HTMLElement).closest("button, textarea, input")) return;
+    e.preventDefault();
+    beginDrag(e.clientX, e.clientY);
+  };
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    if ((e.target as HTMLElement).closest("button, textarea, input")) return;
+    const t = e.touches[0];
+    if (!t) return;
+    beginDrag(t.clientX, t.clientY);
+  };
+
   // COLLAPSED ORB
   if (!isOpen) {
     return (
-      <div
-        style={wrapperStyle}
+      <div 
+        ref={rootRef} 
+        style={wrapperStyle} 
         className="cursor-pointer select-none"
-        onMouseDown={onMouseDown}
+        onMouseDown={onMouseDown} 
         onTouchStart={onTouchStart}
       >
         <button
@@ -246,15 +318,13 @@ export function FloatingChatOrb({
           aria-label="Open chat"
         >
           <MessageSquare className="h-6 w-6 group-hover:scale-110 transition-transform" />
-          
-          {/* Unread badge */}
+
           {unreadCount > 0 && (
             <span className="absolute -top-1 -right-1 w-5 h-5 bg-destructive text-destructive-foreground text-xs font-bold rounded-full flex items-center justify-center">
               {unreadCount > 9 ? "9+" : unreadCount}
             </span>
           )}
-          
-          {/* Subtle pulse ring */}
+
           {unreadCount > 0 && (
             <span className="absolute inset-0 rounded-full bg-primary/30 animate-ping pointer-events-none" />
           )}
@@ -266,10 +336,11 @@ export function FloatingChatOrb({
   // MINIMIZED BAR
   if (isMinimized) {
     return (
-      <div
-        style={wrapperStyle}
+      <div 
+        ref={rootRef} 
+        style={wrapperStyle} 
         className="cursor-move select-none"
-        onMouseDown={onMouseDown}
+        onMouseDown={onMouseDown} 
         onTouchStart={onTouchStart}
       >
         <div className="w-72 bg-card/95 backdrop-blur-xl border border-border rounded-2xl shadow-2xl overflow-hidden">
@@ -284,20 +355,10 @@ export function FloatingChatOrb({
               )}
             </div>
             <div className="flex items-center gap-1">
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="h-7 w-7" 
-                onClick={() => setIsMinimized(false)}
-              >
+              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setIsMinimized(false)}>
                 <ChevronUp className="h-4 w-4" />
               </Button>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="h-7 w-7" 
-                onClick={() => setIsOpen(false)}
-              >
+              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setIsOpen(false)}>
                 <X className="h-4 w-4" />
               </Button>
             </div>
@@ -309,10 +370,10 @@ export function FloatingChatOrb({
 
   // EXPANDED PANEL
   return (
-    <div style={wrapperStyle} className="select-none">
+    <div ref={rootRef} style={wrapperStyle} className="select-none">
       <div className="w-80 sm:w-96 h-[480px] sm:h-[520px] bg-card/95 backdrop-blur-xl border border-border rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-scale-in">
         {/* Header - draggable */}
-        <div 
+        <div
           className="flex items-center justify-between px-4 py-3 bg-primary/5 border-b border-border cursor-move shrink-0"
           onMouseDown={onMouseDown}
           onTouchStart={onTouchStart}
@@ -322,20 +383,10 @@ export function FloatingChatOrb({
             <span className="font-medium">Messages</span>
           </div>
           <div className="flex items-center gap-1">
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="h-7 w-7" 
-              onClick={() => setIsMinimized(true)}
-            >
+            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setIsMinimized(true)}>
               <Minus className="h-4 w-4" />
             </Button>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="h-7 w-7" 
-              onClick={() => setIsOpen(false)}
-            >
+            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setIsOpen(false)}>
               <X className="h-4 w-4" />
             </Button>
           </div>
@@ -343,7 +394,6 @@ export function FloatingChatOrb({
 
         {/* Messages area */}
         <div className="flex-1 overflow-y-auto p-3 space-y-2">
-          {/* Load more button */}
           {hasMoreMessages && (
             <div className="flex justify-center pb-2">
               <Button
@@ -359,7 +409,6 @@ export function FloatingChatOrb({
             </div>
           )}
 
-          {/* Empty state */}
           {messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-center py-8">
               <MessageSquare className="h-10 w-10 text-muted-foreground/30 mb-3" />
@@ -371,8 +420,7 @@ export function FloatingChatOrb({
               {messages.map((msg, index) => {
                 const isClient = msg.sender_type === "client";
                 const isLastClientMsg = isClient && index === lastClientMsgIndex;
-                
-                // Animate only new messages
+
                 const isNewMsg = !seenMessageIds.current.has(msg.id);
                 if (isNewMsg) seenMessageIds.current.add(msg.id);
 
@@ -392,7 +440,7 @@ export function FloatingChatOrb({
                       >
                         {msg.content}
                       </div>
-                      
+
                       <div
                         className={[
                           "mt-0.5 flex items-center gap-1.5 text-[10px] text-muted-foreground",
@@ -411,7 +459,6 @@ export function FloatingChatOrb({
                 );
               })}
 
-              {/* Typing indicator */}
               {teamTyping && (
                 <div className="flex w-full justify-start">
                   <div className="max-w-[85%]">
@@ -423,7 +470,7 @@ export function FloatingChatOrb({
               )}
             </>
           )}
-          
+
           <div ref={messagesEndRef} />
         </div>
 
@@ -450,17 +497,11 @@ export function FloatingChatOrb({
               size="icon"
               className="h-10 w-10 shrink-0"
             >
-              {sending ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Send className="h-4 w-4" />
-              )}
+              {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
             </Button>
           </div>
-          
-          {sendError && (
-            <p className="text-xs text-destructive mt-1">{sendError}</p>
-          )}
+
+          {sendError && <p className="text-xs text-destructive mt-1">{sendError}</p>}
         </div>
       </div>
     </div>
