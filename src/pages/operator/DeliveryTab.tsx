@@ -9,8 +9,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { ProjectDetailDrawer } from "./ProjectDetailDrawer";
-
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+import { adminFetch } from "@/lib/adminFetch";
 
 interface InboxItem {
   project_id: string;
@@ -59,10 +58,7 @@ export function DeliveryTab() {
   const { data: inboxData, isLoading: inboxLoading, refetch: refetchInbox } = useQuery({
     queryKey: ["admin-inbox"],
     queryFn: async () => {
-      const adminKey = localStorage.getItem("admin_key") || "";
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/admin/inbox`, {
-        headers: { "x-admin-key": adminKey },
-      });
+      const res = await adminFetch("/admin/inbox");
       if (!res.ok) throw new Error("Failed to fetch inbox");
       const data = await res.json();
       return (data || []).map((item: {
@@ -90,10 +86,7 @@ export function DeliveryTab() {
   const { data: projectsData } = useQuery({
     queryKey: ["admin-projects"],
     queryFn: async () => {
-      const adminKey = localStorage.getItem("admin_key") || "";
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/admin/projects`, {
-        headers: { "x-admin-key": adminKey },
-      });
+      const res = await adminFetch("/admin/projects");
       if (!res.ok) throw new Error("Failed to fetch projects");
       return res.json() as Promise<{ projects: Project[] }>;
     },

@@ -18,8 +18,7 @@ import {
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { CommentCard } from "@/components/operator/CommentCard";
-
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+import { adminFetch, AdminAuthError } from "@/lib/adminFetch";
 
 interface Project {
   id: string;
@@ -165,10 +164,7 @@ export function ProjectWorkSurface({ project, onBack, onStatusChange }: ProjectW
   const { data: messagesData, isLoading: messagesLoading } = useQuery({
     queryKey: ["project-messages", project.project_token],
     queryFn: async () => {
-      const adminKey = localStorage.getItem("admin_key") || "";
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/messages/${project.project_token}`, {
-        headers: { "x-admin-key": adminKey },
-      });
+      const res = await adminFetch(`/messages/${project.project_token}`);
       if (!res.ok) throw new Error("Failed to fetch messages");
       return res.json() as Promise<{ messages: Message[] }>;
     },
@@ -179,10 +175,7 @@ export function ProjectWorkSurface({ project, onBack, onStatusChange }: ProjectW
   const { data: mediaData, isLoading: mediaLoading } = useQuery({
     queryKey: ["project-media", project.project_token],
     queryFn: async () => {
-      const adminKey = localStorage.getItem("admin_key") || "";
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/admin/media/${project.project_token}`, {
-        headers: { "x-admin-key": adminKey },
-      });
+      const res = await adminFetch(`/admin/media/${project.project_token}`);
       if (!res.ok) throw new Error("Failed to fetch media");
       return res.json() as Promise<{ media: MediaItem[] }>;
     },
@@ -192,10 +185,7 @@ export function ProjectWorkSurface({ project, onBack, onStatusChange }: ProjectW
   const { data: prototypesData, isLoading: prototypesLoading } = useQuery({
     queryKey: ["project-prototypes", project.project_token],
     queryFn: async () => {
-      const adminKey = localStorage.getItem("admin_key") || "";
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/admin/prototypes/${project.project_token}`, {
-        headers: { "x-admin-key": adminKey },
-      });
+      const res = await adminFetch(`/admin/prototypes/${project.project_token}`);
       if (!res.ok) throw new Error("Failed to fetch prototypes");
       return res.json() as Promise<{ prototypes: Prototype[] }>;
     },
@@ -205,10 +195,7 @@ export function ProjectWorkSurface({ project, onBack, onStatusChange }: ProjectW
   const { data: commentsData, isLoading: commentsLoading } = useQuery({
     queryKey: ["project-comments", project.project_token],
     queryFn: async () => {
-      const adminKey = localStorage.getItem("admin_key") || "";
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/admin/comments/${project.project_token}`, {
-        headers: { "x-admin-key": adminKey },
-      });
+      const res = await adminFetch(`/admin/comments/${project.project_token}`);
       if (!res.ok) throw new Error("Failed to fetch comments");
       return res.json() as Promise<{ comments: PrototypeComment[] }>;
     },
@@ -217,10 +204,8 @@ export function ProjectWorkSurface({ project, onBack, onStatusChange }: ProjectW
   // Update status mutation
   const updateStatusMutation = useMutation({
     mutationFn: async (newStatus: string) => {
-      const adminKey = localStorage.getItem("admin_key") || "";
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/admin/projects/${project.project_token}/status`, {
+      const res = await adminFetch(`/admin/projects/${project.project_token}/status`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", "x-admin-key": adminKey },
         body: JSON.stringify({ status: newStatus }),
       });
       if (!res.ok) throw new Error("Failed to update status");
@@ -237,10 +222,8 @@ export function ProjectWorkSurface({ project, onBack, onStatusChange }: ProjectW
   // Send message mutation
   const sendMessageMutation = useMutation({
     mutationFn: async (content: string) => {
-      const adminKey = localStorage.getItem("admin_key") || "";
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/messages/${project.project_token}`, {
+      const res = await adminFetch(`/messages/${project.project_token}`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", "x-admin-key": adminKey },
         body: JSON.stringify({ content, sender_type: "admin" }),
       });
       if (!res.ok) throw new Error("Failed to send message");
@@ -258,12 +241,10 @@ export function ProjectWorkSurface({ project, onBack, onStatusChange }: ProjectW
   // Upload media mutation
   const uploadMediaMutation = useMutation({
     mutationFn: async (file: File) => {
-      const adminKey = localStorage.getItem("admin_key") || "";
       const formData = new FormData();
       formData.append("file", file);
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/admin/media/${project.project_token}`, {
+      const res = await adminFetch(`/admin/media/${project.project_token}`, {
         method: "POST",
-        headers: { "x-admin-key": adminKey },
         body: formData,
       });
       if (!res.ok) throw new Error("Failed to upload media");
@@ -279,10 +260,8 @@ export function ProjectWorkSurface({ project, onBack, onStatusChange }: ProjectW
   // Delete media mutation
   const deleteMediaMutation = useMutation({
     mutationFn: async (mediaId: string) => {
-      const adminKey = localStorage.getItem("admin_key") || "";
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/admin/media/${project.project_token}/${mediaId}`, {
+      const res = await adminFetch(`/admin/media/${project.project_token}/${mediaId}`, {
         method: "DELETE",
-        headers: { "x-admin-key": adminKey },
       });
       if (!res.ok) throw new Error("Failed to delete media");
     },
@@ -296,10 +275,8 @@ export function ProjectWorkSurface({ project, onBack, onStatusChange }: ProjectW
   // Add prototype mutation
   const addPrototypeMutation = useMutation({
     mutationFn: async ({ url, version_label }: { url: string; version_label?: string }) => {
-      const adminKey = localStorage.getItem("admin_key") || "";
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/admin/prototypes/${project.project_token}`, {
+      const res = await adminFetch(`/admin/prototypes/${project.project_token}`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", "x-admin-key": adminKey },
         body: JSON.stringify({ url, version_label, status: "sent" }),
       });
       if (!res.ok) throw new Error("Failed to add prototype");
@@ -319,10 +296,8 @@ export function ProjectWorkSurface({ project, onBack, onStatusChange }: ProjectW
     mutationFn: async ({ prototypeId, body, pinX, pinY, sourceMessageId }: {
       prototypeId: string; body: string; pinX: number; pinY: number; sourceMessageId?: string;
     }) => {
-      const adminKey = localStorage.getItem("admin_key") || "";
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/admin/comments/${project.project_token}`, {
+      const res = await adminFetch(`/admin/comments/${project.project_token}`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", "x-admin-key": adminKey },
         body: JSON.stringify({ prototype_id: prototypeId, body, pin_x: pinX, pin_y: pinY, source_message_id: sourceMessageId }),
       });
       if (!res.ok) throw new Error("Failed to create comment");
@@ -340,10 +315,8 @@ export function ProjectWorkSurface({ project, onBack, onStatusChange }: ProjectW
   // Resolve comment mutation
   const resolveCommentMutation = useMutation({
     mutationFn: async ({ commentId, resolve }: { commentId: string; resolve: boolean }) => {
-      const adminKey = localStorage.getItem("admin_key") || "";
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/admin/comments/${project.project_token}/${commentId}`, {
+      const res = await adminFetch(`/admin/comments/${project.project_token}/${commentId}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", "x-admin-key": adminKey },
         body: JSON.stringify({ resolved: resolve }),
       });
       if (!res.ok) throw new Error("Failed to update comment");
