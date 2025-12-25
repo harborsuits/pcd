@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, createContext, useContext } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -22,6 +23,19 @@ import {
   getLast401At
 } from "@/lib/adminFetch";
 
+// Context to track currently open project token for global shortcuts
+interface OperatorContextValue {
+  currentProjectToken: string | null;
+  setCurrentProjectToken: (token: string | null) => void;
+}
+
+const OperatorContext = createContext<OperatorContextValue>({
+  currentProjectToken: null,
+  setCurrentProjectToken: () => {},
+});
+
+export const useOperatorContext = () => useContext(OperatorContext);
+
 function formatTimeAgo(ts?: number | null): string | null {
   if (!ts) return null;
   const seconds = Math.floor((Date.now() - ts) / 1000);
@@ -36,6 +50,8 @@ export default function OperatorLayout() {
   const [adminKeyInput, setAdminKeyInput] = useState("");
   const [isAuthed, setIsAuthed] = useState(() => !!getAdminKey());
   const [rememberMe, setRememberMe] = useState(() => getAdminKeyStorageMode() === "local");
+  const [currentProjectToken, setCurrentProjectToken] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
   // Listen for AdminAuthError events globally
   useEffect(() => {
@@ -65,6 +81,37 @@ export default function OperatorLayout() {
       window.removeEventListener("unhandledrejection", handleUnhandledRejection);
     };
   }, []);
+
+  // Global Alt+R keyboard shortcut for refresh
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (!(e.altKey && e.key.toLowerCase() === "r")) return;
+
+      const el = document.activeElement as HTMLElement | null;
+      const isTyping =
+        el?.tagName === "INPUT" ||
+        el?.tagName === "TEXTAREA" ||
+        el?.getAttribute("contenteditable") === "true";
+      if (isTyping) return;
+
+      e.preventDefault();
+
+      if (currentProjectToken) {
+        queryClient.invalidateQueries({ queryKey: ["project-messages", currentProjectToken] });
+        queryClient.invalidateQueries({ queryKey: ["project-comments", currentProjectToken] });
+        queryClient.invalidateQueries({ queryKey: ["project-media", currentProjectToken] });
+        queryClient.invalidateQueries({ queryKey: ["project-prototypes", currentProjectToken] });
+        toast.success("Project data refreshed");
+      } else {
+        queryClient.invalidateQueries({ queryKey: ["admin-projects"] });
+        queryClient.invalidateQueries({ queryKey: ["admin-inbox"] });
+        toast.success("Operator data refreshed");
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [queryClient, currentProjectToken]);
 
   const handleSetAdminKey = () => {
     if (adminKeyInput.trim()) {
@@ -131,6 +178,7 @@ export default function OperatorLayout() {
   const last401At = getLast401At();
 
   return (
+    <OperatorContext.Provider value={{ currentProjectToken, setCurrentProjectToken }}>
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="border-b border-border bg-card sticky top-0 z-10">
@@ -231,5 +279,6 @@ export default function OperatorLayout() {
         </Tabs>
       </main>
     </div>
+    </OperatorContext.Provider>
   );
 }
