@@ -3,23 +3,45 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Activity, Rocket, LogOut, FolderOpen, Inbox, Send } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
+import { Activity, Rocket, LogOut, FolderOpen, Inbox, Send, Shield, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { AcquisitionTab } from "./AcquisitionTab";
 import { DeliveryTab } from "./DeliveryTab";
 import { ProjectsTab } from "./ProjectsTab";
-import { AdminAuthError, clearAdminKey, setAdminKey as saveAdminKey } from "@/lib/adminFetch";
+import { 
+  AdminAuthError, 
+  clearAdminKey, 
+  setAdminKey as saveAdminKey, 
+  getAdminKey,
+  setAdminKeyStorageMode,
+  getAdminKeyStorageMode,
+  getKeySetAt,
+  getLast401At
+} from "@/lib/adminFetch";
+
+function formatTimeAgo(ts?: number | null): string | null {
+  if (!ts) return null;
+  const seconds = Math.floor((Date.now() - ts) / 1000);
+  if (seconds < 60) return `${seconds}s ago`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  return `${hours}h ago`;
+}
 
 export default function OperatorLayout() {
-  const [adminKey, setAdminKey] = useState(() => localStorage.getItem("admin_key") || "");
-  const [isAuthed, setIsAuthed] = useState(() => !!localStorage.getItem("admin_key"));
+  const [adminKeyInput, setAdminKeyInput] = useState("");
+  const [isAuthed, setIsAuthed] = useState(() => !!getAdminKey());
+  const [rememberMe, setRememberMe] = useState(() => getAdminKeyStorageMode() === "local");
 
   // Listen for AdminAuthError events globally
   useEffect(() => {
     const handleError = (event: ErrorEvent) => {
       if (event.error instanceof AdminAuthError || event.message?.includes("Admin key invalid")) {
         clearAdminKey();
-        setAdminKey("");
+        setAdminKeyInput("");
         setIsAuthed(false);
         toast.error("Session expired. Please re-enter your admin key.");
       }
@@ -28,7 +50,7 @@ export default function OperatorLayout() {
     const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
       if (event.reason instanceof AdminAuthError || event.reason?.message?.includes("Admin key invalid")) {
         clearAdminKey();
-        setAdminKey("");
+        setAdminKeyInput("");
         setIsAuthed(false);
         toast.error("Session expired. Please re-enter your admin key.");
       }
@@ -44,8 +66,9 @@ export default function OperatorLayout() {
   }, []);
 
   const handleSetAdminKey = () => {
-    if (adminKey.trim()) {
-      saveAdminKey(adminKey.trim());
+    if (adminKeyInput.trim()) {
+      setAdminKeyStorageMode(rememberMe ? "local" : "session");
+      saveAdminKey(adminKeyInput.trim());
       setIsAuthed(true);
       toast.success("Admin key saved");
     }
@@ -53,7 +76,7 @@ export default function OperatorLayout() {
 
   const handleLogout = () => {
     clearAdminKey();
-    setAdminKey("");
+    setAdminKeyInput("");
     setIsAuthed(false);
     toast.success("Logged out");
   };
@@ -74,10 +97,23 @@ export default function OperatorLayout() {
               <Input
                 type="password"
                 placeholder="Enter admin key"
-                value={adminKey}
-                onChange={(e) => setAdminKey(e.target.value)}
+                value={adminKeyInput}
+                onChange={(e) => setAdminKeyInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleSetAdminKey()}
               />
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="rememberMe"
+                checked={rememberMe}
+                onCheckedChange={(checked) => setRememberMe(checked === true)}
+              />
+              <label 
+                htmlFor="rememberMe" 
+                className="text-sm text-muted-foreground cursor-pointer select-none"
+              >
+                Remember me on this device
+              </label>
             </div>
             <Button className="w-full" onClick={handleSetAdminKey}>
               <Rocket className="h-4 w-4 mr-2" />
@@ -89,6 +125,10 @@ export default function OperatorLayout() {
     );
   }
 
+  const storageMode = getAdminKeyStorageMode() === "local" ? "Remembered" : "Session";
+  const keySetAt = getKeySetAt();
+  const last401At = getLast401At();
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -98,10 +138,27 @@ export default function OperatorLayout() {
             <Activity className="h-6 w-6 text-primary" />
             <h1 className="text-xl font-bold">Operator Console</h1>
           </div>
-          <Button variant="ghost" size="sm" onClick={handleLogout}>
-            <LogOut className="h-4 w-4 mr-2" />
-            Logout
-          </Button>
+          <div className="flex items-center gap-3">
+            {/* Session status pill */}
+            <Badge 
+              variant="outline" 
+              className="gap-1.5 text-xs font-normal"
+              title={[
+                `Storage: ${storageMode}`,
+                keySetAt ? `Key set: ${formatTimeAgo(keySetAt)}` : null,
+                last401At ? `Last 401: ${formatTimeAgo(last401At)}` : null
+              ].filter(Boolean).join('\n')}
+            >
+              <ShieldCheck className="h-3 w-3 text-green-500" />
+              <span>Authed</span>
+              <span className="text-muted-foreground">•</span>
+              <span className="text-muted-foreground">{storageMode}</span>
+            </Badge>
+            <Button variant="ghost" size="sm" onClick={handleLogout}>
+              <LogOut className="h-4 w-4 mr-2" />
+              Logout
+            </Button>
+          </div>
         </div>
       </header>
 
