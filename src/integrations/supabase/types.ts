@@ -580,6 +580,53 @@ export type Database = {
           },
         ]
       }
+      project_media: {
+        Row: {
+          created_at: string
+          filename: string
+          id: string
+          mime_type: string
+          project_id: string
+          project_token: string
+          size_bytes: number
+          storage_path: string
+          uploader_type: string
+          uploader_user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          filename: string
+          id?: string
+          mime_type: string
+          project_id: string
+          project_token: string
+          size_bytes: number
+          storage_path: string
+          uploader_type: string
+          uploader_user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          filename?: string
+          id?: string
+          mime_type?: string
+          project_id?: string
+          project_token?: string
+          size_bytes?: number
+          storage_path?: string
+          uploader_type?: string
+          uploader_user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_media_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       projects: {
         Row: {
           address: string | null
