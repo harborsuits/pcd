@@ -13,13 +13,14 @@ import {
   MessageSquare, Send, Loader2, CheckCircle,
   Trash2, Plus, Eye, MessageCirclePlus,
   X, MessageSquareDot, Filter, Check, Circle,
-  ImageIcon, FileIcon, Upload, Download, Copy, Link2, Building2
+  ImageIcon, FileIcon, Upload, Download, Copy, Link2, Building2, Rocket
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { CommentCard } from "@/components/operator/CommentCard";
 import { DataFreshnessPill } from "@/components/operator/DataFreshnessPill";
 import { IntakeOverviewPanel } from "@/components/operator/IntakeOverviewPanel";
+import { LaunchChecklist } from "@/components/operator/LaunchChecklist";
 import { adminFetch, AdminAuthError } from "@/lib/adminFetch";
 
 interface Project {
@@ -674,6 +675,10 @@ export function ProjectWorkSurface({ project, onBack, onStatusChange }: ProjectW
                 Media
                 {media.length > 0 && <Badge variant="secondary" className="text-[10px] px-1 py-0 ml-1">{media.length}</Badge>}
               </TabsTrigger>
+              <TabsTrigger value="launch" className="text-xs gap-1">
+                <Rocket className="h-3 w-3" />
+                Launch
+              </TabsTrigger>
             </TabsList>
 
             {/* Overview / Intake */}
@@ -965,6 +970,11 @@ export function ProjectWorkSurface({ project, onBack, onStatusChange }: ProjectW
                   </div>
                 )}
               </ScrollArea>
+            </TabsContent>
+
+            {/* Launch Checklist */}
+            <TabsContent value="launch" className="flex-1 flex flex-col overflow-hidden m-0">
+              <LaunchChecklist projectToken={project.project_token} />
             </TabsContent>
           </Tabs>
         </div>

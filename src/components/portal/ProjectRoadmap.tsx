@@ -166,7 +166,9 @@ export function computeRoadmapSteps({
   resolvedCommentsCount,
   projectStatus,
   prototypeUrl,
+  finalApprovedAt,
   onViewPrototype,
+  onApproveFinal,
 }: {
   intakeStatus?: 'draft' | 'submitted' | 'approved';
   hasPrototype: boolean;
@@ -174,9 +176,12 @@ export function computeRoadmapSteps({
   resolvedCommentsCount: number;
   projectStatus: string;
   prototypeUrl?: string;
+  finalApprovedAt?: string | null;
   onViewPrototype?: () => void;
+  onApproveFinal?: () => void;
 }): RoadmapStep[] {
   const isCompleted = projectStatus === 'completed';
+  const isFinalApproved = !!finalApprovedAt;
   
   // Step 1: Intake
   const intakeComplete = intakeStatus === 'approved';
@@ -215,19 +220,29 @@ export function computeRoadmapSteps({
     description: hasAnyComments
       ? `${openCommentsCount} open · ${resolvedCommentsCount} resolved`
       : 'Leave feedback on your preview',
-    status: revisionsComplete 
+    status: revisionsComplete || isFinalApproved
       ? 'completed' 
       : (hasPrototype && intakeComplete ? 'current' : 'upcoming'),
   };
 
   // Step 4: Final Review
+  const canApproveFinal = revisionsComplete && !isFinalApproved && !isCompleted;
   const finalStep: RoadmapStep = {
     id: 'final',
     label: 'Final Review',
-    description: isCompleted 
-      ? 'All feedback addressed' 
-      : 'Approve the final version',
-    status: isCompleted ? 'completed' : (revisionsComplete ? 'current' : 'upcoming'),
+    description: isFinalApproved 
+      ? 'You approved the final version' 
+      : isCompleted 
+        ? 'All feedback addressed' 
+        : 'Approve the final version',
+    status: isFinalApproved || isCompleted ? 'completed' : (revisionsComplete ? 'current' : 'upcoming'),
+    action: canApproveFinal && onApproveFinal ? {
+      label: 'Approve Final',
+      onClick: onApproveFinal,
+    } : undefined,
+    meta: isFinalApproved && finalApprovedAt 
+      ? `Approved ${new Date(finalApprovedAt).toLocaleDateString()}` 
+      : undefined,
   };
 
   // Step 5: Launch

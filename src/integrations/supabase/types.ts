@@ -345,6 +345,44 @@ export type Database = {
           },
         ]
       }
+      notification_events: {
+        Row: {
+          created_at: string
+          event_type: string
+          id: string
+          payload: Json
+          project_id: string
+          project_token: string
+          sent_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          event_type: string
+          id?: string
+          payload?: Json
+          project_id: string
+          project_token: string
+          sent_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          event_type?: string
+          id?: string
+          payload?: Json
+          project_id?: string
+          project_token?: string
+          sent_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_events_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       operator_notes: {
         Row: {
           content: string
@@ -641,6 +679,7 @@ export type Database = {
           contact_phone: string | null
           created_at: string
           deleted_at: string | null
+          final_approved_at: string | null
           id: string
           notes: string | null
           owner_user_id: string | null
@@ -662,6 +701,7 @@ export type Database = {
           contact_phone?: string | null
           created_at?: string
           deleted_at?: string | null
+          final_approved_at?: string | null
           id?: string
           notes?: string | null
           owner_user_id?: string | null
@@ -683,6 +723,7 @@ export type Database = {
           contact_phone?: string | null
           created_at?: string
           deleted_at?: string | null
+          final_approved_at?: string | null
           id?: string
           notes?: string | null
           owner_user_id?: string | null

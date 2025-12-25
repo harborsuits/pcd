@@ -62,6 +62,7 @@ Deno.serve(async (req) => {
   const prototypesIdx = pathParts.indexOf("prototypes");
   const commentsIdx = pathParts.indexOf("comments");
   const attachmentsIdx = pathParts.indexOf("attachments");
+  const approveFinalIdx = pathParts.indexOf("approve-final");
   
   if (reviewIdx > portalIdx && req.method === "POST") {
     const token = pathParts[portalIdx + 1];
@@ -135,6 +136,12 @@ Deno.serve(async (req) => {
     return handleCreateProject(req, corsHeaders);
   }
 
+  // POST /portal/:token/approve-final - Client approves final version
+  if (approveFinalIdx > portalIdx && req.method === "POST") {
+    const token = pathParts[portalIdx + 1];
+    return handleApproveFinal(req, token, corsHeaders);
+  }
+
   if (req.method !== "GET") {
     return new Response(
       JSON.stringify({ error: "Method not allowed" }),
@@ -199,7 +206,7 @@ Deno.serve(async (req) => {
     // Fetch project by token (exclude soft-deleted)
     const { data: project, error: projectError } = await supabase
       .from("projects")
-      .select("id, business_name, business_slug, status, project_token")
+      .select("id, business_name, business_slug, status, project_token, final_approved_at")
       .eq("project_token", token)
       .is("deleted_at", null)
       .maybeSingle();
@@ -297,6 +304,7 @@ Deno.serve(async (req) => {
         name: project.business_name,
         slug: project.business_slug,
         status: project.status,
+        final_approved_at: project.final_approved_at || null,
       },
       intake_status: intake?.intake_status || null,
       messages: (messages || []).map((m) => ({
@@ -1415,6 +1423,114 @@ async function handleUploadCommentAttachment(
     );
   } catch (error) {
     console.error("Upload attachment error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+}
+
+// POST /portal/:token/approve-final - Client approves final version
+async function handleApproveFinal(
+  req: Request,
+  token: string,
+  corsHeaders: Record<string, string>
+): Promise<Response> {
+  try {
+    if (!token || !isValidToken(token)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid token" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Fetch project by token
+    const { data: project, error: projectError } = await supabase
+      .from("projects")
+      .select("id, business_name, final_approved_at")
+      .eq("project_token", token)
+      .is("deleted_at", null)
+      .maybeSingle();
+
+    if (projectError || !project) {
+      console.error("Project not found:", projectError);
+      return new Response(
+        JSON.stringify({ error: "Project not found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Check if already approved
+    if (project.final_approved_at) {
+      return new Response(
+        JSON.stringify({ ok: true, already_approved: true, final_approved_at: project.final_approved_at }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const approvedAt = new Date().toISOString();
+
+    // Update project with final_approved_at
+    const { error: updateError } = await supabase
+      .from("projects")
+      .update({ final_approved_at: approvedAt })
+      .eq("id", project.id);
+
+    if (updateError) {
+      console.error("Update project error:", updateError);
+      return new Response(
+        JSON.stringify({ error: "Failed to approve" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Create notification event for email
+    await supabase
+      .from("notification_events")
+      .insert({
+        project_id: project.id,
+        project_token: token,
+        event_type: "final_approved",
+        payload: { business_name: project.business_name, approved_at: approvedAt },
+      });
+
+    console.log(`Project ${project.id} final approved by client`);
+
+    // Send Telegram notification
+    const telegramBotToken = Deno.env.get("TELEGRAM_BOT_TOKEN");
+    const telegramChatId = Deno.env.get("TELEGRAM_CHAT_ID");
+    if (telegramBotToken && telegramChatId) {
+      const msg = `✅ <b>Final Approval</b>\n` +
+        `• <b>Business:</b> ${project.business_name}\n` +
+        `• Client approved the final version\n` +
+        `• <b>Token:</b> <code>${token.slice(0, 12)}...</code>`;
+      
+      try {
+        await fetch(`https://api.telegram.org/bot${telegramBotToken}/sendMessage`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            chat_id: telegramChatId,
+            text: msg,
+            parse_mode: "HTML",
+          }),
+        });
+      } catch (e) {
+        console.error("Telegram notification failed:", e);
+      }
+    }
+
+    return new Response(
+      JSON.stringify({ ok: true, final_approved_at: approvedAt }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+
+  } catch (error) {
+    console.error("Approve final error:", error);
     return new Response(
       JSON.stringify({ error: "Internal server error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
