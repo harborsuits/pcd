@@ -646,6 +646,101 @@ export type Database = {
         }
         Relationships: []
       }
+      prototype_comments: {
+        Row: {
+          author_type: string
+          body: string
+          created_at: string
+          id: string
+          pin_x: number | null
+          pin_y: number | null
+          project_token: string
+          prototype_id: string
+          resolved_at: string | null
+          source_message_id: string | null
+        }
+        Insert: {
+          author_type: string
+          body: string
+          created_at?: string
+          id?: string
+          pin_x?: number | null
+          pin_y?: number | null
+          project_token: string
+          prototype_id: string
+          resolved_at?: string | null
+          source_message_id?: string | null
+        }
+        Update: {
+          author_type?: string
+          body?: string
+          created_at?: string
+          id?: string
+          pin_x?: number | null
+          pin_y?: number | null
+          project_token?: string
+          prototype_id?: string
+          resolved_at?: string | null
+          source_message_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prototype_comments_prototype_id_fkey"
+            columns: ["prototype_id"]
+            isOneToOne: false
+            referencedRelation: "prototypes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prototype_comments_source_message_id_fkey"
+            columns: ["source_message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      prototypes: {
+        Row: {
+          created_at: string
+          id: string
+          project_id: string
+          project_token: string
+          status: string
+          updated_at: string
+          url: string
+          version_label: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          project_id: string
+          project_token: string
+          status?: string
+          updated_at?: string
+          url: string
+          version_label?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          project_id?: string
+          project_token?: string
+          status?: string
+          updated_at?: string
+          url?: string
+          version_label?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prototypes_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       push_subscriptions: {
         Row: {
           auth: string
