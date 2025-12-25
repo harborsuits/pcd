@@ -13,12 +13,13 @@ import {
   MessageSquare, Send, Loader2, CheckCircle,
   Trash2, Plus, Eye, MessageCirclePlus,
   X, MessageSquareDot, Filter, Check, Circle,
-  ImageIcon, FileIcon, Upload, Download, Copy, Link2
+  ImageIcon, FileIcon, Upload, Download, Copy, Link2, Building2
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { CommentCard } from "@/components/operator/CommentCard";
 import { DataFreshnessPill } from "@/components/operator/DataFreshnessPill";
+import { IntakeOverviewPanel } from "@/components/operator/IntakeOverviewPanel";
 import { adminFetch, AdminAuthError } from "@/lib/adminFetch";
 
 interface Project {
@@ -102,7 +103,7 @@ interface ProjectWorkSurfaceProps {
 
 export function ProjectWorkSurface({ project, onBack, onStatusChange }: ProjectWorkSurfaceProps) {
   const [replyContent, setReplyContent] = useState("");
-  const [activePanel, setActivePanel] = useState<"comments" | "chat" | "media">("comments");
+  const [activePanel, setActivePanel] = useState<"overview" | "comments" | "chat" | "media">("overview");
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [commentFilter, setCommentFilter] = useState<"open" | "resolved" | "all">("open");
@@ -634,7 +635,11 @@ export function ProjectWorkSurface({ project, onBack, onStatusChange }: ProjectW
         {/* Right: Sidebar Panel */}
         <div className="w-[400px] flex flex-col bg-card overflow-hidden">
           <Tabs value={activePanel} onValueChange={(v) => setActivePanel(v as typeof activePanel)} className="flex-1 flex flex-col overflow-hidden">
-            <TabsList className="flex-shrink-0 w-full grid grid-cols-3 p-1 m-2 mb-0">
+            <TabsList className="flex-shrink-0 w-full grid grid-cols-4 p-1 m-2 mb-0">
+              <TabsTrigger value="overview" className="text-xs gap-1">
+                <Building2 className="h-3 w-3" />
+                Overview
+              </TabsTrigger>
               <TabsTrigger value="comments" className="text-xs gap-1">
                 <MessageCirclePlus className="h-3 w-3" />
                 Comments
@@ -651,6 +656,14 @@ export function ProjectWorkSurface({ project, onBack, onStatusChange }: ProjectW
                 {media.length > 0 && <Badge variant="secondary" className="text-[10px] px-1 py-0 ml-1">{media.length}</Badge>}
               </TabsTrigger>
             </TabsList>
+
+            {/* Overview / Intake */}
+            <TabsContent value="overview" className="flex-1 flex flex-col overflow-hidden m-0">
+              <IntakeOverviewPanel 
+                intake={project.intake?.intake_json as Record<string, unknown> | null} 
+                intakeCreatedAt={project.intake?.created_at}
+              />
+            </TabsContent>
 
             {/* Comments Triage */}
             <TabsContent value="comments" className="flex-1 flex flex-col overflow-hidden m-0 p-2">
