@@ -2,17 +2,16 @@ import { useParams, Link } from "react-router-dom";
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Textarea } from "@/components/ui/textarea";
-import { Loader2, FileText, MessageSquare, CreditCard, AlertCircle, Send, Home, Download, Image as ImageIcon, Upload, Eye, X, LogOut, ChevronDown, Paperclip, Bell, BellOff } from "lucide-react";
+import { Loader2, FileText, CreditCard, AlertCircle, Home, Download, Image as ImageIcon, Upload, Eye, X, LogOut, ChevronDown, Paperclip, Bell, BellOff } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import { proxyMediaUrl, isImageType, getFileIcon } from "@/lib/media";
 import { WelcomeScreen } from "@/components/portal/WelcomeScreen";
 import { ReviewQueue } from "@/components/portal/ReviewQueue";
 import { ProjectStatusBanner } from "@/components/portal/ProjectStatusBanner";
+import { FloatingChatOrb } from "@/components/portal/FloatingChatOrb";
 import { PortalAuthPage } from "./PortalAuthPage";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import type { User, Session } from "@supabase/supabase-js";
@@ -90,8 +89,6 @@ function getStatusLabel(status: string): string {
 // Status badge component
 function StatusBadge({ status }: { status: string }) {
   const label = getStatusLabel(status);
-  
-  // Use different styling based on status
   const isComplete = status === "completed";
   const isActive = status === "client" || status === "interested";
   
@@ -116,7 +113,6 @@ export default function PortalPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [messageContent, setMessageContent] = useState("");
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -128,28 +124,29 @@ export default function PortalPage() {
   const [showWelcome, setShowWelcome] = useState(false);
   const [teamTyping, setTeamTyping] = useState(false);
   const [showFilesPanel, setShowFilesPanel] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
   const originalTitle = useRef(document.title);
   const markReadInFlight = useRef(false);
   const markDeliveredInFlight = useRef(false);
   const clearQueueTimeoutRef = useRef<number | null>(null);
   const teamTypingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const seenMessageIds = useRef<Set<string>>(new Set());
 
   // Push notifications
   const { isSupported: pushSupported, isSubscribed: pushSubscribed, isLoading: pushLoading, subscribe: subscribePush, unsubscribe: unsubscribePush } = usePushNotifications(token);
+
+  // Compute unread count (admin messages without read_at)
+  const unreadCount = useMemo(() => {
+    if (!data?.messages) return 0;
+    return data.messages.filter(m => m.sender_type === "admin" && !m.read_at).length;
+  }, [data?.messages]);
 
   const playNotify = useCallback(() => {
     try {
       const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
       const ctx = new AudioCtx();
-      
-      // Attempt resume if suspended (browser autoplay policy)
       if (ctx.state === "suspended") {
         ctx.resume().catch(() => {});
       }
-      
       const o = ctx.createOscillator();
       const g = ctx.createGain();
       o.type = "sine";
@@ -162,7 +159,7 @@ export default function PortalPage() {
     } catch {}
   }, []);
   
-  // Unlock audio on first user interaction (browser autoplay policy)
+  // Unlock audio on first user interaction
   useEffect(() => {
     const unlock = () => {
       try {
@@ -174,11 +171,6 @@ export default function PortalPage() {
     };
     window.addEventListener("pointerdown", unlock);
     return () => window.removeEventListener("pointerdown", unlock);
-  }, []);
-
-  // Scroll to bottom when new messages arrive (messages are oldest→newest)
-  const scrollToBottom = useCallback(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, []);
 
   // Check auth status
@@ -200,7 +192,7 @@ export default function PortalPage() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Check if this portal requires auth (has owner_user_id set)
+  // Check if this portal requires auth
   useEffect(() => {
     if (!token) return;
     
@@ -222,7 +214,6 @@ export default function PortalPage() {
         setRequiresAuth(data.requires_auth ?? false);
         setBusinessName(data.business_name ?? "");
         
-        // If portal is not claimed yet, allow access with token only
         if (!data.requires_auth) {
           fetchPortalData(token);
           markAdminMessagesAsRead(token);
@@ -241,7 +232,6 @@ export default function PortalPage() {
   useEffect(() => {
     if (!token || requiresAuth === null) return;
     
-    // If requires auth and user is logged in, fetch data
     if (requiresAuth && user) {
       fetchPortalData(token);
       markAdminMessagesAsRead(token);
@@ -255,7 +245,6 @@ export default function PortalPage() {
   };
 
   const handleAuthSuccess = () => {
-    // Refetch portal data after successful auth
     if (token) {
       fetchPortalData(token);
       markAdminMessagesAsRead(token);
@@ -292,7 +281,6 @@ export default function PortalPage() {
           setData((prev) => {
             if (!prev) return prev;
 
-            // Deduplicate by id
             const exists = prev.messages.some((m) => m.id === newMsg.id);
             if (exists) {
               console.log("⚠️ Duplicate message ignored");
@@ -301,24 +289,20 @@ export default function PortalPage() {
 
             console.log("✅ Adding new message to state");
             
-            // Show toast + sound for admin messages
             if (newMsg.sender_type === "admin") {
               playNotify();
               toast({
                 title: "New message from Team",
                 description: newMsg.content.slice(0, 50) + (newMsg.content.length > 50 ? "..." : ""),
               });
-              // Flash tab title with business name
               const businessName = data?.business?.name || "Portal";
               document.title = `(1) New message — ${businessName}`;
               setTimeout(() => {
                 document.title = originalTitle.current;
               }, 5000);
-              // Mark as read since user is viewing
               markAdminMessagesAsRead(token);
             }
 
-            // Append to end (oldest→newest order)
             return {
               ...prev,
               messages: [
@@ -334,9 +318,6 @@ export default function PortalPage() {
               ],
             };
           });
-
-          // Auto-scroll to bottom for new messages
-          setTimeout(scrollToBottom, 100);
         }
       )
       .on(
@@ -354,7 +335,6 @@ export default function PortalPage() {
             read_at: string | null;
           };
 
-          // Update the read_at for this message in state
           setData((prev) => {
             if (!prev) return prev;
             return {
@@ -374,22 +354,13 @@ export default function PortalPage() {
       console.log("🔌 Cleaning up portal realtime subscription");
       supabase.removeChannel(channel);
     };
-  }, [token, data?.business.name, scrollToBottom]);
+  }, [token, data?.business.name]);
 
   // Typing indicator channel
   const typingChannel = useMemo(() => {
     if (!token) return null;
     return supabase.channel(`typing-${token}`);
   }, [token]);
-
-  // Compute last client message index once
-  const lastClientMsgIndex = useMemo(() => {
-    if (!data?.messages?.length) return -1;
-    for (let i = data.messages.length - 1; i >= 0; i--) {
-      if (data.messages[i].sender_type === "client") return i;
-    }
-    return -1;
-  }, [data?.messages]);
 
   // Subscribe to typing events
   useEffect(() => {
@@ -401,7 +372,6 @@ export default function PortalPage() {
 
         setTeamTyping(!!payload.isTyping);
 
-        // Auto-clear after 2s if no "false" arrives
         if (teamTypingTimeoutRef.current) clearTimeout(teamTypingTimeoutRef.current);
         teamTypingTimeoutRef.current = setTimeout(() => setTeamTyping(false), 2000);
       })
@@ -424,9 +394,7 @@ export default function PortalPage() {
     });
   }, [typingChannel]);
 
-  const handleMessageChange = (value: string) => {
-    setMessageContent(value);
-    
+  const handleTyping = useCallback((value: string) => {
     if (value.trim()) {
       emitTyping(true);
 
@@ -435,7 +403,7 @@ export default function PortalPage() {
         emitTyping(false);
       }, 1200);
     }
-  };
+  }, [emitTyping]);
 
   async function fetchPortalData(portalToken: string, messagesBefore?: string) {
     try {
@@ -477,7 +445,6 @@ export default function PortalPage() {
       }
 
       if (messagesBefore) {
-        // Prepend older messages (they come in ascending order, so prepend to maintain oldest→newest)
         setData((prev) => {
           if (!prev) return response;
           return {
@@ -487,10 +454,7 @@ export default function PortalPage() {
         });
       } else {
         setData(response);
-        // Scroll to bottom after initial load
-        setTimeout(scrollToBottom, 100);
         
-        // Show welcome screen for first-time visitors (no messages, no files)
         const isFirstVisit = !localStorage.getItem(`portal_visited_${portalToken}`);
         if (isFirstVisit && response.messages.length === 0 && response.files.length === 0) {
           setShowWelcome(true);
@@ -507,7 +471,6 @@ export default function PortalPage() {
   }
 
   async function markAdminMessagesAsRead(portalToken: string) {
-    // Throttle: skip if already in flight
     if (markReadInFlight.current) return;
     markReadInFlight.current = true;
 
@@ -542,7 +505,6 @@ export default function PortalPage() {
     }
   }
 
-  // Mark admin messages as delivered when client receives them
   async function markAdminMessagesAsDelivered(portalToken: string) {
     if (markDeliveredInFlight.current) return;
     markDeliveredInFlight.current = true;
@@ -580,13 +542,12 @@ export default function PortalPage() {
 
   function handleLoadOlderMessages() {
     if (!token || !data || data.messages.length === 0) return;
-    // Oldest message is at the beginning (index 0)
     const oldestMessage = data.messages[0];
     fetchPortalData(token, oldestMessage.created_at);
   }
 
-  async function handleSendMessage() {
-    if (!token || !messageContent.trim()) return;
+  async function handleSendMessage(content: string) {
+    if (!token || !content.trim()) return;
 
     setSending(true);
     setSendError(null);
@@ -601,7 +562,7 @@ export default function PortalPage() {
             "apikey": SUPABASE_ANON_KEY,
             "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
           },
-          body: JSON.stringify({ content: messageContent.trim() }),
+          body: JSON.stringify({ content: content.trim() }),
         }
       );
 
@@ -619,13 +580,11 @@ export default function PortalPage() {
         return;
       }
 
-      // Show success toast
       toast({
         title: "Message sent",
         description: "Your message has been delivered.",
       });
 
-      // Optimistically add message to end (oldest→newest)
       if (response?.message) {
         setData((prev) => {
           if (!prev) return prev;
@@ -639,15 +598,12 @@ export default function PortalPage() {
                 sender_type: response.message.sender_type,
                 created_at: response.message.created_at,
                 read_at: response.message.read_at,
-                delivered_at: null, // Client messages don't have delivered_at initially
+                delivered_at: null,
               },
             ],
           };
         });
-        setTimeout(scrollToBottom, 100);
       }
-
-      setMessageContent("");
     } catch (err) {
       console.error("Send message exception:", err);
       setSendError("Failed to send message");
@@ -679,7 +635,6 @@ export default function PortalPage() {
         throw new Error(response.error || "Upload failed");
       }
 
-      // Optimistic update so file appears immediately
       if (response?.file) {
         setData((prev) => {
           if (!prev) return prev;
@@ -702,17 +657,14 @@ export default function PortalPage() {
     
     const fileArray = Array.from(files);
     
-    // Initialize queue
     setUploadQueue(fileArray.map(f => ({ name: f.name, status: 'pending' })));
     setUploading(true);
 
     let successCount = 0;
     
-    // Upload sequentially
     for (let i = 0; i < fileArray.length; i++) {
       const file = fileArray[i];
       
-      // Mark current as uploading
       setUploadQueue(prev => prev.map((item, idx) => 
         idx === i ? { ...item, status: 'uploading' } : item
       ));
@@ -721,19 +673,16 @@ export default function PortalPage() {
         await handleFileUpload(file);
         successCount++;
         
-        // Mark as done
         setUploadQueue(prev => prev.map((item, idx) => 
           idx === i ? { ...item, status: 'done' } : item
         ));
       } catch (err: any) {
-        // Mark as error
         setUploadQueue(prev => prev.map((item, idx) => 
           idx === i ? { ...item, status: 'error', error: err.message } : item
         ));
       }
     }
 
-    // Show toast summary
     if (successCount > 0) {
       toast({
         title: successCount === fileArray.length 
@@ -754,7 +703,6 @@ export default function PortalPage() {
     setUploadDesc("");
     setUploading(false);
     
-    // Clear queue after 3s (cancel any previous timeout)
     if (clearQueueTimeoutRef.current) {
       window.clearTimeout(clearQueueTimeoutRef.current);
     }
@@ -787,7 +735,6 @@ export default function PortalPage() {
     e.stopPropagation();
     setIsDragging(false);
     
-    // Ignore drops while uploading
     if (uploading) return;
     
     const files = e.dataTransfer.files;
@@ -907,15 +854,15 @@ export default function PortalPage() {
         </div>
       </header>
 
-      {/* Main Chat Layout */}
-      <div className="flex flex-col h-[calc(100vh-57px)]">
-        {/* Header Area (scrolls with content on mobile, fixed height) */}
-        <div className="shrink-0 border-b border-border bg-card/50 p-4">
-          <div className="container mx-auto max-w-2xl">
+      {/* Main Content - Now shows project workspace instead of chat */}
+      <main className="pb-24">
+        {/* Header Area */}
+        <div className="border-b border-border bg-card/50 p-6">
+          <div className="container mx-auto max-w-4xl">
             {/* Business Header */}
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-3">
-                <h1 className="text-xl font-bold">{data.business.name}</h1>
+                <h1 className="text-2xl font-bold">{data.business.name}</h1>
                 <StatusBadge status={data.business.status} />
               </div>
               {/* Push Notification Toggle */}
@@ -950,14 +897,14 @@ export default function PortalPage() {
                 </Button>
               )}
             </div>
-            <p className="text-sm text-muted-foreground">Your Project Workspace</p>
+            <p className="text-sm text-muted-foreground mt-1">Your Project Workspace</p>
           </div>
         </div>
 
-        {/* Review Queue - Show above messages if there are pending items */}
+        {/* Review Queue - Show above files if there are pending items */}
         {data.review_items && data.review_items.length > 0 && (
-          <div className="shrink-0 border-b border-border bg-card p-4">
-            <div className="container mx-auto max-w-2xl">
+          <div className="border-b border-border bg-card p-6">
+            <div className="container mx-auto max-w-4xl">
               <ReviewQueue 
                 items={data.review_items} 
                 token={token!} 
@@ -967,166 +914,34 @@ export default function PortalPage() {
           </div>
         )}
 
-        {/* Messages Area (scrollable) */}
-        <div className="flex-1 overflow-y-auto p-4" id="messages-section">
-          <div className="container mx-auto max-w-2xl space-y-3">
-            {/* Load more button at top */}
-            {data.pagination.has_more_messages && (
-              <div className="flex justify-center">
+        {/* Files Section - More prominent now */}
+        <div className="p-6">
+          <div className="container mx-auto max-w-4xl">
+            <div className="bg-card border border-border rounded-xl p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <FileText className="h-5 w-5 text-muted-foreground" />
+                  <h2 className="font-semibold">Project Files</h2>
+                  {data.files.length > 0 && (
+                    <Badge variant="secondary" className="text-xs">
+                      {data.files.length}
+                    </Badge>
+                  )}
+                </div>
                 <Button
-                  variant="ghost"
+                  variant="outline"
                   size="sm"
-                  onClick={handleLoadOlderMessages}
-                  disabled={loadingMore}
-                  className="text-xs"
+                  onClick={() => setShowFilesPanel(!showFilesPanel)}
                 >
-                  {loadingMore ? (
-                    <Loader2 className="h-3 w-3 animate-spin mr-2" />
-                  ) : null}
-                  Load older messages
+                  <Upload className="h-4 w-4 mr-2" />
+                  Upload
                 </Button>
               </div>
-            )}
 
-            {/* Empty state */}
-            {data.messages.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-16 text-center">
-                <MessageSquare className="h-12 w-12 text-muted-foreground/30 mb-4" />
-                <p className="text-muted-foreground">No messages yet</p>
-                <p className="text-sm text-muted-foreground/70">Send a message to get started</p>
-              </div>
-            ) : (
-              <>
-                {/* Chat bubbles */}
-                {data.messages.map((msg, index) => {
-                  const isClient = msg.sender_type === "client";
-                  const isLastClientMsg = isClient && index === lastClientMsgIndex;
-                  
-                  // Compute delivery status
-                  const getDeliveryStatus = () => {
-                    if (msg.read_at) return `Seen ${formatDate(msg.read_at)}`;
-                    if (msg.delivered_at) return "Delivered";
-                    return "Sent";
-                  };
-                  const shouldAnimateSeen = isLastClientMsg && msg.read_at;
-
-                  // Animate only new (unseen) messages
-                  const isNewMsg = !seenMessageIds.current.has(msg.id);
-                  if (isNewMsg) seenMessageIds.current.add(msg.id);
-
-                  return (
-                    <div
-                      key={msg.id}
-                      className={`flex w-full ${isClient ? "justify-end" : "justify-start"}`}
-                    >
-                      <div className={`max-w-[78%] sm:max-w-[70%] ${isNewMsg ? "bubble-in" : ""}`}>
-                        <div
-                          className={[
-                            "rounded-2xl px-4 py-2.5 text-sm leading-relaxed shadow-sm",
-                            isClient
-                              ? "bg-primary text-primary-foreground rounded-br-md"
-                              : "bg-muted text-foreground rounded-bl-md",
-                          ].join(" ")}
-                        >
-                          {msg.content}
-                        </div>
-                        
-                        <div
-                          className={[
-                            "mt-1 flex items-center gap-2 text-[11px] text-muted-foreground",
-                            isClient ? "justify-end" : "justify-start",
-                          ].join(" ")}
-                        >
-                          <span>{formatDate(msg.created_at)}</span>
-                          
-                          {/* Delivery status for last client message */}
-                          {isLastClientMsg && (
-                            <span className={shouldAnimateSeen ? "receipt-pop" : ""}>
-                              {getDeliveryStatus()}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-
-                {/* Typing indicator as a bubble */}
-                {teamTyping && (
-                  <div className="flex w-full justify-start">
-                    <div className="max-w-[78%] sm:max-w-[70%]">
-                      <div className="rounded-2xl rounded-bl-md bg-muted px-4 py-2.5 text-sm">
-                        <span className="typing-anim text-muted-foreground">Team is typing…</span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </>
-            )}
-
-            <div ref={messagesEndRef} />
-          </div>
-        </div>
-
-        {/* Bottom Composer Area (fixed) */}
-        <div className="shrink-0 border-t border-border bg-card p-4">
-          <div className="container mx-auto max-w-2xl space-y-3">
-            {/* Composer */}
-            <div className="flex gap-2">
-              <Textarea
-                placeholder="Type your message..."
-                value={messageContent}
-                onChange={(e) => handleMessageChange(e.target.value)}
-                disabled={sending}
-                className="min-h-[44px] max-h-[120px] resize-none flex-1"
-                rows={1}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    if (messageContent.trim() && !sending) {
-                      handleSendMessage();
-                    }
-                  }
-                }}
-              />
-              <Button
-                onClick={handleSendMessage}
-                disabled={sending || !messageContent.trim()}
-                size="icon"
-                className="h-[44px] w-[44px] shrink-0"
-              >
-                {sending ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Send className="h-4 w-4" />
-                )}
-              </Button>
-            </div>
-            
-            {sendError && (
-              <p className="text-sm text-destructive">{sendError}</p>
-            )}
-
-            {/* Collapsible Files Toggle */}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowFilesPanel(!showFilesPanel)}
-              className="w-full justify-between text-muted-foreground"
-            >
-              <span className="flex items-center gap-2">
-                <Paperclip className="h-4 w-4" />
-                Attach files {data.files.length > 0 && `(${data.files.length})`}
-              </span>
-              <ChevronDown className={`h-4 w-4 transition-transform ${showFilesPanel ? "rotate-180" : ""}`} />
-            </Button>
-
-            {/* Collapsible Files Panel */}
-            {showFilesPanel && (
-              <div className="rounded-xl border border-border bg-background p-3 space-y-3" id="files-section">
-                {/* Upload Form with Drag & Drop */}
+              {/* Upload Panel */}
+              {showFilesPanel && (
                 <div 
-                  className={`p-3 border-2 border-dashed rounded-lg space-y-2 transition-colors ${
+                  className={`p-4 border-2 border-dashed rounded-lg space-y-3 mb-4 transition-colors ${
                     isDragging 
                       ? "border-primary bg-primary/5" 
                       : "border-border"
@@ -1139,7 +954,7 @@ export default function PortalPage() {
                   <div className="flex items-center gap-2 text-sm">
                     <Upload className="h-4 w-4 text-muted-foreground" />
                     <span className="font-medium">
-                      {isDragging ? "Drop file here" : "Upload files"}
+                      {isDragging ? "Drop files here" : "Upload files"}
                     </span>
                   </div>
                   
@@ -1201,106 +1016,132 @@ export default function PortalPage() {
                     {isDragging ? "Release to upload" : "Drag & drop • Images + PDF • Max 10MB"}
                   </p>
                 </div>
+              )}
 
-                {/* Existing Files */}
-                {data.files.length > 0 && (
-                  <div className="space-y-2 max-h-[200px] overflow-y-auto">
-                    {data.files.map((file) => {
-                      const fileUrl = proxyMediaUrl(file.id, token);
-                      const isImage = isImageType(file.file_type);
-                      
-                      return (
-                        <div key={file.id} className="flex items-center gap-2 p-2 bg-muted rounded-lg text-sm">
-                          <span>{getFileIcon(file.file_type)}</span>
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium truncate">{file.file_name}</p>
-                            {file.description && (
-                              <p className="text-xs text-muted-foreground truncate">{file.description}</p>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-1 shrink-0">
-                            {isImage && (
-                              <button
-                                onClick={() => setImgPreview({ url: fileUrl, name: file.file_name })}
-                                className="inline-flex items-center justify-center h-7 w-7 rounded-md hover:bg-background transition-colors"
-                                title="Preview image"
-                              >
-                                <Eye className="h-3.5 w-3.5" />
-                              </button>
-                            )}
-                            {isPdf(file.file_type) && (
-                              <button
-                                onClick={() => setPdfPreview({ url: fileUrl, name: file.file_name })}
-                                className="inline-flex items-center justify-center h-7 w-7 rounded-md hover:bg-background transition-colors"
-                                title="Preview PDF"
-                              >
-                                <Eye className="h-3.5 w-3.5" />
-                              </button>
-                            )}
-                            <a
-                              href={fileUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center justify-center h-7 w-7 rounded-md hover:bg-background transition-colors"
-                              title="Download"
-                            >
-                              <Download className="h-3.5 w-3.5" />
-                            </a>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Payments Section - Show if there are payments */}
-      {data.payments.length > 0 && (
-        <div className="border-t border-border p-4 bg-card">
-          <div className="container mx-auto max-w-2xl">
-            <div className="flex items-center gap-2 mb-3">
-              <CreditCard className="h-4 w-4 text-muted-foreground" />
-              <span className="font-medium text-sm">Payments ({data.payments.length})</span>
-            </div>
-            <div className="space-y-2">
-              {data.payments.map((payment, idx) => (
-                <div key={idx} className="flex items-center justify-between p-2 bg-muted rounded-lg text-sm">
-                  <div>
-                    <p className="font-medium">{formatCurrency(payment.amount_cents)}</p>
-                    <p className="text-xs text-muted-foreground">{payment.payment_type}</p>
-                  </div>
-                  <div className="text-right">
-                    <Badge
-                      variant={
-                        payment.status === "completed"
-                          ? "default"
-                          : payment.status === "pending"
-                          ? "secondary"
-                          : "destructive"
-                      }
-                      className="text-xs"
-                    >
-                      {payment.status}
-                    </Badge>
-                    <p className="text-[10px] text-muted-foreground mt-1">
-                      {formatDate(payment.created_at)}
-                    </p>
-                  </div>
+              {/* Files List */}
+              {data.files.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <FileText className="h-10 w-10 mx-auto mb-2 opacity-30" />
+                  <p className="text-sm">No files yet</p>
+                  <p className="text-xs text-muted-foreground/70">Upload files to share with your team</p>
                 </div>
-              ))}
+              ) : (
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {data.files.map((file) => {
+                    const fileUrl = proxyMediaUrl(file.id, token);
+                    const isImage = isImageType(file.file_type);
+                    
+                    return (
+                      <div key={file.id} className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg border border-border/50">
+                        <span className="text-2xl">{getFileIcon(file.file_type)}</span>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium truncate text-sm">{file.file_name}</p>
+                          {file.description && (
+                            <p className="text-xs text-muted-foreground truncate">{file.description}</p>
+                          )}
+                          <p className="text-[10px] text-muted-foreground">{formatDate(file.created_at)}</p>
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          {isImage && (
+                            <button
+                              onClick={() => setImgPreview({ url: fileUrl, name: file.file_name })}
+                              className="inline-flex items-center justify-center h-8 w-8 rounded-md hover:bg-background transition-colors"
+                              title="Preview image"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </button>
+                          )}
+                          {isPdf(file.file_type) && (
+                            <button
+                              onClick={() => setPdfPreview({ url: fileUrl, name: file.file_name })}
+                              className="inline-flex items-center justify-center h-8 w-8 rounded-md hover:bg-background transition-colors"
+                              title="Preview PDF"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </button>
+                          )}
+                          <a
+                            href={fileUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center justify-center h-8 w-8 rounded-md hover:bg-background transition-colors"
+                            title="Download"
+                          >
+                            <Download className="h-4 w-4" />
+                          </a>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
         </div>
-      )}
+
+        {/* Payments Section - Show if there are payments */}
+        {data.payments.length > 0 && (
+          <div className="px-6 pb-6">
+            <div className="container mx-auto max-w-4xl">
+              <div className="bg-card border border-border rounded-xl p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <CreditCard className="h-5 w-5 text-muted-foreground" />
+                  <h2 className="font-semibold">Payments</h2>
+                  <Badge variant="secondary" className="text-xs">
+                    {data.payments.length}
+                  </Badge>
+                </div>
+                <div className="space-y-2">
+                  {data.payments.map((payment, idx) => (
+                    <div key={idx} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                      <div>
+                        <p className="font-medium">{formatCurrency(payment.amount_cents)}</p>
+                        <p className="text-xs text-muted-foreground">{payment.payment_type}</p>
+                      </div>
+                      <div className="text-right">
+                        <Badge
+                          variant={
+                            payment.status === "completed"
+                              ? "default"
+                              : payment.status === "pending"
+                              ? "secondary"
+                              : "destructive"
+                          }
+                          className="text-xs"
+                        >
+                          {payment.status}
+                        </Badge>
+                        <p className="text-[10px] text-muted-foreground mt-1">
+                          {formatDate(payment.created_at)}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </main>
+
+      {/* Floating Chat Orb */}
+      <FloatingChatOrb
+        messages={data.messages}
+        onSendMessage={handleSendMessage}
+        sending={sending}
+        sendError={sendError}
+        teamTyping={teamTyping}
+        onTyping={handleTyping}
+        hasMoreMessages={data.pagination.has_more_messages}
+        loadingMore={loadingMore}
+        onLoadMore={handleLoadOlderMessages}
+        unreadCount={unreadCount}
+      />
 
       {/* PDF Preview Modal */}
       {pdfPreview && (
         <div 
-          className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4"
+          className="fixed inset-0 z-[60] bg-background/80 backdrop-blur-sm flex items-center justify-center p-4"
           onClick={() => setPdfPreview(null)}
         >
           <div 
@@ -1330,7 +1171,7 @@ export default function PortalPage() {
       {/* Image Lightbox Modal */}
       {imgPreview && (
         <div 
-          className="fixed inset-0 z-50 bg-background/90 backdrop-blur-sm flex items-center justify-center p-4"
+          className="fixed inset-0 z-[60] bg-background/90 backdrop-blur-sm flex items-center justify-center p-4"
           onClick={() => setImgPreview(null)}
         >
           <div 
