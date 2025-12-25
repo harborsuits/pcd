@@ -532,8 +532,6 @@ export function ProjectDetailDrawer({ project, open, onClose, onStatusChange }: 
     },
   });
 
-  if (!project) return null;
-
   const messages = messagesData?.messages || [];
   const notes = notesData?.notes || [];
   const checklistItems = checklistData?.items || [];
@@ -546,6 +544,8 @@ export function ProjectDetailDrawer({ project, open, onClose, onStatusChange }: 
     }
     return -1;
   }, [messages]);
+
+  if (!project) return null;
   const intake = project.intake?.intake_json || {};
 
   // Parse intake sections
