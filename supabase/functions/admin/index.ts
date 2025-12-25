@@ -143,6 +143,18 @@ Deno.serve(async (req) => {
     return handleDeletePrototype(req, token, prototypeId);
   }
 
+  // Route: GET /admin/comments/:token
+  if (subPath.match(/^comments\/[^\/]+$/) && req.method === "GET") {
+    const token = subPath.replace("comments/", "");
+    return handleGetComments(req, token);
+  }
+
+  // Route: POST /admin/comments/:token
+  if (subPath.match(/^comments\/[^\/]+$/) && req.method === "POST") {
+    const token = subPath.replace("comments/", "");
+    return handleCreateComment(req, token);
+  }
+
   return new Response(
     JSON.stringify({ error: "Not found" }),
     { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -1536,7 +1548,130 @@ async function handleDeletePrototype(req: Request, token: string, prototypeId: s
         JSON.stringify({ error: "Failed to delete prototype" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
+}
+
+// GET /admin/comments/:token - Get comments for a project
+async function handleGetComments(req: Request, token: string): Promise<Response> {
+  const authError = validateAdminKey(req);
+  if (authError) return authError;
+
+  if (!isValidToken(token)) {
+    return new Response(
+      JSON.stringify({ error: "Invalid token" }),
+      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  try {
+    console.log(`Fetching comments for token: ${token.slice(0, 8)}...`);
+
+    const supabase = getSupabaseClient();
+
+    const { data: comments, error } = await supabase
+      .from("prototype_comments")
+      .select("*")
+      .eq("project_token", token)
+      .order("created_at", { ascending: true });
+
+    if (error) {
+      console.error("Comments fetch error:", error);
+      return new Response(
+        JSON.stringify({ error: "Failed to fetch comments" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
+
+    return new Response(
+      JSON.stringify({ comments: comments || [] }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+
+  } catch (error) {
+    console.error("Get comments error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+}
+
+// POST /admin/comments/:token - Create a comment (for "Turn into comment" feature)
+async function handleCreateComment(req: Request, token: string): Promise<Response> {
+  const authError = validateAdminKey(req);
+  if (authError) return authError;
+
+  if (!isValidToken(token)) {
+    return new Response(
+      JSON.stringify({ error: "Invalid token" }),
+      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  try {
+    let body: { 
+      prototype_id: string; 
+      body: string; 
+      pin_x?: number; 
+      pin_y?: number; 
+      source_message_id?: string;
+    };
+    try {
+      body = await req.json();
+    } catch {
+      return new Response(
+        JSON.stringify({ error: "Invalid JSON body" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (!body.prototype_id || !body.body) {
+      return new Response(
+        JSON.stringify({ error: "prototype_id and body are required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log(`Creating comment for token: ${token.slice(0, 8)}...`);
+
+    const supabase = getSupabaseClient();
+
+    const { data: comment, error: insertError } = await supabase
+      .from("prototype_comments")
+      .insert({
+        prototype_id: body.prototype_id,
+        project_token: token,
+        author_type: "admin",
+        body: body.body,
+        pin_x: body.pin_x ?? null,
+        pin_y: body.pin_y ?? null,
+        source_message_id: body.source_message_id || null,
+      })
+      .select()
+      .single();
+
+    if (insertError) {
+      console.error("Comment insert error:", insertError);
+      return new Response(
+        JSON.stringify({ error: "Failed to create comment" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log("Comment created successfully");
+
+    return new Response(
+      JSON.stringify({ ok: true, comment }),
+      { status: 201, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+
+  } catch (error) {
+    console.error("Create comment error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+}
 
     console.log("Prototype deleted successfully");
 

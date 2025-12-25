@@ -19,7 +19,7 @@ import {
   User, Mail, Phone, MapPin, FileText, 
   MessageSquare, Send, Loader2, ExternalLink, Building2,
   Palette, Settings, CheckCircle, StickyNote, ListTodo, Trash2,
-  Link, Plus, Eye
+  Link, Plus, Eye, MessageCirclePlus, X
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -109,6 +109,10 @@ export function ProjectDetailDrawer({ project, open, onClose, onStatusChange }: 
   const [clientTyping, setClientTyping] = useState(false);
   const [newPrototypeUrl, setNewPrototypeUrl] = useState("");
   const [newPrototypeVersion, setNewPrototypeVersion] = useState("");
+  // "Turn into comment" state
+  const [pendingCommentMessage, setPendingCommentMessage] = useState<Message | null>(null);
+  const [pendingPin, setPendingPin] = useState<{ x: number; y: number } | null>(null);
+  const pinOverlayRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
   const clientTypingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -532,6 +536,44 @@ export function ProjectDetailDrawer({ project, open, onClose, onStatusChange }: 
     },
   });
 
+  // Create comment mutation (for "Turn into comment" feature)
+  const createCommentMutation = useMutation({
+    mutationFn: async ({ prototypeId, body, pinX, pinY, sourceMessageId }: { 
+      prototypeId: string; 
+      body: string; 
+      pinX: number; 
+      pinY: number; 
+      sourceMessageId: string;
+    }) => {
+      if (!project) throw new Error("No project");
+      const adminKey = localStorage.getItem("admin_key") || "";
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/admin/comments/${project.project_token}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-admin-key": adminKey,
+        },
+        body: JSON.stringify({
+          prototype_id: prototypeId,
+          body,
+          pin_x: pinX,
+          pin_y: pinY,
+          source_message_id: sourceMessageId,
+        }),
+      });
+      if (!res.ok) throw new Error("Failed to create comment");
+      return res.json();
+    },
+    onSuccess: () => {
+      toast.success("Comment created from message");
+      setPendingCommentMessage(null);
+      setPendingPin(null);
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
+    },
+  });
+
   const messages = messagesData?.messages || [];
   const notes = notesData?.notes || [];
   const checklistItems = checklistData?.items || [];
@@ -773,27 +815,44 @@ export function ProjectDetailDrawer({ project, open, onClose, onStatusChange }: 
                     return (
                       <div
                         key={msg.id}
-                        className={`flex ${isAdmin ? "justify-end" : "justify-start"}`}
+                        className={`flex group ${isAdmin ? "justify-end" : "justify-start"}`}
                       >
-                        <div className={`max-w-[78%] rounded-2xl px-4 py-2 ${
-                          isAdmin 
-                            ? "bg-primary text-primary-foreground rounded-br-md" 
-                            : "bg-muted rounded-bl-md"
-                        }`}>
-                          <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
-                          <div className={`mt-1 flex items-center gap-2 text-[11px] ${
-                            isAdmin ? "opacity-80 justify-end" : "text-muted-foreground justify-start"
-                          }`}>
-                            <span>{format(new Date(msg.created_at), "h:mm a")}</span>
-                          </div>
-                          {/* Read receipt for last admin message */}
-                          {isLastAdminMsg && (
-                            <div className={`mt-0.5 text-[11px] text-right ${
-                              msg.read_at ? "text-green-500" : "opacity-70"
-                            }`}>
-                              {getStatus()}
-                            </div>
+                        <div className="flex items-start gap-1">
+                          {/* Turn into comment button - only for client messages when prototypes exist */}
+                          {!isAdmin && prototypes.length > 0 && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 mt-1"
+                              title="Turn into comment"
+                              onClick={() => {
+                                setPendingCommentMessage(msg);
+                                setActiveTab("prototype");
+                              }}
+                            >
+                              <MessageCirclePlus className="h-3.5 w-3.5" />
+                            </Button>
                           )}
+                          <div className={`max-w-[78%] rounded-2xl px-4 py-2 ${
+                            isAdmin 
+                              ? "bg-primary text-primary-foreground rounded-br-md" 
+                              : "bg-muted rounded-bl-md"
+                          }`}>
+                            <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                            <div className={`mt-1 flex items-center gap-2 text-[11px] ${
+                              isAdmin ? "opacity-80 justify-end" : "text-muted-foreground justify-start"
+                            }`}>
+                              <span>{format(new Date(msg.created_at), "h:mm a")}</span>
+                            </div>
+                            {/* Read receipt for last admin message */}
+                            {isLastAdminMsg && (
+                              <div className={`mt-0.5 text-[11px] text-right ${
+                                msg.read_at ? "text-green-500" : "opacity-70"
+                              }`}>
+                                {getStatus()}
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
                     );
@@ -998,43 +1057,141 @@ export function ProjectDetailDrawer({ project, open, onClose, onStatusChange }: 
           {/* Prototype Tab */}
           <TabsContent value="prototype" className="flex-1 overflow-hidden mt-4">
             <div className="h-full flex flex-col">
-              {/* Add new prototype form */}
-              <div className="flex-shrink-0 space-y-2 mb-4">
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="Prototype URL (Lovable, Figma, etc.)"
-                    value={newPrototypeUrl}
-                    onChange={(e) => setNewPrototypeUrl(e.target.value)}
-                    className="flex-1"
-                  />
-                  <Input
-                    placeholder="Version (v1, v2...)"
-                    value={newPrototypeVersion}
-                    onChange={(e) => setNewPrototypeVersion(e.target.value)}
-                    className="w-24"
-                  />
+              {/* Pin picker mode banner */}
+              {pendingCommentMessage && (
+                <div className="flex-shrink-0 bg-primary/10 border border-primary/20 rounded-lg p-3 mb-4">
+                  <div className="flex items-start gap-3">
+                    <MessageCirclePlus className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium">Turn message into comment</p>
+                      <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                        "{pendingCommentMessage.content}"
+                      </p>
+                      {prototypes.length > 0 && !pendingPin && (
+                        <p className="text-xs text-primary mt-2">
+                          Click on the prototype preview below to place a pin
+                        </p>
+                      )}
+                      {pendingPin && (
+                        <div className="flex gap-2 mt-2">
+                          <Button
+                            size="sm"
+                            onClick={() => {
+                              if (prototypes[0] && pendingPin) {
+                                createCommentMutation.mutate({
+                                  prototypeId: prototypes[0].id,
+                                  body: pendingCommentMessage.content,
+                                  pinX: pendingPin.x,
+                                  pinY: pendingPin.y,
+                                  sourceMessageId: pendingCommentMessage.id,
+                                });
+                              }
+                            }}
+                            disabled={createCommentMutation.isPending}
+                          >
+                            {createCommentMutation.isPending ? (
+                              <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                            ) : (
+                              <CheckCircle className="h-3 w-3 mr-1" />
+                            )}
+                            Create Comment
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => setPendingPin(null)}
+                          >
+                            Move Pin
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 flex-shrink-0"
+                      onClick={() => {
+                        setPendingCommentMessage(null);
+                        setPendingPin(null);
+                      }}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
-                <Button
-                  onClick={() => {
-                    if (newPrototypeUrl.trim()) {
-                      addPrototypeMutation.mutate({
-                        url: newPrototypeUrl.trim(),
-                        version_label: newPrototypeVersion.trim() || undefined,
-                      });
-                    }
-                  }}
-                  disabled={!newPrototypeUrl.trim() || addPrototypeMutation.isPending}
-                  size="sm"
-                  className="w-full"
-                >
-                  {addPrototypeMutation.isPending ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  ) : (
-                    <Plus className="h-4 w-4 mr-2" />
-                  )}
-                  Add Prototype
-                </Button>
-              </div>
+              )}
+
+              {/* Prototype preview with pin picker (only when in pin mode and has prototypes) */}
+              {pendingCommentMessage && prototypes.length > 0 && (
+                <div className="flex-shrink-0 mb-4 relative rounded-lg overflow-hidden border border-border">
+                  <iframe
+                    src={prototypes[0].url}
+                    className="w-full h-48 border-0 pointer-events-none"
+                    title="Prototype preview for pinning"
+                  />
+                  {/* Pin overlay */}
+                  <div
+                    ref={pinOverlayRef}
+                    className="absolute inset-0 cursor-crosshair bg-transparent hover:bg-primary/5 transition-colors"
+                    onClick={(e) => {
+                      const rect = e.currentTarget.getBoundingClientRect();
+                      const x = ((e.clientX - rect.left) / rect.width) * 100;
+                      const y = ((e.clientY - rect.top) / rect.height) * 100;
+                      setPendingPin({ x, y });
+                    }}
+                  >
+                    {/* Show pending pin */}
+                    {pendingPin && (
+                      <div
+                        className="absolute w-6 h-6 -ml-3 -mt-3 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-lg animate-pulse"
+                        style={{ left: `${pendingPin.x}%`, top: `${pendingPin.y}%` }}
+                      >
+                        <MessageCirclePlus className="h-3 w-3" />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Add new prototype form - hide when in pin mode */}
+              {!pendingCommentMessage && (
+                <div className="flex-shrink-0 space-y-2 mb-4">
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Prototype URL (Lovable, Figma, etc.)"
+                      value={newPrototypeUrl}
+                      onChange={(e) => setNewPrototypeUrl(e.target.value)}
+                      className="flex-1"
+                    />
+                    <Input
+                      placeholder="Version (v1, v2...)"
+                      value={newPrototypeVersion}
+                      onChange={(e) => setNewPrototypeVersion(e.target.value)}
+                      className="w-24"
+                    />
+                  </div>
+                  <Button
+                    onClick={() => {
+                      if (newPrototypeUrl.trim()) {
+                        addPrototypeMutation.mutate({
+                          url: newPrototypeUrl.trim(),
+                          version_label: newPrototypeVersion.trim() || undefined,
+                        });
+                      }
+                    }}
+                    disabled={!newPrototypeUrl.trim() || addPrototypeMutation.isPending}
+                    size="sm"
+                    className="w-full"
+                  >
+                    {addPrototypeMutation.isPending ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Plus className="h-4 w-4 mr-2" />
+                    )}
+                    Add Prototype
+                  </Button>
+                </div>
+              )}
 
               {/* Prototypes list */}
               <ScrollArea className="flex-1">
@@ -1047,6 +1204,11 @@ export function ProjectDetailDrawer({ project, open, onClose, onStatusChange }: 
                     <Link className="h-10 w-10 mx-auto mb-3 opacity-50" />
                     <p>No prototypes yet</p>
                     <p className="text-sm mt-1">Add a URL to share with client</p>
+                    {pendingCommentMessage && (
+                      <p className="text-xs text-destructive mt-2">
+                        Add a prototype first to pin the comment
+                      </p>
+                    )}
                   </div>
                 ) : (
                   <div className="space-y-3 pr-4">
