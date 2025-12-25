@@ -18,7 +18,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   User, Mail, Phone, MapPin, FileText, 
   MessageSquare, Send, Loader2, ExternalLink, Building2,
-  Palette, Settings, CheckCircle, StickyNote, ListTodo, Trash2
+  Palette, Settings, CheckCircle, StickyNote, ListTodo, Trash2,
+  Link, Plus, Eye
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -75,6 +76,15 @@ interface ChecklistItem {
   completed_at: string | null;
 }
 
+interface Prototype {
+  id: string;
+  url: string;
+  version_label: string | null;
+  status: string;
+  created_at: string;
+  updated_at: string;
+}
+
 const STATUS_OPTIONS = [
   { value: "lead", label: "Lead" },
   { value: "contacted", label: "Contacted" },
@@ -95,8 +105,10 @@ export function ProjectDetailDrawer({ project, open, onClose, onStatusChange }: 
   const [replyContent, setReplyContent] = useState("");
   const [newNote, setNewNote] = useState("");
   const [newChecklistItem, setNewChecklistItem] = useState("");
-  const [activeTab, setActiveTab] = useState<"intake" | "messages" | "notes" | "checklist">("intake");
+  const [activeTab, setActiveTab] = useState<"intake" | "messages" | "notes" | "checklist" | "prototype">("intake");
   const [clientTyping, setClientTyping] = useState(false);
+  const [newPrototypeUrl, setNewPrototypeUrl] = useState("");
+  const [newPrototypeVersion, setNewPrototypeVersion] = useState("");
   const queryClient = useQueryClient();
   const clientTypingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -241,6 +253,21 @@ export function ProjectDetailDrawer({ project, open, onClose, onStatusChange }: 
       });
       if (!res.ok) throw new Error("Failed to fetch checklist");
       return res.json() as Promise<{ items: ChecklistItem[] }>;
+    },
+    enabled: !!project && open,
+  });
+
+  // Fetch prototypes
+  const { data: prototypesData, isLoading: prototypesLoading } = useQuery({
+    queryKey: ["project-prototypes", project?.project_token],
+    queryFn: async () => {
+      if (!project) return { prototypes: [] };
+      const adminKey = localStorage.getItem("admin_key") || "";
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/admin/prototypes/${project.project_token}`, {
+        headers: { "x-admin-key": adminKey },
+      });
+      if (!res.ok) throw new Error("Failed to fetch prototypes");
+      return res.json() as Promise<{ prototypes: Prototype[] }>;
     },
     enabled: !!project && open,
   });
@@ -433,11 +460,84 @@ export function ProjectDetailDrawer({ project, open, onClose, onStatusChange }: 
     },
   });
 
+  // Add prototype mutation
+  const addPrototypeMutation = useMutation({
+    mutationFn: async ({ url, version_label }: { url: string; version_label?: string }) => {
+      if (!project) throw new Error("No project");
+      const adminKey = localStorage.getItem("admin_key") || "";
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/admin/prototypes/${project.project_token}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-admin-key": adminKey,
+        },
+        body: JSON.stringify({ url, version_label, status: "sent" }),
+      });
+      if (!res.ok) throw new Error("Failed to add prototype");
+      return res.json();
+    },
+    onSuccess: () => {
+      toast.success("Prototype added");
+      setNewPrototypeUrl("");
+      setNewPrototypeVersion("");
+      queryClient.invalidateQueries({ queryKey: ["project-prototypes", project?.project_token] });
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
+    },
+  });
+
+  // Update prototype status mutation
+  const updatePrototypeMutation = useMutation({
+    mutationFn: async ({ prototypeId, status }: { prototypeId: string; status: string }) => {
+      if (!project) throw new Error("No project");
+      const adminKey = localStorage.getItem("admin_key") || "";
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/admin/prototypes/${project.project_token}/${prototypeId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "x-admin-key": adminKey,
+        },
+        body: JSON.stringify({ status }),
+      });
+      if (!res.ok) throw new Error("Failed to update prototype");
+      return res.json();
+    },
+    onSuccess: () => {
+      toast.success("Prototype updated");
+      queryClient.invalidateQueries({ queryKey: ["project-prototypes", project?.project_token] });
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
+    },
+  });
+
+  // Delete prototype mutation
+  const deletePrototypeMutation = useMutation({
+    mutationFn: async (prototypeId: string) => {
+      if (!project) throw new Error("No project");
+      const adminKey = localStorage.getItem("admin_key") || "";
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/admin/prototypes/${project.project_token}/${prototypeId}`, {
+        method: "DELETE",
+        headers: { "x-admin-key": adminKey },
+      });
+      if (!res.ok) throw new Error("Failed to delete prototype");
+    },
+    onSuccess: () => {
+      toast.success("Prototype deleted");
+      queryClient.invalidateQueries({ queryKey: ["project-prototypes", project?.project_token] });
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
+    },
+  });
+
   if (!project) return null;
 
   const messages = messagesData?.messages || [];
   const notes = notesData?.notes || [];
   const checklistItems = checklistData?.items || [];
+  const prototypes = prototypesData?.prototypes || [];
 
   // Find last admin message index for read receipt display
   const lastAdminMsgIndex = useMemo(() => {
@@ -524,29 +624,36 @@ export function ProjectDetailDrawer({ project, open, onClose, onStatusChange }: 
           onValueChange={(v) => setActiveTab(v as typeof activeTab)}
           className="flex-1 flex flex-col overflow-hidden"
         >
-          <TabsList className="flex-shrink-0 w-full grid grid-cols-4">
-            <TabsTrigger value="intake" className="gap-1 text-xs px-2">
+          <TabsList className="flex-shrink-0 w-full grid grid-cols-5">
+            <TabsTrigger value="intake" className="gap-1 text-xs px-1">
               <FileText className="h-3 w-3" />
-              Intake
+              <span className="hidden sm:inline">Intake</span>
               {project.intake && <CheckCircle className="h-2.5 w-2.5 text-green-500" />}
             </TabsTrigger>
-            <TabsTrigger value="messages" className="gap-1 text-xs px-2">
+            <TabsTrigger value="prototype" className="gap-1 text-xs px-1">
+              <Link className="h-3 w-3" />
+              <span className="hidden sm:inline">Proto</span>
+              {prototypes.length > 0 && (
+                <Badge variant="secondary" className="text-[10px] px-1 py-0">{prototypes.length}</Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="messages" className="gap-1 text-xs px-1">
               <MessageSquare className="h-3 w-3" />
-              Msgs
+              <span className="hidden sm:inline">Msgs</span>
               {messages.length > 0 && (
                 <Badge variant="secondary" className="text-[10px] px-1 py-0">{messages.length}</Badge>
               )}
             </TabsTrigger>
-            <TabsTrigger value="notes" className="gap-1 text-xs px-2">
+            <TabsTrigger value="notes" className="gap-1 text-xs px-1">
               <StickyNote className="h-3 w-3" />
-              Notes
+              <span className="hidden sm:inline">Notes</span>
               {notes.length > 0 && (
                 <Badge variant="secondary" className="text-[10px] px-1 py-0">{notes.length}</Badge>
               )}
             </TabsTrigger>
-            <TabsTrigger value="checklist" className="gap-1 text-xs px-2">
+            <TabsTrigger value="checklist" className="gap-1 text-xs px-1">
               <ListTodo className="h-3 w-3" />
-              Tasks
+              <span className="hidden sm:inline">Tasks</span>
               {totalCount > 0 && (
                 <Badge variant="secondary" className="text-[10px] px-1 py-0">{completedCount}/{totalCount}</Badge>
               )}
@@ -885,6 +992,155 @@ export function ProjectDetailDrawer({ project, open, onClose, onStatusChange }: 
                   + Add default items
                 </Button>
               )}
+            </div>
+          </TabsContent>
+
+          {/* Prototype Tab */}
+          <TabsContent value="prototype" className="flex-1 overflow-hidden mt-4">
+            <div className="h-full flex flex-col">
+              {/* Add new prototype form */}
+              <div className="flex-shrink-0 space-y-2 mb-4">
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Prototype URL (Lovable, Figma, etc.)"
+                    value={newPrototypeUrl}
+                    onChange={(e) => setNewPrototypeUrl(e.target.value)}
+                    className="flex-1"
+                  />
+                  <Input
+                    placeholder="Version (v1, v2...)"
+                    value={newPrototypeVersion}
+                    onChange={(e) => setNewPrototypeVersion(e.target.value)}
+                    className="w-24"
+                  />
+                </div>
+                <Button
+                  onClick={() => {
+                    if (newPrototypeUrl.trim()) {
+                      addPrototypeMutation.mutate({
+                        url: newPrototypeUrl.trim(),
+                        version_label: newPrototypeVersion.trim() || undefined,
+                      });
+                    }
+                  }}
+                  disabled={!newPrototypeUrl.trim() || addPrototypeMutation.isPending}
+                  size="sm"
+                  className="w-full"
+                >
+                  {addPrototypeMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Plus className="h-4 w-4 mr-2" />
+                  )}
+                  Add Prototype
+                </Button>
+              </div>
+
+              {/* Prototypes list */}
+              <ScrollArea className="flex-1">
+                {prototypesLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                  </div>
+                ) : prototypes.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Link className="h-10 w-10 mx-auto mb-3 opacity-50" />
+                    <p>No prototypes yet</p>
+                    <p className="text-sm mt-1">Add a URL to share with client</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3 pr-4">
+                    {prototypes.map((proto) => (
+                      <div
+                        key={proto.id}
+                        className="p-3 rounded-lg border border-border bg-card space-y-2"
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              {proto.version_label && (
+                                <Badge variant="secondary" className="text-xs">
+                                  {proto.version_label}
+                                </Badge>
+                              )}
+                              <Badge
+                                variant={proto.status === "approved" ? "default" : "outline"}
+                                className={
+                                  proto.status === "approved"
+                                    ? "bg-green-500/10 text-green-600 border-green-500/20 text-xs"
+                                    : "text-xs"
+                                }
+                              >
+                                {proto.status}
+                              </Badge>
+                            </div>
+                            <p className="text-xs text-muted-foreground truncate mt-1">
+                              {proto.url}
+                            </p>
+                            <p className="text-[10px] text-muted-foreground mt-1">
+                              Added {format(new Date(proto.created_at), "MMM d, h:mm a")}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => window.open(proto.url, "_blank")}
+                              title="Preview"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                navigator.clipboard.writeText(proto.url);
+                                toast.success("URL copied");
+                              }}
+                              title="Copy URL"
+                            >
+                              <ExternalLink className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => deletePrototypeMutation.mutate(proto.id)}
+                              disabled={deletePrototypeMutation.isPending}
+                              className="text-destructive hover:text-destructive"
+                              title="Delete"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                        
+                        {/* Status toggle */}
+                        <div className="flex gap-1">
+                          {["draft", "sent", "approved"].map((status) => (
+                            <Button
+                              key={status}
+                              variant={proto.status === status ? "secondary" : "ghost"}
+                              size="sm"
+                              className="text-xs h-6 px-2"
+                              onClick={() => {
+                                if (proto.status !== status) {
+                                  updatePrototypeMutation.mutate({
+                                    prototypeId: proto.id,
+                                    status,
+                                  });
+                                }
+                              }}
+                              disabled={updatePrototypeMutation.isPending}
+                            >
+                              {status}
+                            </Button>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </ScrollArea>
             </div>
           </TabsContent>
         </Tabs>
