@@ -25,7 +25,15 @@ interface FloatingChatOrbProps {
   unreadCount?: number;
 }
 
-const STORAGE_KEY = "floating-chat-position-v1";
+type DockEdge = "left" | "right" | "top" | "bottom" | null;
+
+type SavedPos = {
+  right: number;
+  bottom: number;
+  dockEdge?: DockEdge;
+};
+
+const STORAGE_KEY = "floating-chat-position-v2";
 const DEFAULT_OFFSET = { right: 24, bottom: 24 };
 const SNAP_THRESHOLD = 56;
 const SNAP_PADDING = 16;
@@ -39,13 +47,17 @@ function formatDate(dateStr: string) {
   });
 }
 
-function safeParsePosition(): { right: number; bottom: number } | null {
+function safeParsePosition(): SavedPos | null {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     if (typeof parsed?.right === "number" && typeof parsed?.bottom === "number") {
-      return { right: parsed.right, bottom: parsed.bottom };
+      return {
+        right: parsed.right,
+        bottom: parsed.bottom,
+        dockEdge: (parsed.dockEdge ?? null) as DockEdge,
+      };
     }
     return null;
   } catch {
@@ -53,7 +65,7 @@ function safeParsePosition(): { right: number; bottom: number } | null {
   }
 }
 
-function savePosition(pos: { right: number; bottom: number }) {
+function savePosition(pos: SavedPos) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(pos));
   } catch {}
@@ -87,9 +99,19 @@ export function FloatingChatOrb({
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [messageContent, setMessageContent] = useState("");
+
+  // Position + dock memory
   const [offset, setOffset] = useState<{ right: number; bottom: number }>(() => {
-    return safeParsePosition() ?? DEFAULT_OFFSET;
+    const saved = safeParsePosition();
+    return saved ? { right: saved.right, bottom: saved.bottom } : DEFAULT_OFFSET;
   });
+  const [dockEdge, setDockEdge] = useState<DockEdge>(() => {
+    const saved = safeParsePosition();
+    return saved?.dockEdge ?? null;
+  });
+
+  // Snap preview glow
+  const [snapPreviewEdge, setSnapPreviewEdge] = useState<DockEdge>(null);
 
   const rootRef = useRef<HTMLDivElement | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
@@ -155,6 +177,30 @@ export function FloatingChatOrb({
     };
   }, []);
 
+  // Get nearest edge if within threshold
+  const getNearestEdge = useCallback((pos: { right: number; bottom: number }): DockEdge => {
+    const el = rootRef.current;
+    const elW = el?.offsetWidth ?? 56;
+    const elH = el?.offsetHeight ?? 56;
+
+    const { left, top } = toTopLeft(pos.right, pos.bottom, elW, elH);
+
+    const distLeft = left;
+    const distRight = window.innerWidth - (left + elW);
+    const distTop = top;
+    const distBottom = window.innerHeight - (top + elH);
+
+    const candidates = [
+      { edge: "left" as const, d: distLeft },
+      { edge: "right" as const, d: distRight },
+      { edge: "top" as const, d: distTop },
+      { edge: "bottom" as const, d: distBottom },
+    ].sort((a, b) => a.d - b.d);
+
+    const closest = candidates[0];
+    return closest.d <= SNAP_THRESHOLD ? closest.edge : null;
+  }, []);
+
   const beginDrag = useCallback(
     (clientX: number, clientY: number) => {
       setIsDragging(true);
@@ -170,7 +216,6 @@ export function FloatingChatOrb({
 
   const moveDrag = useCallback(
     (clientX: number, clientY: number) => {
-      // For right/bottom offsets: moving left increases right, moving up increases bottom
       const dx = dragStart.current.x - clientX;
       const dy = dragStart.current.y - clientY;
 
@@ -180,8 +225,10 @@ export function FloatingChatOrb({
       });
 
       setOffset(next);
+      // Preview glow while dragging
+      setSnapPreviewEdge(getNearestEdge(next));
     },
-    [clampOffset]
+    [clampOffset, getNearestEdge]
   );
 
   const snapToNearestEdge = useCallback(
@@ -190,7 +237,6 @@ export function FloatingChatOrb({
       const elW = el?.offsetWidth ?? 56;
       const elH = el?.offsetHeight ?? 56;
 
-      // Convert to top-left for proximity calculation
       const { left, top } = toTopLeft(pos.right, pos.bottom, elW, elH);
 
       const distLeft = left;
@@ -198,7 +244,6 @@ export function FloatingChatOrb({
       const distTop = top;
       const distBottom = window.innerHeight - (top + elH);
 
-      // Find closest edge
       const candidates = [
         { edge: "left" as const, d: distLeft },
         { edge: "right" as const, d: distRight },
@@ -211,7 +256,6 @@ export function FloatingChatOrb({
 
       const closest = candidates[0];
 
-      // Only snap if within threshold
       if (closest.d <= SNAP_THRESHOLD) {
         if (closest.edge === "left") snappedLeft = SNAP_PADDING;
         if (closest.edge === "right") snappedLeft = window.innerWidth - elW - SNAP_PADDING;
@@ -227,12 +271,16 @@ export function FloatingChatOrb({
 
   const endDrag = useCallback(() => {
     setIsDragging(false);
+    setSnapPreviewEdge(null);
+
     setOffset((prev) => {
       const snapped = snapToNearestEdge(prev);
-      savePosition(snapped);
+      const edge = getNearestEdge(snapped);
+      setDockEdge(edge);
+      savePosition({ ...snapped, dockEdge: edge });
       return snapped;
     });
-  }, [snapToNearestEdge]);
+  }, [snapToNearestEdge, getNearestEdge]);
 
   // Mouse listeners
   useEffect(() => {
@@ -268,18 +316,36 @@ export function FloatingChatOrb({
     };
   }, [isDragging, moveDrag, endDrag]);
 
-  // Keep on-screen on window resize
+  // Keep on-screen on window resize + respect dock edge
   useEffect(() => {
     const onResize = () => {
       setOffset((prev) => {
-        const next = clampOffset(prev);
-        savePosition(next);
+        let next = clampOffset(prev);
+
+        // If user previously docked, keep it docked after resize
+        if (dockEdge) {
+          const el = rootRef.current;
+          const elW = el?.offsetWidth ?? 56;
+          const elH = el?.offsetHeight ?? 56;
+
+          let { left, top } = toTopLeft(next.right, next.bottom, elW, elH);
+
+          if (dockEdge === "left") left = SNAP_PADDING;
+          if (dockEdge === "right") left = window.innerWidth - elW - SNAP_PADDING;
+          if (dockEdge === "top") top = SNAP_PADDING;
+          if (dockEdge === "bottom") top = window.innerHeight - elH - SNAP_PADDING;
+
+          next = clampOffset(toRightBottom(left, top, elW, elH));
+        }
+
+        savePosition({ ...next, dockEdge });
         return next;
       });
     };
+
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
-  }, [clampOffset]);
+  }, [clampOffset, dockEdge]);
 
   const wrapperStyle: React.CSSProperties = {
     position: "fixed",
@@ -302,208 +368,235 @@ export function FloatingChatOrb({
     beginDrag(t.clientX, t.clientY);
   };
 
+  // Snap preview glow overlay
+  const SnapGlow = () => {
+    if (!isDragging || !snapPreviewEdge) return null;
+
+    const base = "pointer-events-none fixed z-50 transition-opacity duration-150";
+
+    if (snapPreviewEdge === "left")
+      return <div className={`${base} left-0 top-0 h-full w-8 bg-gradient-to-r from-primary/30 to-transparent`} />;
+
+    if (snapPreviewEdge === "right")
+      return <div className={`${base} right-0 top-0 h-full w-8 bg-gradient-to-l from-primary/30 to-transparent`} />;
+
+    if (snapPreviewEdge === "top")
+      return <div className={`${base} left-0 top-0 w-full h-8 bg-gradient-to-b from-primary/30 to-transparent`} />;
+
+    return <div className={`${base} left-0 bottom-0 w-full h-8 bg-gradient-to-t from-primary/30 to-transparent`} />;
+  };
+
   // COLLAPSED ORB
   if (!isOpen) {
     return (
-      <div 
-        ref={rootRef} 
-        style={wrapperStyle} 
-        className="cursor-pointer select-none"
-        onMouseDown={onMouseDown} 
-        onTouchStart={onTouchStart}
-      >
-        <button
-          onClick={() => setIsOpen(true)}
-          className="relative w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 flex items-center justify-center group"
-          aria-label="Open chat"
+      <>
+        <SnapGlow />
+        <div
+          ref={rootRef}
+          style={wrapperStyle}
+          className="cursor-pointer select-none"
+          onMouseDown={onMouseDown}
+          onTouchStart={onTouchStart}
         >
-          <MessageSquare className="h-6 w-6 group-hover:scale-110 transition-transform" />
+          <button
+            onClick={() => setIsOpen(true)}
+            className="relative w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 flex items-center justify-center group"
+            aria-label="Open chat"
+          >
+            <MessageSquare className="h-6 w-6 group-hover:scale-110 transition-transform" />
 
-          {unreadCount > 0 && (
-            <span className="absolute -top-1 -right-1 w-5 h-5 bg-destructive text-destructive-foreground text-xs font-bold rounded-full flex items-center justify-center">
-              {unreadCount > 9 ? "9+" : unreadCount}
-            </span>
-          )}
+            {unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 w-5 h-5 bg-destructive text-destructive-foreground text-xs font-bold rounded-full flex items-center justify-center">
+                {unreadCount > 9 ? "9+" : unreadCount}
+              </span>
+            )}
 
-          {unreadCount > 0 && (
-            <span className="absolute inset-0 rounded-full bg-primary/30 animate-ping pointer-events-none" />
-          )}
-        </button>
-      </div>
+            {unreadCount > 0 && (
+              <span className="absolute inset-0 rounded-full bg-primary/30 animate-ping pointer-events-none" />
+            )}
+          </button>
+        </div>
+      </>
     );
   }
 
   // MINIMIZED BAR
   if (isMinimized) {
     return (
-      <div 
-        ref={rootRef} 
-        style={wrapperStyle} 
-        className="cursor-move select-none"
-        onMouseDown={onMouseDown} 
-        onTouchStart={onTouchStart}
-      >
-        <div className="w-72 bg-card/95 backdrop-blur-xl border border-border rounded-2xl shadow-2xl overflow-hidden">
-          <div className="flex items-center justify-between px-4 py-3 bg-primary/5 border-b border-border">
+      <>
+        <SnapGlow />
+        <div
+          ref={rootRef}
+          style={wrapperStyle}
+          className="cursor-move select-none"
+          onMouseDown={onMouseDown}
+          onTouchStart={onTouchStart}
+        >
+          <div className="w-72 bg-card/95 backdrop-blur-xl border border-border rounded-2xl shadow-2xl overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-3 bg-primary/5 border-b border-border">
+              <div className="flex items-center gap-2">
+                <MessageSquare className="h-4 w-4 text-primary" />
+                <span className="font-medium text-sm">Messages</span>
+                {unreadCount > 0 && (
+                  <span className="px-1.5 py-0.5 bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full">
+                    {unreadCount > 9 ? "9+" : unreadCount}
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-1">
+                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setIsMinimized(false)}>
+                  <ChevronUp className="h-4 w-4" />
+                </Button>
+                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setIsOpen(false)}>
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  // EXPANDED PANEL
+  return (
+    <>
+      <SnapGlow />
+      <div ref={rootRef} style={wrapperStyle} className="select-none">
+        <div className="w-80 sm:w-96 h-[480px] sm:h-[520px] bg-card/95 backdrop-blur-xl border border-border rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-scale-in">
+          {/* Header - draggable */}
+          <div
+            className="flex items-center justify-between px-4 py-3 bg-primary/5 border-b border-border cursor-move shrink-0"
+            onMouseDown={onMouseDown}
+            onTouchStart={onTouchStart}
+          >
             <div className="flex items-center gap-2">
               <MessageSquare className="h-4 w-4 text-primary" />
-              <span className="font-medium text-sm">Messages</span>
-              {unreadCount > 0 && (
-                <span className="px-1.5 py-0.5 bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full">
-                  {unreadCount > 9 ? "9+" : unreadCount}
-                </span>
-              )}
+              <span className="font-medium">Messages</span>
             </div>
             <div className="flex items-center gap-1">
-              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setIsMinimized(false)}>
-                <ChevronUp className="h-4 w-4" />
+              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setIsMinimized(true)}>
+                <Minus className="h-4 w-4" />
               </Button>
               <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setIsOpen(false)}>
                 <X className="h-4 w-4" />
               </Button>
             </div>
           </div>
-        </div>
-      </div>
-    );
-  }
 
-  // EXPANDED PANEL
-  return (
-    <div ref={rootRef} style={wrapperStyle} className="select-none">
-      <div className="w-80 sm:w-96 h-[480px] sm:h-[520px] bg-card/95 backdrop-blur-xl border border-border rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-scale-in">
-        {/* Header - draggable */}
-        <div
-          className="flex items-center justify-between px-4 py-3 bg-primary/5 border-b border-border cursor-move shrink-0"
-          onMouseDown={onMouseDown}
-          onTouchStart={onTouchStart}
-        >
-          <div className="flex items-center gap-2">
-            <MessageSquare className="h-4 w-4 text-primary" />
-            <span className="font-medium">Messages</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setIsMinimized(true)}>
-              <Minus className="h-4 w-4" />
-            </Button>
-            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setIsOpen(false)}>
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
+          {/* Messages area */}
+          <div className="flex-1 overflow-y-auto p-3 space-y-2">
+            {hasMoreMessages && (
+              <div className="flex justify-center pb-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={onLoadMore}
+                  disabled={loadingMore}
+                  className="text-xs h-7"
+                >
+                  {loadingMore && <Loader2 className="h-3 w-3 animate-spin mr-1" />}
+                  Load older
+                </Button>
+              </div>
+            )}
 
-        {/* Messages area */}
-        <div className="flex-1 overflow-y-auto p-3 space-y-2">
-          {hasMoreMessages && (
-            <div className="flex justify-center pb-2">
+            {messages.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-full text-center py-8">
+                <MessageSquare className="h-10 w-10 text-muted-foreground/30 mb-3" />
+                <p className="text-sm text-muted-foreground">No messages yet</p>
+                <p className="text-xs text-muted-foreground/70">Send a message to get started</p>
+              </div>
+            ) : (
+              <>
+                {messages.map((msg, index) => {
+                  const isClient = msg.sender_type === "client";
+                  const isLastClientMsg = isClient && index === lastClientMsgIndex;
+
+                  const isNewMsg = !seenMessageIds.current.has(msg.id);
+                  if (isNewMsg) seenMessageIds.current.add(msg.id);
+
+                  return (
+                    <div
+                      key={msg.id}
+                      className={`flex w-full ${isClient ? "justify-end" : "justify-start"}`}
+                    >
+                      <div className={`max-w-[85%] ${isNewMsg ? "bubble-in" : ""}`}>
+                        <div
+                          className={[
+                            "rounded-2xl px-3 py-2 text-sm leading-relaxed",
+                            isClient
+                              ? "bg-primary text-primary-foreground rounded-br-sm"
+                              : "bg-muted text-foreground rounded-bl-sm",
+                          ].join(" ")}
+                        >
+                          {msg.content}
+                        </div>
+
+                        <div
+                          className={[
+                            "mt-0.5 flex items-center gap-1.5 text-[10px] text-muted-foreground",
+                            isClient ? "justify-end" : "justify-start",
+                          ].join(" ")}
+                        >
+                          <span>{formatDate(msg.created_at)}</span>
+                          {isLastClientMsg && (
+                            <span className={msg.read_at ? "receipt-pop" : ""}>
+                              {getDeliveryStatus(msg)}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {teamTyping && (
+                  <div className="flex w-full justify-start">
+                    <div className="max-w-[85%]">
+                      <div className="rounded-2xl rounded-bl-sm bg-muted px-3 py-2 text-sm">
+                        <span className="typing-anim text-muted-foreground">Team is typing…</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+
+            <div ref={messagesEndRef} />
+          </div>
+
+          {/* Composer */}
+          <div className="shrink-0 border-t border-border p-3 bg-card/50">
+            <div className="flex gap-2">
+              <Textarea
+                placeholder="Type a message..."
+                value={messageContent}
+                onChange={(e) => handleMessageChange(e.target.value)}
+                disabled={sending}
+                className="min-h-[40px] max-h-[80px] resize-none flex-1 text-sm"
+                rows={1}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSend();
+                  }
+                }}
+              />
               <Button
-                variant="ghost"
-                size="sm"
-                onClick={onLoadMore}
-                disabled={loadingMore}
-                className="text-xs h-7"
+                onClick={handleSend}
+                disabled={sending || !messageContent.trim()}
+                size="icon"
+                className="h-10 w-10 shrink-0"
               >
-                {loadingMore && <Loader2 className="h-3 w-3 animate-spin mr-1" />}
-                Load older
+                {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
               </Button>
             </div>
-          )}
 
-          {messages.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full text-center py-8">
-              <MessageSquare className="h-10 w-10 text-muted-foreground/30 mb-3" />
-              <p className="text-sm text-muted-foreground">No messages yet</p>
-              <p className="text-xs text-muted-foreground/70">Send a message to get started</p>
-            </div>
-          ) : (
-            <>
-              {messages.map((msg, index) => {
-                const isClient = msg.sender_type === "client";
-                const isLastClientMsg = isClient && index === lastClientMsgIndex;
-
-                const isNewMsg = !seenMessageIds.current.has(msg.id);
-                if (isNewMsg) seenMessageIds.current.add(msg.id);
-
-                return (
-                  <div
-                    key={msg.id}
-                    className={`flex w-full ${isClient ? "justify-end" : "justify-start"}`}
-                  >
-                    <div className={`max-w-[85%] ${isNewMsg ? "bubble-in" : ""}`}>
-                      <div
-                        className={[
-                          "rounded-2xl px-3 py-2 text-sm leading-relaxed",
-                          isClient
-                            ? "bg-primary text-primary-foreground rounded-br-sm"
-                            : "bg-muted text-foreground rounded-bl-sm",
-                        ].join(" ")}
-                      >
-                        {msg.content}
-                      </div>
-
-                      <div
-                        className={[
-                          "mt-0.5 flex items-center gap-1.5 text-[10px] text-muted-foreground",
-                          isClient ? "justify-end" : "justify-start",
-                        ].join(" ")}
-                      >
-                        <span>{formatDate(msg.created_at)}</span>
-                        {isLastClientMsg && (
-                          <span className={msg.read_at ? "receipt-pop" : ""}>
-                            {getDeliveryStatus(msg)}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-
-              {teamTyping && (
-                <div className="flex w-full justify-start">
-                  <div className="max-w-[85%]">
-                    <div className="rounded-2xl rounded-bl-sm bg-muted px-3 py-2 text-sm">
-                      <span className="typing-anim text-muted-foreground">Team is typing…</span>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </>
-          )}
-
-          <div ref={messagesEndRef} />
-        </div>
-
-        {/* Composer */}
-        <div className="shrink-0 border-t border-border p-3 bg-card/50">
-          <div className="flex gap-2">
-            <Textarea
-              placeholder="Type a message..."
-              value={messageContent}
-              onChange={(e) => handleMessageChange(e.target.value)}
-              disabled={sending}
-              className="min-h-[40px] max-h-[80px] resize-none flex-1 text-sm"
-              rows={1}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSend();
-                }
-              }}
-            />
-            <Button
-              onClick={handleSend}
-              disabled={sending || !messageContent.trim()}
-              size="icon"
-              className="h-10 w-10 shrink-0"
-            >
-              {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-            </Button>
+            {sendError && <p className="text-xs text-destructive mt-1">{sendError}</p>}
           </div>
-
-          {sendError && <p className="text-xs text-destructive mt-1">{sendError}</p>}
         </div>
       </div>
-    </div>
+    </>
   );
 }
