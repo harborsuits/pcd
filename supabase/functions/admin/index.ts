@@ -115,6 +115,34 @@ Deno.serve(async (req) => {
     return handleAddDefaultChecklist(req, token);
   }
 
+  // Route: GET /admin/prototypes/:token
+  if (subPath.match(/^prototypes\/[^\/]+$/) && req.method === "GET") {
+    const token = subPath.replace("prototypes/", "");
+    return handleGetPrototypes(req, token);
+  }
+
+  // Route: POST /admin/prototypes/:token
+  if (subPath.match(/^prototypes\/[^\/]+$/) && req.method === "POST") {
+    const token = subPath.replace("prototypes/", "");
+    return handleCreatePrototype(req, token);
+  }
+
+  // Route: PATCH /admin/prototypes/:token/:prototypeId
+  if (subPath.match(/^prototypes\/[^\/]+\/[^\/]+$/) && req.method === "PATCH") {
+    const parts = subPath.split("/");
+    const token = parts[1];
+    const prototypeId = parts[2];
+    return handleUpdatePrototype(req, token, prototypeId);
+  }
+
+  // Route: DELETE /admin/prototypes/:token/:prototypeId
+  if (subPath.match(/^prototypes\/[^\/]+\/[^\/]+$/) && req.method === "DELETE") {
+    const parts = subPath.split("/");
+    const token = parts[1];
+    const prototypeId = parts[2];
+    return handleDeletePrototype(req, token, prototypeId);
+  }
+
   return new Response(
     JSON.stringify({ error: "Not found" }),
     { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -1251,6 +1279,274 @@ async function handleUpdateProjectStatus(req: Request, token: string): Promise<R
 
   } catch (error) {
     console.error("Status update error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+}
+
+// GET /admin/prototypes/:token - Get prototypes for a project
+async function handleGetPrototypes(req: Request, token: string): Promise<Response> {
+  const authError = validateAdminKey(req);
+  if (authError) return authError;
+
+  if (!isValidToken(token)) {
+    return new Response(
+      JSON.stringify({ error: "Invalid token" }),
+      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  try {
+    console.log(`Fetching prototypes for token: ${token.slice(0, 8)}...`);
+
+    const supabase = getSupabaseClient();
+
+    // Verify project exists
+    const { data: project, error: projectError } = await supabase
+      .from("projects")
+      .select("id")
+      .eq("project_token", token)
+      .is("deleted_at", null)
+      .maybeSingle();
+
+    if (projectError || !project) {
+      return new Response(
+        JSON.stringify({ error: "Project not found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Fetch prototypes
+    const { data: prototypes, error: prototypesError } = await supabase
+      .from("prototypes")
+      .select("id, url, version_label, status, created_at, updated_at")
+      .eq("project_id", project.id)
+      .order("created_at", { ascending: false });
+
+    if (prototypesError) {
+      console.error("Prototypes fetch error:", prototypesError);
+      return new Response(
+        JSON.stringify({ error: "Database error" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    return new Response(
+      JSON.stringify({ prototypes: prototypes || [] }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+
+  } catch (error) {
+    console.error("Get prototypes error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+}
+
+// POST /admin/prototypes/:token - Create a prototype
+async function handleCreatePrototype(req: Request, token: string): Promise<Response> {
+  const authError = validateAdminKey(req);
+  if (authError) return authError;
+
+  if (!isValidToken(token)) {
+    return new Response(
+      JSON.stringify({ error: "Invalid token" }),
+      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  try {
+    let body: { url?: string; version_label?: string; status?: string };
+    try {
+      body = await req.json();
+    } catch {
+      return new Response(
+        JSON.stringify({ error: "Invalid JSON body" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const url = body.url?.trim();
+    if (!url || url.length === 0) {
+      return new Response(
+        JSON.stringify({ error: "URL is required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log(`Creating prototype for token: ${token.slice(0, 8)}...`);
+
+    const supabase = getSupabaseClient();
+
+    // Verify project exists
+    const { data: project, error: projectError } = await supabase
+      .from("projects")
+      .select("id")
+      .eq("project_token", token)
+      .is("deleted_at", null)
+      .maybeSingle();
+
+    if (projectError || !project) {
+      return new Response(
+        JSON.stringify({ error: "Project not found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Create prototype
+    const { data: prototype, error: insertError } = await supabase
+      .from("prototypes")
+      .insert({
+        project_id: project.id,
+        project_token: token,
+        url,
+        version_label: body.version_label?.trim() || null,
+        status: body.status || "draft",
+      })
+      .select()
+      .single();
+
+    if (insertError) {
+      console.error("Prototype insert error:", insertError);
+      return new Response(
+        JSON.stringify({ error: "Failed to create prototype" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log("Prototype created successfully");
+
+    return new Response(
+      JSON.stringify({ ok: true, prototype }),
+      { status: 201, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+
+  } catch (error) {
+    console.error("Create prototype error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+}
+
+// PATCH /admin/prototypes/:token/:prototypeId - Update a prototype
+async function handleUpdatePrototype(req: Request, token: string, prototypeId: string): Promise<Response> {
+  const authError = validateAdminKey(req);
+  if (authError) return authError;
+
+  if (!isValidToken(token)) {
+    return new Response(
+      JSON.stringify({ error: "Invalid token" }),
+      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  try {
+    let body: { url?: string; version_label?: string; status?: string };
+    try {
+      body = await req.json();
+    } catch {
+      return new Response(
+        JSON.stringify({ error: "Invalid JSON body" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log(`Updating prototype ${prototypeId} for token: ${token.slice(0, 8)}...`);
+
+    const supabase = getSupabaseClient();
+
+    // Build update object
+    const updates: Record<string, string | null> = {};
+    if (body.url !== undefined) updates.url = body.url.trim();
+    if (body.version_label !== undefined) updates.version_label = body.version_label?.trim() || null;
+    if (body.status !== undefined) updates.status = body.status;
+
+    if (Object.keys(updates).length === 0) {
+      return new Response(
+        JSON.stringify({ error: "No fields to update" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Update prototype
+    const { data: prototype, error: updateError } = await supabase
+      .from("prototypes")
+      .update(updates)
+      .eq("id", prototypeId)
+      .eq("project_token", token)
+      .select()
+      .single();
+
+    if (updateError) {
+      console.error("Prototype update error:", updateError);
+      return new Response(
+        JSON.stringify({ error: "Failed to update prototype" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log("Prototype updated successfully");
+
+    return new Response(
+      JSON.stringify({ ok: true, prototype }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+
+  } catch (error) {
+    console.error("Update prototype error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+}
+
+// DELETE /admin/prototypes/:token/:prototypeId - Delete a prototype
+async function handleDeletePrototype(req: Request, token: string, prototypeId: string): Promise<Response> {
+  const authError = validateAdminKey(req);
+  if (authError) return authError;
+
+  if (!isValidToken(token)) {
+    return new Response(
+      JSON.stringify({ error: "Invalid token" }),
+      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  try {
+    console.log(`Deleting prototype ${prototypeId} for token: ${token.slice(0, 8)}...`);
+
+    const supabase = getSupabaseClient();
+
+    const { error: deleteError } = await supabase
+      .from("prototypes")
+      .delete()
+      .eq("id", prototypeId)
+      .eq("project_token", token);
+
+    if (deleteError) {
+      console.error("Prototype delete error:", deleteError);
+      return new Response(
+        JSON.stringify({ error: "Failed to delete prototype" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log("Prototype deleted successfully");
+
+    return new Response(
+      JSON.stringify({ ok: true }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+
+  } catch (error) {
+    console.error("Delete prototype error:", error);
     return new Response(
       JSON.stringify({ error: "Internal server error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
