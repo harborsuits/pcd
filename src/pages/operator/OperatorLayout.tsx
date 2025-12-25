@@ -5,11 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { Activity, Rocket, LogOut, FolderOpen, Inbox, Send, Shield, ShieldCheck } from "lucide-react";
+import { Activity, Rocket, LogOut, FolderOpen, Inbox, Send, ShieldCheck, KeyRound } from "lucide-react";
 import { toast } from "sonner";
 import { AcquisitionTab } from "./AcquisitionTab";
 import { DeliveryTab } from "./DeliveryTab";
 import { ProjectsTab } from "./ProjectsTab";
+import { DataFreshnessPill } from "@/components/operator/DataFreshnessPill";
 import { 
   AdminAuthError, 
   clearAdminKey, 
@@ -139,6 +140,14 @@ export default function OperatorLayout() {
             <h1 className="text-xl font-bold">Operator Console</h1>
           </div>
           <div className="flex items-center gap-3">
+            {/* Data freshness indicator */}
+            <DataFreshnessPill
+              staleAfterSeconds={60}
+              queryKeys={[
+                ["admin-projects"],
+                ["admin-inbox"],
+              ]}
+            />
             {/* Session status pill */}
             <Badge 
               variant="outline" 
@@ -154,6 +163,19 @@ export default function OperatorLayout() {
               <span className="text-muted-foreground">•</span>
               <span className="text-muted-foreground">{storageMode}</span>
             </Badge>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                clearAdminKey();
+                setAdminKeyInput("");
+                setIsAuthed(false);
+                toast.success("Admin key cleared. Please re-authenticate.");
+              }}
+            >
+              <KeyRound className="h-4 w-4 mr-2" />
+              Rotate Key
+            </Button>
             <Button variant="ghost" size="sm" onClick={handleLogout}>
               <LogOut className="h-4 w-4 mr-2" />
               Logout
