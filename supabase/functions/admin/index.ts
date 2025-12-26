@@ -283,6 +283,49 @@ Deno.serve(async (req) => {
     return handleClearTestAccounts(req);
   }
 
+  // Route: GET /admin/milestones/:token
+  if (subPath.match(/^milestones\/[^\/]+$/) && req.method === "GET") {
+    const token = subPath.replace("milestones/", "");
+    return handleGetMilestones(req, token);
+  }
+
+  // Route: POST /admin/milestones/:token
+  if (subPath.match(/^milestones\/[^\/]+$/) && req.method === "POST") {
+    const token = subPath.replace("milestones/", "");
+    return handleCreateMilestone(req, token);
+  }
+
+  // Route: POST /admin/milestones/:token/defaults
+  if (subPath.match(/^milestones\/[^\/]+\/defaults$/) && req.method === "POST") {
+    const parts = subPath.split("/");
+    const token = parts[1];
+    return handleAddDefaultMilestones(req, token);
+  }
+
+  // Route: PATCH /admin/milestones/:token/:milestoneId
+  if (subPath.match(/^milestones\/[^\/]+\/[^\/]+$/) && req.method === "PATCH" && !subPath.includes("notes")) {
+    const parts = subPath.split("/");
+    const token = parts[1];
+    const milestoneId = parts[2];
+    return handleUpdateMilestone(req, token, milestoneId);
+  }
+
+  // Route: DELETE /admin/milestones/:token/:milestoneId
+  if (subPath.match(/^milestones\/[^\/]+\/[^\/]+$/) && req.method === "DELETE" && !subPath.includes("notes")) {
+    const parts = subPath.split("/");
+    const token = parts[1];
+    const milestoneId = parts[2];
+    return handleDeleteMilestone(req, token, milestoneId);
+  }
+
+  // Route: POST /admin/milestones/:token/:milestoneId/notes
+  if (subPath.match(/^milestones\/[^\/]+\/[^\/]+\/notes$/) && req.method === "POST") {
+    const parts = subPath.split("/");
+    const token = parts[1];
+    const milestoneId = parts[2];
+    return handleAddMilestoneNote(req, token, milestoneId);
+  }
+
   return new Response(
     JSON.stringify({ error: "Not found" }),
     { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -3006,6 +3049,455 @@ async function handleClearTestAccounts(req: Request): Promise<Response> {
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    const users = usersData?.users || [];
+    
+    // Filter out operator/admin emails (keep these safe)
+    const safeEmails = ["pleasantcovedesign@gmail.com"];
+    const usersToDelete = users.filter(u => !safeEmails.includes(u.email?.toLowerCase() || ""));
+
+    console.log(`Found ${users.length} total users, ${usersToDelete.length} to delete`);
+
+    let deleted = 0;
+    const errors: string[] = [];
+
+    for (const user of usersToDelete) {
+      await supabase
+        .from("projects")
+        .update({ owner_user_id: null })
+        .eq("owner_user_id", user.id);
+
+      const { error: deleteError } = await supabase.auth.admin.deleteUser(user.id);
+      if (deleteError) {
+        errors.push(`${user.email}: ${deleteError.message}`);
+      } else {
+        deleted++;
+        console.log(`Deleted: ${user.email}`);
+      }
+    }
+
+    await supabase
+      .from("email_verifications")
+      .delete()
+      .is("project_token", null);
+
+    console.log(`Cleared ${deleted} test accounts`);
+
+    return new Response(
+      JSON.stringify({ 
+        ok: true, 
+        deleted, 
+        total: usersToDelete.length,
+        errors: errors.length > 0 ? errors : undefined 
+      }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+
+  } catch (error) {
+    console.error("Clear test accounts error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+}
+
+// ==================== MILESTONES HANDLERS ====================
+
+const DEFAULT_MILESTONE_ITEMS = [
+  { label: "Content received", description: "Client has provided all copy and assets" },
+  { label: "Design approved", description: "Client has approved the design mockups" },
+  { label: "Development complete", description: "Site is built and ready for review" },
+  { label: "Final revisions", description: "Client feedback incorporated" },
+  { label: "Ready for launch", description: "All pre-launch checks passed" },
+];
+
+// GET /admin/milestones/:token
+async function handleGetMilestones(req: Request, token: string): Promise<Response> {
+  const authError = validateAdminKey(req);
+  if (authError) return authError;
+
+  if (!isValidToken(token)) {
+    return new Response(
+      JSON.stringify({ error: "Invalid token" }),
+      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  try {
+    const supabase = getSupabaseClient();
+
+    // Get project
+    const { data: project, error: projErr } = await supabase
+      .from("projects")
+      .select("id")
+      .eq("project_token", token)
+      .is("deleted_at", null)
+      .maybeSingle();
+
+    if (projErr || !project) {
+      return new Response(
+        JSON.stringify({ error: "Project not found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Get milestones with notes
+    const { data: milestones, error: milestonesError } = await supabase
+      .from("project_milestones")
+      .select("*")
+      .eq("project_token", token)
+      .order("sort_order", { ascending: true });
+
+    if (milestonesError) throw milestonesError;
+
+    // Get notes for all milestones
+    const milestoneIds = (milestones || []).map(m => m.id);
+    let notes: any[] = [];
+    
+    if (milestoneIds.length > 0) {
+      const { data: notesData, error: notesError } = await supabase
+        .from("milestone_notes")
+        .select("*")
+        .in("milestone_id", milestoneIds)
+        .order("created_at", { ascending: true });
+      
+      if (!notesError) {
+        notes = notesData || [];
+      }
+    }
+
+    // Attach notes to milestones
+    const milestonesWithNotes = (milestones || []).map(m => ({
+      ...m,
+      notes: notes.filter(n => n.milestone_id === m.id),
+    }));
+
+    return new Response(
+      JSON.stringify({ milestones: milestonesWithNotes }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+
+  } catch (error) {
+    console.error("Get milestones error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+}
+
+// POST /admin/milestones/:token
+async function handleCreateMilestone(req: Request, token: string): Promise<Response> {
+  const authError = validateAdminKey(req);
+  if (authError) return authError;
+
+  if (!isValidToken(token)) {
+    return new Response(
+      JSON.stringify({ error: "Invalid token" }),
+      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  try {
+    const body = await req.json();
+    const { label, description } = body;
+
+    if (!label || typeof label !== "string") {
+      return new Response(
+        JSON.stringify({ error: "Label required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const supabase = getSupabaseClient();
+
+    // Get project
+    const { data: project, error: projErr } = await supabase
+      .from("projects")
+      .select("id")
+      .eq("project_token", token)
+      .is("deleted_at", null)
+      .maybeSingle();
+
+    if (projErr || !project) {
+      return new Response(
+        JSON.stringify({ error: "Project not found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Get max sort order
+    const { data: maxData } = await supabase
+      .from("project_milestones")
+      .select("sort_order")
+      .eq("project_token", token)
+      .order("sort_order", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const nextOrder = (maxData?.sort_order ?? -1) + 1;
+
+    // Create milestone
+    const { data: milestone, error: insertError } = await supabase
+      .from("project_milestones")
+      .insert({
+        project_id: project.id,
+        project_token: token,
+        label: label.trim(),
+        description: description?.trim() || null,
+        sort_order: nextOrder,
+      })
+      .select()
+      .single();
+
+    if (insertError) throw insertError;
+
+    return new Response(
+      JSON.stringify({ milestone }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+
+  } catch (error) {
+    console.error("Create milestone error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+}
+
+// POST /admin/milestones/:token/defaults
+async function handleAddDefaultMilestones(req: Request, token: string): Promise<Response> {
+  const authError = validateAdminKey(req);
+  if (authError) return authError;
+
+  if (!isValidToken(token)) {
+    return new Response(
+      JSON.stringify({ error: "Invalid token" }),
+      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  try {
+    const supabase = getSupabaseClient();
+
+    // Get project
+    const { data: project, error: projErr } = await supabase
+      .from("projects")
+      .select("id")
+      .eq("project_token", token)
+      .is("deleted_at", null)
+      .maybeSingle();
+
+    if (projErr || !project) {
+      return new Response(
+        JSON.stringify({ error: "Project not found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Insert default milestones
+    const inserts = DEFAULT_MILESTONE_ITEMS.map((item, idx) => ({
+      project_id: project.id,
+      project_token: token,
+      label: item.label,
+      description: item.description,
+      sort_order: idx,
+      is_client_visible: true,
+    }));
+
+    const { error: insertError } = await supabase
+      .from("project_milestones")
+      .insert(inserts);
+
+    if (insertError) throw insertError;
+
+    return new Response(
+      JSON.stringify({ ok: true }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+
+  } catch (error) {
+    console.error("Add default milestones error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+}
+
+// PATCH /admin/milestones/:token/:milestoneId
+async function handleUpdateMilestone(req: Request, token: string, milestoneId: string): Promise<Response> {
+  const authError = validateAdminKey(req);
+  if (authError) return authError;
+
+  if (!isValidToken(token)) {
+    return new Response(
+      JSON.stringify({ error: "Invalid token" }),
+      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  try {
+    const body = await req.json();
+    const { is_done, is_client_visible, label, description } = body;
+
+    const supabase = getSupabaseClient();
+
+    const updates: Record<string, unknown> = {};
+    
+    if (typeof is_done === "boolean") {
+      updates.is_done = is_done;
+      updates.completed_at = is_done ? new Date().toISOString() : null;
+    }
+    
+    if (typeof is_client_visible === "boolean") {
+      updates.is_client_visible = is_client_visible;
+    }
+    
+    if (typeof label === "string") {
+      updates.label = label.trim();
+    }
+    
+    if (typeof description === "string") {
+      updates.description = description.trim() || null;
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return new Response(
+        JSON.stringify({ error: "No valid fields to update" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const { data: milestone, error: updateError } = await supabase
+      .from("project_milestones")
+      .update(updates)
+      .eq("id", milestoneId)
+      .eq("project_token", token)
+      .select()
+      .single();
+
+    if (updateError) throw updateError;
+
+    return new Response(
+      JSON.stringify({ milestone }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+
+  } catch (error) {
+    console.error("Update milestone error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+}
+
+// DELETE /admin/milestones/:token/:milestoneId
+async function handleDeleteMilestone(req: Request, token: string, milestoneId: string): Promise<Response> {
+  const authError = validateAdminKey(req);
+  if (authError) return authError;
+
+  if (!isValidToken(token)) {
+    return new Response(
+      JSON.stringify({ error: "Invalid token" }),
+      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  try {
+    const supabase = getSupabaseClient();
+
+    const { error: deleteError } = await supabase
+      .from("project_milestones")
+      .delete()
+      .eq("id", milestoneId)
+      .eq("project_token", token);
+
+    if (deleteError) throw deleteError;
+
+    return new Response(
+      JSON.stringify({ ok: true }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+
+  } catch (error) {
+    console.error("Delete milestone error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+}
+
+// POST /admin/milestones/:token/:milestoneId/notes
+async function handleAddMilestoneNote(req: Request, token: string, milestoneId: string): Promise<Response> {
+  const authError = validateAdminKey(req);
+  if (authError) return authError;
+
+  if (!isValidToken(token)) {
+    return new Response(
+      JSON.stringify({ error: "Invalid token" }),
+      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  try {
+    const body = await req.json();
+    const { content, created_by } = body;
+
+    if (!content || typeof content !== "string") {
+      return new Response(
+        JSON.stringify({ error: "Content required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const supabase = getSupabaseClient();
+
+    // Verify milestone exists
+    const { data: milestone, error: milestoneErr } = await supabase
+      .from("project_milestones")
+      .select("id")
+      .eq("id", milestoneId)
+      .eq("project_token", token)
+      .maybeSingle();
+
+    if (milestoneErr || !milestone) {
+      return new Response(
+        JSON.stringify({ error: "Milestone not found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const { data: note, error: insertError } = await supabase
+      .from("milestone_notes")
+      .insert({
+        milestone_id: milestoneId,
+        project_token: token,
+        content: content.trim(),
+        created_by: created_by?.trim() || "operator",
+      })
+      .select()
+      .single();
+
+    if (insertError) throw insertError;
+
+    return new Response(
+      JSON.stringify({ note }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+
+  } catch (error) {
+    console.error("Add milestone note error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+}
 
     const users = usersData?.users || [];
     

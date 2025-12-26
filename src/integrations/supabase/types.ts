@@ -381,6 +381,41 @@ export type Database = {
           },
         ]
       }
+      milestone_notes: {
+        Row: {
+          content: string
+          created_at: string
+          created_by: string | null
+          id: string
+          milestone_id: string
+          project_token: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          milestone_id: string
+          project_token: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          milestone_id?: string
+          project_token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "milestone_notes_milestone_id_fkey"
+            columns: ["milestone_id"]
+            isOneToOne: false
+            referencedRelation: "project_milestones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notification_events: {
         Row: {
           created_at: string
@@ -697,6 +732,56 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "project_media_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_milestones: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          description: string | null
+          id: string
+          is_client_visible: boolean
+          is_done: boolean
+          label: string
+          project_id: string
+          project_token: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_client_visible?: boolean
+          is_done?: boolean
+          label: string
+          project_id: string
+          project_token: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_client_visible?: boolean
+          is_done?: boolean
+          label?: string
+          project_id?: string
+          project_token?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_milestones_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
