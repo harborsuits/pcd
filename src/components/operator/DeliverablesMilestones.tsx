@@ -2,9 +2,14 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { 
   Plus, 
   Loader2, 
@@ -16,7 +21,10 @@ import {
   ChevronDown,
   ChevronRight,
   MessageSquare,
-  Clock
+  Clock,
+  Sparkles,
+  Rocket,
+  Zap
 } from "lucide-react";
 import { toast } from "sonner";
 import { adminFetch } from "@/lib/adminFetch";
@@ -45,13 +53,12 @@ interface DeliverablesMilestonesProps {
   projectStatus?: string;
 }
 
-const DEFAULT_MILESTONES = [
-  { label: "Content received", description: "Client has provided all copy and assets" },
-  { label: "Design approved", description: "Client has approved the design mockups" },
-  { label: "Development complete", description: "Site is built and ready for review" },
-  { label: "Final revisions", description: "Client feedback incorporated" },
-  { label: "Ready for launch", description: "All pre-launch checks passed" },
-];
+// Package templates with display info
+const PACKAGE_TEMPLATES = [
+  { id: "starter", label: "Starter", icon: Zap, description: "4 milestones" },
+  { id: "growth", label: "Growth", icon: Sparkles, description: "6 milestones" },
+  { id: "full_ops", label: "Full Ops", icon: Rocket, description: "9 milestones" },
+] as const;
 
 export function DeliverablesMilestones({ projectToken, projectStatus }: DeliverablesMilestonesProps) {
   const [newItemLabel, setNewItemLabel] = useState("");
@@ -157,18 +164,20 @@ export function DeliverablesMilestones({ projectToken, projectStatus }: Delivera
     onError: (error: Error) => toast.error(error.message),
   });
 
-  // Add defaults mutation
+  // Add defaults mutation with package support
   const addDefaultsMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (packageType: string) => {
       const res = await adminFetch(`/admin/milestones/${projectToken}/defaults`, {
         method: "POST",
+        body: JSON.stringify({ package: packageType }),
       });
       if (!res.ok) throw new Error("Failed to add defaults");
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["project-milestones", projectToken] });
-      toast.success("Default milestones added");
+      const pkgLabel = PACKAGE_TEMPLATES.find(p => p.id === data.package)?.label || data.package;
+      toast.success(`${pkgLabel} template added (${data.count} milestones)`);
     },
     onError: (error: Error) => toast.error(error.message),
   });
@@ -194,20 +203,40 @@ export function DeliverablesMilestones({ projectToken, projectStatus }: Delivera
           )}
         </div>
         {milestones.length === 0 && !isLaunched && (
-          <Button
-            variant="outline"
-            size="sm"
-            className="text-xs h-7"
-            onClick={() => addDefaultsMutation.mutate()}
-            disabled={addDefaultsMutation.isPending}
-          >
-            {addDefaultsMutation.isPending ? (
-              <Loader2 className="h-3 w-3 animate-spin mr-1" />
-            ) : (
-              <Plus className="h-3 w-3 mr-1" />
-            )}
-            Add Defaults
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-xs h-7"
+                disabled={addDefaultsMutation.isPending}
+              >
+                {addDefaultsMutation.isPending ? (
+                  <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                ) : (
+                  <Plus className="h-3 w-3 mr-1" />
+                )}
+                Add Template
+                <ChevronDown className="h-3 w-3 ml-1" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-44">
+              {PACKAGE_TEMPLATES.map((pkg) => {
+                const Icon = pkg.icon;
+                return (
+                  <DropdownMenuItem
+                    key={pkg.id}
+                    onClick={() => addDefaultsMutation.mutate(pkg.id)}
+                    className="flex items-center gap-2"
+                  >
+                    <Icon className="h-3.5 w-3.5" />
+                    <span className="flex-1">{pkg.label}</span>
+                    <span className="text-[10px] text-muted-foreground">{pkg.description}</span>
+                  </DropdownMenuItem>
+                );
+              })}
+            </DropdownMenuContent>
+          </DropdownMenu>
         )}
       </div>
 
