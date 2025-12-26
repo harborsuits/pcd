@@ -62,15 +62,19 @@ export function PortalAuthPage({ projectToken, businessName, onAuthSuccess }: Po
         return;
       }
 
-      // ALWAYS go to OTP verification after signup, regardless of session state
-      // (auto-confirm may return a session immediately, but we still require OTP)
-      if (data.user) {
-        setPendingSession({
-          accessToken: data.session?.access_token ?? "",
-          userName: name,
-        });
-        setStep("verification");
-      }
+      console.log("✅ Signup succeeded, data:", { user: !!data.user, session: !!data.session });
+
+      // ALWAYS go to OTP verification after signup - NO CONDITIONS
+      // Store session info for after verification
+      setPendingSession({
+        accessToken: data.session?.access_token ?? "",
+        userName: name,
+      });
+      
+      console.log("🚀 Forcing OTP step now");
+      setStep("verification");
+      // DO NOT call onAuthSuccess() here - wait for OTP verification
+      
     } catch (err) {
       console.error("Signup error:", err);
       setError("Something went wrong. Please try again.");
