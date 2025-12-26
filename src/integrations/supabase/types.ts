@@ -92,6 +92,7 @@ export type Database = {
       }
       email_verifications: {
         Row: {
+          attempt_count: number
           code_hash: string
           created_at: string
           email: string
@@ -101,6 +102,7 @@ export type Database = {
           verified_at: string | null
         }
         Insert: {
+          attempt_count?: number
           code_hash: string
           created_at?: string
           email: string
@@ -110,6 +112,7 @@ export type Database = {
           verified_at?: string | null
         }
         Update: {
+          attempt_count?: number
           code_hash?: string
           created_at?: string
           email?: string
