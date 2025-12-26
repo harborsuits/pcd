@@ -244,6 +244,11 @@ Deno.serve(async (req) => {
     return handleDeleteAccount(req, userId);
   }
 
+  // Route: POST /admin/accounts/clear-test - Delete all non-operator test accounts
+  if (subPath === "accounts/clear-test" && req.method === "POST") {
+    return handleClearTestAccounts(req);
+  }
+
   return new Response(
     JSON.stringify({ error: "Not found" }),
     { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -2936,6 +2941,86 @@ async function handleDeleteAccount(req: Request, userId: string): Promise<Respon
 
   } catch (error) {
     console.error("Delete account error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+}
+
+// POST /admin/accounts/clear-test - Delete all non-operator test accounts
+async function handleClearTestAccounts(req: Request): Promise<Response> {
+  const authError = validateAdminKey(req);
+  if (authError) return authError;
+
+  try {
+    console.log("Clearing test accounts...");
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: { autoRefreshToken: false, persistSession: false }
+    });
+
+    // Get all users
+    const { data: usersData, error: listError } = await supabase.auth.admin.listUsers({ perPage: 1000 });
+
+    if (listError) {
+      console.error("Failed to list users:", listError);
+      return new Response(
+        JSON.stringify({ error: listError.message || "Failed to list users" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const users = usersData?.users || [];
+    
+    // Filter out operator/admin emails (keep these safe)
+    const safeEmails = ["pleasantcovedesign@gmail.com"]; // Add your operator emails here
+    const usersToDelete = users.filter(u => !safeEmails.includes(u.email?.toLowerCase() || ""));
+
+    console.log(`Found ${users.length} total users, ${usersToDelete.length} to delete`);
+
+    let deleted = 0;
+    const errors: string[] = [];
+
+    for (const user of usersToDelete) {
+      // Unlink projects first
+      await supabase
+        .from("projects")
+        .update({ owner_user_id: null })
+        .eq("owner_user_id", user.id);
+
+      // Delete the user
+      const { error: deleteError } = await supabase.auth.admin.deleteUser(user.id);
+      if (deleteError) {
+        errors.push(`${user.email}: ${deleteError.message}`);
+      } else {
+        deleted++;
+        console.log(`Deleted: ${user.email}`);
+      }
+    }
+
+    // Also clear email verifications
+    await supabase
+      .from("email_verifications")
+      .delete()
+      .is("project_token", null);
+
+    console.log(`Cleared ${deleted} test accounts`);
+
+    return new Response(
+      JSON.stringify({ 
+        ok: true, 
+        deleted, 
+        total: usersToDelete.length,
+        errors: errors.length > 0 ? errors : undefined 
+      }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+
+  } catch (error) {
+    console.error("Clear test accounts error:", error);
     return new Response(
       JSON.stringify({ error: "Internal server error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
