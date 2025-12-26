@@ -12,7 +12,8 @@ import {
   Rocket, 
   CheckCircle2,
   ListChecks,
-  PartyPopper
+  PartyPopper,
+  Mail
 } from "lucide-react";
 import { toast } from "sonner";
 import { adminFetch } from "@/lib/adminFetch";
@@ -138,6 +139,25 @@ export function LaunchChecklist({ projectToken, projectStatus, onLaunchComplete 
     onError: (error: Error) => toast.error(error.message),
   });
 
+  // Send test email mutation
+  const sendTestEmailMutation = useMutation({
+    mutationFn: async () => {
+      const res = await adminFetch(`/admin/notifications/test`, {
+        method: "POST",
+        body: JSON.stringify({ project_token: projectToken }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to send test email");
+      }
+      return res.json();
+    },
+    onSuccess: (data) => {
+      toast.success(`Test email sent to ${data.email_to}`);
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
   const items = checklistData?.items || [];
   const completedCount = items.filter(i => i.is_done).length;
   const totalCount = items.length;
@@ -163,22 +183,39 @@ export function LaunchChecklist({ projectToken, projectStatus, onLaunchComplete 
             </Badge>
           )}
         </div>
-        {items.length === 0 && !isLaunched && (
+        <div className="flex items-center gap-2">
           <Button
             variant="outline"
             size="sm"
             className="text-xs h-7"
-            onClick={() => addDefaultsMutation.mutate()}
-            disabled={addDefaultsMutation.isPending}
+            onClick={() => sendTestEmailMutation.mutate()}
+            disabled={sendTestEmailMutation.isPending}
+            title="Send test email to project contact"
           >
-            {addDefaultsMutation.isPending ? (
+            {sendTestEmailMutation.isPending ? (
               <Loader2 className="h-3 w-3 animate-spin mr-1" />
             ) : (
-              <ListChecks className="h-3 w-3 mr-1" />
+              <Mail className="h-3 w-3 mr-1" />
             )}
-            Add Defaults
+            Test Email
           </Button>
-        )}
+          {items.length === 0 && !isLaunched && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-xs h-7"
+              onClick={() => addDefaultsMutation.mutate()}
+              disabled={addDefaultsMutation.isPending}
+            >
+              {addDefaultsMutation.isPending ? (
+                <Loader2 className="h-3 w-3 animate-spin mr-1" />
+              ) : (
+                <ListChecks className="h-3 w-3 mr-1" />
+              )}
+              Add Defaults
+            </Button>
+          )}
+        </div>
       </div>
 
       <ScrollArea className="flex-1">

@@ -94,6 +94,11 @@ Deno.serve(async (req) => {
     return handleLaunchComplete(req, token);
   }
 
+  // Route: POST /admin/notifications/test
+  if (subPath === "notifications/test" && req.method === "POST") {
+    return handleTestEmail(req);
+  }
+
   // Route: GET /admin/checklist/:token
   if (subPath.match(/^checklist\/[^\/]+$/) && req.method === "GET") {
     const token = subPath.replace("checklist/", "");
@@ -2556,6 +2561,132 @@ async function handleLaunchComplete(req: Request, token: string): Promise<Respon
 
   } catch (error) {
     console.error("Launch complete error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+}
+
+// POST /admin/notifications/test - Send a test email
+async function handleTestEmail(req: Request): Promise<Response> {
+  const authError = validateAdminKey(req);
+  if (authError) return authError;
+
+  try {
+    let body: { project_token?: string };
+    try {
+      body = await req.json();
+    } catch {
+      return new Response(
+        JSON.stringify({ error: "Invalid JSON body" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const { project_token } = body;
+
+    if (!project_token || !isValidToken(project_token)) {
+      return new Response(
+        JSON.stringify({ error: "Valid project_token required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log(`Sending test email for token: ${project_token.slice(0, 8)}...`);
+
+    const supabase = getSupabaseClient();
+
+    // Get project with contact_email
+    const { data: project, error: projectError } = await supabase
+      .from("projects")
+      .select("id, project_token, business_name, contact_email")
+      .eq("project_token", project_token)
+      .is("deleted_at", null)
+      .maybeSingle();
+
+    if (projectError) {
+      console.error("Project query error:", projectError);
+      return new Response(
+        JSON.stringify({ error: "Database error" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (!project) {
+      return new Response(
+        JSON.stringify({ error: "Project not found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (!project.contact_email) {
+      return new Response(
+        JSON.stringify({ error: "Project has no contact_email" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Insert test notification event
+    const { data: eventData, error: eventError } = await supabase
+      .from("notification_events")
+      .insert({
+        project_id: project.id,
+        project_token: project.project_token,
+        event_type: "test",
+        payload: { test: true, timestamp: new Date().toISOString() },
+      })
+      .select("id")
+      .single();
+
+    if (eventError) {
+      console.error("Event insert error:", eventError);
+      return new Response(
+        JSON.stringify({ error: "Failed to create test event" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Now call the email worker to process this event
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
+    try {
+      const workerRes = await fetch(`${supabaseUrl}/functions/v1/email-worker`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${serviceKey}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      const workerResult = await workerRes.json();
+      console.log("Email worker result:", workerResult);
+
+      return new Response(
+        JSON.stringify({
+          ok: true,
+          event_id: eventData.id,
+          email_to: project.contact_email,
+          worker_result: workerResult,
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    } catch (workerError) {
+      console.error("Email worker call failed:", workerError);
+      return new Response(
+        JSON.stringify({
+          ok: true,
+          event_id: eventData.id,
+          email_to: project.contact_email,
+          worker_error: "Worker call failed, event created but email not sent",
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+  } catch (error) {
+    console.error("Test email error:", error);
     return new Response(
       JSON.stringify({ error: "Internal server error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
