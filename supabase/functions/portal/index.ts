@@ -943,6 +943,14 @@ async function handleCreateProject(
       // Don't hard-fail the project creation — but log it loudly
     }
 
+    // Create notification event for intake_submitted email
+    await supabase.from("notification_events").insert({
+      project_id: project.id,
+      project_token: projectToken,
+      event_type: "intake_submitted",
+      payload: { business_name: intake.businessName, email: user.email },
+    });
+
     // Send auto-welcome message
     await supabase.from("messages").insert({
       project_id: project.id,

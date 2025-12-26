@@ -1409,6 +1409,23 @@ async function handleApproveIntake(req: Request, intakeId: string): Promise<Resp
       );
     }
 
+    // Get project info for notification
+    const { data: project } = await supabase
+      .from("projects")
+      .select("id, project_token, business_name")
+      .eq("id", data.project_id)
+      .maybeSingle();
+
+    // Create notification event for intake_approved email
+    if (project) {
+      await supabase.from("notification_events").insert({
+        project_id: project.id,
+        project_token: project.project_token,
+        event_type: "intake_approved",
+        payload: { business_name: project.business_name },
+      });
+    }
+
     console.log(`Intake ${intakeId} approved`);
 
     return new Response(
@@ -1556,6 +1573,14 @@ async function handleCreatePrototype(req: Request, token: string): Promise<Respo
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    // Create notification event for prototype_added email
+    await supabase.from("notification_events").insert({
+      project_id: project.id,
+      project_token: token,
+      event_type: "prototype_added",
+      payload: { url, version_label: body.version_label || null },
+    });
 
     console.log("Prototype created successfully");
 
