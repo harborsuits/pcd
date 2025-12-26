@@ -227,6 +227,23 @@ Deno.serve(async (req) => {
     return handleDeleteMedia(req, token, mediaId);
   }
 
+  // Route: GET /admin/accounts - List all auth users with linked projects
+  if (subPath === "accounts" && req.method === "GET") {
+    return handleGetAccounts(req);
+  }
+
+  // Route: PATCH /admin/accounts/:userId - Update user email
+  if (subPath.match(/^accounts\/[^\/]+$/) && req.method === "PATCH") {
+    const userId = subPath.replace("accounts/", "");
+    return handleUpdateAccount(req, userId);
+  }
+
+  // Route: DELETE /admin/accounts/:userId - Delete auth user
+  if (subPath.match(/^accounts\/[^\/]+$/) && req.method === "DELETE") {
+    const userId = subPath.replace("accounts/", "");
+    return handleDeleteAccount(req, userId);
+  }
+
   return new Response(
     JSON.stringify({ error: "Not found" }),
     { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -2712,6 +2729,213 @@ async function handleTestEmail(req: Request): Promise<Response> {
 
   } catch (error) {
     console.error("Test email error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+}
+
+// GET /admin/accounts - List all auth users with linked projects
+async function handleGetAccounts(req: Request): Promise<Response> {
+  const authError = validateAdminKey(req);
+  if (authError) return authError;
+
+  try {
+    console.log("Fetching all accounts with linked projects...");
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: { autoRefreshToken: false, persistSession: false }
+    });
+
+    // Fetch all auth users using Admin API
+    const { data: usersData, error: usersError } = await supabase.auth.admin.listUsers({
+      perPage: 1000,
+    });
+
+    if (usersError) {
+      console.error("Failed to list users:", usersError);
+      return new Response(
+        JSON.stringify({ error: "Failed to fetch users" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const users = usersData?.users || [];
+    console.log(`Found ${users.length} auth users`);
+
+    // Fetch all projects with owner_user_id set
+    const { data: projects, error: projectsError } = await supabase
+      .from("projects")
+      .select("id, project_token, business_name, status, contact_email, contact_phone, owner_user_id")
+      .is("deleted_at", null);
+
+    if (projectsError) {
+      console.error("Failed to fetch projects:", projectsError);
+      return new Response(
+        JSON.stringify({ error: "Failed to fetch projects" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Build accounts with linked projects
+    const accountsWithProjects = users.map((user) => {
+      const linkedProjects = (projects || []).filter((p) => p.owner_user_id === user.id);
+      return {
+        user: {
+          id: user.id,
+          email: user.email || "",
+          created_at: user.created_at,
+          last_sign_in_at: user.last_sign_in_at || null,
+          email_confirmed_at: user.email_confirmed_at || null,
+        },
+        projects: linkedProjects.map((p) => ({
+          id: p.id,
+          project_token: p.project_token,
+          business_name: p.business_name,
+          status: p.status,
+          contact_email: p.contact_email,
+          contact_phone: p.contact_phone,
+        })),
+      };
+    });
+
+    console.log(`Returning ${accountsWithProjects.length} accounts`);
+
+    return new Response(
+      JSON.stringify(accountsWithProjects),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+
+  } catch (error) {
+    console.error("Get accounts error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+}
+
+// PATCH /admin/accounts/:userId - Update user email
+async function handleUpdateAccount(req: Request, userId: string): Promise<Response> {
+  const authError = validateAdminKey(req);
+  if (authError) return authError;
+
+  try {
+    let body: { email?: string };
+    try {
+      body = await req.json();
+    } catch {
+      return new Response(
+        JSON.stringify({ error: "Invalid JSON body" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const { email } = body;
+
+    if (!email || !email.includes("@")) {
+      return new Response(
+        JSON.stringify({ error: "Valid email required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log(`Updating account ${userId} with email: ${email}`);
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: { autoRefreshToken: false, persistSession: false }
+    });
+
+    // Update auth user email
+    const { error: updateError } = await supabase.auth.admin.updateUserById(userId, {
+      email: email.trim(),
+    });
+
+    if (updateError) {
+      console.error("Failed to update user:", updateError);
+      return new Response(
+        JSON.stringify({ error: updateError.message || "Failed to update user" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Also update contact_email in linked projects
+    const { error: projectsError } = await supabase
+      .from("projects")
+      .update({ contact_email: email.trim() })
+      .eq("owner_user_id", userId);
+
+    if (projectsError) {
+      console.warn("Failed to update project contact emails:", projectsError);
+      // Don't fail the request, just log
+    }
+
+    console.log(`Account ${userId} updated successfully`);
+
+    return new Response(
+      JSON.stringify({ ok: true }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+
+  } catch (error) {
+    console.error("Update account error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+}
+
+// DELETE /admin/accounts/:userId - Delete auth user
+async function handleDeleteAccount(req: Request, userId: string): Promise<Response> {
+  const authError = validateAdminKey(req);
+  if (authError) return authError;
+
+  try {
+    console.log(`Deleting account ${userId}...`);
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: { autoRefreshToken: false, persistSession: false }
+    });
+
+    // Unlink projects from this user before deleting
+    const { error: unlinkError } = await supabase
+      .from("projects")
+      .update({ owner_user_id: null })
+      .eq("owner_user_id", userId);
+
+    if (unlinkError) {
+      console.warn("Failed to unlink projects:", unlinkError);
+      // Continue with deletion anyway
+    }
+
+    // Delete auth user
+    const { error: deleteError } = await supabase.auth.admin.deleteUser(userId);
+
+    if (deleteError) {
+      console.error("Failed to delete user:", deleteError);
+      return new Response(
+        JSON.stringify({ error: deleteError.message || "Failed to delete user" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log(`Account ${userId} deleted successfully`);
+
+    return new Response(
+      JSON.stringify({ ok: true }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+
+  } catch (error) {
+    console.error("Delete account error:", error);
     return new Response(
       JSON.stringify({ error: "Internal server error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
