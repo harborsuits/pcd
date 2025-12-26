@@ -13,7 +13,7 @@ import {
   MessageSquare, Send, Loader2, CheckCircle,
   Trash2, Plus, Eye, MessageCirclePlus,
   X, MessageSquareDot, Filter, Check, Circle,
-  ImageIcon, FileIcon, Upload, Download, Copy, Link2, Building2, Rocket
+  ImageIcon, FileIcon, Upload, Download, Copy, Link2, Building2, Rocket, Target
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -21,6 +21,7 @@ import { CommentCard } from "@/components/operator/CommentCard";
 import { DataFreshnessPill } from "@/components/operator/DataFreshnessPill";
 import { IntakeOverviewPanel } from "@/components/operator/IntakeOverviewPanel";
 import { LaunchChecklist } from "@/components/operator/LaunchChecklist";
+import { DeliverablesMilestones } from "@/components/operator/DeliverablesMilestones";
 import { adminFetch, AdminAuthError } from "@/lib/adminFetch";
 
 interface Project {
@@ -106,7 +107,7 @@ interface ProjectWorkSurfaceProps {
 
 export function ProjectWorkSurface({ project, onBack, onStatusChange }: ProjectWorkSurfaceProps) {
   const [replyContent, setReplyContent] = useState("");
-  const [activePanel, setActivePanel] = useState<"overview" | "comments" | "chat" | "media">("overview");
+  const [activePanel, setActivePanel] = useState<"overview" | "milestones" | "comments" | "chat" | "media" | "launch">("overview");
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [commentFilter, setCommentFilter] = useState<"open" | "resolved" | "all">("open");
@@ -655,10 +656,14 @@ export function ProjectWorkSurface({ project, onBack, onStatusChange }: ProjectW
         {/* Right: Sidebar Panel */}
         <div className="w-[400px] flex flex-col bg-card overflow-hidden">
           <Tabs value={activePanel} onValueChange={(v) => setActivePanel(v as typeof activePanel)} className="flex-1 flex flex-col overflow-hidden">
-            <TabsList className="flex-shrink-0 w-full grid grid-cols-5 p-1 m-2 mb-0">
+            <TabsList className="flex-shrink-0 w-full grid grid-cols-6 p-1 m-2 mb-0">
               <TabsTrigger value="overview" className="text-xs gap-1">
                 <Building2 className="h-3 w-3" />
                 Overview
+              </TabsTrigger>
+              <TabsTrigger value="milestones" className="text-xs gap-1">
+                <Target className="h-3 w-3" />
+                Milestones
               </TabsTrigger>
               <TabsTrigger value="comments" className="text-xs gap-1">
                 <MessageCirclePlus className="h-3 w-3" />
@@ -689,6 +694,14 @@ export function ProjectWorkSurface({ project, onBack, onStatusChange }: ProjectW
                 intakeStatus={project.intake?.intake_status}
                 onApproveIntake={project.intake?.id ? () => approveIntakeMut.mutate(project.intake!.id) : undefined}
                 isApproving={approveIntakeMut.isPending}
+              />
+            </TabsContent>
+
+            {/* Milestones */}
+            <TabsContent value="milestones" className="flex-1 flex flex-col overflow-hidden m-0">
+              <DeliverablesMilestones 
+                projectToken={project.project_token} 
+                projectStatus={project.status}
               />
             </TabsContent>
 

@@ -14,6 +14,7 @@ import { ProjectStatusBanner } from "@/components/portal/ProjectStatusBanner";
 import { FloatingChatOrb } from "@/components/portal/FloatingChatOrb";
 import { PrototypeViewer, type Prototype, type PrototypeComment } from "@/components/portal/PrototypeViewer";
 import { ProjectRoadmap, computeRoadmapSteps } from "@/components/portal/ProjectRoadmap";
+import { ClientFileUpload } from "@/components/portal/ClientFileUpload";
 
 import { PortalAuthPage } from "./PortalAuthPage";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
@@ -1151,167 +1152,25 @@ export default function PortalPage() {
           </div>
         )}
 
-        {/* Files Section - More prominent now */}
+        {/* Files Section - Categorized Upload */}
         <div className="p-6">
           <div className="container mx-auto max-w-4xl">
             <div className="bg-card border border-border rounded-xl p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <FileText className="h-5 w-5 text-muted-foreground" />
-                  <h2 className="font-semibold">Project Files</h2>
-                  {data.files.length > 0 && (
-                    <Badge variant="secondary" className="text-xs">
-                      {data.files.length}
-                    </Badge>
-                  )}
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowFilesPanel(!showFilesPanel)}
-                >
-                  <Upload className="h-4 w-4 mr-2" />
-                  Upload
-                </Button>
-              </div>
-
-              {/* Upload Panel */}
-              {showFilesPanel && (
-                <div 
-                  className={`p-4 border-2 border-dashed rounded-lg space-y-3 mb-4 transition-colors ${
-                    isDragging 
-                      ? "border-primary bg-primary/5" 
-                      : "border-border"
-                  } ${uploading ? "opacity-50 pointer-events-none" : ""}`}
-                  onDragOver={handleDragOver}
-                  onDragEnter={handleDragEnter}
-                  onDragLeave={handleDragLeave}
-                  onDrop={handleDrop}
-                >
-                  <div className="flex items-center gap-2 text-sm">
-                    <Upload className="h-4 w-4 text-muted-foreground" />
-                    <span className="font-medium">
-                      {isDragging ? "Drop files here" : "Upload files"}
-                    </span>
-                  </div>
-                  
-                  {!isDragging && (
-                    <>
-                      <div className="flex gap-2">
-                        <Input
-                          id="file-upload"
-                          type="file"
-                          accept="image/*,application/pdf"
-                          multiple
-                          onChange={(e) => {
-                            const files = e.target.files;
-                            if (files && files.length > 0) {
-                              handleMultiFileUpload(files);
-                            }
-                            e.currentTarget.value = "";
-                          }}
-                          disabled={uploading}
-                          className="cursor-pointer text-sm"
-                        />
-                      </div>
-                      
-                      <Input
-                        value={uploadDesc}
-                        onChange={(e) => setUploadDesc(e.target.value)}
-                        placeholder="Description (optional)"
-                        disabled={uploading}
-                        className="text-sm"
-                      />
-                    </>
-                  )}
-                  
-                  {/* Upload Queue Status */}
-                  {uploadQueue.length > 0 && (
-                    <div className="space-y-1">
-                      {uploadQueue.map((item, idx) => (
-                        <div key={idx} className="flex items-center gap-2 text-xs">
-                          {item.status === 'uploading' && <Loader2 className="h-3 w-3 animate-spin" />}
-                          {item.status === 'done' && <span className="text-green-500">✓</span>}
-                          {item.status === 'error' && <span className="text-destructive">✗</span>}
-                          {item.status === 'pending' && <span className="text-muted-foreground">○</span>}
-                          <span className={item.status === 'error' ? 'text-destructive' : 'text-muted-foreground'}>
-                            {item.name}
-                            {item.error && ` - ${item.error}`}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  {uploading && uploadQueue.length === 0 && (
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <Loader2 className="h-3 w-3 animate-spin" />
-                      Uploading...
-                    </div>
-                  )}
-                  
-                  <p className="text-[10px] text-muted-foreground">
-                    {isDragging ? "Release to upload" : "Drag & drop • Images + PDF • Max 10MB"}
-                  </p>
-                </div>
-              )}
-
-              {/* Files List */}
-              {data.files.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <FileText className="h-10 w-10 mx-auto mb-2 opacity-30" />
-                  <p className="text-sm">No files yet</p>
-                  <p className="text-xs text-muted-foreground/70">Upload files to share with your team</p>
-                </div>
-              ) : (
-                <div className="grid gap-3 sm:grid-cols-2">
-                  {data.files.map((file) => {
-                    const fileUrl = proxyMediaUrl(file.id, token);
-                    const isImage = isImageType(file.file_type);
-                    
-                    return (
-                      <div key={file.id} className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg border border-border/50">
-                        <span className="text-2xl">{getFileIcon(file.file_type)}</span>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium truncate text-sm">{file.file_name}</p>
-                          {file.description && (
-                            <p className="text-xs text-muted-foreground truncate">{file.description}</p>
-                          )}
-                          <p className="text-[10px] text-muted-foreground">{formatDate(file.created_at)}</p>
-                        </div>
-                        <div className="flex items-center gap-1 shrink-0">
-                          {isImage && (
-                            <button
-                              onClick={() => setImgPreview({ url: fileUrl, name: file.file_name })}
-                              className="inline-flex items-center justify-center h-8 w-8 rounded-md hover:bg-background transition-colors"
-                              title="Preview image"
-                            >
-                              <Eye className="h-4 w-4" />
-                            </button>
-                          )}
-                          {isPdf(file.file_type) && (
-                            <button
-                              onClick={() => setPdfPreview({ url: fileUrl, name: file.file_name })}
-                              className="inline-flex items-center justify-center h-8 w-8 rounded-md hover:bg-background transition-colors"
-                              title="Preview PDF"
-                            >
-                              <Eye className="h-4 w-4" />
-                            </button>
-                          )}
-                          <a
-                            href={fileUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center justify-center h-8 w-8 rounded-md hover:bg-background transition-colors"
-                            title="Download"
-                          >
-                            <Download className="h-4 w-4" />
-                          </a>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
+              <ClientFileUpload
+                token={token!}
+                files={data.files}
+                onFileUploaded={(file) => {
+                  setData((prev) => {
+                    if (!prev) return prev;
+                    return {
+                      ...prev,
+                      files: [file, ...prev.files],
+                    };
+                  });
+                }}
+                onPreviewImage={(url, name) => setImgPreview({ url, name })}
+                onPreviewPdf={(url, name) => setPdfPreview({ url, name })}
+              />
             </div>
           </div>
         </div>
