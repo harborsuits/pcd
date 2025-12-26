@@ -31,13 +31,14 @@ export function EmailVerification({
   const [resendCountdown, setResendCountdown] = useState(0);
   const hasSentInitial = useRef(false);
 
-  // Send verification code on mount
+  // Send verification code on mount - guard until all values exist
   useEffect(() => {
-    if (!hasSentInitial.current) {
-      hasSentInitial.current = true;
-      sendCode();
-    }
-  }, []);
+    if (!email || !projectToken) return;
+    if (hasSentInitial.current) return;
+    
+    hasSentInitial.current = true;
+    sendCode();
+  }, [email, projectToken]);
 
   // Countdown timer for resend
   useEffect(() => {
