@@ -54,10 +54,10 @@ const Pricing = () => {
           <div className="grid md:grid-cols-3 gap-6">
             <PricingCard
               title="Essential Website"
-              price="$750 – $1,250"
+              price="$950 – $1,500"
               description="Professional foundation for your business"
               features={[
-                "1–5 page professional website",
+                "Up to 5 page professional website",
                 "Mobile-friendly, fast loading",
                 "Click-to-call & contact forms",
                 "Google Maps embed",
@@ -69,7 +69,7 @@ const Pricing = () => {
             <PricingCard
               title="Growth Website"
               price="$1,500 – $2,500"
-              description="Built to convert visitors into customers"
+              description="Designed for businesses that want consistent inbound leads, not just an online presence."
               featured
               features={[
                 "Everything in Essential",
@@ -82,7 +82,7 @@ const Pricing = () => {
             />
             <PricingCard
               title="Premium / Interactive"
-              price="$2,500 – $4,000+"
+              price="$3,000 – $5,000+"
               description="Maximum polish and custom experiences"
               features={[
                 "Everything in Growth",
@@ -94,7 +94,8 @@ const Pricing = () => {
             />
           </div>
           <p className="text-sm text-muted-foreground mt-6 text-center">
-            Note: Custom illustration, 3D assets, or heavy animation increase cost.
+            Note: Custom illustration, 3D assets, or heavy animation increase cost.<br />
+            Final pricing depends on scope, integrations, and content readiness.
           </p>
         </div>
       </section>
@@ -259,7 +260,7 @@ const Pricing = () => {
           <div className="grid md:grid-cols-3 gap-6">
             <BundleCard
               title="PCD Starter System"
-              buildPrice="$750 – $1,250"
+              buildPrice="$950 – $1,500"
               monthlyPrice="$500 – $650 / month"
               features={[
                 "Essential website",
@@ -283,7 +284,7 @@ const Pricing = () => {
             />
             <BundleCard
               title="PCD Full Operations"
-              buildPrice="$2,500 – $4,000"
+              buildPrice="$3,000 – $5,000"
               monthlyPrice="$950 – $1,200 / month"
               features={[
                 "Premium website",
