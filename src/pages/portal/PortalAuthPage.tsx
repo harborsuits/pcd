@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,6 +7,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2, Lock, Mail, User } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { EmailVerification } from "@/components/portal/EmailVerification";
+import { ClientLayout } from "@/components/portal/ClientLayout";
+import { BrandCard } from "@/components/portal/BrandCard";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -197,164 +198,150 @@ export function PortalAuthPage({ projectToken, businessName, onAuthSuccess }: Po
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
-      {/* Header - matches homepage */}
-      <header className="border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-50">
-        <div className="container mx-auto px-6 py-4 flex items-center justify-between">
-          <Link to="/" className="font-serif text-xl font-bold tracking-tight text-foreground">
-            Pleasant Cove
-          </Link>
+    <ClientLayout
+      title={businessName}
+      subtitle={
+        <>
+          <span className="text-accent font-medium uppercase tracking-wide text-sm">Client Portal</span>
+        </>
+      }
+      maxWidth="md"
+      centered
+    >
+      <BrandCard className="w-full max-w-md mx-auto">
+        <div className="text-center mb-6">
+          <h2 className="font-serif text-xl font-bold text-foreground">
+            {mode === "signup" ? "Create your account" : "Welcome back"}
+          </h2>
+          <p className="text-sm text-muted-foreground mt-1">
+            {mode === "signup"
+              ? "Sign up to access your project portal"
+              : "Log in to continue"}
+          </p>
         </div>
-      </header>
+        
+        <Tabs value={mode} onValueChange={(v) => setMode(v as "login" | "signup")}>
+          <TabsList className="grid w-full grid-cols-2 mb-6">
+            <TabsTrigger value="signup">Sign Up</TabsTrigger>
+            <TabsTrigger value="login">Log In</TabsTrigger>
+          </TabsList>
 
-      {/* Hero section with branding */}
-      <div className="bg-gradient-to-b from-accent/5 to-background border-b border-border">
-        <div className="container mx-auto px-6 py-8 text-center">
-          <p className="text-sm text-accent font-medium uppercase tracking-wide mb-2">Client Portal</p>
-          <h1 className="font-serif text-2xl md:text-3xl font-bold tracking-tight text-foreground">
-            {businessName}
-          </h1>
-        </div>
-      </div>
+          <TabsContent value="signup">
+            <form onSubmit={handleSignup} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Your Name</Label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="name"
+                    type="text"
+                    placeholder="John Smith"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="pl-10"
+                    required
+                  />
+                </div>
+              </div>
 
-      <main className="flex-1 flex items-center justify-center p-6">
-        <div className="w-full max-w-md bg-card rounded-xl border border-border shadow-sm">
-          <div className="p-6 border-b border-border text-center">
-            <h2 className="font-serif text-xl font-bold text-foreground">
-              {mode === "signup" ? "Create your account" : "Welcome back"}
-            </h2>
-            <p className="text-sm text-muted-foreground mt-1">
-              {mode === "signup"
-                ? "Sign up to access your project portal"
-                : "Log in to continue"}
-            </p>
-          </div>
-          
-          <div className="p-6">
-            <Tabs value={mode} onValueChange={(v) => setMode(v as "login" | "signup")}>
-              <TabsList className="grid w-full grid-cols-2 mb-6">
-                <TabsTrigger value="signup">Sign Up</TabsTrigger>
-                <TabsTrigger value="login">Log In</TabsTrigger>
-              </TabsList>
+              <div className="space-y-2">
+                <Label htmlFor="signup-email">Email</Label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="signup-email"
+                    type="email"
+                    placeholder="you@example.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="pl-10"
+                    required
+                  />
+                </div>
+              </div>
 
-              <TabsContent value="signup">
-                <form onSubmit={handleSignup} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Your Name</Label>
-                    <div className="relative">
-                      <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="name"
-                        type="text"
-                        placeholder="John Smith"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        className="pl-10"
-                        required
-                      />
-                    </div>
-                  </div>
+              <div className="space-y-2">
+                <Label htmlFor="signup-password">Password</Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="signup-password"
+                    type="password"
+                    placeholder="At least 6 characters"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="pl-10"
+                    minLength={6}
+                    required
+                  />
+                </div>
+              </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-email">Email</Label>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="signup-email"
-                        type="email"
-                        placeholder="you@example.com"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        className="pl-10"
-                        required
-                      />
-                    </div>
-                  </div>
+              {error && <p className="text-sm text-destructive">{error}</p>}
 
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-password">Password</Label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="signup-password"
-                        type="password"
-                        placeholder="At least 6 characters"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        className="pl-10"
-                        minLength={6}
-                        required
-                      />
-                    </div>
-                  </div>
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Creating account...
+                  </>
+                ) : (
+                  "Create Account"
+                )}
+              </Button>
+            </form>
+          </TabsContent>
 
-                  {error && <p className="text-sm text-destructive">{error}</p>}
+          <TabsContent value="login">
+            <form onSubmit={handleLogin} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="login-email">Email</Label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="login-email"
+                    type="email"
+                    placeholder="you@example.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="pl-10"
+                    required
+                  />
+                </div>
+              </div>
 
-                  <Button type="submit" className="w-full" disabled={loading}>
-                    {loading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Creating account...
-                      </>
-                    ) : (
-                      "Create Account"
-                    )}
-                  </Button>
-                </form>
-              </TabsContent>
+              <div className="space-y-2">
+                <Label htmlFor="login-password">Password</Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="login-password"
+                    type="password"
+                    placeholder="Your password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="pl-10"
+                    required
+                  />
+                </div>
+              </div>
 
-              <TabsContent value="login">
-                <form onSubmit={handleLogin} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="login-email">Email</Label>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="login-email"
-                        type="email"
-                        placeholder="you@example.com"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        className="pl-10"
-                        required
-                      />
-                    </div>
-                  </div>
+              {error && <p className="text-sm text-destructive">{error}</p>}
 
-                  <div className="space-y-2">
-                    <Label htmlFor="login-password">Password</Label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="login-password"
-                        type="password"
-                        placeholder="Your password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        className="pl-10"
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  {error && <p className="text-sm text-destructive">{error}</p>}
-
-                  <Button type="submit" className="w-full" disabled={loading}>
-                    {loading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Logging in...
-                      </>
-                    ) : (
-                      "Log In"
-                    )}
-                  </Button>
-                </form>
-              </TabsContent>
-            </Tabs>
-          </div>
-        </div>
-      </main>
-    </div>
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Logging in...
+                  </>
+                ) : (
+                  "Log In"
+                )}
+              </Button>
+            </form>
+          </TabsContent>
+        </Tabs>
+      </BrandCard>
+    </ClientLayout>
   );
 }
