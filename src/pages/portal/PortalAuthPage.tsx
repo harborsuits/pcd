@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2, Lock, Mail, User } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { EmailVerification } from "@/components/portal/EmailVerification";
 import type { User as SupabaseUser, Session } from "@supabase/supabase-js";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
@@ -19,13 +20,19 @@ interface PortalAuthPageProps {
   onAuthSuccess: () => void;
 }
 
+type AuthStep = "credentials" | "verification";
+
 export function PortalAuthPage({ projectToken, businessName, onAuthSuccess }: PortalAuthPageProps) {
   const [mode, setMode] = useState<"login" | "signup">("signup");
+  const [step, setStep] = useState<AuthStep>("credentials");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // For verification step
+  const [pendingSession, setPendingSession] = useState<{ accessToken: string; userName: string } | null>(null);
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,13 +63,13 @@ export function PortalAuthPage({ projectToken, businessName, onAuthSuccess }: Po
       }
 
       if (data.session) {
-        // Link user to project using JWT
-        await linkUserToProject(data.session.access_token);
-        toast({
-          title: "Account created!",
-          description: "Welcome to your project portal.",
+        // Store session for after verification
+        setPendingSession({
+          accessToken: data.session.access_token,
+          userName: name,
         });
-        onAuthSuccess();
+        // Go to verification step
+        setStep("verification");
       }
     } catch (err) {
       console.error("Signup error:", err);
@@ -111,6 +118,28 @@ export function PortalAuthPage({ projectToken, businessName, onAuthSuccess }: Po
     }
   };
 
+  const handleVerificationComplete = async () => {
+    if (!pendingSession) return;
+
+    // Link user to project after verification
+    await linkUserToProject(pendingSession.accessToken);
+    toast({
+      title: "Account created!",
+      description: "Welcome to your project portal.",
+    });
+    onAuthSuccess();
+  };
+
+  const handleBackToCredentials = async () => {
+    // Sign out the pending session
+    await supabase.auth.signOut();
+    setPendingSession(null);
+    setStep("credentials");
+    setEmail("");
+    setPassword("");
+    setName("");
+  };
+
   // Use the user's JWT - server extracts user from token
   const linkUserToProject = async (accessToken: string) => {
     try {
@@ -151,6 +180,19 @@ export function PortalAuthPage({ projectToken, businessName, onAuthSuccess }: Po
       return false;
     }
   };
+
+  // Show verification screen if we're in that step
+  if (step === "verification") {
+    return (
+      <EmailVerification
+        email={email}
+        projectToken={projectToken}
+        businessName={businessName}
+        onVerified={handleVerificationComplete}
+        onBack={handleBackToCredentials}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
