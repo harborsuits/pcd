@@ -63,6 +63,7 @@ Deno.serve(async (req) => {
   const commentsIdx = pathParts.indexOf("comments");
   const attachmentsIdx = pathParts.indexOf("attachments");
   const approveFinalIdx = pathParts.indexOf("approve-final");
+  const milestonesIdx = pathParts.indexOf("milestones");
   
   if (reviewIdx > portalIdx && req.method === "POST") {
     const token = pathParts[portalIdx + 1];
@@ -140,6 +141,12 @@ Deno.serve(async (req) => {
   if (approveFinalIdx > portalIdx && req.method === "POST") {
     const token = pathParts[portalIdx + 1];
     return handleApproveFinal(req, token, corsHeaders);
+  }
+
+  // GET /portal/:token/milestones - Get client-visible milestones
+  if (milestonesIdx > portalIdx && req.method === "GET") {
+    const token = pathParts[portalIdx + 1];
+    return handleGetClientMilestones(token, corsHeaders);
   }
 
   if (req.method !== "GET") {
@@ -1539,6 +1546,74 @@ async function handleApproveFinal(
 
   } catch (error) {
     console.error("Approve final error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+}
+
+// GET /portal/:token/milestones - Get client-visible milestones
+async function handleGetClientMilestones(
+  token: string,
+  corsHeaders: Record<string, string>
+): Promise<Response> {
+  try {
+    if (!token || !isValidToken(token)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid token" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Fetch project by token
+    const { data: project, error: projectError } = await supabase
+      .from("projects")
+      .select("id, status")
+      .eq("project_token", token)
+      .is("deleted_at", null)
+      .maybeSingle();
+
+    if (projectError || !project) {
+      console.error("Project not found:", projectError);
+      return new Response(
+        JSON.stringify({ error: "Project not found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Fetch only client-visible milestones
+    const { data: milestones, error: milestonesError } = await supabase
+      .from("project_milestones")
+      .select("id, label, description, is_done, completed_at, sort_order")
+      .eq("project_token", token)
+      .eq("is_client_visible", true)
+      .order("sort_order", { ascending: true });
+
+    if (milestonesError) {
+      console.error("Milestones fetch error:", milestonesError);
+      return new Response(
+        JSON.stringify({ error: "Failed to fetch milestones" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log(`Returning ${milestones?.length || 0} client-visible milestones for token ${token.slice(0, 8)}...`);
+
+    return new Response(
+      JSON.stringify({
+        milestones: milestones || [],
+        project_status: project.status,
+      }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+
+  } catch (error) {
+    console.error("Get client milestones error:", error);
     return new Response(
       JSON.stringify({ error: "Internal server error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }

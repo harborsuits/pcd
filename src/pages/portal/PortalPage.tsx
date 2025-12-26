@@ -15,6 +15,7 @@ import { FloatingChatOrb } from "@/components/portal/FloatingChatOrb";
 import { PrototypeViewer, type Prototype, type PrototypeComment } from "@/components/portal/PrototypeViewer";
 import { ProjectRoadmap, computeRoadmapSteps } from "@/components/portal/ProjectRoadmap";
 import { ClientFileUpload } from "@/components/portal/ClientFileUpload";
+import { ClientProgressPanel } from "@/components/portal/ClientProgressPanel";
 
 import { PortalAuthPage } from "./PortalAuthPage";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
@@ -1123,6 +1124,15 @@ export default function PortalPage() {
                 onApproveFinal: handleApproveFinal,
               })}
             />
+          </div>
+        </div>
+
+        {/* Client Progress Panel */}
+        <div className="border-b border-border p-6">
+          <div className="container mx-auto max-w-4xl">
+            <div className="bg-card border border-border rounded-xl p-6">
+              <ClientProgressPanel token={token!} />
+            </div>
           </div>
         </div>
         {prototypes.length > 0 && (
