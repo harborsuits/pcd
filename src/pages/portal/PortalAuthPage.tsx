@@ -62,13 +62,13 @@ export function PortalAuthPage({ projectToken, businessName, onAuthSuccess }: Po
         return;
       }
 
-      if (data.session) {
-        // Store session for after verification
+      // ALWAYS go to OTP verification after signup, regardless of session state
+      // (auto-confirm may return a session immediately, but we still require OTP)
+      if (data.user) {
         setPendingSession({
-          accessToken: data.session.access_token,
+          accessToken: data.session?.access_token ?? "",
           userName: name,
         });
-        // Go to verification step
         setStep("verification");
       }
     } catch (err) {
