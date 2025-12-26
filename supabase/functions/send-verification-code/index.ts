@@ -49,6 +49,68 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
+    // ============ RATE LIMITING ============
+    
+    // Build query for rate limit checks - handle null vs non-null project_token
+    const baseRateLimitQuery = () => {
+      let q = supabase
+        .from("email_verifications")
+        .select("created_at")
+        .eq("email", normalizedEmail);
+      
+      if (token) {
+        q = q.eq("project_token", token);
+      } else {
+        q = q.is("project_token", null);
+      }
+      return q;
+    };
+
+    // Check 60-second cooldown
+    const { data: recent } = await baseRateLimitQuery()
+      .is("verified_at", null)
+      .order("created_at", { ascending: false })
+      .limit(1);
+
+    if (recent?.length) {
+      const ageMs = Date.now() - new Date(recent[0].created_at).getTime();
+      if (ageMs < 60_000) {
+        const waitSeconds = Math.ceil((60_000 - ageMs) / 1000);
+        console.log(`⏱️ Rate limit: ${normalizedEmail} must wait ${waitSeconds}s`);
+        return new Response(
+          JSON.stringify({ error: `Please wait ${waitSeconds} seconds before requesting another code.` }),
+          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
+    // Check 5 per hour cap
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    
+    let countQuery = supabase
+      .from("email_verifications")
+      .select("id", { count: "exact", head: true })
+      .eq("email", normalizedEmail)
+      .gte("created_at", oneHourAgo);
+    
+    if (token) {
+      countQuery = countQuery.eq("project_token", token);
+    } else {
+      countQuery = countQuery.is("project_token", null);
+    }
+    
+    const { count: hourlyCount } = await countQuery;
+
+    if ((hourlyCount ?? 0) >= 5) {
+      console.log(`⏱️ Hourly rate limit hit: ${normalizedEmail} has ${hourlyCount} attempts`);
+      return new Response(
+        JSON.stringify({ error: "Too many verification attempts. Try again in an hour." }),
+        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // ============ END RATE LIMITING ============
+
     // Generate code and hash
     const code = generateCode();
     const codeHash = await hashCode(code);
@@ -92,8 +154,8 @@ serve(async (req) => {
       );
     }
 
-    // Send email via Resend
-    const emailFrom = Deno.env.get("EMAIL_FROM") || "onboarding@resend.dev";
+    // Send email via Resend - FORCE test sender until domain is verified
+    const emailFrom = "onboarding@resend.dev"; // TODO: Change to verified domain
     const displayName = business_name || "Pleasant Cove";
 
     console.log(`📨 Attempting to send email via Resend`, { from: emailFrom, to: normalizedEmail });
