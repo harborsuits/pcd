@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -686,20 +686,29 @@ export default function OnboardingWizard() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
+      {/* Header - matches homepage */}
       <header className="border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-50">
+        <div className="container mx-auto px-6 py-4 flex items-center justify-between">
+          <Link to="/" className="font-serif text-xl font-bold tracking-tight text-foreground">
+            Pleasant Cove
+          </Link>
+          <span className="text-sm text-muted-foreground">
+            Step {currentStep + 1} of {STEPS.length}
+          </span>
+        </div>
+      </header>
+
+      {/* Progress section with branded gradient */}
+      <div className="bg-gradient-to-b from-accent/5 to-background border-b border-border">
         <div className="container mx-auto px-6 py-4">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2 mb-3">
             <button
               onClick={handleBack}
-              className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1"
+              className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
             >
               <ArrowLeft className="h-4 w-4" />
               {currentStep === 0 ? "Back to portal" : "Back"}
             </button>
-            <span className="text-sm text-muted-foreground">
-              Step {currentStep + 1} of {STEPS.length}
-            </span>
           </div>
           
           {/* Progress bar */}
@@ -714,22 +723,34 @@ export default function OnboardingWizard() {
               return (
                 <div
                   key={step.id}
-                  className={`flex items-center gap-1.5 text-xs ${
+                  className={`flex items-center gap-1.5 text-xs transition-colors ${
                     isActive 
-                      ? "text-primary font-medium" 
+                      ? "text-accent font-medium" 
                       : isComplete 
-                        ? "text-accent" 
+                        ? "text-accent/70" 
                         : "text-muted-foreground"
                   }`}
                 >
-                  <Icon className="h-3.5 w-3.5" />
+                  <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
+                    isActive 
+                      ? "bg-accent text-accent-foreground" 
+                      : isComplete 
+                        ? "bg-accent/20 text-accent" 
+                        : "bg-muted text-muted-foreground"
+                  }`}>
+                    {isComplete ? (
+                      <CheckCircle2 className="h-3.5 w-3.5" />
+                    ) : (
+                      <Icon className="h-3.5 w-3.5" />
+                    )}
+                  </div>
                   <span className="hidden sm:inline">{step.label}</span>
                 </div>
               );
             })}
           </div>
         </div>
-      </header>
+      </div>
 
       {/* Main content */}
       <main className="container mx-auto px-6 py-8">

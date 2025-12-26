@@ -4,7 +4,6 @@ import {
   CheckCircle2, 
   Circle, 
   Loader2,
-  Target,
   Clock
 } from "lucide-react";
 import { format } from "date-fns";
@@ -85,39 +84,35 @@ export function ClientProgressPanel({ token }: ClientProgressPanelProps) {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden">
       {/* Header with progress */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Target className="h-5 w-5 text-primary" />
-          <h3 className="font-semibold">Project Progress</h3>
+      <div className="p-6 border-b border-border bg-gradient-to-b from-accent/5 to-transparent">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="font-serif text-lg font-bold text-foreground">Project Progress</h3>
+            <p className="text-sm text-muted-foreground">
+              {completedCount} of {totalCount} milestones complete
+            </p>
+          </div>
+          <div className="text-2xl font-bold text-accent">{progressPercent}%</div>
         </div>
-        <Badge 
-          variant={completedCount === totalCount ? "default" : "secondary"}
-          className={completedCount === totalCount ? "bg-green-500/10 text-green-600 border-green-500/20" : ""}
-        >
-          {completedCount}/{totalCount} Complete
-        </Badge>
-      </div>
-
-      {/* Progress Bar */}
-      <div className="space-y-2">
+        
+        {/* Progress Bar */}
         <div className="h-2 bg-muted rounded-full overflow-hidden">
           <div 
-            className="h-full bg-primary transition-all duration-500 ease-out"
+            className="h-full bg-accent transition-all duration-500 ease-out"
             style={{ width: `${progressPercent}%` }}
           />
         </div>
-        <div className="flex justify-between text-xs text-muted-foreground">
-          <span>{progressPercent}% complete</span>
-          {currentMilestone && (
-            <span>Current: {currentMilestone.label}</span>
-          )}
-        </div>
+        {currentMilestone && (
+          <p className="text-xs text-muted-foreground mt-2">
+            Current: {currentMilestone.label}
+          </p>
+        )}
       </div>
 
       {/* Milestones List */}
-      <div className="space-y-2">
+      <div className="p-6 space-y-3">
         {milestones.map((milestone, index) => {
           const isCompleted = milestone.is_done;
           const isCurrent = currentMilestone?.id === milestone.id;
@@ -127,21 +122,21 @@ export function ClientProgressPanel({ token }: ClientProgressPanelProps) {
               key={milestone.id}
               className={`flex items-start gap-3 p-3 rounded-lg transition-colors ${
                 isCompleted 
-                  ? "bg-green-500/5 border border-green-500/10" 
+                  ? "bg-accent/5 border border-accent/10" 
                   : isCurrent 
-                    ? "bg-primary/5 border border-primary/20" 
+                    ? "bg-accent/10 border border-accent/20" 
                     : "bg-muted/50 border border-transparent"
               }`}
             >
               {/* Status Icon */}
               <div className="shrink-0 mt-0.5">
                 {isCompleted ? (
-                  <CheckCircle2 className="h-5 w-5 text-green-500" />
+                  <CheckCircle2 className="h-5 w-5 text-accent" />
                 ) : isCurrent ? (
                   <div className="relative">
-                    <Circle className="h-5 w-5 text-primary" />
+                    <Circle className="h-5 w-5 text-accent" />
                     <div className="absolute inset-0 animate-ping">
-                      <Circle className="h-5 w-5 text-primary opacity-30" />
+                      <Circle className="h-5 w-5 text-accent opacity-30" />
                     </div>
                   </div>
                 ) : (
@@ -158,7 +153,7 @@ export function ClientProgressPanel({ token }: ClientProgressPanelProps) {
                     {milestone.label}
                   </span>
                   {isCurrent && (
-                    <Badge variant="outline" className="text-[10px] h-4 border-primary/30 text-primary">
+                    <Badge variant="outline" className="text-[10px] h-4 border-accent/30 text-accent">
                       In Progress
                     </Badge>
                   )}
@@ -179,9 +174,9 @@ export function ClientProgressPanel({ token }: ClientProgressPanelProps) {
               {/* Step Number */}
               <div className={`shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium ${
                 isCompleted 
-                  ? "bg-green-500/10 text-green-600" 
+                  ? "bg-accent/10 text-accent" 
                   : isCurrent 
-                    ? "bg-primary/10 text-primary" 
+                    ? "bg-accent/10 text-accent" 
                     : "bg-muted text-muted-foreground"
               }`}>
                 {index + 1}
@@ -193,9 +188,11 @@ export function ClientProgressPanel({ token }: ClientProgressPanelProps) {
 
       {/* Last Update */}
       {lastCompleted?.completed_at && (
-        <p className="text-xs text-muted-foreground text-center pt-2 border-t border-border">
-          Last update: {format(new Date(lastCompleted.completed_at), "MMMM d, yyyy")}
-        </p>
+        <div className="px-6 pb-6">
+          <p className="text-xs text-muted-foreground text-center pt-4 border-t border-border">
+            Last update: {format(new Date(lastCompleted.completed_at), "MMMM d, yyyy")}
+          </p>
+        </div>
       )}
     </div>
   );

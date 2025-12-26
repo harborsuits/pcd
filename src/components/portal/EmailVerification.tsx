@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from "react";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
-import { Loader2, Mail, RefreshCw, CheckCircle2 } from "lucide-react";
+import { Loader2, Mail, RefreshCw } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
@@ -135,86 +135,108 @@ export function EmailVerification({
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <div className="mx-auto mb-4 h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-            <Mail className="h-6 w-6 text-primary" />
-          </div>
-          <CardTitle className="text-2xl">Verify your email</CardTitle>
-          <CardDescription>
-            We sent a 6-digit code to <strong>{email}</strong>
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="flex justify-center">
-            <InputOTP
-              maxLength={6}
-              value={code}
-              onChange={(value) => setCode(value)}
-              disabled={verifying}
-            >
-              <InputOTPGroup>
-                <InputOTPSlot index={0} />
-                <InputOTPSlot index={1} />
-                <InputOTPSlot index={2} />
-                <InputOTPSlot index={3} />
-                <InputOTPSlot index={4} />
-                <InputOTPSlot index={5} />
-              </InputOTPGroup>
-            </InputOTP>
-          </div>
+    <div className="min-h-screen flex flex-col bg-background">
+      {/* Header - matches homepage */}
+      <header className="border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-50">
+        <div className="container mx-auto px-6 py-4 flex items-center justify-between">
+          <Link to="/" className="font-serif text-xl font-bold tracking-tight text-foreground">
+            Pleasant Cove
+          </Link>
+        </div>
+      </header>
 
-          {error && (
-            <p className="text-sm text-destructive text-center">{error}</p>
-          )}
+      {/* Hero section with branding */}
+      <div className="bg-gradient-to-b from-accent/5 to-background border-b border-border">
+        <div className="container mx-auto px-6 py-8 text-center">
+          <p className="text-sm text-accent font-medium uppercase tracking-wide mb-2">Email Verification</p>
+          <h1 className="font-serif text-2xl md:text-3xl font-bold tracking-tight text-foreground">
+            {businessName}
+          </h1>
+        </div>
+      </div>
 
-          {verifying && (
-            <div className="flex items-center justify-center gap-2 text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              <span>Verifying...</span>
+      <main className="flex-1 flex items-center justify-center p-6">
+        <div className="w-full max-w-md bg-card rounded-xl border border-border shadow-sm">
+          <div className="p-6 border-b border-border text-center">
+            <div className="mx-auto mb-4 h-12 w-12 rounded-full bg-accent/10 flex items-center justify-center">
+              <Mail className="h-6 w-6 text-accent" />
             </div>
-          )}
-
-          <div className="space-y-3">
-            <Button
-              variant="outline"
-              className="w-full"
-              onClick={sendCode}
-              disabled={sending || resendCountdown > 0}
-            >
-              {sending ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Sending...
-                </>
-              ) : resendCountdown > 0 ? (
-                <>
-                  <RefreshCw className="mr-2 h-4 w-4" />
-                  Resend in {resendCountdown}s
-                </>
-              ) : (
-                <>
-                  <RefreshCw className="mr-2 h-4 w-4" />
-                  Resend code
-                </>
-              )}
-            </Button>
-
-            <Button
-              variant="ghost"
-              className="w-full"
-              onClick={onBack}
-            >
-              Use a different email
-            </Button>
+            <h2 className="font-serif text-xl font-bold text-foreground">Verify your email</h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              We sent a 6-digit code to <strong>{email}</strong>
+            </p>
           </div>
+          
+          <div className="p-6 space-y-6">
+            <div className="flex justify-center">
+              <InputOTP
+                maxLength={6}
+                value={code}
+                onChange={(value) => setCode(value)}
+                disabled={verifying}
+              >
+                <InputOTPGroup>
+                  <InputOTPSlot index={0} />
+                  <InputOTPSlot index={1} />
+                  <InputOTPSlot index={2} />
+                  <InputOTPSlot index={3} />
+                  <InputOTPSlot index={4} />
+                  <InputOTPSlot index={5} />
+                </InputOTPGroup>
+              </InputOTP>
+            </div>
 
-          <p className="text-xs text-muted-foreground text-center">
-            Didn't receive the email? Check your spam folder or try resending.
-          </p>
-        </CardContent>
-      </Card>
+            {error && (
+              <p className="text-sm text-destructive text-center">{error}</p>
+            )}
+
+            {verifying && (
+              <div className="flex items-center justify-center gap-2 text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span>Verifying...</span>
+              </div>
+            )}
+
+            <div className="space-y-3">
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={sendCode}
+                disabled={sending || resendCountdown > 0}
+              >
+                {sending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Sending...
+                  </>
+                ) : resendCountdown > 0 ? (
+                  <>
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                    Resend in {resendCountdown}s
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                    Resend code
+                  </>
+                )}
+              </Button>
+
+              <Button
+                variant="ghost"
+                className="w-full"
+                onClick={onBack}
+              >
+                Use a different email
+              </Button>
+            </div>
+
+            <p className="text-xs text-muted-foreground text-center">
+              Didn't receive the email? Check your spam folder or try resending.
+            </p>
+          </div>
+        </div>
+      </main>
     </div>
   );
 }
