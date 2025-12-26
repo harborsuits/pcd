@@ -3,7 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
@@ -22,7 +22,6 @@ import {
   Store,
   Users,
   Utensils,
-  Phone,
   Calendar,
   MessageSquare,
   CreditCard,
@@ -31,6 +30,7 @@ import {
   Sparkles
 } from "lucide-react";
 import { IntakeSubmittedScreen } from "@/components/portal/IntakeSubmittedScreen";
+import { ClientLayout } from "@/components/portal/ClientLayout";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
