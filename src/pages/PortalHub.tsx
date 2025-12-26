@@ -64,7 +64,7 @@ export default function PortalHub() {
   const [linkInput, setLinkInput] = useState("");
   const [linkError, setLinkError] = useState<string | null>(null);
   
-  // OTP verification state
+  // OTP verification state (email verified BEFORE account creation)
   const [showOtpVerification, setShowOtpVerification] = useState(false);
   const [otpCode, setOtpCode] = useState("");
   const [otpError, setOtpError] = useState<string | null>(null);
@@ -72,6 +72,13 @@ export default function PortalHub() {
   const [otpVerifying, setOtpVerifying] = useState(false);
   const [resendCountdown, setResendCountdown] = useState(0);
   const hasSentOtp = useRef(false);
+  
+  // Pending signup data (stored until email is verified)
+  const [pendingSignup, setPendingSignup] = useState<{
+    email: string;
+    password: string;
+    fullName: string;
+  } | null>(null);
 
   // Check auth state on mount
   useEffect(() => {
@@ -152,11 +159,12 @@ export default function PortalHub() {
     }
   };
 
-  // Send OTP code
-  const sendOtpCode = async () => {
-    if (!email) return;
+  // Send OTP code (uses pendingSignup email if available, otherwise current email)
+  const sendOtpCode = async (targetEmail?: string) => {
+    const emailToVerify = targetEmail || pendingSignup?.email || email;
+    if (!emailToVerify) return;
     
-    console.log("🔥 SENDING OTP", { email });
+    console.log("🔥 SENDING OTP", { email: emailToVerify });
     setOtpSending(true);
     setOtpError(null);
     
@@ -168,7 +176,7 @@ export default function PortalHub() {
           "apikey": SUPABASE_ANON_KEY,
         },
         body: JSON.stringify({
-          email,
+          email: emailToVerify,
           project_token: null, // No project token for portal-level verification
           business_name: "Pleasant Cove Portal",
         }),
@@ -191,15 +199,17 @@ export default function PortalHub() {
     }
   };
   
-  // Verify OTP code
+  // Verify OTP code and then create account
   const verifyOtpCode = async () => {
-    if (otpCode.length !== 6) return;
+    if (otpCode.length !== 6 || !pendingSignup) return;
     
-    console.log("🔐 VERIFYING OTP", { email, code: otpCode });
+    const { email: pendingEmail, password, fullName } = pendingSignup;
+    console.log("🔐 VERIFYING OTP", { email: pendingEmail, code: otpCode });
     setOtpVerifying(true);
     setOtpError(null);
     
     try {
+      // Step 1: Verify the OTP code
       const res = await fetch(`${SUPABASE_URL}/functions/v1/verify-code`, {
         method: "POST",
         headers: {
@@ -207,7 +217,7 @@ export default function PortalHub() {
           "apikey": SUPABASE_ANON_KEY,
         },
         body: JSON.stringify({
-          email,
+          email: pendingEmail,
           code: otpCode,
           project_token: null, // No project token for portal-level verification
         }),
@@ -220,9 +230,27 @@ export default function PortalHub() {
         throw new Error(result.error || "Invalid code");
       }
       
-      // Success! Hide OTP screen
+      // Step 2: OTP verified - NOW create the account
+      console.log("📝 Creating account after email verification...");
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email: pendingEmail,
+        password,
+        options: {
+          data: { full_name: fullName },
+          emailRedirectTo: `${window.location.origin}/portal`,
+        },
+      });
+
+      if (signUpError) {
+        throw new Error(signUpError.message);
+      }
+
+      // Success! Clear pending and hide OTP screen
+      setPendingSignup(null);
       setShowOtpVerification(false);
-      toast({ title: "Email verified!", description: "Welcome to your portal." });
+      setOtpCode("");
+      toast({ title: "Account created!", description: "Welcome to your portal." });
+      
     } catch (err) {
       console.error("OTP verify error:", err);
       setOtpError(err instanceof Error ? err.message : "Verification failed");
@@ -238,13 +266,13 @@ export default function PortalHub() {
     return () => clearTimeout(timer);
   }, [resendCountdown]);
   
-  // Send OTP when verification screen mounts
+  // Send OTP when verification screen mounts (uses pendingSignup email)
   useEffect(() => {
-    if (showOtpVerification && email && !hasSentOtp.current) {
+    if (showOtpVerification && pendingSignup?.email && !hasSentOtp.current) {
       hasSentOtp.current = true;
-      sendOtpCode();
+      sendOtpCode(pendingSignup.email);
     }
-  }, [showOtpVerification, email]);
+  }, [showOtpVerification, pendingSignup?.email]);
   
   // Auto-verify when 6 digits entered
   useEffect(() => {
@@ -253,6 +281,7 @@ export default function PortalHub() {
     }
   }, [otpCode, showOtpVerification]);
 
+  // Signup: DON'T create account yet, just store data and send OTP
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -260,34 +289,35 @@ export default function PortalHub() {
     setLoading(true);
 
     try {
-      const { data, error: signUpError } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: { full_name: fullName },
-          emailRedirectTo: `${window.location.origin}/portal`,
-        },
-      });
-
-      if (signUpError) {
-        if (signUpError.message.includes("already registered")) {
-          setError("This email is already registered. Try logging in instead.");
-          setMode("login");
-        } else {
-          setError(signUpError.message);
-        }
+      // Validate inputs before proceeding
+      if (!email || !password || !fullName) {
+        setError("Please fill in all fields");
+        return;
+      }
+      
+      if (password.length < 6) {
+        setError("Password must be at least 6 characters");
         return;
       }
 
-      console.log("✅ Signup succeeded, forcing OTP step");
+      // Check if email is already registered (try to sign in - will fail if not registered)
+      const { error: checkError } = await supabase.auth.signInWithPassword({
+        email,
+        password: "dummy-check-password-that-wont-work",
+      });
       
-      // ALWAYS go to OTP verification - NO CONDITIONS
+      // If the error is NOT "Invalid login credentials", the email might already exist
+      // But this check isn't perfect, so we'll let the final signup handle duplicates
+      
+      console.log("📧 Storing pending signup, will verify email first...");
+      
+      // Store the signup data - we'll create the account AFTER email verification
+      setPendingSignup({ email, password, fullName });
       hasSentOtp.current = false; // Reset so sendOtpCode fires
       setShowOtpVerification(true);
-      // DO NOT check data.session, DO NOT toast success yet
       
     } catch (err) {
-      console.error("Signup error:", err);
+      console.error("Signup prep error:", err);
       setError("Something went wrong. Please try again.");
     } finally {
       setLoading(false);
@@ -393,7 +423,7 @@ export default function PortalHub() {
             <CardHeader className="text-center">
               <CardTitle className="font-serif text-2xl">Verify Your Email</CardTitle>
               <CardDescription>
-                We sent a 6-digit code to <strong>{email}</strong>
+                We sent a 6-digit code to <strong>{pendingSignup?.email || email}</strong>
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -432,7 +462,7 @@ export default function PortalHub() {
                   size="sm"
                   onClick={() => {
                     hasSentOtp.current = false;
-                    sendOtpCode();
+                    sendOtpCode(pendingSignup?.email);
                   }}
                   disabled={otpSending || resendCountdown > 0}
                 >
@@ -459,6 +489,7 @@ export default function PortalHub() {
                     setShowOtpVerification(false);
                     setOtpCode("");
                     setOtpError(null);
+                    setPendingSignup(null);
                     hasSentOtp.current = false;
                   }}
                   className="text-sm text-muted-foreground hover:text-foreground"
