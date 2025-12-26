@@ -6,11 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { Activity, Rocket, LogOut, FolderOpen, Inbox, Send, ShieldCheck, KeyRound } from "lucide-react";
+import { Activity, Rocket, LogOut, FolderOpen, Inbox, Send, ShieldCheck, KeyRound, Users } from "lucide-react";
 import { toast } from "sonner";
 import { AcquisitionTab } from "./AcquisitionTab";
 import { DeliveryTab } from "./DeliveryTab";
 import { ProjectsTab } from "./ProjectsTab";
+import { AccountsTab } from "./AccountsTab";
 import { DataFreshnessPill } from "@/components/operator/DataFreshnessPill";
 import { 
   AdminAuthError, 
@@ -288,7 +289,7 @@ export default function OperatorLayout() {
       {/* Main Content */}
       <main className="container mx-auto px-4 py-6">
         <Tabs defaultValue="projects" className="space-y-6">
-          <TabsList className="grid w-full max-w-2xl grid-cols-4">
+          <TabsList className="grid w-full max-w-3xl grid-cols-5">
             <TabsTrigger value="projects" className="gap-2">
               <FolderOpen className="h-4 w-4" />
               Projects
@@ -296,6 +297,10 @@ export default function OperatorLayout() {
             <TabsTrigger value="inbox" className="gap-2">
               <Inbox className="h-4 w-4" />
               Inbox
+            </TabsTrigger>
+            <TabsTrigger value="accounts" className="gap-2">
+              <Users className="h-4 w-4" />
+              Accounts
             </TabsTrigger>
             <TabsTrigger value="leads" className="gap-2">
               <Rocket className="h-4 w-4" />
@@ -313,6 +318,10 @@ export default function OperatorLayout() {
 
           <TabsContent value="inbox">
             <DeliveryTab />
+          </TabsContent>
+
+          <TabsContent value="accounts">
+            <AccountsTab />
           </TabsContent>
 
           <TabsContent value="leads">
