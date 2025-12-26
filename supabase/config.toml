@@ -38,3 +38,6 @@ verify_jwt = false
 
 [functions.push]
 verify_jwt = false
+
+[functions.email-worker]
+verify_jwt = false

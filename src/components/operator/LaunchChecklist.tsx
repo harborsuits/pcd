@@ -11,7 +11,8 @@ import {
   Trash2, 
   Rocket, 
   CheckCircle2,
-  ListChecks
+  ListChecks,
+  PartyPopper
 } from "lucide-react";
 import { toast } from "sonner";
 import { adminFetch } from "@/lib/adminFetch";
@@ -26,6 +27,8 @@ interface ChecklistItem {
 
 interface LaunchChecklistProps {
   projectToken: string;
+  projectStatus?: string;
+  onLaunchComplete?: () => void;
 }
 
 const DEFAULT_CHECKLIST_ITEMS = [
@@ -38,9 +41,11 @@ const DEFAULT_CHECKLIST_ITEMS = [
   "Final invoice confirmed",
 ];
 
-export function LaunchChecklist({ projectToken }: LaunchChecklistProps) {
+export function LaunchChecklist({ projectToken, projectStatus, onLaunchComplete }: LaunchChecklistProps) {
   const [newItemLabel, setNewItemLabel] = useState("");
   const queryClient = useQueryClient();
+
+  const isLaunched = projectStatus === "completed";
 
   // Fetch checklist items
   const { data: checklistData, isLoading } = useQuery({
@@ -115,6 +120,24 @@ export function LaunchChecklist({ projectToken }: LaunchChecklistProps) {
     onError: (error: Error) => toast.error(error.message),
   });
 
+  // Mark launched mutation
+  const markLaunchedMutation = useMutation({
+    mutationFn: async () => {
+      const res = await adminFetch(`/admin/projects/${projectToken}/launch-complete`, {
+        method: "POST",
+      });
+      if (!res.ok) throw new Error("Failed to mark as launched");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-projects"] });
+      queryClient.invalidateQueries({ queryKey: ["project-checklist", projectToken] });
+      toast.success("🚀 Project marked as launched!");
+      onLaunchComplete?.();
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
   const items = checklistData?.items || [];
   const completedCount = items.filter(i => i.is_done).length;
   const totalCount = items.length;
@@ -134,8 +157,13 @@ export function LaunchChecklist({ projectToken }: LaunchChecklistProps) {
               {completedCount}/{totalCount}
             </Badge>
           )}
+          {isLaunched && (
+            <Badge className="text-xs bg-primary/10 text-primary border-primary/20">
+              Launched
+            </Badge>
+          )}
         </div>
-        {items.length === 0 && (
+        {items.length === 0 && !isLaunched && (
           <Button
             variant="outline"
             size="sm"
@@ -157,6 +185,12 @@ export function LaunchChecklist({ projectToken }: LaunchChecklistProps) {
         {isLoading ? (
           <div className="flex items-center justify-center py-8">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
+        ) : isLaunched ? (
+          <div className="text-center py-8">
+            <PartyPopper className="h-12 w-12 mx-auto mb-3 text-primary" />
+            <p className="text-sm font-medium text-foreground">Project Launched!</p>
+            <p className="text-xs mt-1 text-muted-foreground">This project has been marked as complete</p>
           </div>
         ) : items.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
@@ -201,36 +235,56 @@ export function LaunchChecklist({ projectToken }: LaunchChecklistProps) {
         )}
       </ScrollArea>
 
-      {/* Add item input */}
-      <div className="flex-shrink-0 pt-2 border-t border-border mt-2 flex gap-2">
-        <Input
-          value={newItemLabel}
-          onChange={(e) => setNewItemLabel(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && newItemLabel.trim()) {
-              addItemMutation.mutate(newItemLabel.trim());
-            }
-          }}
-          placeholder="Add checklist item..."
-          className="flex-1 h-8 text-sm"
-        />
-        <Button
-          size="sm"
-          className="h-8"
-          onClick={() => {
-            if (newItemLabel.trim()) {
-              addItemMutation.mutate(newItemLabel.trim());
-            }
-          }}
-          disabled={!newItemLabel.trim() || addItemMutation.isPending}
-        >
-          {addItemMutation.isPending ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Plus className="h-4 w-4" />
-          )}
-        </Button>
-      </div>
+      {/* Mark Launched button - shown when all items done and not already launched */}
+      {allDone && !isLaunched && (
+        <div className="flex-shrink-0 pt-3 border-t border-border mt-2">
+          <Button
+            className="w-full gap-2"
+            onClick={() => markLaunchedMutation.mutate()}
+            disabled={markLaunchedMutation.isPending}
+          >
+            {markLaunchedMutation.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Rocket className="h-4 w-4" />
+            )}
+            Mark Launched
+          </Button>
+        </div>
+      )}
+
+      {/* Add item input - hidden after launch */}
+      {!isLaunched && (
+        <div className="flex-shrink-0 pt-2 border-t border-border mt-2 flex gap-2">
+          <Input
+            value={newItemLabel}
+            onChange={(e) => setNewItemLabel(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && newItemLabel.trim()) {
+                addItemMutation.mutate(newItemLabel.trim());
+              }
+            }}
+            placeholder="Add checklist item..."
+            className="flex-1 h-8 text-sm"
+          />
+          <Button
+            size="sm"
+            className="h-8"
+            onClick={() => {
+              if (newItemLabel.trim()) {
+                addItemMutation.mutate(newItemLabel.trim());
+              }
+            }}
+            disabled={!newItemLabel.trim() || addItemMutation.isPending}
+          >
+            {addItemMutation.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Plus className="h-4 w-4" />
+            )}
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
