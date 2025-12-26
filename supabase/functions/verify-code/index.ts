@@ -64,7 +64,7 @@ serve(async (req) => {
       );
     }
 
-    // Mark as verified
+    // Mark as verified in email_verifications
     const { error: updateError } = await supabase
       .from("email_verifications")
       .update({ verified_at: new Date().toISOString() })
@@ -76,6 +76,18 @@ serve(async (req) => {
         JSON.stringify({ error: "Failed to verify code" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
+    }
+
+    // CRITICAL: Also set email_verified = true on the project
+    // This gates portal access independent of Supabase auth state
+    const { error: projectError } = await supabase
+      .from("projects")
+      .update({ email_verified: true })
+      .eq("project_token", project_token);
+
+    if (projectError) {
+      console.error("Project update error:", projectError);
+      // Don't fail the whole request, email is still verified
     }
 
     console.log(`✅ Email verified: ${email} for project ${project_token}`);

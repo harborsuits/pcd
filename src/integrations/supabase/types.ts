@@ -709,6 +709,7 @@ export type Database = {
           contact_phone: string | null
           created_at: string
           deleted_at: string | null
+          email_verified: boolean
           final_approved_at: string | null
           id: string
           notes: string | null
@@ -731,6 +732,7 @@ export type Database = {
           contact_phone?: string | null
           created_at?: string
           deleted_at?: string | null
+          email_verified?: boolean
           final_approved_at?: string | null
           id?: string
           notes?: string | null
@@ -753,6 +755,7 @@ export type Database = {
           contact_phone?: string | null
           created_at?: string
           deleted_at?: string | null
+          email_verified?: boolean
           final_approved_at?: string | null
           id?: string
           notes?: string | null
