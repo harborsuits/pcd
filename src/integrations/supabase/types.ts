@@ -90,6 +90,36 @@ export type Database = {
           },
         ]
       }
+      email_verifications: {
+        Row: {
+          code_hash: string
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+          project_token: string | null
+          verified_at: string | null
+        }
+        Insert: {
+          code_hash: string
+          created_at?: string
+          email: string
+          expires_at: string
+          id?: string
+          project_token?: string | null
+          verified_at?: string | null
+        }
+        Update: {
+          code_hash?: string
+          created_at?: string
+          email?: string
+          expires_at?: string
+          id?: string
+          project_token?: string | null
+          verified_at?: string | null
+        }
+        Relationships: []
+      }
       files: {
         Row: {
           created_at: string
