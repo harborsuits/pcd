@@ -107,19 +107,20 @@ const Pricing = () => {
             <div className="w-10 h-10 bg-accent/10 text-accent rounded-lg flex items-center justify-center">
               <Wrench className="h-5 w-5" />
             </div>
-            <h2 className="font-serif text-2xl md:text-3xl font-bold">Hosting & Website Care</h2>
+            <h2 className="font-serif text-2xl md:text-3xl font-bold">Managed Hosting & Maintenance</h2>
             <span className="text-sm text-muted-foreground">(Monthly)</span>
           </div>
           
           <Card className="max-w-xl">
             <CardHeader>
-              <CardTitle className="font-serif text-xl">Website Hosting & Maintenance</CardTitle>
+            <CardTitle className="font-serif text-xl">Managed Hosting & Maintenance</CardTitle>
               <CardDescription className="text-lg font-semibold text-accent">$75 – $200 / month</CardDescription>
             </CardHeader>
             <CardContent>
               <ul className="space-y-2">
                 {[
                   "Secure hosting",
+                  "Proactive monitoring & issue prevention",
                   "Backups & uptime monitoring",
                   "Technical maintenance",
                   "Minor content updates",
@@ -151,7 +152,7 @@ const Pricing = () => {
             <PricingCard
               title="Tier 1 — AI Front Door"
               subtitle="Call Coverage"
-              price="$450 – $650 / month"
+              price="$500 – $650 / month"
               description="Never miss a call again"
               features={[
                 "Answers incoming calls",
@@ -164,7 +165,7 @@ const Pricing = () => {
             <PricingCard
               title="Tier 2 — AI + Booking"
               price="$700 – $950 / month"
-              description="Let AI schedule for you"
+              description="Designed to turn calls into booked jobs automatically."
               featured
               features={[
                 "Everything in Tier 1",
@@ -176,7 +177,7 @@ const Pricing = () => {
             />
             <PricingCard
               title="Tier 3 — AI + CRM"
-              price="$950 – $1,200 / month"
+              price="$950 – $1,400 / month"
               description="Full operational intelligence"
               features={[
                 "Everything in Tier 2",
@@ -228,11 +229,12 @@ const Pricing = () => {
                 <CardDescription className="text-lg font-semibold text-accent">$150 – $350 / month</CardDescription>
               </CardHeader>
               <CardContent>
-                <ul className="space-y-2">
+              <ul className="space-y-2">
                   {[
                     "Website changes",
                     "Form & funnel updates",
                     "Troubleshooting",
+                    "Same-week turnaround on operational changes",
                     "Priority communication"
                   ].map((feature) => (
                     <li key={feature} className="flex items-start gap-2 text-sm text-muted-foreground">
@@ -285,7 +287,7 @@ const Pricing = () => {
             <BundleCard
               title="PCD Full Operations"
               buildPrice="$3,000 – $5,000"
-              monthlyPrice="$950 – $1,200 / month"
+              monthlyPrice="$950 – $1,400 / month"
               features={[
                 "Premium website",
                 "Hosting",
@@ -306,9 +308,12 @@ const Pricing = () => {
               <Phone className="h-6 w-6" />
             </div>
             <h2 className="font-serif text-2xl md:text-3xl font-bold mb-4">Pilot Option</h2>
-            <p className="text-muted-foreground mb-6">
+            <p className="text-muted-foreground mb-4">
               For select businesses, we offer a 7-day pilot with full functionality and real call traffic. 
               Clear conversion expectations discussed upfront.
+            </p>
+            <p className="text-sm text-muted-foreground/80 mb-6 italic">
+              Pilot eligibility is limited and subject to capacity.
             </p>
             <Button asChild size="lg" className="group">
               <Link to="/get-demo">
