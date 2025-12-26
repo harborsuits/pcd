@@ -32,7 +32,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Users, Search, Trash2, Pencil, RefreshCw, FolderOpen, Mail, Phone, AlertTriangle, CheckCircle2, XCircle, Clock } from "lucide-react";
+import { Users, Search, Trash2, Pencil, RefreshCw, FolderOpen, Mail, Phone, AlertTriangle, CheckCircle2, XCircle, Clock, Send } from "lucide-react";
 import { toast } from "sonner";
 import { adminFetch } from "@/lib/adminFetch";
 import { format, differenceInDays } from "date-fns";
@@ -100,6 +100,25 @@ async function clearTestAccounts(): Promise<{ deleted: number; total: number; er
   return res.json();
 }
 
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+
+async function resendOtp(email: string, businessName?: string): Promise<void> {
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/send-verification-code`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      email,
+      project_token: null,
+      business_name: businessName ?? "Pleasant Cove",
+    }),
+  });
+
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(data.error || "Failed to send code");
+  }
+}
+
 export function AccountsTab() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
@@ -153,6 +172,30 @@ export function AccountsTab() {
       toast.error(err.message);
     },
   });
+
+  const [resendingUserId, setResendingUserId] = useState<string | null>(null);
+
+  const resendOtpMutation = useMutation({
+    mutationFn: ({ email, businessName }: { email: string; businessName?: string }) =>
+      resendOtp(email, businessName),
+    onMutate: (variables) => {
+      // We'll track which user is being resent via state
+    },
+    onSuccess: () => {
+      toast.success("If that email can receive mail, a code was sent.");
+      setResendingUserId(null);
+    },
+    onError: (err: Error) => {
+      toast.error(err.message);
+      setResendingUserId(null);
+    },
+  });
+
+  const handleResendOtp = (account: AccountWithProjects) => {
+    setResendingUserId(account.user.id);
+    const businessName = account.projects[0]?.business_name ?? "Pleasant Cove";
+    resendOtpMutation.mutate({ email: account.user.email, businessName });
+  };
 
   const filteredAccounts = accounts?.filter((acc) => {
     if (!search.trim()) return true;
@@ -365,6 +408,28 @@ export function AccountsTab() {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">
+                          {/* Resend OTP: only show when unverified OR never signed in */}
+                          {(!isVerified || activityStatus === "never") ? (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleResendOtp(account)}
+                              disabled={resendingUserId === account.user.id}
+                              title="Send login code"
+                            >
+                              <Send className="h-4 w-4" />
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              disabled
+                              title="User is verified & active"
+                              className="opacity-30 cursor-not-allowed"
+                            >
+                              <Send className="h-4 w-4" />
+                            </Button>
+                          )}
                           <Button
                             variant="ghost"
                             size="sm"
