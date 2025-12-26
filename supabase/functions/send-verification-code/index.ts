@@ -154,15 +154,17 @@ serve(async (req) => {
       );
     }
 
-    // Send email via Resend - FORCE test sender until domain is verified
-    const emailFrom = "onboarding@resend.dev"; // TODO: Change to verified domain
+    // Send email via Resend using verified domain
+    const emailFrom = Deno.env.get("EMAIL_FROM") || "Pleasant Cove <no-reply@send.pleasantcovedesign.com>";
     const displayName = business_name || "Pleasant Cove";
 
+    // Debug logging
+    console.log("🔑 HAS RESEND KEY:", Boolean(Deno.env.get("RESEND_API_KEY")));
     console.log(`📨 Attempting to send email via Resend`, { from: emailFrom, to: normalizedEmail });
 
     const emailResult = await resend.emails.send({
-      from: `${displayName} <${emailFrom}>`,
-      to: [normalizedEmail], // Use normalized email for consistency
+      from: emailFrom, // EMAIL_FROM already includes display name
+      to: [normalizedEmail],
       subject: `Your verification code: ${code}`,
       html: `
         <!DOCTYPE html>
