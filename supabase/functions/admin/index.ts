@@ -3104,13 +3104,37 @@ async function handleClearTestAccounts(req: Request): Promise<Response> {
 
 // ==================== MILESTONES HANDLERS ====================
 
-const DEFAULT_MILESTONE_ITEMS = [
-  { label: "Content received", description: "Client has provided all copy and assets" },
-  { label: "Design approved", description: "Client has approved the design mockups" },
-  { label: "Development complete", description: "Site is built and ready for review" },
-  { label: "Final revisions", description: "Client feedback incorporated" },
-  { label: "Ready for launch", description: "All pre-launch checks passed" },
-];
+// Package-based milestone templates
+const MILESTONE_TEMPLATES: Record<string, Array<{ label: string; description: string }>> = {
+  starter: [
+    { label: "Content received", description: "Client has provided logo and basic copy" },
+    { label: "Design approved", description: "Single-page design reviewed and approved" },
+    { label: "Development complete", description: "Site is built and ready for review" },
+    { label: "Ready for launch", description: "All pre-launch checks passed" },
+  ],
+  growth: [
+    { label: "Content received", description: "All copy, photos, and brand assets provided" },
+    { label: "Design approved", description: "Homepage + key page designs approved" },
+    { label: "Development complete", description: "Multi-page site built and tested" },
+    { label: "SEO setup", description: "Meta tags, sitemap, and Google indexing configured" },
+    { label: "Final revisions", description: "Client feedback incorporated" },
+    { label: "Ready for launch", description: "All pre-launch checks passed" },
+  ],
+  full_ops: [
+    { label: "Discovery call", description: "Initial strategy and requirements discussion" },
+    { label: "Content received", description: "All copy, photos, video, and brand assets provided" },
+    { label: "Design approved", description: "Full site design system approved" },
+    { label: "Development complete", description: "Full site built with integrations" },
+    { label: "SEO & analytics", description: "SEO, tracking, and analytics configured" },
+    { label: "Integrations live", description: "Booking, payments, or CRM integrations tested" },
+    { label: "Training complete", description: "Client trained on managing their site" },
+    { label: "Final revisions", description: "All feedback addressed" },
+    { label: "Ready for launch", description: "All pre-launch checks passed" },
+  ],
+};
+
+// Legacy fallback
+const DEFAULT_MILESTONE_ITEMS = MILESTONE_TEMPLATES.growth;
 
 // GET /admin/milestones/:token
 async function handleGetMilestones(req: Request, token: string): Promise<Response> {
@@ -3280,6 +3304,20 @@ async function handleAddDefaultMilestones(req: Request, token: string): Promise<
   }
 
   try {
+    // Parse optional package from body
+    let packageType = "growth"; // default
+    try {
+      const body = await req.json();
+      if (body.package && MILESTONE_TEMPLATES[body.package]) {
+        packageType = body.package;
+      }
+    } catch {
+      // No body or invalid JSON, use default
+    }
+
+    const template = MILESTONE_TEMPLATES[packageType] || MILESTONE_TEMPLATES.growth;
+    console.log(`Adding ${packageType} milestone template (${template.length} items)`);
+
     const supabase = getSupabaseClient();
 
     // Get project
@@ -3297,8 +3335,8 @@ async function handleAddDefaultMilestones(req: Request, token: string): Promise<
       );
     }
 
-    // Insert default milestones
-    const inserts = DEFAULT_MILESTONE_ITEMS.map((item, idx) => ({
+    // Insert milestones from template
+    const inserts = template.map((item, idx) => ({
       project_id: project.id,
       project_token: token,
       label: item.label,
@@ -3314,7 +3352,7 @@ async function handleAddDefaultMilestones(req: Request, token: string): Promise<
     if (insertError) throw insertError;
 
     return new Response(
-      JSON.stringify({ ok: true }),
+      JSON.stringify({ ok: true, package: packageType, count: template.length }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
 
