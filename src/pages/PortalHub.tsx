@@ -375,15 +375,8 @@ export default function PortalHub() {
     }
   };
 
-  if (authChecking) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
-
-  // OTP verification screen - HARD GATE
+  // OTP verification screen - HIGHEST PRIORITY (before auth check)
+  // This must come first so it doesn't get bypassed by auto-confirm sessions
   if (showOtpVerification) {
     return (
       <div className="min-h-screen bg-background flex flex-col">
@@ -479,6 +472,7 @@ export default function PortalHub() {
       </div>
     );
   }
+
 
   // Logged in - show portals
   if (user) {
