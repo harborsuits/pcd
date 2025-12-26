@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import { Loader2, Lock, Mail, ArrowRight, Home, ExternalLink, Sparkles, User as 
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/hooks/use-toast";
 import type { User, Session } from "@supabase/supabase-js";
+import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -62,6 +63,15 @@ export default function PortalHub() {
   
   const [linkInput, setLinkInput] = useState("");
   const [linkError, setLinkError] = useState<string | null>(null);
+  
+  // OTP verification state
+  const [showOtpVerification, setShowOtpVerification] = useState(false);
+  const [otpCode, setOtpCode] = useState("");
+  const [otpError, setOtpError] = useState<string | null>(null);
+  const [otpSending, setOtpSending] = useState(false);
+  const [otpVerifying, setOtpVerifying] = useState(false);
+  const [resendCountdown, setResendCountdown] = useState(0);
+  const hasSentOtp = useRef(false);
 
   // Check auth state on mount
   useEffect(() => {
@@ -142,6 +152,107 @@ export default function PortalHub() {
     }
   };
 
+  // Send OTP code
+  const sendOtpCode = async () => {
+    if (!email) return;
+    
+    console.log("🔥 SENDING OTP", { email });
+    setOtpSending(true);
+    setOtpError(null);
+    
+    try {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/send-verification-code`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": SUPABASE_ANON_KEY,
+        },
+        body: JSON.stringify({
+          email,
+          project_token: null, // No project token for portal-level verification
+          business_name: "Pleasant Cove Portal",
+        }),
+      });
+      
+      const result = await res.json();
+      console.log("📧 OTP send result:", result);
+      
+      if (!res.ok) {
+        throw new Error(result.error || "Failed to send verification code");
+      }
+      
+      setResendCountdown(60);
+      toast({ title: "Code sent!", description: "Check your email for the verification code." });
+    } catch (err) {
+      console.error("OTP send error:", err);
+      setOtpError(err instanceof Error ? err.message : "Failed to send code");
+    } finally {
+      setOtpSending(false);
+    }
+  };
+  
+  // Verify OTP code
+  const verifyOtpCode = async () => {
+    if (otpCode.length !== 6) return;
+    
+    console.log("🔐 VERIFYING OTP", { email, code: otpCode });
+    setOtpVerifying(true);
+    setOtpError(null);
+    
+    try {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/verify-code`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": SUPABASE_ANON_KEY,
+        },
+        body: JSON.stringify({
+          email,
+          code: otpCode,
+          project_token: null, // No project token for portal-level verification
+        }),
+      });
+      
+      const result = await res.json();
+      console.log("✅ OTP verify result:", result);
+      
+      if (!res.ok) {
+        throw new Error(result.error || "Invalid code");
+      }
+      
+      // Success! Hide OTP screen
+      setShowOtpVerification(false);
+      toast({ title: "Email verified!", description: "Welcome to your portal." });
+    } catch (err) {
+      console.error("OTP verify error:", err);
+      setOtpError(err instanceof Error ? err.message : "Verification failed");
+    } finally {
+      setOtpVerifying(false);
+    }
+  };
+  
+  // Resend countdown
+  useEffect(() => {
+    if (resendCountdown <= 0) return;
+    const timer = setTimeout(() => setResendCountdown(resendCountdown - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [resendCountdown]);
+  
+  // Send OTP when verification screen mounts
+  useEffect(() => {
+    if (showOtpVerification && email && !hasSentOtp.current) {
+      hasSentOtp.current = true;
+      sendOtpCode();
+    }
+  }, [showOtpVerification, email]);
+  
+  // Auto-verify when 6 digits entered
+  useEffect(() => {
+    if (otpCode.length === 6 && showOtpVerification) {
+      verifyOtpCode();
+    }
+  }, [otpCode, showOtpVerification]);
+
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -168,12 +279,13 @@ export default function PortalHub() {
         return;
       }
 
-      if (!data.session) {
-        setInfo("Check your email to confirm your account, then come back and log in.");
-        return;
-      }
-
-      toast({ title: "Account created!", description: "Loading your portals..." });
+      console.log("✅ Signup succeeded, forcing OTP step");
+      
+      // ALWAYS go to OTP verification - NO CONDITIONS
+      hasSentOtp.current = false; // Reset so sendOtpCode fires
+      setShowOtpVerification(true);
+      // DO NOT check data.session, DO NOT toast success yet
+      
     } catch (err) {
       console.error("Signup error:", err);
       setError("Something went wrong. Please try again.");
@@ -267,6 +379,103 @@ export default function PortalHub() {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  // OTP verification screen - HARD GATE
+  if (showOtpVerification) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col">
+        <header className="border-b border-border bg-card/80 backdrop-blur-sm">
+          <div className="container mx-auto px-6 py-4 flex items-center justify-between">
+            <Link to="/" className="font-serif text-xl font-bold tracking-tight text-foreground">
+              Pleasant Cove
+            </Link>
+          </div>
+        </header>
+
+        <main className="flex-1 flex items-center justify-center p-6">
+          <Card className="w-full max-w-md">
+            <CardHeader className="text-center">
+              <CardTitle className="font-serif text-2xl">Verify Your Email</CardTitle>
+              <CardDescription>
+                We sent a 6-digit code to <strong>{email}</strong>
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="flex justify-center">
+                <InputOTP
+                  maxLength={6}
+                  value={otpCode}
+                  onChange={setOtpCode}
+                  disabled={otpVerifying}
+                >
+                  <InputOTPGroup>
+                    <InputOTPSlot index={0} />
+                    <InputOTPSlot index={1} />
+                    <InputOTPSlot index={2} />
+                    <InputOTPSlot index={3} />
+                    <InputOTPSlot index={4} />
+                    <InputOTPSlot index={5} />
+                  </InputOTPGroup>
+                </InputOTP>
+              </div>
+
+              {otpError && (
+                <p className="text-sm text-destructive text-center">{otpError}</p>
+              )}
+
+              {otpVerifying && (
+                <div className="flex items-center justify-center gap-2 text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Verifying...
+                </div>
+              )}
+
+              <div className="text-center">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    hasSentOtp.current = false;
+                    sendOtpCode();
+                  }}
+                  disabled={otpSending || resendCountdown > 0}
+                >
+                  {otpSending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Sending...
+                    </>
+                  ) : resendCountdown > 0 ? (
+                    `Resend in ${resendCountdown}s`
+                  ) : (
+                    <>
+                      <RefreshCw className="mr-2 h-4 w-4" />
+                      Resend code
+                    </>
+                  )}
+                </Button>
+              </div>
+
+              <div className="text-center">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowOtpVerification(false);
+                    setOtpCode("");
+                    setOtpError(null);
+                    hasSentOtp.current = false;
+                  }}
+                  className="text-sm text-muted-foreground hover:text-foreground"
+                >
+                  ← Back to signup
+                </button>
+              </div>
+            </CardContent>
+          </Card>
+        </main>
       </div>
     );
   }
