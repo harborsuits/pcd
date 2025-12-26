@@ -1,19 +1,53 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-admin-key",
-};
+// Allowed origins for admin console
+const ADMIN_ALLOWED_ORIGINS = [
+  /^https?:\/\/.*\.lovable\.app$/,
+  /^https?:\/\/.*\.lovableproject\.com$/,
+  /^https?:\/\/localhost(:\d+)?$/,
+  /^https?:\/\/127\.0\.0\.1(:\d+)?$/,
+  /^https?:\/\/.*\.pleasantcove\.design$/,
+];
+
+function isAdminOriginAllowed(origin: string | null): boolean {
+  if (!origin) return true; // Server-to-server calls
+  return ADMIN_ALLOWED_ORIGINS.some(pattern => pattern.test(origin));
+}
+
+function getAdminCorsHeaders(origin: string | null): Record<string, string> {
+  return {
+    "Access-Control-Allow-Origin": origin || "*",
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-admin-key",
+    "Access-Control-Allow-Methods": "GET, POST, PATCH, DELETE, OPTIONS",
+  };
+}
 
 // Token validation: alphanumeric + hyphens/underscores, 12-128 chars
 function isValidToken(token: string): boolean {
   return /^[a-zA-Z0-9\-_]{12,128}$/.test(token);
 }
 
+// Default CORS headers for handler functions (used when origin check already passed)
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-admin-key",
+  "Access-Control-Allow-Methods": "GET, POST, PATCH, DELETE, OPTIONS",
+};
+
 Deno.serve(async (req) => {
-  // Handle CORS preflight
+  const origin = req.headers.get("origin");
+  
+  // Check origin for CORS - reject disallowed origins  
+  if (origin && !isAdminOriginAllowed(origin)) {
+    return new Response(
+      JSON.stringify({ error: "Origin not allowed" }),
+      { status: 403, headers: { "Content-Type": "application/json" } }
+    );
+  }
+
+  // Handle CORS preflight with origin-aware headers
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: getAdminCorsHeaders(origin) });
   }
 
   const url = new URL(req.url);
