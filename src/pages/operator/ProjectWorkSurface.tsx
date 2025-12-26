@@ -974,7 +974,11 @@ export function ProjectWorkSurface({ project, onBack, onStatusChange }: ProjectW
 
             {/* Launch Checklist */}
             <TabsContent value="launch" className="flex-1 flex flex-col overflow-hidden m-0">
-              <LaunchChecklist projectToken={project.project_token} />
+              <LaunchChecklist 
+                projectToken={project.project_token} 
+                projectStatus={project.status}
+                onLaunchComplete={() => queryClient.invalidateQueries({ queryKey: ["admin-projects"] })}
+              />
             </TabsContent>
           </Tabs>
         </div>

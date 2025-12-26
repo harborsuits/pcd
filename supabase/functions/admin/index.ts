@@ -87,6 +87,13 @@ Deno.serve(async (req) => {
     return handleApproveIntake(req, intakeId);
   }
 
+  // Route: POST /admin/projects/:token/launch-complete
+  if (subPath.match(/^projects\/[^\/]+\/launch-complete$/) && req.method === "POST") {
+    const parts = subPath.split("/");
+    const token = parts[1];
+    return handleLaunchComplete(req, token);
+  }
+
   // Route: GET /admin/checklist/:token
   if (subPath.match(/^checklist\/[^\/]+$/) && req.method === "GET") {
     const token = subPath.replace("checklist/", "");
@@ -2438,6 +2445,117 @@ async function handleDeleteCommentAttachment(req: Request, token: string, commen
 
   } catch (error) {
     console.error("Delete attachment error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+}
+
+// POST /admin/projects/:token/launch-complete - Mark project as launched
+async function handleLaunchComplete(req: Request, token: string): Promise<Response> {
+  const authError = validateAdminKey(req);
+  if (authError) return authError;
+
+  if (!isValidToken(token)) {
+    return new Response(
+      JSON.stringify({ error: "Invalid token format" }),
+      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  try {
+    console.log(`Marking project as launched: ${token.slice(0, 8)}...`);
+
+    const supabase = getSupabaseClient();
+
+    // Fetch project
+    const { data: project, error: fetchError } = await supabase
+      .from("projects")
+      .select("id, project_token, business_name, status")
+      .eq("project_token", token)
+      .is("deleted_at", null)
+      .maybeSingle();
+
+    if (fetchError) {
+      console.error("Project fetch error:", fetchError);
+      return new Response(
+        JSON.stringify({ error: "Database error" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (!project) {
+      return new Response(
+        JSON.stringify({ error: "Project not found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Update project status to completed
+    const { error: updateError } = await supabase
+      .from("projects")
+      .update({ 
+        status: "completed",
+        updated_at: new Date().toISOString()
+      })
+      .eq("id", project.id);
+
+    if (updateError) {
+      console.error("Project update error:", updateError);
+      return new Response(
+        JSON.stringify({ error: "Failed to update project" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Insert notification event
+    const { error: eventError } = await supabase
+      .from("notification_events")
+      .insert({
+        project_id: project.id,
+        project_token: project.project_token,
+        event_type: "launch_complete",
+        payload: { marked_by: "operator" },
+      });
+
+    if (eventError) {
+      console.error("Notification event error:", eventError);
+      // Non-fatal, continue
+    }
+
+    // Send Telegram notification
+    try {
+      const telegramBotToken = Deno.env.get("TELEGRAM_BOT_TOKEN");
+      const telegramChatId = Deno.env.get("TELEGRAM_CHAT_ID");
+
+      if (telegramBotToken && telegramChatId) {
+        const message = `🚀 *Launch Complete*\n\n*${project.business_name}* has been marked as launched!`;
+
+        await fetch(`https://api.telegram.org/bot${telegramBotToken}/sendMessage`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            chat_id: telegramChatId,
+            text: message,
+            parse_mode: "Markdown",
+          }),
+        });
+      }
+    } catch (telegramError) {
+      console.error("Telegram notification failed:", telegramError);
+      // Non-fatal
+    }
+
+    console.log("Project marked as launched successfully");
+
+    return new Response(
+      JSON.stringify({ ok: true }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+
+  } catch (error) {
+    console.error("Launch complete error:", error);
     return new Response(
       JSON.stringify({ error: "Internal server error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
