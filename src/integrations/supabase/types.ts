@@ -99,6 +99,7 @@ export type Database = {
           expires_at: string
           id: string
           project_token: string | null
+          requester_ip: string | null
           verified_at: string | null
         }
         Insert: {
@@ -109,6 +110,7 @@ export type Database = {
           expires_at: string
           id?: string
           project_token?: string | null
+          requester_ip?: string | null
           verified_at?: string | null
         }
         Update: {
@@ -119,6 +121,7 @@ export type Database = {
           expires_at?: string
           id?: string
           project_token?: string | null
+          requester_ip?: string | null
           verified_at?: string | null
         }
         Relationships: []

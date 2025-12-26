@@ -23,6 +23,11 @@ async function hashCode(code: string): Promise<string> {
   return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
 }
 
+// Rate limit constants
+const COOLDOWN_MS = 60_000; // 60 seconds between sends
+const MAX_PER_EMAIL_PER_HOUR = 5;
+const MAX_PER_IP_PER_HOUR = 20;
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -41,8 +46,14 @@ serve(async (req) => {
 
     const normalizedEmail = String(email).toLowerCase();
     const token = project_token ?? null; // Explicitly allow null
+    
+    // Get client IP for rate limiting (check common headers)
+    const clientIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() 
+      || req.headers.get("x-real-ip") 
+      || req.headers.get("cf-connecting-ip")
+      || "unknown";
 
-    console.log(`📧 Sending OTP to ${normalizedEmail}, project_token: ${token ?? "null (portal-level)"}`);
+    console.log(`📧 OTP request from IP ${clientIp} for ${normalizedEmail}, project: ${token ?? "portal-level"}`);
 
     // Create Supabase client with service role
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -66,7 +77,7 @@ serve(async (req) => {
       return q;
     };
 
-    // Check 60-second cooldown
+    // Check 60-second cooldown (per email)
     const { data: recent } = await baseRateLimitQuery()
       .is("verified_at", null)
       .order("created_at", { ascending: false })
@@ -74,39 +85,58 @@ serve(async (req) => {
 
     if (recent?.length) {
       const ageMs = Date.now() - new Date(recent[0].created_at).getTime();
-      if (ageMs < 60_000) {
-        const waitSeconds = Math.ceil((60_000 - ageMs) / 1000);
-        console.log(`⏱️ Rate limit: ${normalizedEmail} must wait ${waitSeconds}s`);
+      if (ageMs < COOLDOWN_MS) {
+        const waitSeconds = Math.ceil((COOLDOWN_MS - ageMs) / 1000);
+        console.log(`⏱️ Cooldown: ${normalizedEmail} must wait ${waitSeconds}s`);
         return new Response(
+          // Generic message - don't confirm email exists
           JSON.stringify({ error: `Please wait ${waitSeconds} seconds before requesting another code.` }),
           { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
     }
 
-    // Check 5 per hour cap
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
-    
-    let countQuery = supabase
+
+    // Check per-email hourly limit
+    let emailCountQuery = supabase
       .from("email_verifications")
       .select("id", { count: "exact", head: true })
       .eq("email", normalizedEmail)
       .gte("created_at", oneHourAgo);
     
     if (token) {
-      countQuery = countQuery.eq("project_token", token);
+      emailCountQuery = emailCountQuery.eq("project_token", token);
     } else {
-      countQuery = countQuery.is("project_token", null);
+      emailCountQuery = emailCountQuery.is("project_token", null);
     }
     
-    const { count: hourlyCount } = await countQuery;
+    const { count: emailHourlyCount } = await emailCountQuery;
 
-    if ((hourlyCount ?? 0) >= 5) {
-      console.log(`⏱️ Hourly rate limit hit: ${normalizedEmail} has ${hourlyCount} attempts`);
+    if ((emailHourlyCount ?? 0) >= MAX_PER_EMAIL_PER_HOUR) {
+      console.log(`⏱️ Email hourly limit: ${normalizedEmail} has ${emailHourlyCount} attempts`);
       return new Response(
-        JSON.stringify({ error: "Too many verification attempts. Try again in an hour." }),
+        // Generic message
+        JSON.stringify({ error: "Too many requests. Please try again later." }),
         { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
+    }
+
+    // Check per-IP hourly limit (prevents bot farms)
+    if (clientIp !== "unknown") {
+      const { count: ipHourlyCount } = await supabase
+        .from("email_verifications")
+        .select("id", { count: "exact", head: true })
+        .eq("requester_ip", clientIp)
+        .gte("created_at", oneHourAgo);
+
+      if ((ipHourlyCount ?? 0) >= MAX_PER_IP_PER_HOUR) {
+        console.log(`⏱️ IP hourly limit: ${clientIp} has ${ipHourlyCount} attempts`);
+        return new Response(
+          JSON.stringify({ error: "Too many requests. Please try again later." }),
+          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
     }
 
     // ============ END RATE LIMITING ============
@@ -144,6 +174,7 @@ serve(async (req) => {
         code_hash: codeHash,
         expires_at: expiresAt.toISOString(),
         project_token: token, // null is allowed
+        requester_ip: clientIp, // for IP rate limiting
       });
 
     if (insertError) {
