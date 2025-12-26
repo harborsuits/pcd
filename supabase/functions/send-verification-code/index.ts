@@ -155,7 +155,7 @@ serve(async (req) => {
     }
 
     // Send email via Resend using verified domain
-    const emailFrom = Deno.env.get("EMAIL_FROM") || "Pleasant Cove <no-reply@send.pleasantcovedesign.com>";
+    const emailFrom = Deno.env.get("EMAIL_FROM") || "Pleasant Cove <no-reply@pleasantcovedesign.com>";
     const displayName = business_name || "Pleasant Cove";
 
     // Debug logging
