@@ -32,7 +32,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Users, Search, Trash2, Pencil, RefreshCw, FolderOpen, Mail, Phone } from "lucide-react";
+import { Users, Search, Trash2, Pencil, RefreshCw, FolderOpen, Mail, Phone, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { adminFetch } from "@/lib/adminFetch";
 import { format } from "date-fns";
@@ -89,12 +89,24 @@ async function deleteAccount(userId: string): Promise<void> {
   }
 }
 
+async function clearTestAccounts(): Promise<{ deleted: number; total: number; errors?: string[] }> {
+  const res = await adminFetch("/admin/accounts/clear-test", {
+    method: "POST",
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: "Failed to clear test accounts" }));
+    throw new Error(err.error || "Failed to clear test accounts");
+  }
+  return res.json();
+}
+
 export function AccountsTab() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [editingAccount, setEditingAccount] = useState<AccountWithProjects | null>(null);
   const [editEmail, setEditEmail] = useState("");
   const [deletingAccount, setDeletingAccount] = useState<AccountWithProjects | null>(null);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
 
   const { data: accounts, isLoading, error, refetch } = useQuery({
     queryKey: ["admin-accounts"],
@@ -121,6 +133,21 @@ export function AccountsTab() {
       toast.success("Account deleted");
       queryClient.invalidateQueries({ queryKey: ["admin-accounts"] });
       setDeletingAccount(null);
+    },
+    onError: (err: Error) => {
+      toast.error(err.message);
+    },
+  });
+
+  const clearTestMutation = useMutation({
+    mutationFn: clearTestAccounts,
+    onSuccess: (data) => {
+      toast.success(`Cleared ${data.deleted} of ${data.total} test accounts`);
+      if (data.errors && data.errors.length > 0) {
+        console.warn("Some accounts failed to delete:", data.errors);
+      }
+      queryClient.invalidateQueries({ queryKey: ["admin-accounts"] });
+      setShowClearConfirm(false);
     },
     onError: (err: Error) => {
       toast.error(err.message);
@@ -167,10 +194,21 @@ export function AccountsTab() {
             <Users className="h-5 w-5" />
             Client Accounts
           </CardTitle>
-          <Button variant="outline" size="sm" onClick={() => refetch()}>
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Refresh
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => refetch()}>
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Refresh
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-destructive border-destructive/50 hover:bg-destructive/10"
+              onClick={() => setShowClearConfirm(true)}
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Clear Test Accounts
+            </Button>
+          </div>
         </div>
         <div className="flex items-center gap-2 mt-4">
           <div className="relative flex-1 max-w-sm">
@@ -377,6 +415,36 @@ export function AccountsTab() {
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               >
                 {deleteMutation.isPending ? "Deleting..." : "Delete Account"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Clear Test Accounts Confirmation */}
+        <AlertDialog open={showClearConfirm} onOpenChange={setShowClearConfirm}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-destructive" />
+                Clear All Test Accounts
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                This will permanently delete <strong>all client accounts</strong> except operator accounts
+                (pleasantcovedesign@gmail.com).
+                <br /><br />
+                Projects will remain but will be unlinked from their users.
+                <br /><br />
+                <strong>This action cannot be undone.</strong>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={clearTestMutation.isPending}>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => clearTestMutation.mutate()}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                disabled={clearTestMutation.isPending}
+              >
+                {clearTestMutation.isPending ? "Clearing..." : "Clear All Test Accounts"}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
