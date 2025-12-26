@@ -31,12 +31,18 @@ serve(async (req) => {
   try {
     const { email, project_token, business_name } = await req.json();
 
-    if (!email || !project_token) {
+    // Only email is required - project_token can be null for portal-level verification
+    if (!email) {
       return new Response(
-        JSON.stringify({ error: "email and project_token are required" }),
+        JSON.stringify({ error: "email is required" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    const normalizedEmail = String(email).toLowerCase();
+    const token = project_token ?? null; // Explicitly allow null
+
+    console.log(`📧 Sending OTP to ${normalizedEmail}, project_token: ${token ?? "null (portal-level)"}`);
 
     // Create Supabase client with service role
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -48,22 +54,34 @@ serve(async (req) => {
     const codeHash = await hashCode(code);
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
-    // Delete any existing unverified codes for this email/project
-    await supabase
+    // Delete any existing unverified codes for this email + scope (portal-level OR project-level)
+    let deleteQuery = supabase
       .from("email_verifications")
       .delete()
-      .eq("email", email.toLowerCase())
-      .eq("project_token", project_token)
+      .eq("email", normalizedEmail)
       .is("verified_at", null);
+
+    // Handle null vs non-null project_token correctly
+    if (token) {
+      deleteQuery = deleteQuery.eq("project_token", token);
+    } else {
+      deleteQuery = deleteQuery.is("project_token", null);
+    }
+
+    const { error: deleteError } = await deleteQuery;
+    if (deleteError) {
+      console.log("Delete prior codes warning:", deleteError);
+      // Continue anyway
+    }
 
     // Insert new verification record
     const { error: insertError } = await supabase
       .from("email_verifications")
       .insert({
-        email: email.toLowerCase(),
+        email: normalizedEmail,
         code_hash: codeHash,
         expires_at: expiresAt.toISOString(),
-        project_token,
+        project_token: token, // null is allowed
       });
 
     if (insertError) {
@@ -76,7 +94,7 @@ serve(async (req) => {
 
     // Send email via Resend
     const emailFrom = Deno.env.get("EMAIL_FROM") || "onboarding@resend.dev";
-    const displayName = business_name || "Your Project";
+    const displayName = business_name || "Pleasant Cove";
 
     const { error: emailError } = await resend.emails.send({
       from: `${displayName} <${emailFrom}>`,
@@ -95,7 +113,7 @@ serve(async (req) => {
           </div>
           
           <p style="color: #4a4a4a; font-size: 16px; line-height: 1.5; margin-bottom: 24px;">
-            Enter this code to continue setting up your project portal:
+            Enter this code to continue:
           </p>
           
           <div style="background: #f5f5f5; border-radius: 8px; padding: 24px; text-align: center; margin-bottom: 24px;">
@@ -118,7 +136,7 @@ serve(async (req) => {
       );
     }
 
-    console.log(`✅ Verification code sent to ${email} for project ${project_token}`);
+    console.log(`✅ Verification code sent to ${normalizedEmail} (project: ${token ?? "portal-level"})`);
 
     return new Response(
       JSON.stringify({ ok: true, message: "Verification code sent" }),

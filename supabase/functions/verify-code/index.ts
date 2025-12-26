@@ -23,12 +23,18 @@ serve(async (req) => {
   try {
     const { email, code, project_token } = await req.json();
 
-    if (!email || !code || !project_token) {
+    // Only email and code are required - project_token can be null for portal-level verification
+    if (!email || !code) {
       return new Response(
-        JSON.stringify({ error: "email, code, and project_token are required" }),
+        JSON.stringify({ error: "email and code are required" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    const normalizedEmail = String(email).toLowerCase();
+    const token = project_token ?? null; // Explicitly allow null
+
+    console.log(`🔐 Verifying OTP for ${normalizedEmail}, project_token: ${token ?? "null (portal-level)"}`);
 
     // Create Supabase client with service role
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -38,15 +44,21 @@ serve(async (req) => {
     // Hash the provided code
     const codeHash = await hashCode(code);
 
-    // Find matching verification record
-    const { data: verification, error: findError } = await supabase
+    // Build query - handle null vs non-null project_token correctly
+    let findQuery = supabase
       .from("email_verifications")
       .select("*")
-      .eq("email", email.toLowerCase())
-      .eq("project_token", project_token)
+      .eq("email", normalizedEmail)
       .eq("code_hash", codeHash)
-      .is("verified_at", null)
-      .single();
+      .is("verified_at", null);
+
+    if (token) {
+      findQuery = findQuery.eq("project_token", token);
+    } else {
+      findQuery = findQuery.is("project_token", null);
+    }
+
+    const { data: verification, error: findError } = await findQuery.maybeSingle();
 
     if (findError || !verification) {
       console.log("Verification not found:", findError);
@@ -78,19 +90,20 @@ serve(async (req) => {
       );
     }
 
-    // CRITICAL: Also set email_verified = true on the project
-    // This gates portal access independent of Supabase auth state
-    const { error: projectError } = await supabase
-      .from("projects")
-      .update({ email_verified: true })
-      .eq("project_token", project_token);
+    // If there's a project_token, also set email_verified = true on the project
+    if (token) {
+      const { error: projectError } = await supabase
+        .from("projects")
+        .update({ email_verified: true })
+        .eq("project_token", token);
 
-    if (projectError) {
-      console.error("Project update error:", projectError);
-      // Don't fail the whole request, email is still verified
+      if (projectError) {
+        console.error("Project update error:", projectError);
+        // Don't fail the whole request, email is still verified
+      }
     }
 
-    console.log(`✅ Email verified: ${email} for project ${project_token}`);
+    console.log(`✅ Email verified: ${normalizedEmail} (project: ${token ?? "portal-level"})`);
 
     return new Response(
       JSON.stringify({ ok: true, verified: true }),
