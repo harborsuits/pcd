@@ -16,6 +16,8 @@ import { PrototypeViewer, type Prototype, type PrototypeComment } from "@/compon
 import { ProjectRoadmap, computeRoadmapSteps } from "@/components/portal/ProjectRoadmap";
 import { ClientFileUpload } from "@/components/portal/ClientFileUpload";
 import { ClientProgressPanel } from "@/components/portal/ClientProgressPanel";
+import { ClientLayout } from "@/components/portal/ClientLayout";
+import { BrandCard } from "@/components/portal/BrandCard";
 
 import { PortalAuthPage } from "./PortalAuthPage";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
@@ -975,9 +977,11 @@ export default function PortalPage() {
   // Show loading while checking auth
   if (authChecking || requiresAuth === null) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
+      <ClientLayout maxWidth="md" centered>
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      </ClientLayout>
     );
   }
 
@@ -994,23 +998,23 @@ export default function PortalPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
+      <ClientLayout maxWidth="md" centered>
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      </ClientLayout>
     );
   }
 
   if (error || !data) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Card className="max-w-md">
-          <CardContent className="pt-6 text-center">
-            <AlertCircle className="h-12 w-12 mx-auto mb-4 text-destructive" />
-            <h2 className="text-xl font-semibold mb-2">Portal Not Found</h2>
-            <p className="text-muted-foreground">{error || "Invalid or expired portal link"}</p>
-          </CardContent>
-        </Card>
-      </div>
+      <ClientLayout maxWidth="md" centered>
+        <BrandCard className="text-center">
+          <AlertCircle className="h-12 w-12 mx-auto mb-4 text-destructive" />
+          <h2 className="font-serif text-xl font-bold mb-2">Portal Not Found</h2>
+          <p className="text-muted-foreground">{error || "Invalid or expired portal link"}</p>
+        </BrandCard>
+      </ClientLayout>
     );
   }
 
@@ -1030,7 +1034,60 @@ export default function PortalPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <ClientLayout
+      title={
+        <div className="flex items-center gap-3">
+          <span>{data.business.name}</span>
+          <StatusBadge status={data.business.status} />
+        </div>
+      }
+      subtitle="Your Project Workspace"
+      maxWidth="4xl"
+      rightSlot={
+        <div className="flex items-center gap-2">
+          {user && (
+            <>
+              <Button asChild variant="ghost" size="sm">
+                <Link to="/portal">My Portals</Link>
+              </Button>
+              <Button variant="ghost" size="sm" onClick={handleLogout}>
+                <LogOut className="h-4 w-4 mr-2" />
+                Log out
+              </Button>
+            </>
+          )}
+          {pushSupported && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={async () => {
+                if (pushSubscribed) {
+                  const ok = await unsubscribePush();
+                  if (ok) toast({ title: "Notifications disabled" });
+                } else {
+                  const ok = await subscribePush();
+                  if (ok) {
+                    toast({ title: "Notifications enabled", description: "You'll be notified when you receive a message." });
+                  } else {
+                    toast({ title: "Could not enable notifications", description: "Please allow notifications in your browser settings.", variant: "destructive" });
+                  }
+                }
+              }}
+              disabled={pushLoading}
+              title={pushSubscribed ? "Disable notifications" : "Enable notifications"}
+            >
+              {pushLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : pushSubscribed ? (
+                <Bell className="h-4 w-4 text-accent" />
+              ) : (
+                <BellOff className="h-4 w-4" />
+              )}
+            </Button>
+          )}
+        </div>
+      }
+    >
       {/* Welcome Screen */}
       {showWelcome && data && (
         <WelcomeScreen 
@@ -1039,104 +1096,33 @@ export default function PortalPage() {
         />
       )}
 
-      {/* Navigation Header */}
-      <header className="border-b border-border bg-card">
-        <div className="container mx-auto px-4 py-3 max-w-4xl flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
-            <Home className="h-4 w-4" />
-            <span className="text-sm">Home</span>
-          </Link>
-          {user && (
-            <div className="flex items-center gap-2">
-              <Button asChild variant="ghost" size="sm" className="text-muted-foreground">
-                <Link to="/portal">
-                  My Portals
-                </Link>
-              </Button>
-              <Button variant="ghost" size="sm" onClick={handleLogout} className="text-muted-foreground">
-                <LogOut className="h-4 w-4 mr-2" />
-                Log out
-              </Button>
-            </div>
-          )}
-        </div>
-      </header>
-
-      {/* Main Content - Now shows project workspace instead of chat */}
-      <main className="pb-24">
-        {/* Header Area */}
-        <div className="border-b border-border bg-card/50 p-6">
-          <div className="container mx-auto max-w-4xl">
-            {/* Business Header */}
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <h1 className="text-2xl font-bold">{data.business.name}</h1>
-                <StatusBadge status={data.business.status} />
-              </div>
-              {/* Push Notification Toggle */}
-              {pushSupported && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={async () => {
-                    if (pushSubscribed) {
-                      const ok = await unsubscribePush();
-                      if (ok) toast({ title: "Notifications disabled" });
-                    } else {
-                      const ok = await subscribePush();
-                      if (ok) {
-                        toast({ title: "Notifications enabled", description: "You'll be notified when you receive a message." });
-                      } else {
-                        toast({ title: "Could not enable notifications", description: "Please allow notifications in your browser settings.", variant: "destructive" });
-                      }
-                    }
-                  }}
-                  disabled={pushLoading}
-                  className="text-muted-foreground"
-                  title={pushSubscribed ? "Disable notifications" : "Enable notifications"}
-                >
-                  {pushLoading ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : pushSubscribed ? (
-                    <Bell className="h-4 w-4 text-primary" />
-                  ) : (
-                    <BellOff className="h-4 w-4" />
-                  )}
-                </Button>
-              )}
-            </div>
-            <p className="text-sm text-muted-foreground mt-1">Your Project Workspace</p>
-          </div>
-        </div>
+      {/* Main Content */}
+      <div className="space-y-6 pb-24">
 
         {/* Project Roadmap */}
-        <div className="border-b border-border bg-muted/30 p-6">
-          <div className="container mx-auto max-w-4xl">
-            <ProjectRoadmap 
-              steps={computeRoadmapSteps({
-                intakeStatus: data.intake_status ?? undefined,
-                hasPrototype: prototypes.length > 0,
-                openCommentsCount: prototypeComments.filter(c => !c.resolved_at).length,
-                resolvedCommentsCount: prototypeComments.filter(c => c.resolved_at).length,
-                projectStatus: data.business.status,
-                prototypeUrl: prototypes[0]?.url,
-                finalApprovedAt: data.business.final_approved_at,
-                onApproveFinal: handleApproveFinal,
-              })}
-            />
-          </div>
-        </div>
+        <BrandCard variant="muted">
+          <ProjectRoadmap 
+            steps={computeRoadmapSteps({
+              intakeStatus: data.intake_status ?? undefined,
+              hasPrototype: prototypes.length > 0,
+              openCommentsCount: prototypeComments.filter(c => !c.resolved_at).length,
+              resolvedCommentsCount: prototypeComments.filter(c => c.resolved_at).length,
+              projectStatus: data.business.status,
+              prototypeUrl: prototypes[0]?.url,
+              finalApprovedAt: data.business.final_approved_at,
+              onApproveFinal: handleApproveFinal,
+            })}
+          />
+        </BrandCard>
 
         {/* Client Progress Panel */}
-        <div className="border-b border-border p-6">
-          <div className="container mx-auto max-w-4xl">
-            <div className="bg-card border border-border rounded-xl p-6">
-              <ClientProgressPanel token={token!} />
-            </div>
-          </div>
-        </div>
+        <BrandCard>
+          <ClientProgressPanel token={token!} />
+        </BrandCard>
+
+        {/* Prototype Viewer */}
         {prototypes.length > 0 && (
-          <div className="border-b border-border">
+          <BrandCard noPadding>
             <PrototypeViewer
               prototype={prototypes[0]}
               comments={prototypeComments}
@@ -1146,89 +1132,79 @@ export default function PortalPage() {
               onUnresolveComment={handleUnresolveComment}
               onRefresh={handleRefreshPrototype}
             />
-          </div>
+          </BrandCard>
         )}
 
         {/* Review Queue - Show above files if there are pending items */}
         {data.review_items && data.review_items.length > 0 && (
-          <div className="border-b border-border bg-card p-6">
-            <div className="container mx-auto max-w-4xl">
-              <ReviewQueue 
-                items={data.review_items} 
-                token={token!} 
-                onItemUpdated={handleReviewItemUpdated}
-              />
-            </div>
-          </div>
+          <BrandCard>
+            <ReviewQueue 
+              items={data.review_items} 
+              token={token!} 
+              onItemUpdated={handleReviewItemUpdated}
+            />
+          </BrandCard>
         )}
 
         {/* Files Section - Categorized Upload */}
-        <div className="p-6">
-          <div className="container mx-auto max-w-4xl">
-            <div className="bg-card border border-border rounded-xl p-6">
-              <ClientFileUpload
-                token={token!}
-                files={data.files}
-                onFileUploaded={(file) => {
-                  setData((prev) => {
-                    if (!prev) return prev;
-                    return {
-                      ...prev,
-                      files: [file, ...prev.files],
-                    };
-                  });
-                }}
-                onPreviewImage={(url, name) => setImgPreview({ url, name })}
-                onPreviewPdf={(url, name) => setPdfPreview({ url, name })}
-              />
-            </div>
-          </div>
-        </div>
+        <BrandCard>
+          <ClientFileUpload
+            token={token!}
+            files={data.files}
+            onFileUploaded={(file) => {
+              setData((prev) => {
+                if (!prev) return prev;
+                return {
+                  ...prev,
+                  files: [file, ...prev.files],
+                };
+              });
+            }}
+            onPreviewImage={(url, name) => setImgPreview({ url, name })}
+            onPreviewPdf={(url, name) => setPdfPreview({ url, name })}
+          />
+        </BrandCard>
 
         {/* Payments Section - Show if there are payments */}
         {data.payments.length > 0 && (
-          <div className="px-6 pb-6">
-            <div className="container mx-auto max-w-4xl">
-              <div className="bg-card border border-border rounded-xl p-6">
-                <div className="flex items-center gap-2 mb-4">
-                  <CreditCard className="h-5 w-5 text-muted-foreground" />
-                  <h2 className="font-semibold">Payments</h2>
-                  <Badge variant="secondary" className="text-xs">
-                    {data.payments.length}
-                  </Badge>
-                </div>
-                <div className="space-y-2">
-                  {data.payments.map((payment, idx) => (
-                    <div key={idx} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                      <div>
-                        <p className="font-medium">{formatCurrency(payment.amount_cents)}</p>
-                        <p className="text-xs text-muted-foreground">{payment.payment_type}</p>
-                      </div>
-                      <div className="text-right">
-                        <Badge
-                          variant={
-                            payment.status === "completed"
-                              ? "default"
-                              : payment.status === "pending"
-                              ? "secondary"
-                              : "destructive"
-                          }
-                          className="text-xs"
-                        >
-                          {payment.status}
-                        </Badge>
-                        <p className="text-[10px] text-muted-foreground mt-1">
-                          {formatDate(payment.created_at)}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
+          <BrandCard>
+            <div className="flex items-center gap-2 mb-4">
+              <CreditCard className="h-5 w-5 text-muted-foreground" />
+              <h2 className="font-serif font-bold">Payments</h2>
+              <Badge variant="secondary" className="text-xs">
+                {data.payments.length}
+              </Badge>
             </div>
-          </div>
+            <div className="space-y-2">
+              {data.payments.map((payment, idx) => (
+                <div key={idx} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                  <div>
+                    <p className="font-medium">{formatCurrency(payment.amount_cents)}</p>
+                    <p className="text-xs text-muted-foreground">{payment.payment_type}</p>
+                  </div>
+                  <div className="text-right">
+                    <Badge
+                      variant={
+                        payment.status === "completed"
+                          ? "default"
+                          : payment.status === "pending"
+                          ? "secondary"
+                          : "destructive"
+                      }
+                      className="text-xs"
+                    >
+                      {payment.status}
+                    </Badge>
+                    <p className="text-[10px] text-muted-foreground mt-1">
+                      {formatDate(payment.created_at)}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </BrandCard>
         )}
-      </main>
+      </div>
 
       {/* Floating Chat Orb */}
       <FloatingChatOrb
@@ -1303,6 +1279,6 @@ export default function PortalPage() {
           </div>
         </div>
       )}
-    </div>
+    </ClientLayout>
   );
 }
