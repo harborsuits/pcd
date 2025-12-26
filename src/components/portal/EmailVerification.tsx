@@ -56,6 +56,7 @@ export function EmailVerification({
   }, [code]);
 
   const sendCode = async () => {
+    console.log("🔥 SENDING OTP", { email, projectToken, businessName });
     setSending(true);
     setError(null);
 
