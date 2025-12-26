@@ -32,10 +32,10 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Users, Search, Trash2, Pencil, RefreshCw, FolderOpen, Mail, Phone, AlertTriangle } from "lucide-react";
+import { Users, Search, Trash2, Pencil, RefreshCw, FolderOpen, Mail, Phone, AlertTriangle, CheckCircle2, XCircle, Clock } from "lucide-react";
 import { toast } from "sonner";
 import { adminFetch } from "@/lib/adminFetch";
-import { format } from "date-fns";
+import { format, differenceInDays } from "date-fns";
 
 interface AuthUser {
   id: string;
@@ -260,43 +260,108 @@ export function AccountsTab() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredAccounts.map((account) => (
+                  filteredAccounts.map((account) => {
+                    const isVerified = !!account.user.email_confirmed_at;
+                    const lastSignIn = account.user.last_sign_in_at;
+                    const daysSinceSignIn = lastSignIn 
+                      ? differenceInDays(new Date(), new Date(lastSignIn))
+                      : null;
+                    const activityStatus = daysSinceSignIn === null 
+                      ? "never" 
+                      : daysSinceSignIn <= 7 
+                        ? "active" 
+                        : "stale";
+                    
+                    const getStatusColor = (status: string) => {
+                      switch (status) {
+                        case "client":
+                        case "completed":
+                          return "bg-green-500/10 text-green-600 border-green-500/20";
+                        case "interested":
+                        case "contacted":
+                          return "bg-blue-500/10 text-blue-600 border-blue-500/20";
+                        case "lead":
+                          return "bg-yellow-500/10 text-yellow-600 border-yellow-500/20";
+                        case "archived":
+                          return "bg-muted text-muted-foreground border-border";
+                        default:
+                          return "";
+                      }
+                    };
+
+                    return (
                     <TableRow key={account.user.id}>
                       <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Mail className="h-4 w-4 text-muted-foreground" />
-                          <span className="font-medium">{account.user.email}</span>
-                          {account.user.email_confirmed_at && (
-                            <Badge variant="outline" className="text-xs">Verified</Badge>
-                          )}
+                        <div className="flex flex-col gap-1">
+                          <div className="flex items-center gap-2">
+                            <Mail className="h-4 w-4 text-muted-foreground" />
+                            <span className="font-medium">{account.user.email}</span>
+                          </div>
+                          <div className="flex items-center gap-2 ml-6">
+                            {isVerified ? (
+                              <Badge variant="outline" className="text-xs bg-green-500/10 text-green-600 border-green-500/20">
+                                <CheckCircle2 className="h-3 w-3 mr-1" />
+                                Verified
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="text-xs bg-orange-500/10 text-orange-600 border-orange-500/20">
+                                <XCircle className="h-3 w-3 mr-1" />
+                                Unverified
+                              </Badge>
+                            )}
+                          </div>
                         </div>
                       </TableCell>
                       <TableCell className="text-muted-foreground">
                         {format(new Date(account.user.created_at), "MMM d, yyyy")}
                       </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {account.user.last_sign_in_at
-                          ? format(new Date(account.user.last_sign_in_at), "MMM d, yyyy h:mm a")
-                          : "Never"}
+                      <TableCell>
+                        <div className="flex flex-col gap-1">
+                          <span className="text-muted-foreground text-sm">
+                            {lastSignIn
+                              ? format(new Date(lastSignIn), "MMM d, yyyy")
+                              : "Never"}
+                          </span>
+                          {activityStatus === "active" && (
+                            <Badge variant="outline" className="text-xs w-fit bg-green-500/10 text-green-600 border-green-500/20">
+                              <Clock className="h-3 w-3 mr-1" />
+                              Active
+                            </Badge>
+                          )}
+                          {activityStatus === "stale" && (
+                            <Badge variant="outline" className="text-xs w-fit bg-yellow-500/10 text-yellow-600 border-yellow-500/20">
+                              <Clock className="h-3 w-3 mr-1" />
+                              {daysSinceSignIn}d ago
+                            </Badge>
+                          )}
+                          {activityStatus === "never" && (
+                            <Badge variant="outline" className="text-xs w-fit bg-muted text-muted-foreground border-border">
+                              <Clock className="h-3 w-3 mr-1" />
+                              Never
+                            </Badge>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell>
-                        {account.projects.length === 0 ? (
-                          <span className="text-muted-foreground text-sm">No projects</span>
-                        ) : (
-                          <div className="flex flex-wrap gap-1">
-                            {account.projects.map((project) => (
-                              <Badge
-                                key={project.id}
-                                variant="secondary"
-                                className="text-xs flex items-center gap-1"
-                              >
-                                <FolderOpen className="h-3 w-3" />
-                                {project.business_name}
-                                <span className="text-muted-foreground">({project.status})</span>
-                              </Badge>
-                            ))}
-                          </div>
-                        )}
+                        <div className="flex flex-col gap-1">
+                          <Badge variant="secondary" className="text-xs w-fit">
+                            {account.projects.length} Project{account.projects.length !== 1 ? "s" : ""}
+                          </Badge>
+                          {account.projects.length > 0 && (
+                            <div className="flex flex-wrap gap-1">
+                              {account.projects.map((project) => (
+                                <Badge
+                                  key={project.id}
+                                  variant="outline"
+                                  className={`text-xs flex items-center gap-1 ${getStatusColor(project.status)}`}
+                                >
+                                  <FolderOpen className="h-3 w-3" />
+                                  {project.business_name}
+                                </Badge>
+                              ))}
+                            </div>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">
@@ -318,7 +383,7 @@ export function AccountsTab() {
                         </div>
                       </TableCell>
                     </TableRow>
-                  ))
+                  )})
                 )}
               </TableBody>
             </Table>
