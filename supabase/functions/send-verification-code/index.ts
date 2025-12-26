@@ -96,9 +96,11 @@ serve(async (req) => {
     const emailFrom = Deno.env.get("EMAIL_FROM") || "onboarding@resend.dev";
     const displayName = business_name || "Pleasant Cove";
 
-    const { error: emailError } = await resend.emails.send({
+    console.log(`📨 Attempting to send email via Resend`, { from: emailFrom, to: normalizedEmail });
+
+    const emailResult = await resend.emails.send({
       from: `${displayName} <${emailFrom}>`,
-      to: [email],
+      to: [normalizedEmail], // Use normalized email for consistency
       subject: `Your verification code: ${code}`,
       html: `
         <!DOCTYPE html>
@@ -128,10 +130,12 @@ serve(async (req) => {
       `,
     });
 
-    if (emailError) {
-      console.error("Email error:", emailError);
+    console.log("📨 Resend result:", JSON.stringify(emailResult));
+
+    if (emailResult.error) {
+      console.error("Email error:", emailResult.error);
       return new Response(
-        JSON.stringify({ error: "Failed to send verification email" }),
+        JSON.stringify({ error: "Failed to send verification email", details: emailResult.error }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
