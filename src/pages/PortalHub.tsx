@@ -4,14 +4,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, Lock, Mail, ArrowRight, Home, ExternalLink, Sparkles, User as UserIcon, RefreshCw, Plus } from "lucide-react";
+import { Loader2, Lock, Mail, ArrowRight, ExternalLink, Sparkles, User as UserIcon, RefreshCw, Plus } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/hooks/use-toast";
 import type { User, Session } from "@supabase/supabase-js";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
-import { PortalLayout } from "@/components/portal/PortalLayout";
+import { ClientLayout } from "@/components/portal/ClientLayout";
+import { BrandCard, BrandCardHeader, BrandCardContent } from "@/components/portal/BrandCard";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -410,98 +410,87 @@ export default function PortalHub() {
   // This must come first so it doesn't get bypassed by auto-confirm sessions
   if (showOtpVerification) {
     return (
-      <div className="min-h-screen bg-background flex flex-col">
-        <header className="border-b border-border bg-card/80 backdrop-blur-sm">
-          <div className="container mx-auto px-6 py-4 flex items-center justify-between">
-            <Link to="/" className="font-serif text-xl font-bold tracking-tight text-foreground">
-              Pleasant Cove
-            </Link>
+      <ClientLayout
+        title="Verify Your Email"
+        subtitle={<>We sent a 6-digit code to <strong>{pendingSignup?.email || email}</strong></>}
+        maxWidth="md"
+        centered
+      >
+        <BrandCard className="w-full max-w-md mx-auto">
+          <div className="space-y-6">
+            <div className="flex justify-center">
+              <InputOTP
+                maxLength={6}
+                value={otpCode}
+                onChange={setOtpCode}
+                disabled={otpVerifying}
+              >
+                <InputOTPGroup>
+                  <InputOTPSlot index={0} />
+                  <InputOTPSlot index={1} />
+                  <InputOTPSlot index={2} />
+                  <InputOTPSlot index={3} />
+                  <InputOTPSlot index={4} />
+                  <InputOTPSlot index={5} />
+                </InputOTPGroup>
+              </InputOTP>
+            </div>
+
+            {otpError && (
+              <p className="text-sm text-destructive text-center">{otpError}</p>
+            )}
+
+            {otpVerifying && (
+              <div className="flex items-center justify-center gap-2 text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Verifying...
+              </div>
+            )}
+
+            <div className="text-center">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  hasSentOtp.current = false;
+                  sendOtpCode(pendingSignup?.email);
+                }}
+                disabled={otpSending || resendCountdown > 0}
+              >
+                {otpSending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Sending...
+                  </>
+                ) : resendCountdown > 0 ? (
+                  `Resend in ${resendCountdown}s`
+                ) : (
+                  <>
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                    Resend code
+                  </>
+                )}
+              </Button>
+            </div>
+
+            <div className="text-center">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowOtpVerification(false);
+                  setOtpCode("");
+                  setOtpError(null);
+                  setPendingSignup(null);
+                  hasSentOtp.current = false;
+                }}
+                className="text-sm text-muted-foreground hover:text-foreground"
+              >
+                ← Back to signup
+              </button>
+            </div>
           </div>
-        </header>
-
-        <main className="flex-1 flex items-center justify-center p-6">
-          <Card className="w-full max-w-md">
-            <CardHeader className="text-center">
-              <CardTitle className="font-serif text-2xl">Verify Your Email</CardTitle>
-              <CardDescription>
-                We sent a 6-digit code to <strong>{pendingSignup?.email || email}</strong>
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="flex justify-center">
-                <InputOTP
-                  maxLength={6}
-                  value={otpCode}
-                  onChange={setOtpCode}
-                  disabled={otpVerifying}
-                >
-                  <InputOTPGroup>
-                    <InputOTPSlot index={0} />
-                    <InputOTPSlot index={1} />
-                    <InputOTPSlot index={2} />
-                    <InputOTPSlot index={3} />
-                    <InputOTPSlot index={4} />
-                    <InputOTPSlot index={5} />
-                  </InputOTPGroup>
-                </InputOTP>
-              </div>
-
-              {otpError && (
-                <p className="text-sm text-destructive text-center">{otpError}</p>
-              )}
-
-              {otpVerifying && (
-                <div className="flex items-center justify-center gap-2 text-muted-foreground">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Verifying...
-                </div>
-              )}
-
-              <div className="text-center">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    hasSentOtp.current = false;
-                    sendOtpCode(pendingSignup?.email);
-                  }}
-                  disabled={otpSending || resendCountdown > 0}
-                >
-                  {otpSending ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Sending...
-                    </>
-                  ) : resendCountdown > 0 ? (
-                    `Resend in ${resendCountdown}s`
-                  ) : (
-                    <>
-                      <RefreshCw className="mr-2 h-4 w-4" />
-                      Resend code
-                    </>
-                  )}
-                </Button>
-              </div>
-
-              <div className="text-center">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowOtpVerification(false);
-                    setOtpCode("");
-                    setOtpError(null);
-                    setPendingSignup(null);
-                    hasSentOtp.current = false;
-                  }}
-                  className="text-sm text-muted-foreground hover:text-foreground"
-                >
-                  ← Back to signup
-                </button>
-              </div>
-            </CardContent>
-          </Card>
-        </main>
-      </div>
+        </BrandCard>
+      </ClientLayout>
     );
   }
 
@@ -509,353 +498,310 @@ export default function PortalHub() {
   // Logged in - show portals
   if (user) {
     return (
-      <div className="min-h-screen bg-background">
-        <header className="border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-50">
-          <div className="container mx-auto px-6 py-4 flex items-center justify-between">
-            <Link to="/" className="font-serif text-xl font-bold tracking-tight text-foreground">
-              Pleasant Cove
-            </Link>
-            <Button variant="ghost" size="sm" onClick={handleLogout}>
-              Log out
-            </Button>
-          </div>
-        </header>
+      <ClientLayout
+        title="Your Portals"
+        subtitle={`Logged in as ${user.email}`}
+        maxWidth="2xl"
+        rightSlot={
+          <Button variant="ghost" size="sm" onClick={handleLogout}>
+            Log out
+          </Button>
+        }
+      >
+        <div className="space-y-6">
+          {/* Always show "Open from link" at top */}
+          <BrandCard>
+            <BrandCardHeader
+              title="Open from a link"
+              subtitle="Paste the link from your text message or email"
+              icon={<ExternalLink className="h-5 w-5 text-accent" />}
+            />
+            <BrandCardContent>
+              <form onSubmit={handleOpenLink} className="flex gap-2">
+                <Input
+                  placeholder="https://... or portal code"
+                  value={linkInput}
+                  onChange={(e) => {
+                    setLinkInput(e.target.value);
+                    setLinkError(null);
+                  }}
+                  className="flex-1"
+                />
+                <Button type="submit">Open</Button>
+              </form>
+              {linkError && (
+                <p className="text-sm text-destructive mt-2">{linkError}</p>
+              )}
+            </BrandCardContent>
+          </BrandCard>
 
-        <main className="container mx-auto px-6 py-12">
-          <div className="max-w-2xl mx-auto">
-            <h1 className="font-serif text-3xl font-bold mb-2">Your Portals</h1>
-            <p className="text-muted-foreground mb-8">
-              Logged in as {user.email}
-            </p>
-
-            {/* Always show "Open from link" at top */}
-            <Card className="mb-6">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <ExternalLink className="h-4 w-4" />
-                  Open from a link
-                </CardTitle>
-                <CardDescription>
-                  Paste the link from your text message or email
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handleOpenLink} className="flex gap-2">
-                  <Input
-                    placeholder="https://... or portal code"
-                    value={linkInput}
-                    onChange={(e) => {
-                      setLinkInput(e.target.value);
-                      setLinkError(null);
-                    }}
-                    className="flex-1"
-                  />
-                  <Button type="submit">Open</Button>
-                </form>
-                {linkError && (
-                  <p className="text-sm text-destructive mt-2">{linkError}</p>
-                )}
-              </CardContent>
-            </Card>
-
-            {loadingPortals ? (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between mb-2">
-                  <Skeleton className="h-5 w-32" />
+          {loadingPortals ? (
+            <div className="space-y-4">
+              {[0, 1, 2].map((i) => (
+                <BrandCard key={i}>
+                  <div className="flex items-center justify-between">
+                    <Skeleton className="h-6 w-48" />
+                    <Skeleton className="h-9 w-28" />
+                  </div>
+                </BrandCard>
+              ))}
+            </div>
+          ) : portals.length === 0 ? (
+            <div className="space-y-6">
+              {/* Primary CTA - Start a new project */}
+              <BrandCard variant="highlight" className="text-center py-10">
+                <div className="w-14 h-14 rounded-full bg-accent/10 flex items-center justify-center mx-auto mb-4">
+                  <Plus className="h-7 w-7 text-accent" />
                 </div>
-                {[0, 1, 2].map((i) => (
-                  <Card key={i}>
-                    <CardContent className="p-6 flex items-center justify-between">
-                      <Skeleton className="h-6 w-48" />
-                      <Skeleton className="h-9 w-28" />
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            ) : portals.length === 0 ? (
-              <div className="space-y-6">
-                {/* Primary CTA - Start a new project */}
-                <Card className="border-2 border-primary/20 bg-primary/5">
-                  <CardContent className="py-8 text-center">
-                    <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
-                      <Plus className="h-6 w-6 text-primary" />
-                    </div>
-                    <h3 className="font-serif text-lg font-bold mb-2">Start a new project</h3>
-                    <p className="text-sm text-muted-foreground max-w-sm mx-auto mb-4">
-                      Set up your website in about 5 minutes. We'll guide you through the process.
-                    </p>
-                    <Button asChild size="lg">
-                      <Link to="/portal/new">
-                        <Sparkles className="mr-2 h-4 w-4" />
-                        Get started
-                      </Link>
-                    </Button>
-                  </CardContent>
-                </Card>
+                <h3 className="font-serif text-xl font-bold mb-2">Start a new project</h3>
+                <p className="text-muted-foreground max-w-sm mx-auto mb-6">
+                  Set up your website in about 5 minutes. We'll guide you through the process.
+                </p>
+                <Button asChild size="lg">
+                  <Link to="/portal/new">
+                    <Sparkles className="mr-2 h-4 w-4" />
+                    Get started
+                  </Link>
+                </Button>
+              </BrandCard>
 
-                <div className="text-center text-sm text-muted-foreground">
-                  Already have a demo link? Paste it above.
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {/* Start new project button at top when user has portals */}
-                <Card className="border-dashed">
-                  <CardContent className="py-4 flex items-center justify-between">
-                    <p className="text-sm text-muted-foreground">
-                      Ready for another project?
-                    </p>
-                    <Button asChild variant="outline" size="sm">
-                      <Link to="/portal/new">
-                        <Plus className="mr-2 h-4 w-4" />
-                        New project
-                      </Link>
-                    </Button>
-                  </CardContent>
-                </Card>
+              <p className="text-center text-sm text-muted-foreground">
+                Already have a demo link? Paste it above.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {/* Start new project button at top when user has portals */}
+              <BrandCard variant="muted" className="flex items-center justify-between">
+                <p className="text-sm text-muted-foreground">
+                  Ready for another project?
+                </p>
+                <Button asChild variant="outline" size="sm">
+                  <Link to="/portal/new">
+                    <Plus className="mr-2 h-4 w-4" />
+                    New project
+                  </Link>
+                </Button>
+              </BrandCard>
 
-                {portals.map((portal) => (
-                  <Card key={portal.project_token} className="hover:border-accent/50 transition-colors">
-                    <CardContent className="p-6 flex items-center justify-between">
-                      <div>
-                        <h3 className="font-serif text-lg font-bold">{portal.business_name}</h3>
-                      </div>
-                      <Button asChild variant="outline" size="sm" className="group">
-                        <Link to={`/p/${portal.project_token}`}>
-                          Open Portal
-                          <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
-                        </Link>
-                      </Button>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </div>
-        </main>
-      </div>
+              {portals.map((portal) => (
+                <BrandCard key={portal.project_token} className="flex items-center justify-between hover:border-accent/50 transition-colors">
+                  <h3 className="font-serif text-lg font-bold">{portal.business_name}</h3>
+                  <Button asChild variant="outline" size="sm" className="group">
+                    <Link to={`/p/${portal.project_token}`}>
+                      Open Portal
+                      <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                    </Link>
+                  </Button>
+                </BrandCard>
+              ))}
+            </div>
+          )}
+        </div>
+      </ClientLayout>
     );
   }
 
   // Not logged in - show login form
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <header className="border-b border-border bg-card/80 backdrop-blur-sm">
-        <div className="container mx-auto px-6 py-4 flex items-center justify-between">
-          <Link to="/" className="font-serif text-xl font-bold tracking-tight text-foreground">
-            Pleasant Cove
-          </Link>
-          <Button asChild variant="ghost" size="sm">
-            <Link to="/">
-              <Home className="mr-2 h-4 w-4" />
-              Home
-            </Link>
-          </Button>
-        </div>
-      </header>
+    <ClientLayout
+      title="Client Portal"
+      subtitle={mode === "login" ? "Log in to access your project portal" : "Create an account to get started"}
+      maxWidth="md"
+      centered
+    >
+      <BrandCard className="w-full max-w-md mx-auto">
+        <Tabs value={mode} onValueChange={(v) => { setMode(v as "login" | "signup"); setError(null); setInfo(null); }}>
+          <TabsList className="grid w-full grid-cols-2 mb-6">
+            <TabsTrigger value="login">Log In</TabsTrigger>
+            <TabsTrigger value="signup">Sign Up</TabsTrigger>
+          </TabsList>
 
-      <main className="flex-1 flex items-center justify-center p-6">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <CardTitle className="font-serif text-2xl">Client Portal</CardTitle>
-            <CardDescription>
-              {mode === "login" ? "Log in to access your project portal" : "Create an account to get started"}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Tabs value={mode} onValueChange={(v) => { setMode(v as "login" | "signup"); setError(null); setInfo(null); }}>
-              <TabsList className="grid w-full grid-cols-2 mb-6">
-                <TabsTrigger value="login">Log In</TabsTrigger>
-                <TabsTrigger value="signup">Sign Up</TabsTrigger>
-              </TabsList>
+          <TabsContent value="login">
+            {showForgotPassword ? (
+              <form onSubmit={handleForgotPassword} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="reset-email">Email</Label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="reset-email"
+                      type="email"
+                      placeholder="you@example.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="pl-10"
+                      required
+                    />
+                  </div>
+                </div>
 
-              <TabsContent value="login">
-                {showForgotPassword ? (
-                  <form onSubmit={handleForgotPassword} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="reset-email">Email</Label>
-                      <div className="relative">
-                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input
-                          id="reset-email"
-                          type="email"
-                          placeholder="you@example.com"
-                          value={email}
-                          onChange={(e) => setEmail(e.target.value)}
-                          className="pl-10"
-                          required
-                        />
-                      </div>
-                    </div>
+                {error && <p className="text-sm text-destructive">{error}</p>}
+                {info && <p className="text-sm text-accent">{info}</p>}
 
-                    {error && <p className="text-sm text-destructive">{error}</p>}
-                    {info && <p className="text-sm text-accent">{info}</p>}
+                <Button type="submit" className="w-full" disabled={loading}>
+                  {loading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Sending...
+                    </>
+                  ) : (
+                    "Send Reset Link"
+                  )}
+                </Button>
 
-                    <Button type="submit" className="w-full" disabled={loading}>
-                      {loading ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Sending...
-                        </>
-                      ) : (
-                        "Send Reset Link"
-                      )}
-                    </Button>
+                <button
+                  type="button"
+                  onClick={() => { setShowForgotPassword(false); setError(null); setInfo(null); }}
+                  className="text-sm text-muted-foreground hover:text-foreground w-full text-center"
+                >
+                  Back to login
+                </button>
+              </form>
+            ) : (
+              <form onSubmit={handleLogin} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="login-email">Email</Label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="login-email"
+                      type="email"
+                      placeholder="you@example.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="pl-10"
+                      required
+                    />
+                  </div>
+                </div>
 
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="login-password">Password</Label>
                     <button
                       type="button"
-                      onClick={() => { setShowForgotPassword(false); setError(null); setInfo(null); }}
-                      className="text-sm text-muted-foreground hover:text-foreground w-full text-center"
+                      onClick={() => { setShowForgotPassword(true); setError(null); setInfo(null); }}
+                      className="text-xs text-muted-foreground hover:text-foreground"
                     >
-                      Back to login
+                      Forgot password?
                     </button>
-                  </form>
+                  </div>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="login-password"
+                      type="password"
+                      placeholder="Your password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="pl-10"
+                      required
+                    />
+                  </div>
+                </div>
+
+                {error && <p className="text-sm text-destructive">{error}</p>}
+                {info && <p className="text-sm text-accent">{info}</p>}
+
+                <Button type="submit" className="w-full" disabled={loading}>
+                  {loading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Logging in...
+                    </>
+                  ) : (
+                    "Log In"
+                  )}
+                </Button>
+
+                <button
+                  type="button"
+                  onClick={handleResendConfirmation}
+                  className="text-sm text-muted-foreground hover:text-foreground text-center w-full"
+                  disabled={loading}
+                >
+                  Resend confirmation email
+                </button>
+              </form>
+            )}
+          </TabsContent>
+
+          <TabsContent value="signup">
+            <form onSubmit={handleSignup} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="signup-name">Full Name</Label>
+                <div className="relative">
+                  <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="signup-name"
+                    type="text"
+                    placeholder="John Smith"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    className="pl-10"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="signup-email">Email</Label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="signup-email"
+                    type="email"
+                    placeholder="you@example.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="pl-10"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="signup-password">Password</Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="signup-password"
+                    type="password"
+                    placeholder="At least 6 characters"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="pl-10"
+                    minLength={6}
+                    required
+                  />
+                </div>
+              </div>
+
+              {error && <p className="text-sm text-destructive">{error}</p>}
+              {info && <p className="text-sm text-accent">{info}</p>}
+
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Creating account...
+                  </>
                 ) : (
-                  <form onSubmit={handleLogin} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="login-email">Email</Label>
-                      <div className="relative">
-                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input
-                          id="login-email"
-                          type="email"
-                          placeholder="you@example.com"
-                          value={email}
-                          onChange={(e) => setEmail(e.target.value)}
-                          className="pl-10"
-                          required
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <Label htmlFor="login-password">Password</Label>
-                        <button
-                          type="button"
-                          onClick={() => { setShowForgotPassword(true); setError(null); setInfo(null); }}
-                          className="text-xs text-muted-foreground hover:text-foreground"
-                        >
-                          Forgot password?
-                        </button>
-                      </div>
-                      <div className="relative">
-                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input
-                          id="login-password"
-                          type="password"
-                          placeholder="Your password"
-                          value={password}
-                          onChange={(e) => setPassword(e.target.value)}
-                          className="pl-10"
-                          required
-                        />
-                      </div>
-                    </div>
-
-                    {error && <p className="text-sm text-destructive">{error}</p>}
-                    {info && <p className="text-sm text-accent">{info}</p>}
-
-                    <Button type="submit" className="w-full" disabled={loading}>
-                      {loading ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Logging in...
-                        </>
-                      ) : (
-                        "Log In"
-                      )}
-                    </Button>
-
-                    <button
-                      type="button"
-                      onClick={handleResendConfirmation}
-                      className="text-sm text-muted-foreground hover:text-foreground text-center w-full"
-                      disabled={loading}
-                    >
-                      Resend confirmation email
-                    </button>
-                  </form>
+                  "Create Account"
                 )}
-              </TabsContent>
+              </Button>
+            </form>
+          </TabsContent>
+        </Tabs>
 
-              <TabsContent value="signup">
-                <form onSubmit={handleSignup} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-name">Full Name</Label>
-                    <div className="relative">
-                      <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="signup-name"
-                        type="text"
-                        placeholder="John Smith"
-                        value={fullName}
-                        onChange={(e) => setFullName(e.target.value)}
-                        className="pl-10"
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-email">Email</Label>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="signup-email"
-                        type="email"
-                        placeholder="you@example.com"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        className="pl-10"
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-password">Password</Label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="signup-password"
-                        type="password"
-                        placeholder="At least 6 characters"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        className="pl-10"
-                        minLength={6}
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  {error && <p className="text-sm text-destructive">{error}</p>}
-                  {info && <p className="text-sm text-accent">{info}</p>}
-
-                  <Button type="submit" className="w-full" disabled={loading}>
-                    {loading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Creating account...
-                      </>
-                    ) : (
-                      "Create Account"
-                    )}
-                  </Button>
-                </form>
-              </TabsContent>
-            </Tabs>
-
-            <p className="text-sm text-muted-foreground text-center mt-6">
-              <Link to="/get-demo" className="text-accent hover:underline">
-                <Sparkles className="inline h-3 w-3 mr-1" />
-                Get a free demo
-              </Link>
-            </p>
-          </CardContent>
-        </Card>
-      </main>
-    </div>
+        <p className="text-sm text-muted-foreground text-center mt-6">
+          <Link to="/get-demo" className="text-accent hover:underline">
+            <Sparkles className="inline h-3 w-3 mr-1" />
+            Get a free demo
+          </Link>
+        </p>
+      </BrandCard>
+    </ClientLayout>
   );
 }
