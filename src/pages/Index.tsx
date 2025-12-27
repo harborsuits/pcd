@@ -53,7 +53,7 @@ const capabilities = [
   {
     icon: Bot,
     title: "AI Receptionist",
-    description: "Optional add-on — never miss a call again.",
+    description: "Smart lead handling and follow-ups.",
   },
 ];
 
@@ -151,6 +151,69 @@ const Index = () => {
         </div>
       </section>
 
+      {/* AI Receptionist Highlight Section */}
+      <section className="py-16 border-t border-border bg-emerald-50/30">
+        <div className="container mx-auto px-6">
+          <div className="max-w-5xl mx-auto grid md:grid-cols-2 gap-10 items-center">
+            {/* Left: Copy + CTA */}
+            <div className="space-y-6">
+              <div>
+                <p className="text-xs font-medium text-accent uppercase tracking-wide mb-2">
+                  Lead Handling & Follow-Ups
+                </p>
+                <h2 className="font-serif text-3xl md:text-4xl font-bold mb-4">
+                  AI Receptionist <span className="text-accent">(Recommended)</span>
+                </h2>
+                <p className="text-muted-foreground leading-relaxed">
+                  Automatically respond to missed calls, texts, and form submissions — qualify leads, answer common questions, and route serious inquiries without interrupting your day.
+                </p>
+              </div>
+              
+              <ul className="space-y-3">
+                <li className="flex items-start gap-3">
+                  <CheckCircle className="h-5 w-5 text-accent mt-0.5 flex-shrink-0" />
+                  <span className="text-foreground">Instant responses to calls, texts, and form submissions</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <CheckCircle className="h-5 w-5 text-accent mt-0.5 flex-shrink-0" />
+                  <span className="text-foreground">Smart qualifying questions before you ever pick up</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <CheckCircle className="h-5 w-5 text-accent mt-0.5 flex-shrink-0" />
+                  <span className="text-foreground">Seamless handoff to booking links or a real person</span>
+                </li>
+              </ul>
+              
+              <p className="text-sm text-muted-foreground">
+                Works especially well for service businesses that miss calls during the day.
+              </p>
+              
+              <div className="flex flex-wrap gap-3">
+                <Button asChild>
+                  <a href="#demos">
+                    See How It Works
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </a>
+                </Button>
+                <Button asChild variant="outline">
+                  <Link to="/get-demo">Add to My Project</Link>
+                </Button>
+              </div>
+            </div>
+            
+            {/* Right: Video placeholder */}
+            <div className="relative">
+              <div className="aspect-video bg-secondary/50 border border-border rounded-xl shadow-lg overflow-hidden flex items-center justify-center">
+                <div className="text-center p-6">
+                  <Bot className="h-12 w-12 text-accent/40 mx-auto mb-3" />
+                  <p className="text-sm text-muted-foreground">Demo video coming soon</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* What We Build - Capabilities Grid */}
       <section className="py-16 border-t border-border bg-card">
         <div className="container mx-auto px-6">
@@ -224,28 +287,6 @@ const Index = () => {
                 Request a Custom Demo
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
-            </Button>
-          </div>
-        </div>
-      </section>
-
-      {/* AI Receptionist Callout - Optional Add-on */}
-      <section className="py-12 border-t border-border bg-accent/5">
-        <div className="container mx-auto px-6">
-          <div className="max-w-3xl mx-auto flex flex-col md:flex-row items-center gap-6 md:gap-8">
-            <div className="flex-shrink-0 w-14 h-14 rounded-full bg-accent/10 flex items-center justify-center">
-              <Bot className="h-7 w-7 text-accent" />
-            </div>
-            <div className="text-center md:text-left flex-1">
-              <h3 className="font-serif text-xl font-bold mb-1">
-                Optional: AI Receptionist
-              </h3>
-              <p className="text-muted-foreground">
-                For businesses that want fewer interruptions. Auto-replies, missed call follow-ups, and smart routing — without replacing your personal touch.
-              </p>
-            </div>
-            <Button asChild variant="outline" size="sm">
-              <Link to="/get-demo">Learn More</Link>
             </Button>
           </div>
         </div>
