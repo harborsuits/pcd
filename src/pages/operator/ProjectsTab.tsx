@@ -80,6 +80,11 @@ export function ProjectsTab() {
       return res.json() as Promise<{ projects: Project[] }>;
     },
     refetchInterval: 15000, // 15 second refresh
+    retry: (failureCount, error) => {
+      // Don't retry on auth errors
+      if (error?.message?.includes("Admin key invalid")) return false;
+      return failureCount < 3;
+    },
   });
 
   const projects = projectsData?.projects || [];
