@@ -1,7 +1,11 @@
 import { Link } from "react-router-dom";
+import { useMemo } from "react";
 import { ArrowRight, MessageSquare, FolderOpen, Sparkles, Shield, Smartphone, CreditCard, LogIn, Globe, CalendarCheck, Zap, Bot, Clock, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Hero3DModel } from "@/components/Hero3DModel";
+import { ErrorBoundary } from "@/components/common/ErrorBoundary";
+import { canUseWebGL } from "@/lib/webgl";
+import HeroStatic from "@/components/HeroStatic";
 
 const exampleDemos = [
   {
@@ -58,6 +62,17 @@ const capabilities = [
 ];
 
 const Index = () => {
+  const webglSupported = useMemo(() => canUseWebGL(), []);
+
+  const HeroVisual = () => {
+    if (!webglSupported) return <HeroStatic />;
+    return (
+      <ErrorBoundary fallback={<HeroStatic />}>
+        <Hero3DModel />
+      </ErrorBoundary>
+    );
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-emerald-100/60 text-foreground">
       {/* Header */}
@@ -146,7 +161,7 @@ const Index = () => {
               <p className="text-sm text-muted-foreground">Examples of branded client portals</p>
               <p className="text-xs text-accent">Different industries. Same system.</p>
             </div>
-            <Hero3DModel />
+            <HeroVisual />
           </div>
         </div>
       </section>
