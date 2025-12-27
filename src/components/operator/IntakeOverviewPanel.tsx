@@ -10,29 +10,35 @@ import {
   Globe, 
   Clock,
   FileText,
-  Sparkles,
   CheckCircle2,
-  Loader2
+  Loader2,
+  DollarSign,
+  Package,
+  AlertTriangle
 } from "lucide-react";
 
 interface IntakeData {
   businessName?: string;
   businessType?: string;
+  serviceArea?: string;
+  contactEmail?: string;
+  contactPhone?: string;
   goals?: string[];
+  websiteStatus?: string;
   hasWebsite?: boolean;
   websiteUrl?: string;
   timeline?: string;
-  contactName?: string;
-  contactPhone?: string;
-  contactEmail?: string;
-  serviceArea?: string;
+  readinessAssets?: string[];
   styleVibe?: string;
-  colorPreset?: string;
+  selectedDemo?: string;
   inspirationLinks?: string;
   functionality?: string[];
   hoursType?: string;
-  selectedDemo?: string;
+  budgetRange?: string;
   notes?: string;
+  // Legacy fields
+  colorPreset?: string;
+  contactName?: string;
 }
 
 interface IntakeOverviewPanelProps {
@@ -44,21 +50,50 @@ interface IntakeOverviewPanelProps {
 }
 
 const BUSINESS_TYPE_LABELS: Record<string, string> = {
-  services: "Services",
   trades: "Trades",
-  retail: "Local Retail",
-  professional: "Professional",
+  professional: "Professional Services",
+  retail: "Retail / E-commerce",
   restaurant: "Restaurant / Hospitality",
+  creative: "Creative / Media",
+  services: "Services",
   other: "Other",
 };
 
 const GOAL_LABELS: Record<string, string> = {
-  calls: "Get more calls / leads",
+  calls: "Get more phone calls",
   booking: "Online booking / scheduling",
   professional: "Improve credibility",
-  reviews: "Better reviews / reputation",
-  payments: "Take payments / deposits",
-  automations: "Automations / follow-ups",
+  sell: "Sell products/services online",
+  automate: "Automate inquiries/follow-ups",
+  unsure: "Not sure yet",
+  reviews: "Better reviews",
+  payments: "Take payments",
+  automations: "Automations",
+};
+
+const WEBSITE_STATUS_LABELS: Record<string, string> = {
+  new: "Brand new website",
+  redesign: "Redesigning existing site",
+  adding: "Adding features",
+};
+
+const TIMELINE_LABELS: Record<string, string> = {
+  standard: "Standard: 4–6 weeks",
+  flexible: "Flexible: 6–8+ weeks",
+  rush: "Rush: 2–3 weeks ⚠️",
+  exploring: "Just exploring",
+  asap: "ASAP",
+  "1-2_weeks": "1–2 weeks",
+  "30_days": "Within 30 days",
+  browsing: "Just browsing",
+};
+
+const READINESS_LABELS: Record<string, string> = {
+  logo: "Logo",
+  colors: "Brand colors",
+  photos: "Photos/images",
+  content: "Written content",
+  none: "None / need help",
 };
 
 const STYLE_LABELS: Record<string, string> = {
@@ -69,34 +104,31 @@ const STYLE_LABELS: Record<string, string> = {
   auto: "You decide",
 };
 
-const COLOR_LABELS: Record<string, string> = {
-  neutral: "Light & Neutral",
-  dark: "Dark & Bold",
-  blue: "Blue & Trustworthy",
-  green: "Green & Natural",
-  auto: "Choose for me",
-};
-
 const FUNCTIONALITY_LABELS: Record<string, string> = {
-  booking: "Appointments / Booking",
-  faq: "FAQ / Auto-answers",
-  contact: "Contact Requests",
-  afterhours: "After-Hours Handling",
-  payments: "Payments / Deposits",
-  simple: "Simple Info Site",
-};
-
-const TIMELINE_LABELS: Record<string, string> = {
-  asap: "ASAP",
-  "1-2_weeks": "1–2 weeks",
-  "30_days": "Within 30 days",
-  browsing: "Just browsing",
+  contact: "Contact form",
+  booking: "Booking / appointments",
+  faq: "FAQ pages",
+  payments: "Payments",
+  afterhours: "After-hours handling",
+  ai_basic: "AI Receptionist – Basic",
+  ai_diligent: "AI Receptionist – Diligent",
+  simple: "Simple info site",
+  unsure: "Not sure yet",
 };
 
 const HOURS_LABELS: Record<string, string> = {
-  regular: "Regular hours (9-5)",
-  extended: "Extended / 24-7",
-  notsure: "Not sure yet",
+  regular: "Regular hours (9–5)",
+  extended: "Extended / evenings",
+  "24_7": "24/7",
+  notsure: "Not sure",
+};
+
+const BUDGET_LABELS: Record<string, string> = {
+  under_1500: "Under $1,500",
+  "1500_3000": "$1,500 – $3,000",
+  "3000_6000": "$3,000 – $6,000",
+  "6000_plus": "$6,000+",
+  guidance: "Needs guidance",
 };
 
 function Section({ icon: Icon, title, children }: { icon: React.ComponentType<{ className?: string }>; title: string; children: React.ReactNode }) {
@@ -118,7 +150,7 @@ export function IntakeOverviewPanel({ intake, intakeCreatedAt, intakeStatus, onA
         <div className="text-center">
           <FileText className="h-10 w-10 mx-auto mb-3 opacity-50" />
           <p className="text-sm font-medium">No intake data</p>
-          <p className="text-xs mt-1">Client hasn't completed the onboarding wizard yet.</p>
+          <p className="text-xs mt-1">Client hasn't completed Phase 1A yet.</p>
         </div>
       </div>
     );
@@ -126,8 +158,8 @@ export function IntakeOverviewPanel({ intake, intakeCreatedAt, intakeStatus, onA
 
   const statusConfig = {
     draft: { label: "Draft", variant: "outline" as const, color: "text-muted-foreground" },
-    submitted: { label: "Submitted", variant: "secondary" as const, color: "text-amber-600" },
-    approved: { label: "Approved", variant: "default" as const, color: "text-green-600" },
+    submitted: { label: "Phase 1A: Submitted", variant: "secondary" as const, color: "text-amber-600" },
+    approved: { label: "Phase 1A: Approved", variant: "default" as const, color: "text-green-600" },
   };
 
   const status = intakeStatus || 'submitted';
@@ -136,7 +168,6 @@ export function IntakeOverviewPanel({ intake, intakeCreatedAt, intakeStatus, onA
   return (
     <ScrollArea className="flex-1">
       <div className="p-4 space-y-5">
-        {/* Intake status header */}
         <div className="flex items-center justify-between border-b border-border pb-3">
           <div className="flex items-center gap-2">
             <Badge variant={variant} className={color}>
@@ -150,118 +181,79 @@ export function IntakeOverviewPanel({ intake, intakeCreatedAt, intakeStatus, onA
             )}
           </div>
           {status === 'submitted' && onApproveIntake && (
-            <Button 
-              size="sm" 
-              onClick={onApproveIntake}
-              disabled={isApproving}
-            >
+            <Button size="sm" onClick={onApproveIntake} disabled={isApproving}>
               {isApproving ? (
-                <>
-                  <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                  Approving...
-                </>
+                <><Loader2 className="h-3 w-3 mr-1 animate-spin" />Approving...</>
               ) : (
-                <>
-                  <CheckCircle2 className="h-3 w-3 mr-1" />
-                  Approve Intake
-                </>
+                <><CheckCircle2 className="h-3 w-3 mr-1" />Approve Intake</>
               )}
             </Button>
           )}
         </div>
 
-        {/* Business Snapshot */}
         <Section icon={Building2} title="Business">
           <div className="space-y-1.5 text-sm">
-            {intake.businessName && (
-              <p className="font-medium">{intake.businessName}</p>
-            )}
-            {intake.businessType && (
-              <p className="text-muted-foreground">
-                {BUSINESS_TYPE_LABELS[intake.businessType] || intake.businessType}
-              </p>
-            )}
-            {intake.serviceArea && (
-              <p className="text-muted-foreground flex items-center gap-1">
-                <MapPin className="h-3 w-3" />
-                {intake.serviceArea}
-              </p>
-            )}
-            {intake.websiteUrl && (
-              <a 
-                href={intake.websiteUrl} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="text-primary hover:underline flex items-center gap-1"
-              >
-                <Globe className="h-3 w-3" />
-                {intake.websiteUrl}
-              </a>
-            )}
+            {intake.businessName && <p className="font-medium">{intake.businessName}</p>}
+            {intake.businessType && <p className="text-muted-foreground">{BUSINESS_TYPE_LABELS[intake.businessType] || intake.businessType}</p>}
+            {intake.serviceArea && <p className="text-muted-foreground flex items-center gap-1"><MapPin className="h-3 w-3" />{intake.serviceArea}</p>}
+            {intake.contactEmail && <p className="text-muted-foreground">{intake.contactEmail} · {intake.contactPhone}</p>}
+            {intake.websiteUrl && <a href={intake.websiteUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1"><Globe className="h-3 w-3" />{intake.websiteUrl}</a>}
           </div>
         </Section>
 
-        {/* Goals */}
         {intake.goals && intake.goals.length > 0 && (
           <Section icon={Target} title="Goals">
             <div className="flex flex-wrap gap-1.5">
-              {intake.goals.map((goal) => (
-                <Badge key={goal} variant="secondary" className="text-xs">
-                  {GOAL_LABELS[goal] || goal}
-                </Badge>
-              ))}
+              {intake.goals.map((goal) => <Badge key={goal} variant="secondary" className="text-xs">{GOAL_LABELS[goal] || goal}</Badge>)}
             </div>
+            {intake.websiteStatus && <p className="text-xs text-muted-foreground mt-2">{WEBSITE_STATUS_LABELS[intake.websiteStatus] || intake.websiteStatus}</p>}
           </Section>
         )}
 
-        {/* Timeline */}
         {intake.timeline && (
           <Section icon={Clock} title="Timeline">
-            <p className="text-sm">{TIMELINE_LABELS[intake.timeline] || intake.timeline}</p>
+            <p className={`text-sm ${intake.timeline === 'rush' ? 'text-warning font-medium' : ''}`}>
+              {intake.timeline === 'rush' && <AlertTriangle className="h-3 w-3 inline mr-1" />}
+              {TIMELINE_LABELS[intake.timeline] || intake.timeline}
+            </p>
           </Section>
         )}
 
-        {/* Style Direction */}
-        {(intake.styleVibe || intake.colorPreset || intake.selectedDemo) && (
-          <Section icon={Palette} title="Style Direction">
-            <div className="space-y-1.5 text-sm">
-              {intake.selectedDemo && (
-                <p className="text-muted-foreground">Demo: {intake.selectedDemo}</p>
-              )}
-              {intake.styleVibe && (
-                <p>{STYLE_LABELS[intake.styleVibe] || intake.styleVibe}</p>
-              )}
-              {intake.colorPreset && (
-                <p className="text-muted-foreground">{COLOR_LABELS[intake.colorPreset] || intake.colorPreset}</p>
-              )}
-              {intake.inspirationLinks && (
-                <p className="text-xs text-muted-foreground mt-1">{intake.inspirationLinks}</p>
-              )}
-            </div>
+        {intake.budgetRange && (
+          <Section icon={DollarSign} title="Budget">
+            <p className="text-sm font-medium">{BUDGET_LABELS[intake.budgetRange] || intake.budgetRange}</p>
           </Section>
         )}
 
-        {/* Functionality */}
-        {intake.functionality && intake.functionality.length > 0 && (
-          <Section icon={Cog} title="Functionality">
+        {intake.readinessAssets && intake.readinessAssets.length > 0 && (
+          <Section icon={Package} title="Assets Ready">
             <div className="flex flex-wrap gap-1.5">
-              {intake.functionality.map((fn) => (
-                <Badge key={fn} variant="outline" className="text-xs">
-                  {FUNCTIONALITY_LABELS[fn] || fn}
-                </Badge>
-              ))}
+              {intake.readinessAssets.map((asset) => <Badge key={asset} variant="outline" className="text-xs">{READINESS_LABELS[asset] || asset}</Badge>)}
             </div>
-            {intake.hoursType && (
-              <p className="text-xs text-muted-foreground mt-2">
-                Hours: {HOURS_LABELS[intake.hoursType] || intake.hoursType}
-              </p>
-            )}
           </Section>
         )}
 
-        {/* Notes */}
+        {(intake.styleVibe || intake.selectedDemo) && (
+          <Section icon={Palette} title="Style">
+            <div className="space-y-1.5 text-sm">
+              {intake.selectedDemo && <p className="text-muted-foreground">Demo: {intake.selectedDemo}</p>}
+              {intake.styleVibe && <p>{STYLE_LABELS[intake.styleVibe] || intake.styleVibe}</p>}
+              {intake.inspirationLinks && <p className="text-xs text-muted-foreground mt-1">{intake.inspirationLinks}</p>}
+            </div>
+          </Section>
+        )}
+
+        {intake.functionality && intake.functionality.length > 0 && (
+          <Section icon={Cog} title="Features">
+            <div className="flex flex-wrap gap-1.5">
+              {intake.functionality.map((fn) => <Badge key={fn} variant="outline" className="text-xs">{FUNCTIONALITY_LABELS[fn] || fn}</Badge>)}
+            </div>
+            {intake.hoursType && <p className="text-xs text-muted-foreground mt-2">Hours: {HOURS_LABELS[intake.hoursType] || intake.hoursType}</p>}
+          </Section>
+        )}
+
         {intake.notes && (
-          <Section icon={FileText} title="Client Notes">
+          <Section icon={FileText} title="Notes">
             <p className="text-sm text-muted-foreground whitespace-pre-wrap">{intake.notes}</p>
           </Section>
         )}

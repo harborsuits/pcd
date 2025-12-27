@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
+import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { 
@@ -27,7 +28,15 @@ import {
   CreditCard,
   Clock,
   HelpCircle,
-  Sparkles
+  Sparkles,
+  Target,
+  Timer,
+  Package,
+  DollarSign,
+  FileText,
+  Bot,
+  Zap,
+  AlertTriangle
 } from "lucide-react";
 import { IntakeSubmittedScreen } from "@/components/portal/IntakeSubmittedScreen";
 import { ClientLayout } from "@/components/portal/ClientLayout";
@@ -35,40 +44,60 @@ import { ClientLayout } from "@/components/portal/ClientLayout";
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
-// Step definitions
+// Step definitions - 8 steps matching the revised intake
 const STEPS = [
   { id: "basics", label: "Basics", icon: Building2 },
+  { id: "intent", label: "Intent", icon: Target },
+  { id: "timeline", label: "Timeline", icon: Timer },
+  { id: "readiness", label: "Readiness", icon: Package },
   { id: "style", label: "Style", icon: Palette },
-  { id: "function", label: "Function", icon: Cog },
+  { id: "functionality", label: "Features", icon: Cog },
+  { id: "budget", label: "Budget", icon: DollarSign },
   { id: "review", label: "Review", icon: CheckCircle2 },
 ];
 
 // Business types
 const BUSINESS_TYPES = [
-  { id: "services", label: "Services", icon: Wrench, description: "Plumbing, HVAC, cleaning, etc." },
-  { id: "trades", label: "Trades", icon: Building2, description: "Construction, roofing, electrical" },
-  { id: "retail", label: "Local retail", icon: Store, description: "Shops, boutiques, showrooms" },
-  { id: "professional", label: "Professional", icon: Briefcase, description: "Law, accounting, consulting" },
-  { id: "restaurant", label: "Restaurant / hospitality", icon: Utensils, description: "Food, bars, events" },
+  { id: "trades", label: "Trades", icon: Wrench, description: "Plumbing, HVAC, electrical, roofing" },
+  { id: "professional", label: "Professional services", icon: Briefcase, description: "Law, accounting, consulting" },
+  { id: "retail", label: "Retail / e-commerce", icon: Store, description: "Shops, boutiques, online sales" },
+  { id: "restaurant", label: "Restaurant / hospitality", icon: Utensils, description: "Food, bars, hotels, events" },
+  { id: "creative", label: "Creative / media", icon: Sparkles, description: "Design, photography, marketing" },
   { id: "other", label: "Other", icon: Users, description: "Something else" },
 ];
 
-// Main goals (multi-select)
+// Primary goals (multi-select)
 const GOALS = [
-  { id: "calls", label: "Get more calls / leads" },
+  { id: "calls", label: "Get more phone calls" },
   { id: "booking", label: "Online booking / scheduling" },
-  { id: "professional", label: "Improve credibility / modernize site" },
-  { id: "reviews", label: "Better reviews / reputation" },
-  { id: "payments", label: "Take payments / deposits" },
-  { id: "automations", label: "Automations / follow-ups" },
+  { id: "professional", label: "Improve credibility / look professional" },
+  { id: "sell", label: "Sell products or services online" },
+  { id: "automate", label: "Automate inquiries or follow-ups" },
+  { id: "unsure", label: "Not sure yet" },
 ];
 
-// Timeline options
+// Website status
+const WEBSITE_STATUS = [
+  { id: "new", label: "Brand new website" },
+  { id: "redesign", label: "Redesigning an existing site" },
+  { id: "adding", label: "Adding features to an existing site" },
+];
+
+// Timeline options - realistic with rush pricing warning
 const TIMELINE_OPTIONS = [
-  { id: "asap", label: "ASAP — I need something live now" },
-  { id: "1-2_weeks", label: "1–2 weeks" },
-  { id: "30_days", label: "Within 30 days" },
-  { id: "browsing", label: "Just browsing / planning" },
+  { id: "standard", label: "Standard (recommended): 4–6 weeks", description: "Best quality, best price" },
+  { id: "flexible", label: "Flexible: 6–8+ weeks", description: "No rush, lower priority" },
+  { id: "rush", label: "Express / Rush: 2–3 weeks", description: "Limited availability, higher cost", warning: true },
+  { id: "exploring", label: "Just exploring / no set timeline", description: "Planning ahead" },
+];
+
+// Readiness assets
+const READINESS_ASSETS = [
+  { id: "logo", label: "Logo" },
+  { id: "colors", label: "Brand colors" },
+  { id: "photos", label: "Photos / images" },
+  { id: "content", label: "Written content" },
+  { id: "none", label: "None of the above / need help" },
 ];
 
 // Style vibes
@@ -80,57 +109,77 @@ const STYLE_VIBES = [
   { id: "auto", label: "You decide for me", description: "We'll pick based on your industry", color: "bg-accent/20 border-accent" },
 ];
 
-// Color presets
-const COLOR_PRESETS = [
-  { id: "neutral", label: "Light & neutral", colors: ["#f8fafc", "#e2e8f0", "#334155"] },
-  { id: "dark", label: "Dark & bold", colors: ["#18181b", "#27272a", "#fafafa"] },
-  { id: "blue", label: "Blue & trustworthy", colors: ["#eff6ff", "#3b82f6", "#1e40af"] },
-  { id: "green", label: "Green & natural", colors: ["#f0fdf4", "#22c55e", "#166534"] },
-  { id: "auto", label: "Choose for me", colors: ["#f0fdfa", "#2dd4bf", "#0f766e"] },
-];
-
 // Curated demo style gallery
 const STYLE_DEMOS = [
-  { id: "clean-contractor", title: "Clean Contractor", subtitle: "Modern trades look", styleVibe: "clean", colorPreset: "neutral" },
-  { id: "warm-local", title: "Warm & Local", subtitle: "Friendly neighborhood feel", styleVibe: "warm", colorPreset: "green" },
-  { id: "bold-pro", title: "Bold Professional", subtitle: "Premium high-end vibe", styleVibe: "bold", colorPreset: "dark" },
-  { id: "simple-service", title: "Simple Service", subtitle: "No-frills & trustworthy", styleVibe: "simple", colorPreset: "blue" },
+  { id: "clean-contractor", title: "Clean Contractor", subtitle: "Modern trades look", styleVibe: "clean" },
+  { id: "warm-local", title: "Warm & Local", subtitle: "Friendly neighborhood feel", styleVibe: "warm" },
+  { id: "bold-pro", title: "Bold Professional", subtitle: "Premium high-end vibe", styleVibe: "bold" },
+  { id: "simple-service", title: "Simple Service", subtitle: "No-frills & trustworthy", styleVibe: "simple" },
 ];
 
-// Functionality options
+// Functionality options - including AI Receptionist tiers
 const FUNCTIONALITY_OPTIONS = [
-  { id: "booking", label: "Let customers book appointments", icon: Calendar },
-  { id: "faq", label: "Answer common questions automatically", icon: HelpCircle },
-  { id: "contact", label: "Collect contact requests", icon: MessageSquare },
-  { id: "afterhours", label: "Handle after-hours calls/messages", icon: Clock },
-  { id: "payments", label: "Take payments or deposits", icon: CreditCard },
-  { id: "simple", label: "Just show info (simple site)", icon: Building2 },
+  { id: "contact", label: "Contact form", icon: MessageSquare },
+  { id: "booking", label: "Online booking / appointments", icon: Calendar },
+  { id: "faq", label: "FAQ / information pages", icon: HelpCircle },
+  { id: "payments", label: "Payments", icon: CreditCard },
+  { id: "afterhours", label: "After-hours handling", icon: Clock },
+  { id: "ai_basic", label: "AI Receptionist – Basic", icon: Bot, description: "Answer common questions automatically" },
+  { id: "ai_diligent", label: "AI Receptionist – Diligent", icon: Zap, description: "Advanced handling, routing, follow-ups" },
+  { id: "simple", label: "Simple informational site", icon: Building2 },
+  { id: "unsure", label: "Not sure yet", icon: HelpCircle },
 ];
 
 // Hours options
 const HOURS_OPTIONS = [
-  { id: "regular", label: "Regular hours (9-5 type)" },
-  { id: "extended", label: "Extended / 24-7" },
-  { id: "notsure", label: "Not sure yet" },
+  { id: "regular", label: "Regular hours (e.g. 9–5)" },
+  { id: "extended", label: "Extended / evenings / weekends" },
+  { id: "24_7", label: "24/7" },
+  { id: "notsure", label: "Not sure" },
+];
+
+// Budget ranges
+const BUDGET_RANGES = [
+  { id: "under_1500", label: "Under $1,500" },
+  { id: "1500_3000", label: "$1,500 – $3,000" },
+  { id: "3000_6000", label: "$3,000 – $6,000" },
+  { id: "6000_plus", label: "$6,000+" },
+  { id: "guidance", label: "Not sure — need guidance" },
 ];
 
 interface IntakeData {
+  // Step 1: Basics
   businessName: string;
   businessType: string;
+  serviceArea: string;
+  contactEmail: string;
+  contactPhone: string;
+  
+  // Step 2: Intent
   goals: string[];
+  websiteStatus: string;
   hasWebsite: boolean;
   websiteUrl: string;
+  
+  // Step 3: Timeline
   timeline: string;
-  contactName: string;
-  contactPhone: string;
-  contactEmail: string;
-  serviceArea: string;
+  
+  // Step 4: Readiness
+  readinessAssets: string[];
+  
+  // Step 5: Style
   styleVibe: string;
-  colorPreset: string;
+  selectedDemo: string;
   inspirationLinks: string;
+  
+  // Step 6: Functionality
   functionality: string[];
   hoursType: string;
-  selectedDemo: string;
+  
+  // Step 7: Budget
+  budgetRange: string;
+  
+  // Step 8: Notes
   notes: string;
 }
 
@@ -143,20 +192,21 @@ export default function OnboardingWizard() {
   const [intake, setIntake] = useState<IntakeData>({
     businessName: "",
     businessType: "",
+    serviceArea: "",
+    contactEmail: "",
+    contactPhone: "",
     goals: [],
+    websiteStatus: "",
     hasWebsite: false,
     websiteUrl: "",
     timeline: "",
-    contactName: "",
-    contactPhone: "",
-    contactEmail: "",
-    serviceArea: "",
+    readinessAssets: [],
     styleVibe: "",
-    colorPreset: "",
+    selectedDemo: "",
     inspirationLinks: "",
     functionality: [],
     hoursType: "",
-    selectedDemo: "",
+    budgetRange: "",
     notes: "",
   });
 
@@ -165,12 +215,20 @@ export default function OnboardingWizard() {
   const canProceed = (): boolean => {
     switch (currentStep) {
       case 0: // Basics
-        return !!intake.businessName && !!intake.businessType && intake.goals.length > 0 && !!intake.timeline;
-      case 1: // Style - can proceed if they pick a demo OR manual style+color
-        return (!!intake.styleVibe && !!intake.colorPreset) || !!intake.selectedDemo;
-      case 2: // Function
+        return !!intake.businessName && !!intake.businessType && !!intake.contactEmail && !!intake.contactPhone;
+      case 1: // Intent
+        return intake.goals.length > 0 && !!intake.websiteStatus;
+      case 2: // Timeline
+        return !!intake.timeline;
+      case 3: // Readiness
+        return intake.readinessAssets.length > 0;
+      case 4: // Style
+        return !!intake.styleVibe || !!intake.selectedDemo;
+      case 5: // Functionality
         return intake.functionality.length > 0 && !!intake.hoursType;
-      case 3: // Review
+      case 6: // Budget
+        return !!intake.budgetRange;
+      case 7: // Review
         return true;
       default:
         return false;
@@ -191,13 +249,27 @@ export default function OnboardingWizard() {
     }
   };
 
-  const toggleFunctionality = (id: string) => {
-    setIntake(prev => ({
-      ...prev,
-      functionality: prev.functionality.includes(id)
-        ? prev.functionality.filter(f => f !== id)
-        : [...prev.functionality, id],
-    }));
+  const toggleArrayItem = (field: keyof IntakeData, id: string) => {
+    setIntake(prev => {
+      const arr = prev[field] as string[];
+      // Handle "none" option in readiness
+      if (field === 'readinessAssets') {
+        if (id === 'none') {
+          return { ...prev, [field]: ['none'] };
+        } else {
+          return {
+            ...prev,
+            [field]: arr.includes(id) 
+              ? arr.filter(item => item !== id)
+              : [...arr.filter(item => item !== 'none'), id]
+          };
+        }
+      }
+      return {
+        ...prev,
+        [field]: arr.includes(id) ? arr.filter(item => item !== id) : [...arr, id],
+      };
+    });
   };
 
   const handleCreateProject = async () => {
@@ -230,7 +302,6 @@ export default function OnboardingWizard() {
         throw new Error(data.error || "Failed to create project");
       }
 
-      // Show confirmation screen instead of navigating directly
       setSubmittedProject({
         businessName: intake.businessName,
         projectToken: data.project_token,
@@ -249,10 +320,10 @@ export default function OnboardingWizard() {
 
   const renderStep = () => {
     switch (currentStep) {
+      // STEP 1: BASICS
       case 0:
         return (
           <div className="space-y-6">
-            {/* Business name */}
             <div className="space-y-2">
               <Label htmlFor="businessName">Business name</Label>
               <Input
@@ -263,9 +334,8 @@ export default function OnboardingWizard() {
               />
             </div>
 
-            {/* Business type */}
             <div className="space-y-3">
-              <Label>What best describes your business?</Label>
+              <Label>Business type</Label>
               <div className="grid grid-cols-2 gap-3">
                 {BUSINESS_TYPES.map((type) => {
                   const Icon = type.icon;
@@ -289,21 +359,49 @@ export default function OnboardingWizard() {
               </div>
             </div>
 
-            {/* Goals (multi-select) */}
+            <div className="space-y-2">
+              <Label htmlFor="serviceArea">Where do you primarily serve customers?</Label>
+              <Input
+                id="serviceArea"
+                placeholder="e.g. Dallas, TX or Greater Boston Area"
+                value={intake.serviceArea}
+                onChange={(e) => setIntake(prev => ({ ...prev, serviceArea: e.target.value }))}
+              />
+            </div>
+
             <div className="space-y-3">
-              <Label>What are you trying to accomplish? (select all that apply)</Label>
+              <Label>Primary contact</Label>
+              <div className="grid grid-cols-2 gap-3">
+                <Input
+                  placeholder="Email"
+                  type="email"
+                  value={intake.contactEmail}
+                  onChange={(e) => setIntake(prev => ({ ...prev, contactEmail: e.target.value }))}
+                />
+                <Input
+                  placeholder="Phone"
+                  type="tel"
+                  value={intake.contactPhone}
+                  onChange={(e) => setIntake(prev => ({ ...prev, contactPhone: e.target.value }))}
+                />
+              </div>
+            </div>
+          </div>
+        );
+
+      // STEP 2: INTENT
+      case 1:
+        return (
+          <div className="space-y-6">
+            <div className="space-y-3">
+              <Label>What is the primary goal of this website? (select all that apply)</Label>
               <div className="grid grid-cols-2 gap-2">
                 {GOALS.map((goal) => {
                   const isChecked = intake.goals.includes(goal.id);
                   return (
                     <button
                       key={goal.id}
-                      onClick={() => setIntake(prev => ({
-                        ...prev,
-                        goals: isChecked 
-                          ? prev.goals.filter(g => g !== goal.id)
-                          : [...prev.goals, goal.id]
-                      }))}
+                      onClick={() => toggleArrayItem('goals', goal.id)}
                       className={`p-3 rounded-lg border-2 text-left transition-all flex items-center gap-2 ${
                         isChecked 
                           ? "border-primary bg-primary/5" 
@@ -318,82 +416,125 @@ export default function OnboardingWizard() {
               </div>
             </div>
 
-            {/* Do you have a website? */}
             <div className="space-y-3">
-              <Label>Do you currently have a website?</Label>
+              <Label>Is this a new website or a redesign?</Label>
               <RadioGroup
-                value={intake.hasWebsite ? "yes" : "no"}
+                value={intake.websiteStatus}
                 onValueChange={(value) => setIntake(prev => ({ 
                   ...prev, 
-                  hasWebsite: value === "yes",
-                  websiteUrl: value === "no" ? "" : prev.websiteUrl
+                  websiteStatus: value,
+                  hasWebsite: value !== "new"
                 }))}
-                className="flex gap-4"
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="yes" id="has-website-yes" />
-                  <Label htmlFor="has-website-yes" className="cursor-pointer">Yes</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="no" id="has-website-no" />
-                  <Label htmlFor="has-website-no" className="cursor-pointer">No</Label>
-                </div>
-              </RadioGroup>
-              
-              {intake.hasWebsite && (
-                <Input
-                  placeholder="https://yoursite.com (optional)"
-                  value={intake.websiteUrl}
-                  onChange={(e) => setIntake(prev => ({ ...prev, websiteUrl: e.target.value }))}
-                />
-              )}
-            </div>
-
-            {/* Timeline */}
-            <div className="space-y-3">
-              <Label>When do you want to start?</Label>
-              <RadioGroup
-                value={intake.timeline}
-                onValueChange={(value) => setIntake(prev => ({ ...prev, timeline: value }))}
                 className="space-y-2"
               >
-                {TIMELINE_OPTIONS.map((opt) => (
+                {WEBSITE_STATUS.map((opt) => (
                   <div key={opt.id} className="flex items-center space-x-3">
-                    <RadioGroupItem value={opt.id} id={`timeline-${opt.id}`} />
-                    <Label htmlFor={`timeline-${opt.id}`} className="cursor-pointer">{opt.label}</Label>
+                    <RadioGroupItem value={opt.id} id={`status-${opt.id}`} />
+                    <Label htmlFor={`status-${opt.id}`} className="cursor-pointer">{opt.label}</Label>
                   </div>
                 ))}
               </RadioGroup>
             </div>
 
-            {/* Contact info (optional but helpful) */}
-            <div className="space-y-3">
-              <Label className="text-muted-foreground">Contact info (optional — helps us reach you faster)</Label>
-              <div className="grid grid-cols-2 gap-3">
+            {intake.hasWebsite && (
+              <div className="space-y-2">
+                <Label htmlFor="websiteUrl">Current website URL (optional)</Label>
                 <Input
-                  placeholder="Your name"
-                  value={intake.contactName}
-                  onChange={(e) => setIntake(prev => ({ ...prev, contactName: e.target.value }))}
-                />
-                <Input
-                  placeholder="Phone"
-                  value={intake.contactPhone}
-                  onChange={(e) => setIntake(prev => ({ ...prev, contactPhone: e.target.value }))}
+                  id="websiteUrl"
+                  placeholder="https://yoursite.com"
+                  value={intake.websiteUrl}
+                  onChange={(e) => setIntake(prev => ({ ...prev, websiteUrl: e.target.value }))}
                 />
               </div>
-              <Input
-                placeholder="Service area (towns, counties, etc.)"
-                value={intake.serviceArea}
-                onChange={(e) => setIntake(prev => ({ ...prev, serviceArea: e.target.value }))}
-              />
+            )}
+          </div>
+        );
+
+      // STEP 3: TIMELINE
+      case 2:
+        return (
+          <div className="space-y-6">
+            <div className="bg-muted/50 rounded-lg p-4 text-sm text-muted-foreground">
+              <p>Most projects take several weeks depending on scope and availability. Faster timelines require rush pricing.</p>
+            </div>
+
+            <div className="space-y-3">
+              <Label>When would you ideally like this project completed?</Label>
+              <RadioGroup
+                value={intake.timeline}
+                onValueChange={(value) => setIntake(prev => ({ ...prev, timeline: value }))}
+                className="space-y-3"
+              >
+                {TIMELINE_OPTIONS.map((opt) => (
+                  <div 
+                    key={opt.id} 
+                    className={`flex items-start space-x-3 p-4 rounded-lg border-2 transition-all ${
+                      intake.timeline === opt.id 
+                        ? opt.warning ? "border-warning bg-warning/5" : "border-primary bg-primary/5"
+                        : "border-border hover:border-muted-foreground/30"
+                    }`}
+                  >
+                    <RadioGroupItem value={opt.id} id={`timeline-${opt.id}`} className="mt-0.5" />
+                    <div className="flex-1">
+                      <Label htmlFor={`timeline-${opt.id}`} className="cursor-pointer flex items-center gap-2">
+                        {opt.label}
+                        {opt.warning && <AlertTriangle className="h-4 w-4 text-warning" />}
+                      </Label>
+                      <p className="text-sm text-muted-foreground mt-0.5">{opt.description}</p>
+                    </div>
+                  </div>
+                ))}
+              </RadioGroup>
+            </div>
+
+            {intake.timeline === 'rush' && (
+              <div className="bg-warning/10 border border-warning/30 rounded-lg p-4 text-sm">
+                <div className="flex items-start gap-2">
+                  <AlertTriangle className="h-5 w-5 text-warning shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-medium text-warning">Rush projects typically require 50% higher pricing</p>
+                    <p className="text-muted-foreground mt-1">They also require significant upfront commitment. Availability is limited.</p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+
+      // STEP 4: READINESS
+      case 3:
+        return (
+          <div className="space-y-6">
+            <div className="space-y-3">
+              <Label>Do you already have any of the following?</Label>
+              <p className="text-sm text-muted-foreground">This helps us plan — it does not affect approval.</p>
+              <div className="space-y-2">
+                {READINESS_ASSETS.map((asset) => {
+                  const isChecked = intake.readinessAssets.includes(asset.id);
+                  return (
+                    <button
+                      key={asset.id}
+                      onClick={() => toggleArrayItem('readinessAssets', asset.id)}
+                      className={`w-full p-4 rounded-lg border-2 text-left transition-all flex items-center gap-3 ${
+                        isChecked 
+                          ? "border-primary bg-primary/5" 
+                          : "border-border hover:border-muted-foreground/30"
+                      }`}
+                    >
+                      <Checkbox checked={isChecked} className="pointer-events-none" />
+                      <span className="font-medium text-sm">{asset.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
         );
 
-      case 1:
+      // STEP 5: STYLE
+      case 4:
         return (
           <div className="space-y-6">
-            {/* Demo gallery - pick a style reference */}
             <div className="space-y-3">
               <div>
                 <Label className="text-base">Pick a style demo (optional)</Label>
@@ -410,8 +551,7 @@ export default function OnboardingWizard() {
                       onClick={() => setIntake(prev => ({
                         ...prev,
                         selectedDemo: demo.id,
-                        styleVibe: demo.styleVibe ?? prev.styleVibe,
-                        colorPreset: demo.colorPreset ?? prev.colorPreset,
+                        styleVibe: demo.styleVibe,
                       }))}
                       className={`group text-left rounded-xl border-2 p-4 transition-all ${
                         isSelected 
@@ -432,22 +572,17 @@ export default function OnboardingWizard() {
                   );
                 })}
               </div>
-              <p className="text-xs text-muted-foreground">
-                Don't worry — you can change this later in your portal.
-              </p>
             </div>
 
-            {/* Divider */}
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
                 <div className="w-full border-t border-border" />
               </div>
               <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-card px-2 text-muted-foreground">Or customize manually</span>
+                <span className="bg-card px-2 text-muted-foreground">Or describe a vibe</span>
               </div>
             </div>
 
-            {/* Style vibe */}
             <div className="space-y-3">
               <Label>What should this site feel like?</Label>
               <div className="grid grid-cols-1 gap-3">
@@ -473,60 +608,24 @@ export default function OnboardingWizard() {
               </div>
             </div>
 
-            {/* Color preset */}
-            <div className="space-y-3">
-              <Label>Color direction</Label>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                {COLOR_PRESETS.map((preset) => {
-                  const isSelected = intake.colorPreset === preset.id && !intake.selectedDemo;
-                  return (
-                    <button
-                      key={preset.id}
-                      onClick={() => setIntake(prev => ({ ...prev, colorPreset: preset.id, selectedDemo: "" }))}
-                      className={`p-3 rounded-lg border-2 text-left transition-all ${
-                        isSelected 
-                          ? "border-primary bg-primary/5" 
-                          : "border-border hover:border-muted-foreground/30"
-                      }`}
-                    >
-                      <div className="flex gap-1 mb-2">
-                        {preset.colors.map((color, i) => (
-                          <div 
-                            key={i} 
-                            className="w-5 h-5 rounded-full border border-border/50" 
-                            style={{ backgroundColor: color }}
-                          />
-                        ))}
-                      </div>
-                      <div className="font-medium text-sm">{preset.label}</div>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Inspiration links (optional) */}
             <div className="space-y-2">
-              <Label htmlFor="inspiration">Any websites you like? (optional)</Label>
+              <Label htmlFor="inspiration">Any websites you like or dislike? (optional)</Label>
               <Input
                 id="inspiration"
-                placeholder="Paste links or describe what you like"
+                placeholder="Paste links or describe what you like/dislike"
                 value={intake.inspirationLinks}
                 onChange={(e) => setIntake(prev => ({ ...prev, inspirationLinks: e.target.value }))}
               />
-              <p className="text-xs text-muted-foreground">
-                We'll use these as inspiration for your design.
-              </p>
             </div>
           </div>
         );
 
-      case 2:
+      // STEP 6: FUNCTIONALITY
+      case 5:
         return (
           <div className="space-y-6">
-            {/* Functionality checkboxes */}
             <div className="space-y-3">
-              <Label>What should this website help you do?</Label>
+              <Label>What functionality do you think you'll need?</Label>
               <div className="space-y-3">
                 {FUNCTIONALITY_OPTIONS.map((option) => {
                   const Icon = option.icon;
@@ -534,28 +633,29 @@ export default function OnboardingWizard() {
                   return (
                     <button
                       key={option.id}
-                      onClick={() => toggleFunctionality(option.id)}
-                      className={`w-full p-4 rounded-lg border-2 text-left transition-all flex items-center gap-3 ${
+                      onClick={() => toggleArrayItem('functionality', option.id)}
+                      className={`w-full p-4 rounded-lg border-2 text-left transition-all flex items-start gap-3 ${
                         isChecked 
                           ? "border-primary bg-primary/5" 
                           : "border-border hover:border-muted-foreground/30"
                       }`}
                     >
-                      <Checkbox checked={isChecked} className="pointer-events-none" />
-                      <Icon className={`h-5 w-5 ${isChecked ? "text-primary" : "text-muted-foreground"}`} />
-                      <span className="font-medium text-sm">{option.label}</span>
+                      <Checkbox checked={isChecked} className="pointer-events-none mt-0.5" />
+                      <Icon className={`h-5 w-5 shrink-0 ${isChecked ? "text-primary" : "text-muted-foreground"}`} />
+                      <div className="flex-1">
+                        <span className="font-medium text-sm">{option.label}</span>
+                        {option.description && (
+                          <p className="text-sm text-muted-foreground mt-0.5">{option.description}</p>
+                        )}
+                      </div>
                     </button>
                   );
                 })}
               </div>
-              <p className="text-xs text-muted-foreground">
-                We'll recommend the best setup for your selections.
-              </p>
             </div>
 
-            {/* Hours */}
             <div className="space-y-3">
-              <Label>Your business hours</Label>
+              <Label>What are your business hours?</Label>
               <RadioGroup
                 value={intake.hoursType}
                 onValueChange={(value) => setIntake(prev => ({ ...prev, hoursType: value }))}
@@ -572,10 +672,44 @@ export default function OnboardingWizard() {
           </div>
         );
 
-      case 3:
+      // STEP 7: BUDGET
+      case 6:
         return (
           <div className="space-y-6">
-            {/* Summary cards */}
+            <div className="bg-muted/50 rounded-lg p-4 text-sm text-muted-foreground">
+              <p>Most projects vary based on scope and complexity. This helps ensure we're aligned before moving forward.</p>
+              <p className="mt-2 text-xs">This does not lock pricing.</p>
+            </div>
+
+            <div className="space-y-3">
+              <Label>Budget comfort range</Label>
+              <RadioGroup
+                value={intake.budgetRange}
+                onValueChange={(value) => setIntake(prev => ({ ...prev, budgetRange: value }))}
+                className="space-y-2"
+              >
+                {BUDGET_RANGES.map((range) => (
+                  <div 
+                    key={range.id} 
+                    className={`flex items-center space-x-3 p-4 rounded-lg border-2 transition-all ${
+                      intake.budgetRange === range.id 
+                        ? "border-primary bg-primary/5" 
+                        : "border-border hover:border-muted-foreground/30"
+                    }`}
+                  >
+                    <RadioGroupItem value={range.id} id={`budget-${range.id}`} />
+                    <Label htmlFor={`budget-${range.id}`} className="cursor-pointer flex-1">{range.label}</Label>
+                  </div>
+                ))}
+              </RadioGroup>
+            </div>
+          </div>
+        );
+
+      // STEP 8: REVIEW & NOTES
+      case 7:
+        return (
+          <div className="space-y-6">
             <div className="space-y-4">
               <Card>
                 <CardHeader className="pb-2">
@@ -585,18 +719,31 @@ export default function OnboardingWizard() {
                   <p className="font-semibold">{intake.businessName || "—"}</p>
                   <p className="text-sm text-muted-foreground">
                     {BUSINESS_TYPES.find(t => t.id === intake.businessType)?.label || "—"}
-                    {intake.goals.length > 0 && ` · ${intake.goals.map(g => GOALS.find(goal => goal.id === g)?.label).filter(Boolean).join(", ")}`}
+                    {intake.serviceArea && ` · ${intake.serviceArea}`}
                   </p>
-                  {intake.timeline && (
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Timeline: {TIMELINE_OPTIONS.find(t => t.id === intake.timeline)?.label || intake.timeline}
-                    </p>
-                  )}
-                  {intake.hasWebsite && intake.websiteUrl && (
-                    <p className="text-xs text-muted-foreground">
-                      Current site: {intake.websiteUrl}
-                    </p>
-                  )}
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {intake.contactEmail} · {intake.contactPhone}
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">Goals & Timeline</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm">
+                    {intake.goals.map(g => GOALS.find(goal => goal.id === g)?.label).filter(Boolean).join(", ") || "—"}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {WEBSITE_STATUS.find(s => s.id === intake.websiteStatus)?.label || "—"}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Timeline: {TIMELINE_OPTIONS.find(t => t.id === intake.timeline)?.label.split(":")[0] || "—"}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Budget: {BUDGET_RANGES.find(b => b.id === intake.budgetRange)?.label || "—"}
+                  </p>
                 </CardContent>
               </Card>
 
@@ -606,11 +753,13 @@ export default function OnboardingWizard() {
                 </CardHeader>
                 <CardContent>
                   <p className="font-semibold">
-                    {STYLE_VIBES.find(v => v.id === intake.styleVibe)?.label || "—"}
+                    {intake.selectedDemo 
+                      ? STYLE_DEMOS.find(d => d.id === intake.selectedDemo)?.title
+                      : STYLE_VIBES.find(v => v.id === intake.styleVibe)?.label || "—"}
                   </p>
-                  <p className="text-sm text-muted-foreground">
-                    {COLOR_PRESETS.find(c => c.id === intake.colorPreset)?.label || "—"}
-                  </p>
+                  {intake.inspirationLinks && (
+                    <p className="text-xs text-muted-foreground mt-1">Inspiration: {intake.inspirationLinks}</p>
+                  )}
                 </CardContent>
               </Card>
 
@@ -634,7 +783,17 @@ export default function OnboardingWizard() {
               </Card>
             </div>
 
-            {/* Process timeline */}
+            <div className="space-y-2">
+              <Label htmlFor="notes">Anything else we should know before the discovery meeting? (optional)</Label>
+              <Textarea
+                id="notes"
+                placeholder="Additional context, special requirements, questions..."
+                value={intake.notes}
+                onChange={(e) => setIntake(prev => ({ ...prev, notes: e.target.value }))}
+                rows={4}
+              />
+            </div>
+
             <Card className="bg-muted/30">
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium">What happens next</CardTitle>
@@ -642,9 +801,9 @@ export default function OnboardingWizard() {
               <CardContent>
                 <div className="space-y-3">
                   {[
-                    { step: 1, label: "Intake complete", done: true },
-                    { step: 2, label: "Draft design + workflow plan", done: false },
-                    { step: 3, label: "Review & edits", done: false },
+                    { step: 1, label: "Phase 1A: Intake complete", done: true },
+                    { step: 2, label: "Phase 1B: Discovery meeting", done: false },
+                    { step: 3, label: "Phase 2: Build & review", done: false },
                     { step: 4, label: "Launch", done: false },
                   ].map((item, i) => (
                     <div key={i} className="flex items-center gap-3">
@@ -662,7 +821,7 @@ export default function OnboardingWizard() {
                   ))}
                 </div>
                 <p className="text-sm text-muted-foreground mt-4">
-                  We'll create your first draft and message you here when it's ready.
+                  We'll review your intake and reach out to schedule a discovery meeting.
                 </p>
               </CardContent>
             </Card>
@@ -674,7 +833,6 @@ export default function OnboardingWizard() {
     }
   };
 
-  // Show confirmation screen after successful submission
   if (submittedProject) {
     return (
       <IntakeSubmittedScreen
@@ -686,7 +844,6 @@ export default function OnboardingWizard() {
 
   return (
     <ClientLayout hideHeader maxWidth="5xl">
-      {/* Custom wizard header */}
       <header className="border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-6 py-4 flex items-center justify-between">
           <Link to="/" className="font-serif text-xl font-bold tracking-tight text-foreground">
@@ -698,7 +855,6 @@ export default function OnboardingWizard() {
         </div>
       </header>
 
-      {/* Progress section with branded gradient */}
       <div className="bg-gradient-to-b from-accent/5 to-background border-b border-border">
         <div className="container mx-auto px-6 py-4">
           <div className="flex items-center gap-2 mb-3">
@@ -711,11 +867,9 @@ export default function OnboardingWizard() {
             </button>
           </div>
           
-          {/* Progress bar */}
           <Progress value={stepProgress} className="h-1.5" />
           
-          {/* Step indicators */}
-          <div className="flex justify-between mt-3">
+          <div className="flex justify-between mt-3 overflow-x-auto">
             {STEPS.map((step, i) => {
               const Icon = step.icon;
               const isActive = i === currentStep;
@@ -723,7 +877,7 @@ export default function OnboardingWizard() {
               return (
                 <div
                   key={step.id}
-                  className={`flex items-center gap-1.5 text-xs transition-colors ${
+                  className={`flex items-center gap-1.5 text-xs transition-colors shrink-0 ${
                     isActive 
                       ? "text-accent font-medium" 
                       : isComplete 
@@ -752,27 +906,33 @@ export default function OnboardingWizard() {
         </div>
       </div>
 
-      {/* Main content */}
       <main className="container mx-auto px-6 py-8">
         <div className="max-w-xl mx-auto">
           <div className="mb-6">
             <h1 className="font-serif text-2xl font-bold mb-1">
-              {currentStep === 0 && "Let's set up your project"}
-              {currentStep === 1 && "Style & vibe"}
-              {currentStep === 2 && "How it should work"}
-              {currentStep === 3 && "Review & start"}
+              {currentStep === 0 && "Let's start with the basics"}
+              {currentStep === 1 && "What are your goals?"}
+              {currentStep === 2 && "Timeline expectations"}
+              {currentStep === 3 && "What do you have ready?"}
+              {currentStep === 4 && "Style direction"}
+              {currentStep === 5 && "Features & functionality"}
+              {currentStep === 6 && "Budget alignment"}
+              {currentStep === 7 && "Review & submit"}
             </h1>
             <p className="text-muted-foreground">
-              {currentStep === 0 && "This takes about 5 minutes. You can change anything later."}
-              {currentStep === 1 && "Pick what feels right. We'll refine it together."}
-              {currentStep === 2 && "Select the features you need."}
-              {currentStep === 3 && "Make sure everything looks good."}
+              {currentStep === 0 && "Tell us about your business."}
+              {currentStep === 1 && "What should this website help you accomplish?"}
+              {currentStep === 2 && "When do you need this completed?"}
+              {currentStep === 3 && "This helps us plan the project."}
+              {currentStep === 4 && "Pick what feels right. We'll refine it together."}
+              {currentStep === 5 && "Select the features you need."}
+              {currentStep === 6 && "This helps ensure we're aligned."}
+              {currentStep === 7 && "Make sure everything looks good, then add any final notes."}
             </p>
           </div>
 
           {renderStep()}
 
-          {/* Navigation buttons */}
           <div className="flex justify-between mt-8 pt-6 border-t border-border">
             <Button variant="ghost" onClick={handleBack}>
               <ArrowLeft className="mr-2 h-4 w-4" />
@@ -789,12 +949,12 @@ export default function OnboardingWizard() {
                 {loading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Creating...
+                    Submitting...
                   </>
                 ) : (
                   <>
                     <Sparkles className="mr-2 h-4 w-4" />
-                    Start my project
+                    Submit intake
                   </>
                 )}
               </Button>
