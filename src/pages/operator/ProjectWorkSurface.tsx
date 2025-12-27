@@ -654,37 +654,39 @@ export function ProjectWorkSurface({ project, onBack, onStatusChange }: ProjectW
         </div>
 
         {/* Right: Sidebar Panel */}
-        <div className="w-[400px] flex flex-col bg-card overflow-hidden">
+        <div className="w-[480px] flex flex-col bg-card overflow-hidden">
           <Tabs value={activePanel} onValueChange={(v) => setActivePanel(v as typeof activePanel)} className="flex-1 flex flex-col overflow-hidden">
-            <TabsList className="flex-shrink-0 w-auto h-auto flex flex-wrap gap-1 p-1 mx-2 mt-2 mb-0">
-              <TabsTrigger value="overview" className="text-xs gap-1 px-2 py-1.5 flex-none">
-                <Building2 className="h-3 w-3" />
-                Overview
-              </TabsTrigger>
-              <TabsTrigger value="milestones" className="text-xs gap-1 px-2 py-1.5 flex-none">
-                <Target className="h-3 w-3" />
-                Milestones
-              </TabsTrigger>
-              <TabsTrigger value="comments" className="text-xs gap-1 px-2 py-1.5 flex-none">
-                <MessageCirclePlus className="h-3 w-3" />
-                Comments
-                {openCount > 0 && <Badge variant="secondary" className="text-[10px] px-1 py-0 ml-1">{openCount}</Badge>}
-              </TabsTrigger>
-              <TabsTrigger value="chat" className="text-xs gap-1 px-2 py-1.5 flex-none">
-                <MessageSquare className="h-3 w-3" />
-                Chat
-                {messages.length > 0 && <Badge variant="secondary" className="text-[10px] px-1 py-0 ml-1">{messages.length}</Badge>}
-              </TabsTrigger>
-              <TabsTrigger value="media" className="text-xs gap-1 px-2 py-1.5 flex-none">
-                <ImageIcon className="h-3 w-3" />
-                Media
-                {media.length > 0 && <Badge variant="secondary" className="text-[10px] px-1 py-0 ml-1">{media.length}</Badge>}
-              </TabsTrigger>
-              <TabsTrigger value="launch" className="text-xs gap-1 px-2 py-1.5 flex-none">
-                <Rocket className="h-3 w-3" />
-                Launch
-              </TabsTrigger>
-            </TabsList>
+            <div className="flex-shrink-0 overflow-x-auto mx-2 mt-2 mb-0">
+              <TabsList className="w-full inline-flex h-9 p-1">
+                <TabsTrigger value="overview" className="text-xs gap-1 px-3 py-1.5 whitespace-nowrap">
+                  <Building2 className="h-3 w-3 flex-shrink-0" />
+                  Overview
+                </TabsTrigger>
+                <TabsTrigger value="milestones" className="text-xs gap-1 px-3 py-1.5 whitespace-nowrap">
+                  <Target className="h-3 w-3 flex-shrink-0" />
+                  Milestones
+                </TabsTrigger>
+                <TabsTrigger value="comments" className="text-xs gap-1 px-3 py-1.5 whitespace-nowrap">
+                  <MessageCirclePlus className="h-3 w-3 flex-shrink-0" />
+                  Comments
+                  {openCount > 0 && <Badge variant="secondary" className="text-[10px] px-1 py-0 ml-1">{openCount}</Badge>}
+                </TabsTrigger>
+                <TabsTrigger value="chat" className="text-xs gap-1 px-3 py-1.5 whitespace-nowrap">
+                  <MessageSquare className="h-3 w-3 flex-shrink-0" />
+                  Chat
+                  {messages.length > 0 && <Badge variant="secondary" className="text-[10px] px-1 py-0 ml-1">{messages.length}</Badge>}
+                </TabsTrigger>
+                <TabsTrigger value="media" className="text-xs gap-1 px-3 py-1.5 whitespace-nowrap">
+                  <ImageIcon className="h-3 w-3 flex-shrink-0" />
+                  Media
+                  {media.length > 0 && <Badge variant="secondary" className="text-[10px] px-1 py-0 ml-1">{media.length}</Badge>}
+                </TabsTrigger>
+                <TabsTrigger value="launch" className="text-xs gap-1 px-3 py-1.5 whitespace-nowrap">
+                  <Rocket className="h-3 w-3 flex-shrink-0" />
+                  Launch
+                </TabsTrigger>
+              </TabsList>
+            </div>
 
             {/* Overview / Intake */}
             <TabsContent value="overview" className="flex-1 flex flex-col overflow-hidden m-0">
