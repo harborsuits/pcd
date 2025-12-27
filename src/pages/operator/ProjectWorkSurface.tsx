@@ -654,38 +654,40 @@ export function ProjectWorkSurface({ project, onBack, onStatusChange }: ProjectW
         </div>
 
         {/* Right: Sidebar Panel */}
-        <div className="w-[480px] flex flex-col bg-card overflow-hidden">
+        <div className="min-w-0 w-[480px] flex flex-col bg-card overflow-hidden">
           <Tabs value={activePanel} onValueChange={(v) => setActivePanel(v as typeof activePanel)} className="flex-1 flex flex-col overflow-hidden">
-            <div className="flex-shrink-0 overflow-x-auto mx-2 mt-2 mb-0">
-              <TabsList className="w-full inline-flex h-9 p-1">
-                <TabsTrigger value="overview" className="text-xs gap-1 px-3 py-1.5 whitespace-nowrap">
+            <div className="relative flex-shrink-0 mx-2 mt-2 mb-0">
+              <TabsList className="w-full justify-start overflow-x-auto overflow-y-hidden whitespace-nowrap flex gap-1 rounded-lg bg-muted/50 p-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                <TabsTrigger value="overview" className="flex-none text-xs gap-1.5 px-3 py-1.5 rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm">
                   <Building2 className="h-3 w-3 flex-shrink-0" />
                   Overview
                 </TabsTrigger>
-                <TabsTrigger value="milestones" className="text-xs gap-1 px-3 py-1.5 whitespace-nowrap">
+                <TabsTrigger value="milestones" className="flex-none text-xs gap-1.5 px-3 py-1.5 rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm">
                   <Target className="h-3 w-3 flex-shrink-0" />
                   Milestones
                 </TabsTrigger>
-                <TabsTrigger value="comments" className="text-xs gap-1 px-3 py-1.5 whitespace-nowrap">
+                <TabsTrigger value="comments" className="flex-none text-xs gap-1.5 px-3 py-1.5 rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm">
                   <MessageCirclePlus className="h-3 w-3 flex-shrink-0" />
                   Comments
                   {openCount > 0 && <Badge variant="secondary" className="text-[10px] px-1 py-0 ml-1">{openCount}</Badge>}
                 </TabsTrigger>
-                <TabsTrigger value="chat" className="text-xs gap-1 px-3 py-1.5 whitespace-nowrap">
+                <TabsTrigger value="chat" className="flex-none text-xs gap-1.5 px-3 py-1.5 rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm">
                   <MessageSquare className="h-3 w-3 flex-shrink-0" />
                   Chat
                   {messages.length > 0 && <Badge variant="secondary" className="text-[10px] px-1 py-0 ml-1">{messages.length}</Badge>}
                 </TabsTrigger>
-                <TabsTrigger value="media" className="text-xs gap-1 px-3 py-1.5 whitespace-nowrap">
+                <TabsTrigger value="media" className="flex-none text-xs gap-1.5 px-3 py-1.5 rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm">
                   <ImageIcon className="h-3 w-3 flex-shrink-0" />
                   Media
                   {media.length > 0 && <Badge variant="secondary" className="text-[10px] px-1 py-0 ml-1">{media.length}</Badge>}
                 </TabsTrigger>
-                <TabsTrigger value="launch" className="text-xs gap-1 px-3 py-1.5 whitespace-nowrap">
+                <TabsTrigger value="launch" className="flex-none text-xs gap-1.5 px-3 py-1.5 rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm">
                   <Rocket className="h-3 w-3 flex-shrink-0" />
                   Launch
                 </TabsTrigger>
               </TabsList>
+              {/* Scroll hint gradient */}
+              <div className="pointer-events-none absolute right-0 top-0 h-full w-8 bg-gradient-to-l from-card to-transparent" />
             </div>
 
             {/* Overview / Intake */}
