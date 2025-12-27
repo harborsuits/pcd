@@ -201,13 +201,16 @@ const Index = () => {
               </div>
             </div>
             
-            {/* Right: Video placeholder */}
+            {/* Right: Video */}
             <div className="relative">
-              <div className="aspect-video bg-secondary/50 border border-border rounded-xl shadow-lg overflow-hidden flex items-center justify-center">
-                <div className="text-center p-6">
-                  <Bot className="h-12 w-12 text-accent/40 mx-auto mb-3" />
-                  <p className="text-sm text-muted-foreground">Demo video coming soon</p>
-                </div>
+              <div className="aspect-video border border-border rounded-xl shadow-lg overflow-hidden">
+                <iframe
+                  src="https://www.youtube.com/embed/9A8WrDvIyQA"
+                  title="AI Receptionist Demo"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                  className="w-full h-full"
+                />
               </div>
             </div>
           </div>
