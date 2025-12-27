@@ -654,8 +654,8 @@ export function ProjectWorkSurface({ project, onBack, onStatusChange }: ProjectW
         </div>
 
         {/* Right: Sidebar Panel */}
-        <div className="min-w-0 w-[480px] flex flex-col bg-card overflow-hidden">
-          <Tabs value={activePanel} onValueChange={(v) => setActivePanel(v as typeof activePanel)} className="flex-1 flex flex-col overflow-hidden">
+        <div className="min-w-0 w-[480px] h-full flex flex-col bg-card">
+          <Tabs value={activePanel} onValueChange={(v) => setActivePanel(v as typeof activePanel)} className="h-full min-h-0 flex flex-col">
             <div className="relative flex-shrink-0 mx-2 mt-2 mb-0">
               <TabsList className="w-full justify-start overflow-x-auto overflow-y-hidden whitespace-nowrap flex gap-1 rounded-lg bg-muted/50 p-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 <TabsTrigger value="overview" className="flex-none text-xs gap-1.5 px-3 py-1.5 rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm">
@@ -690,313 +690,316 @@ export function ProjectWorkSurface({ project, onBack, onStatusChange }: ProjectW
               <div className="pointer-events-none absolute right-0 top-0 h-full w-8 bg-gradient-to-l from-card to-transparent" />
             </div>
 
-            {/* Overview / Intake */}
-            <TabsContent value="overview" className="flex-1 flex flex-col overflow-hidden m-0">
-              <IntakeOverviewPanel 
-                intake={project.intake?.intake_json as Record<string, unknown> | null} 
-                intakeCreatedAt={project.intake?.created_at}
-                intakeStatus={project.intake?.intake_status}
-                onApproveIntake={project.intake?.id ? () => approveIntakeMut.mutate(project.intake!.id) : undefined}
-                isApproving={approveIntakeMut.isPending}
-              />
-            </TabsContent>
+            {/* Content wrapper - must fill remaining height */}
+            <div className="flex-1 min-h-0 overflow-hidden">
+              {/* Overview / Intake */}
+              <TabsContent value="overview" className="h-full overflow-auto data-[state=inactive]:hidden m-0">
+                <IntakeOverviewPanel 
+                  intake={project.intake?.intake_json as Record<string, unknown> | null} 
+                  intakeCreatedAt={project.intake?.created_at}
+                  intakeStatus={project.intake?.intake_status}
+                  onApproveIntake={project.intake?.id ? () => approveIntakeMut.mutate(project.intake!.id) : undefined}
+                  isApproving={approveIntakeMut.isPending}
+                />
+              </TabsContent>
 
-            {/* Milestones */}
-            <TabsContent value="milestones" className="flex-1 flex flex-col overflow-hidden m-0">
-              <DeliverablesMilestones 
-                projectToken={project.project_token} 
-                projectStatus={project.status}
-              />
-            </TabsContent>
+              {/* Milestones */}
+              <TabsContent value="milestones" className="h-full overflow-auto data-[state=inactive]:hidden m-0">
+                <DeliverablesMilestones 
+                  projectToken={project.project_token} 
+                  projectStatus={project.status}
+                />
+              </TabsContent>
 
-            {/* Comments Triage */}
-            <TabsContent value="comments" className="flex-1 flex flex-col overflow-hidden m-0 p-2">
-              {/* Filter buttons */}
-              <div className="flex-shrink-0 flex items-center gap-1 mb-2">
-                <Button
-                  variant={commentFilter === "open" ? "secondary" : "ghost"}
-                  size="sm"
-                  className="text-xs h-7"
-                  onClick={() => setCommentFilter("open")}
-                >
-                  <Circle className="h-3 w-3 mr-1" /> Open ({openCount})
-                </Button>
-                <Button
-                  variant={commentFilter === "resolved" ? "secondary" : "ghost"}
-                  size="sm"
-                  className="text-xs h-7"
-                  onClick={() => setCommentFilter("resolved")}
-                >
-                  <CheckCircle className="h-3 w-3 mr-1" /> Resolved ({resolvedCount})
-                </Button>
-                <Button
-                  variant={commentFilter === "all" ? "secondary" : "ghost"}
-                  size="sm"
-                  className="text-xs h-7"
-                  onClick={() => setCommentFilter("all")}
-                >
-                  <Filter className="h-3 w-3 mr-1" /> All
-                </Button>
-              </div>
+              {/* Comments Triage */}
+              <TabsContent value="comments" className="h-full flex flex-col data-[state=inactive]:hidden m-0 p-2">
+                {/* Filter buttons */}
+                <div className="flex-shrink-0 flex items-center gap-1 mb-2">
+                  <Button
+                    variant={commentFilter === "open" ? "secondary" : "ghost"}
+                    size="sm"
+                    className="text-xs h-7"
+                    onClick={() => setCommentFilter("open")}
+                  >
+                    <Circle className="h-3 w-3 mr-1" /> Open ({openCount})
+                  </Button>
+                  <Button
+                    variant={commentFilter === "resolved" ? "secondary" : "ghost"}
+                    size="sm"
+                    className="text-xs h-7"
+                    onClick={() => setCommentFilter("resolved")}
+                  >
+                    <CheckCircle className="h-3 w-3 mr-1" /> Resolved ({resolvedCount})
+                  </Button>
+                  <Button
+                    variant={commentFilter === "all" ? "secondary" : "ghost"}
+                    size="sm"
+                    className="text-xs h-7"
+                    onClick={() => setCommentFilter("all")}
+                  >
+                    <Filter className="h-3 w-3 mr-1" /> All
+                  </Button>
+                </div>
 
-              <ScrollArea className="flex-1">
-                {commentsLoading ? (
-                  <div className="flex items-center justify-center py-8">
-                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                  </div>
-                ) : filteredComments.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <MessageCirclePlus className="h-10 w-10 mx-auto mb-3 opacity-50" />
-                    <p className="text-sm">No {commentFilter} comments</p>
-                  </div>
-                ) : (
-                  <div className="space-y-2 pr-2">
-                    {filteredComments.map((comment, idx) => (
-                      <CommentCard
-                        key={comment.id}
-                        comment={comment}
-                        index={idx}
-                        projectToken={project.project_token}
-                        isHighlighted={highlightedPinId === comment.id}
-                        onJumpToPin={handleJumpToPin}
-                        onResolveToggle={(commentId, resolve) => 
-                          resolveCommentMutation.mutate({ commentId, resolve })
-                        }
-                        isResolving={resolveCommentMutation.isPending}
-                      />
-                    ))}
-                  </div>
-                )}
-              </ScrollArea>
-            </TabsContent>
+                <ScrollArea className="flex-1 min-h-0">
+                  {commentsLoading ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : filteredComments.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <MessageCirclePlus className="h-10 w-10 mx-auto mb-3 opacity-50" />
+                      <p className="text-sm">No {commentFilter} comments</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2 pr-2">
+                      {filteredComments.map((comment, idx) => (
+                        <CommentCard
+                          key={comment.id}
+                          comment={comment}
+                          index={idx}
+                          projectToken={project.project_token}
+                          isHighlighted={highlightedPinId === comment.id}
+                          onJumpToPin={handleJumpToPin}
+                          onResolveToggle={(commentId, resolve) => 
+                            resolveCommentMutation.mutate({ commentId, resolve })
+                          }
+                          isResolving={resolveCommentMutation.isPending}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </ScrollArea>
+              </TabsContent>
 
-            {/* Chat */}
-            <TabsContent value="chat" className="flex-1 flex flex-col overflow-hidden m-0 p-2">
-              <ScrollArea className="flex-1">
-                {messagesLoading ? (
-                  <div className="flex items-center justify-center py-8">
-                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                  </div>
-                ) : messages.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <MessageSquare className="h-10 w-10 mx-auto mb-3 opacity-50" />
-                    <p className="text-sm">No messages yet</p>
-                  </div>
-                ) : (
-                  <div className="space-y-2 pr-2">
-                    {messages.map((msg) => {
-                      const isAdmin = msg.sender_type === "admin";
-                      const isLinkedToComment = linkedMessageIds.has(msg.id);
-                      return (
-                        <div key={msg.id} className={`flex group ${isAdmin ? "justify-end" : "justify-start"}`}>
-                          <div className="flex items-start gap-1 max-w-[85%]">
-                            {!isAdmin && prototypes.length > 0 && !isLinkedToComment && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 mt-1"
-                                title="Turn into comment"
-                                onClick={() => { setPendingCommentMessage(msg); }}
+              {/* Chat */}
+              <TabsContent value="chat" className="h-full flex flex-col data-[state=inactive]:hidden m-0 p-2">
+                <ScrollArea className="flex-1 min-h-0">
+                  {messagesLoading ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : messages.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <MessageSquare className="h-10 w-10 mx-auto mb-3 opacity-50" />
+                      <p className="text-sm">No messages yet</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2 pr-2">
+                      {messages.map((msg) => {
+                        const isAdmin = msg.sender_type === "admin";
+                        const isLinkedToComment = linkedMessageIds.has(msg.id);
+                        return (
+                          <div key={msg.id} className={`flex group ${isAdmin ? "justify-end" : "justify-start"}`}>
+                            <div className="flex items-start gap-1 max-w-[85%]">
+                              {!isAdmin && prototypes.length > 0 && !isLinkedToComment && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 mt-1"
+                                  title="Turn into comment"
+                                  onClick={() => { setPendingCommentMessage(msg); }}
+                                >
+                                  <MessageCirclePlus className="h-3 w-3" />
+                                </Button>
+                              )}
+                              {!isAdmin && isLinkedToComment && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-5 w-5 flex-shrink-0 mt-1"
+                                  title="Jump to pinned comment"
+                                  onClick={() => handleJumpFromMessage(msg.id)}
+                                >
+                                  <MessageSquareDot className="h-3 w-3 text-primary" />
+                                </Button>
+                              )}
+                              <div 
+                                className={`rounded-xl px-3 py-2 text-sm ${
+                                  isAdmin ? "bg-primary text-primary-foreground rounded-br-sm" : "bg-muted rounded-bl-sm"
+                                } ${isLinkedToComment && !isAdmin ? "cursor-pointer hover:ring-1 hover:ring-primary/30" : ""}`}
+                                onClick={isLinkedToComment && !isAdmin ? () => handleJumpFromMessage(msg.id) : undefined}
                               >
-                                <MessageCirclePlus className="h-3 w-3" />
-                              </Button>
-                            )}
-                            {!isAdmin && isLinkedToComment && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-5 w-5 flex-shrink-0 mt-1"
-                                title="Jump to pinned comment"
-                                onClick={() => handleJumpFromMessage(msg.id)}
-                              >
-                                <MessageSquareDot className="h-3 w-3 text-primary" />
-                              </Button>
-                            )}
-                            <div 
-                              className={`rounded-xl px-3 py-2 text-sm ${
-                                isAdmin ? "bg-primary text-primary-foreground rounded-br-sm" : "bg-muted rounded-bl-sm"
-                              } ${isLinkedToComment && !isAdmin ? "cursor-pointer hover:ring-1 hover:ring-primary/30" : ""}`}
-                              onClick={isLinkedToComment && !isAdmin ? () => handleJumpFromMessage(msg.id) : undefined}
-                            >
-                              <p className="whitespace-pre-wrap">{msg.content}</p>
-                              <p className={`text-[10px] mt-1 ${isAdmin ? "opacity-70" : "text-muted-foreground"}`}>
-                                {format(new Date(msg.created_at), "h:mm a")}
-                                {isLinkedToComment && (
-                                  <span className="text-primary ml-1 hover:underline">• Pinned ↗</span>
-                                )}
-                              </p>
+                                <p className="whitespace-pre-wrap">{msg.content}</p>
+                                <p className={`text-[10px] mt-1 ${isAdmin ? "opacity-70" : "text-muted-foreground"}`}>
+                                  {format(new Date(msg.created_at), "h:mm a")}
+                                  {isLinkedToComment && (
+                                    <span className="text-primary ml-1 hover:underline">• Pinned ↗</span>
+                                  )}
+                                </p>
+                              </div>
                             </div>
                           </div>
+                        );
+                      })}
+                      {clientTyping && (
+                        <div className="flex justify-start">
+                          <div className="bg-muted rounded-xl px-3 py-2 text-sm text-muted-foreground animate-pulse">
+                            typing...
+                          </div>
                         </div>
-                      );
-                    })}
-                    {clientTyping && (
-                      <div className="flex justify-start">
-                        <div className="bg-muted rounded-xl px-3 py-2 text-sm text-muted-foreground animate-pulse">
-                          typing...
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </ScrollArea>
+                      )}
+                    </div>
+                  )}
+                </ScrollArea>
 
-              {/* Reply input */}
-              <div className="flex-shrink-0 pt-2 border-t border-border mt-2 space-y-2">
-                <Textarea
-                  value={replyContent}
-                  onChange={(e) => handleReplyChange(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && !e.shiftKey && replyContent.trim()) {
-                      e.preventDefault();
-                      sendMessageMutation.mutate(replyContent);
-                    }
-                  }}
-                  placeholder="Send a message..."
-                  className="min-h-[60px] resize-none text-sm"
+                {/* Reply input */}
+                <div className="flex-shrink-0 pt-2 border-t border-border mt-2 space-y-2">
+                  <Textarea
+                    value={replyContent}
+                    onChange={(e) => handleReplyChange(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey && replyContent.trim()) {
+                        e.preventDefault();
+                        sendMessageMutation.mutate(replyContent);
+                      }
+                    }}
+                    placeholder="Send a message..."
+                    className="min-h-[60px] resize-none text-sm"
+                  />
+                  <Button
+                    className="w-full"
+                    onClick={() => sendMessageMutation.mutate(replyContent)}
+                    disabled={!replyContent.trim() || sendMessageMutation.isPending}
+                    size="sm"
+                  >
+                    {sendMessageMutation.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
+                    Send
+                  </Button>
+                </div>
+              </TabsContent>
+
+              {/* Media */}
+              <TabsContent value="media" className="h-full flex flex-col data-[state=inactive]:hidden m-0 p-2">
+                {/* Hidden file input */}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  className="hidden"
+                  onChange={(e) => handleFileSelect(e.target.files)}
                 />
-                <Button
-                  className="w-full"
-                  onClick={() => sendMessageMutation.mutate(replyContent)}
-                  disabled={!replyContent.trim() || sendMessageMutation.isPending}
-                  size="sm"
+                
+                {/* Upload area */}
+                <div
+                  className={`flex-shrink-0 mb-2 border-2 border-dashed rounded-lg p-4 text-center transition-colors cursor-pointer ${
+                    isDragging ? "border-primary bg-primary/10" : "border-border hover:border-primary/50"
+                  }`}
+                  onClick={() => fileInputRef.current?.click()}
+                  onDrop={handleDrop}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
                 >
-                  {sendMessageMutation.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
-                  Send
-                </Button>
-              </div>
-            </TabsContent>
+                  {uploadMediaMutation.isPending ? (
+                    <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Uploading...
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center gap-1 text-sm text-muted-foreground">
+                      <Upload className="h-5 w-5" />
+                      <span>Drop files or click to upload</span>
+                    </div>
+                  )}
+                </div>
 
-            {/* Media */}
-            <TabsContent value="media" className="flex-1 flex flex-col overflow-hidden m-0 p-2">
-              {/* Hidden file input */}
-              <input
-                ref={fileInputRef}
-                type="file"
-                multiple
-                className="hidden"
-                onChange={(e) => handleFileSelect(e.target.files)}
-              />
-              
-              {/* Upload area */}
-              <div
-                className={`flex-shrink-0 mb-2 border-2 border-dashed rounded-lg p-4 text-center transition-colors cursor-pointer ${
-                  isDragging ? "border-primary bg-primary/10" : "border-border hover:border-primary/50"
-                }`}
-                onClick={() => fileInputRef.current?.click()}
-                onDrop={handleDrop}
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-              >
-                {uploadMediaMutation.isPending ? (
-                  <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Uploading...
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center gap-1 text-sm text-muted-foreground">
-                    <Upload className="h-5 w-5" />
-                    <span>Drop files or click to upload</span>
-                  </div>
-                )}
-              </div>
-
-              <ScrollArea className="flex-1">
-                {mediaLoading ? (
-                  <div className="flex items-center justify-center py-8">
-                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                  </div>
-                ) : media.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <ImageIcon className="h-10 w-10 mx-auto mb-3 opacity-50" />
-                    <p className="text-sm">No media yet</p>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-2 gap-2 pr-2">
-                    {media.map((item) => (
-                      <div key={item.id} className="border border-border rounded-lg overflow-hidden group">
-                        {/* Preview */}
-                        <div className="aspect-square bg-muted/50 relative">
-                          {isImageMime(item.mime_type) && item.signed_url ? (
-                            <img 
-                              src={item.signed_url} 
-                              alt={item.filename}
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center">
-                              <FileIcon className="h-10 w-10 text-muted-foreground" />
-                            </div>
-                          )}
-                          {/* Actions overlay */}
-                          <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1">
-                            {item.signed_url && (
-                              <>
-                                <Button
-                                  variant="secondary"
-                                  size="icon"
-                                  className="h-7 w-7"
-                                  onClick={() => window.open(item.signed_url!, "_blank")}
-                                  title="Open"
-                                >
-                                  <ExternalLink className="h-3 w-3" />
-                                </Button>
-                                <Button
-                                  variant="secondary"
-                                  size="icon"
-                                  className="h-7 w-7"
-                                  onClick={() => copyMediaLink(item.signed_url!)}
-                                  title="Copy link"
-                                >
-                                  <Link2 className="h-3 w-3" />
-                                </Button>
-                                <a href={item.signed_url} download={item.filename}>
+                <ScrollArea className="flex-1 min-h-0">
+                  {mediaLoading ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : media.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <ImageIcon className="h-10 w-10 mx-auto mb-3 opacity-50" />
+                      <p className="text-sm">No media yet</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-2 pr-2">
+                      {media.map((item) => (
+                        <div key={item.id} className="border border-border rounded-lg overflow-hidden group">
+                          {/* Preview */}
+                          <div className="aspect-square bg-muted/50 relative">
+                            {isImageMime(item.mime_type) && item.signed_url ? (
+                              <img 
+                                src={item.signed_url} 
+                                alt={item.filename}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center">
+                                <FileIcon className="h-10 w-10 text-muted-foreground" />
+                              </div>
+                            )}
+                            {/* Actions overlay */}
+                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1">
+                              {item.signed_url && (
+                                <>
                                   <Button
                                     variant="secondary"
                                     size="icon"
                                     className="h-7 w-7"
-                                    title="Download"
+                                    onClick={() => window.open(item.signed_url!, "_blank")}
+                                    title="Open"
                                   >
-                                    <Download className="h-3 w-3" />
+                                    <ExternalLink className="h-3 w-3" />
                                   </Button>
-                                </a>
-                              </>
-                            )}
-                            <Button
-                              variant="destructive"
-                              size="icon"
-                              className="h-7 w-7"
-                              onClick={() => deleteMediaMutation.mutate(item.id)}
-                              disabled={deleteMediaMutation.isPending}
-                              title="Delete"
-                            >
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
+                                  <Button
+                                    variant="secondary"
+                                    size="icon"
+                                    className="h-7 w-7"
+                                    onClick={() => copyMediaLink(item.signed_url!)}
+                                    title="Copy link"
+                                  >
+                                    <Link2 className="h-3 w-3" />
+                                  </Button>
+                                  <a href={item.signed_url} download={item.filename}>
+                                    <Button
+                                      variant="secondary"
+                                      size="icon"
+                                      className="h-7 w-7"
+                                      title="Download"
+                                    >
+                                      <Download className="h-3 w-3" />
+                                    </Button>
+                                  </a>
+                                </>
+                              )}
+                              <Button
+                                variant="destructive"
+                                size="icon"
+                                className="h-7 w-7"
+                                onClick={() => deleteMediaMutation.mutate(item.id)}
+                                disabled={deleteMediaMutation.isPending}
+                                title="Delete"
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </div>
+                          {/* Info */}
+                          <div className="p-2">
+                            <p className="text-xs font-medium truncate" title={item.filename}>{item.filename}</p>
+                            <p className="text-[10px] text-muted-foreground flex items-center justify-between">
+                              <span>{item.uploader_type === "client" ? "Client" : "Admin"}</span>
+                              <span>{formatFileSize(item.size_bytes)}</span>
+                            </p>
                           </div>
                         </div>
-                        {/* Info */}
-                        <div className="p-2">
-                          <p className="text-xs font-medium truncate" title={item.filename}>{item.filename}</p>
-                          <p className="text-[10px] text-muted-foreground flex items-center justify-between">
-                            <span>{item.uploader_type === "client" ? "Client" : "Admin"}</span>
-                            <span>{formatFileSize(item.size_bytes)}</span>
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </ScrollArea>
-            </TabsContent>
+                      ))}
+                    </div>
+                  )}
+                </ScrollArea>
+              </TabsContent>
 
-            {/* Launch Checklist */}
-            <TabsContent value="launch" className="flex-1 flex flex-col overflow-hidden m-0">
-              <LaunchChecklist 
-                projectToken={project.project_token} 
-                projectStatus={project.status}
-                onLaunchComplete={() => queryClient.invalidateQueries({ queryKey: ["admin-projects"] })}
-              />
-            </TabsContent>
+              {/* Launch Checklist */}
+              <TabsContent value="launch" className="h-full overflow-auto data-[state=inactive]:hidden m-0">
+                <LaunchChecklist 
+                  projectToken={project.project_token} 
+                  projectStatus={project.status}
+                  onLaunchComplete={() => queryClient.invalidateQueries({ queryKey: ["admin-projects"] })}
+                />
+              </TabsContent>
+            </div>
           </Tabs>
         </div>
       </div>
