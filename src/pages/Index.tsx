@@ -162,7 +162,7 @@ const Index = () => {
                   Lead Handling & Follow-Ups
                 </p>
                 <h2 className="font-serif text-3xl md:text-4xl font-bold mb-4">
-                  AI Receptionist <span className="text-accent">(Recommended)</span>
+                  AI Receptionist
                 </h2>
                 <p className="text-muted-foreground leading-relaxed">
                   Automatically respond to missed calls, texts, and form submissions — qualify leads, answer common questions, and route serious inquiries without interrupting your day.
