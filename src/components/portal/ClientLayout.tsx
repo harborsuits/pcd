@@ -74,6 +74,31 @@ export function ClientLayout({
           {children}
         </div>
       </main>
+
+      {/* Footer - shared across all portal screens */}
+      <footer className="border-t border-border bg-card/50 py-8 mt-auto">
+        <div className="container mx-auto px-6">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
+            <div className="flex items-center gap-2">
+              <span>© {new Date().getFullYear()} Pleasant Cove Design</span>
+              <span className="hidden sm:inline">•</span>
+              <span className="hidden sm:inline">Built for local businesses</span>
+            </div>
+
+            <div className="flex items-center gap-4">
+              <Link to="/pricing" className="hover:text-foreground transition-colors">
+                Pricing
+              </Link>
+              <Link to="/what-we-build" className="hover:text-foreground transition-colors">
+                Demos
+              </Link>
+              <Link to="/portal" className="hover:text-foreground transition-colors">
+                Client Portal
+              </Link>
+            </div>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
