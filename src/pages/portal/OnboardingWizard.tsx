@@ -124,8 +124,8 @@ const FUNCTIONALITY_OPTIONS = [
   { id: "faq", label: "FAQ / information pages", icon: HelpCircle },
   { id: "payments", label: "Payments", icon: CreditCard },
   { id: "afterhours", label: "After-hours handling", icon: Clock },
-  { id: "ai_basic", label: "AI Receptionist – Basic", icon: Bot, description: "Answer common questions automatically" },
-  { id: "ai_diligent", label: "AI Receptionist – Diligent", icon: Zap, description: "Advanced handling, routing, follow-ups" },
+  { id: "ai_basic", label: "AI Receptionist – Basic", icon: Bot, description: "Auto-replies + missed call follow-up + basic routing" },
+  { id: "ai_diligent", label: "AI Receptionist – Diligent", icon: Zap, description: "Smarter handling + qualifying questions + follow-ups + escalation rules" },
   { id: "simple", label: "Simple informational site", icon: Building2 },
   { id: "unsure", label: "Not sure yet", icon: HelpCircle },
 ];
@@ -214,8 +214,8 @@ export default function OnboardingWizard() {
 
   const canProceed = (): boolean => {
     switch (currentStep) {
-      case 0: // Basics
-        return !!intake.businessName && !!intake.businessType && !!intake.contactEmail && !!intake.contactPhone;
+      case 0: // Basics - phone is optional to increase completions
+        return !!intake.businessName && !!intake.businessType && !!intake.contactEmail;
       case 1: // Intent
         return intake.goals.length > 0 && !!intake.websiteStatus;
       case 2: // Timeline
@@ -379,7 +379,7 @@ export default function OnboardingWizard() {
                   onChange={(e) => setIntake(prev => ({ ...prev, contactEmail: e.target.value }))}
                 />
                 <Input
-                  placeholder="Phone"
+                  placeholder="Phone (optional)"
                   type="tel"
                   value={intake.contactPhone}
                   onChange={(e) => setIntake(prev => ({ ...prev, contactPhone: e.target.value }))}
@@ -454,8 +454,9 @@ export default function OnboardingWizard() {
       case 2:
         return (
           <div className="space-y-6">
-            <div className="bg-muted/50 rounded-lg p-4 text-sm text-muted-foreground">
+            <div className="bg-muted/50 rounded-lg p-4 text-sm text-muted-foreground space-y-2">
               <p>Most projects take several weeks depending on scope and availability. Faster timelines require rush pricing.</p>
+              <p className="text-xs">Timelines assume your content + approvals are provided quickly. Delays in assets or feedback can extend delivery.</p>
             </div>
 
             <div className="space-y-3">
