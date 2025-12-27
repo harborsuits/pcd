@@ -175,7 +175,16 @@ export default function OperatorLayout() {
   // Show auth prompt if no admin key
   if (!isAuthed) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <div className="min-h-screen bg-background flex flex-col">
+        <header className="border-b border-border bg-card p-4">
+          <Button variant="ghost" size="sm" asChild>
+            <Link to="/">
+              <Home className="h-4 w-4 mr-2" />
+              Home
+            </Link>
+          </Button>
+        </header>
+        <div className="flex-1 flex items-center justify-center p-4">
         <Card className="w-full max-w-md">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -212,6 +221,7 @@ export default function OperatorLayout() {
             </Button>
           </CardContent>
         </Card>
+        </div>
       </div>
     );
   }
