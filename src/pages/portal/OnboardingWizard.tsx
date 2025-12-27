@@ -685,8 +685,8 @@ export default function OnboardingWizard() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header - matches homepage */}
+    <ClientLayout hideHeader maxWidth="5xl">
+      {/* Custom wizard header */}
       <header className="border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-6 py-4 flex items-center justify-between">
           <Link to="/" className="font-serif text-xl font-bold tracking-tight text-foreground">
@@ -802,6 +802,6 @@ export default function OnboardingWizard() {
           </div>
         </div>
       </main>
-    </div>
+    </ClientLayout>
   );
 }
