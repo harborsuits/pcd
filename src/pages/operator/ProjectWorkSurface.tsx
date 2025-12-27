@@ -656,31 +656,31 @@ export function ProjectWorkSurface({ project, onBack, onStatusChange }: ProjectW
         {/* Right: Sidebar Panel */}
         <div className="w-[400px] flex flex-col bg-card overflow-hidden">
           <Tabs value={activePanel} onValueChange={(v) => setActivePanel(v as typeof activePanel)} className="flex-1 flex flex-col overflow-hidden">
-            <TabsList className="flex-shrink-0 w-full grid grid-cols-6 p-1 m-2 mb-0">
-              <TabsTrigger value="overview" className="text-xs gap-1">
+            <TabsList className="flex-shrink-0 w-auto h-auto flex flex-wrap gap-1 p-1 mx-2 mt-2 mb-0">
+              <TabsTrigger value="overview" className="text-xs gap-1 px-2 py-1.5 flex-none">
                 <Building2 className="h-3 w-3" />
                 Overview
               </TabsTrigger>
-              <TabsTrigger value="milestones" className="text-xs gap-1">
+              <TabsTrigger value="milestones" className="text-xs gap-1 px-2 py-1.5 flex-none">
                 <Target className="h-3 w-3" />
                 Milestones
               </TabsTrigger>
-              <TabsTrigger value="comments" className="text-xs gap-1">
+              <TabsTrigger value="comments" className="text-xs gap-1 px-2 py-1.5 flex-none">
                 <MessageCirclePlus className="h-3 w-3" />
                 Comments
                 {openCount > 0 && <Badge variant="secondary" className="text-[10px] px-1 py-0 ml-1">{openCount}</Badge>}
               </TabsTrigger>
-              <TabsTrigger value="chat" className="text-xs gap-1">
+              <TabsTrigger value="chat" className="text-xs gap-1 px-2 py-1.5 flex-none">
                 <MessageSquare className="h-3 w-3" />
                 Chat
                 {messages.length > 0 && <Badge variant="secondary" className="text-[10px] px-1 py-0 ml-1">{messages.length}</Badge>}
               </TabsTrigger>
-              <TabsTrigger value="media" className="text-xs gap-1">
+              <TabsTrigger value="media" className="text-xs gap-1 px-2 py-1.5 flex-none">
                 <ImageIcon className="h-3 w-3" />
                 Media
                 {media.length > 0 && <Badge variant="secondary" className="text-[10px] px-1 py-0 ml-1">{media.length}</Badge>}
               </TabsTrigger>
-              <TabsTrigger value="launch" className="text-xs gap-1">
+              <TabsTrigger value="launch" className="text-xs gap-1 px-2 py-1.5 flex-none">
                 <Rocket className="h-3 w-3" />
                 Launch
               </TabsTrigger>
