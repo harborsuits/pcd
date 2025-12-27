@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { Activity, Rocket, LogOut, FolderOpen, Inbox, Send, ShieldCheck, KeyRound, Users, Home } from "lucide-react";
+import { Activity, Rocket, LogOut, FolderOpen, Inbox, Send, ShieldCheck, KeyRound, Users, Home, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { AcquisitionTab } from "./AcquisitionTab";
 import { DeliveryTab } from "./DeliveryTab";
@@ -59,6 +59,8 @@ function formatTimeAgo(ts?: number | null): string | null {
 export default function OperatorLayout() {
   const [adminKeyInput, setAdminKeyInput] = useState("");
   const [isAuthed, setIsAuthed] = useState(() => !!getAdminKey());
+  const [isValidating, setIsValidating] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
   const [rememberMe, setRememberMe] = useState(() => getAdminKeyStorageMode() === "local");
   const [currentProjectToken, setCurrentProjectToken] = useState<string | null>(null);
   const [currentProjectName, setCurrentProjectName] = useState<string | null>(null);
@@ -156,12 +158,41 @@ export default function OperatorLayout() {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [queryClient, currentProjectToken]);
 
-  const handleSetAdminKey = () => {
-    if (adminKeyInput.trim()) {
+  const handleSetAdminKey = async () => {
+    const key = adminKeyInput.trim();
+    if (!key) return;
+    
+    setIsValidating(true);
+    setLoginError(null);
+    
+    // Test the key against the server before saving
+    try {
+      const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/admin/projects`, {
+        headers: { "x-admin-key": key }
+      });
+      
+      if (res.status === 401) {
+        setLoginError("Invalid admin key. Please check and try again.");
+        setIsValidating(false);
+        return;
+      }
+      
+      if (!res.ok) {
+        setLoginError("Server error. Please try again.");
+        setIsValidating(false);
+        return;
+      }
+      
+      // Key is valid - save it
       setAdminKeyStorageMode(rememberMe ? "local" : "session");
-      saveAdminKey(adminKeyInput.trim());
+      saveAdminKey(key);
       setIsAuthed(true);
-      toast.success("Admin key saved");
+      toast.success("Authenticated successfully");
+    } catch (err) {
+      setLoginError("Network error. Please check your connection.");
+    } finally {
+      setIsValidating(false);
     }
   };
 
@@ -198,15 +229,23 @@ export default function OperatorLayout() {
                 type="password"
                 placeholder="Enter admin key"
                 value={adminKeyInput}
-                onChange={(e) => setAdminKeyInput(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleSetAdminKey()}
+                onChange={(e) => {
+                  setAdminKeyInput(e.target.value);
+                  setLoginError(null);
+                }}
+                onKeyDown={(e) => e.key === "Enter" && !isValidating && handleSetAdminKey()}
+                disabled={isValidating}
               />
+              {loginError && (
+                <p className="text-sm text-destructive mt-2">{loginError}</p>
+              )}
             </div>
             <div className="flex items-center space-x-2">
               <Checkbox
                 id="rememberMe"
                 checked={rememberMe}
                 onCheckedChange={(checked) => setRememberMe(checked === true)}
+                disabled={isValidating}
               />
               <label 
                 htmlFor="rememberMe" 
@@ -215,9 +254,18 @@ export default function OperatorLayout() {
                 Remember me on this device
               </label>
             </div>
-            <Button className="w-full" onClick={handleSetAdminKey}>
-              <Rocket className="h-4 w-4 mr-2" />
-              Access Console
+            <Button className="w-full" onClick={handleSetAdminKey} disabled={isValidating}>
+              {isValidating ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Validating...
+                </>
+              ) : (
+                <>
+                  <Rocket className="h-4 w-4 mr-2" />
+                  Access Console
+                </>
+              )}
             </Button>
           </CardContent>
         </Card>
