@@ -64,7 +64,7 @@ const Index = () => {
       <header className="border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-6 py-4 flex items-center justify-between">
           <Link to="/" className="font-serif text-xl font-bold tracking-tight text-foreground">
-            Pleasant Cove
+            Pleasant Cove Design
           </Link>
           <nav className="flex items-center gap-4">
             <Button asChild variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
