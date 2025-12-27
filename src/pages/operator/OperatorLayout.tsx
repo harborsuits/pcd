@@ -266,6 +266,12 @@ export default function OperatorLayout() {
               <span className="text-muted-foreground">•</span>
               <span className="text-muted-foreground">{storageMode}</span>
             </Badge>
+            <Button variant="ghost" size="sm" asChild>
+              <Link to="/">
+                <Home className="h-4 w-4 mr-2" />
+                Home
+              </Link>
+            </Button>
             <Button
               variant="outline"
               size="sm"
@@ -282,12 +288,6 @@ export default function OperatorLayout() {
             <Button variant="ghost" size="sm" onClick={handleLogout}>
               <LogOut className="h-4 w-4 mr-2" />
               Logout
-            </Button>
-            <Button variant="ghost" size="sm" asChild>
-              <Link to="/">
-                <Home className="h-4 w-4 mr-2" />
-                Home
-              </Link>
             </Button>
           </div>
         </div>
