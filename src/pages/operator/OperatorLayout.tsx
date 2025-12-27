@@ -1,4 +1,5 @@
 import { useState, useEffect, createContext, useContext, useRef, useCallback } from "react";
+import { Link } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { Activity, Rocket, LogOut, FolderOpen, Inbox, Send, ShieldCheck, KeyRound, Users } from "lucide-react";
+import { Activity, Rocket, LogOut, FolderOpen, Inbox, Send, ShieldCheck, KeyRound, Users, Home } from "lucide-react";
 import { toast } from "sonner";
 import { AcquisitionTab } from "./AcquisitionTab";
 import { DeliveryTab } from "./DeliveryTab";
@@ -281,6 +282,12 @@ export default function OperatorLayout() {
             <Button variant="ghost" size="sm" onClick={handleLogout}>
               <LogOut className="h-4 w-4 mr-2" />
               Logout
+            </Button>
+            <Button variant="ghost" size="sm" asChild>
+              <Link to="/">
+                <Home className="h-4 w-4 mr-2" />
+                Home
+              </Link>
             </Button>
           </div>
         </div>
