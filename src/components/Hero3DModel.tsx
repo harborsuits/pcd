@@ -1,4 +1,4 @@
-import { Suspense, useRef, useEffect, useState, useCallback } from "react";
+import { Suspense, useRef, useEffect, useState, useCallback, forwardRef } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { useGLTF, Environment, Float, ContactShadows, OrbitControls } from "@react-three/drei";
 import { ChevronLeft, ChevronRight } from "lucide-react";
@@ -53,49 +53,51 @@ const HERO_MODELS = [
   },
 ];
 
-function FitCameraToObject({ object, onReady }: { object: THREE.Object3D; onReady?: () => void }) {
-  const { camera } = useThree();
-  const hasFramed = useRef(false);
+const FitCameraToObject = forwardRef<THREE.Object3D, { object: THREE.Object3D; onReady?: () => void }>(
+  function FitCameraToObject({ object, onReady }, _ref) {
+    const { camera } = useThree();
+    const hasFramed = useRef(false);
 
-  useEffect(() => {
-    if (!object || hasFramed.current) return;
+    useEffect(() => {
+      if (!object || hasFramed.current) return;
 
-    const box = new THREE.Box3().setFromObject(object);
-    const size = new THREE.Vector3();
-    const center = new THREE.Vector3();
-    box.getSize(size);
-    box.getCenter(center);
+      const box = new THREE.Box3().setFromObject(object);
+      const size = new THREE.Vector3();
+      const center = new THREE.Vector3();
+      box.getSize(size);
+      box.getCenter(center);
 
-    // Center the object at origin
-    object.position.x += (object.position.x - center.x);
-    object.position.y += (object.position.y - center.y);
-    object.position.z += (object.position.z - center.z);
+      // Center the object at origin
+      object.position.x += (object.position.x - center.x);
+      object.position.y += (object.position.y - center.y);
+      object.position.z += (object.position.z - center.z);
 
-    const maxDim = Math.max(size.x, size.y, size.z);
+      const maxDim = Math.max(size.x, size.y, size.z);
 
-    // Compute camera distance from FOV so the object fits
-    const fov = (camera as THREE.PerspectiveCamera).fov * (Math.PI / 180);
-    let cameraZ = Math.abs((maxDim / 2) / Math.tan(fov / 2));
+      // Compute camera distance from FOV so the object fits
+      const fov = (camera as THREE.PerspectiveCamera).fov * (Math.PI / 180);
+      let cameraZ = Math.abs((maxDim / 2) / Math.tan(fov / 2));
 
-    cameraZ *= 1.5; // padding factor
+      cameraZ *= 1.5; // padding factor
 
-    camera.position.set(0, maxDim * 0.15, cameraZ);
-    camera.lookAt(0, 0, 0);
+      camera.position.set(0, maxDim * 0.15, cameraZ);
+      camera.lookAt(0, 0, 0);
 
-    camera.near = cameraZ / 100;
-    camera.far = cameraZ * 100;
-    camera.updateProjectionMatrix();
-    
-    hasFramed.current = true;
-    
-    // Signal that framing is complete
-    requestAnimationFrame(() => {
-      onReady?.();
-    });
-  }, [object, camera, onReady]);
+      camera.near = cameraZ / 100;
+      camera.far = cameraZ * 100;
+      camera.updateProjectionMatrix();
+      
+      hasFramed.current = true;
+      
+      // Signal that framing is complete
+      requestAnimationFrame(() => {
+        onReady?.();
+      });
+    }, [object, camera, onReady]);
 
-  return null;
-}
+    return null;
+  }
+);
 
 interface ModelProps {
   path: string;
@@ -104,63 +106,67 @@ interface ModelProps {
   onCameraReady?: () => void;
 }
 
-function Model({ path, preset, opacity, onCameraReady }: ModelProps) {
-  const groupRef = useRef<THREE.Group>(null);
-  const { scene } = useGLTF(path);
-  const [clonedScene, setClonedScene] = useState<THREE.Group | null>(null);
+const Model = forwardRef<THREE.Group, ModelProps>(
+  function Model({ path, preset, opacity, onCameraReady }, _ref) {
+    const groupRef = useRef<THREE.Group>(null);
+    const { scene } = useGLTF(path);
+    const [clonedScene, setClonedScene] = useState<THREE.Group | null>(null);
 
-  // Clone the scene to avoid shared state between models
-  useEffect(() => {
-    setClonedScene(scene.clone(true));
-  }, [scene]);
+    // Clone the scene to avoid shared state between models
+    useEffect(() => {
+      setClonedScene(scene.clone(true));
+    }, [scene]);
 
-  // Apply material preset
-  useEffect(() => {
-    if (!clonedScene) return;
-    
-    const materialConfig = MATERIAL_PRESETS[preset];
-    
-    clonedScene.traverse((obj: THREE.Object3D) => {
-      if ((obj as THREE.Mesh).isMesh) {
-        const mesh = obj as THREE.Mesh;
-        mesh.castShadow = true;
-        mesh.receiveShadow = true;
+    // Apply material preset
+    useEffect(() => {
+      if (!clonedScene) return;
+      
+      const materialConfig = MATERIAL_PRESETS[preset];
+      
+      clonedScene.traverse((obj: THREE.Object3D) => {
+        if ((obj as THREE.Mesh).isMesh) {
+          const mesh = obj as THREE.Mesh;
+          mesh.castShadow = true;
+          mesh.receiveShadow = true;
 
-        const material = new THREE.MeshStandardMaterial({
-          color: new THREE.Color(materialConfig.color),
-          metalness: materialConfig.metalness,
-          roughness: materialConfig.roughness,
-          side: THREE.DoubleSide,
-          envMapIntensity: materialConfig.envMapIntensity,
-          transparent: true,
-          opacity: opacity,
-        });
+          const material = new THREE.MeshStandardMaterial({
+            color: new THREE.Color(materialConfig.color),
+            metalness: materialConfig.metalness,
+            roughness: materialConfig.roughness,
+            side: THREE.DoubleSide,
+            envMapIntensity: materialConfig.envMapIntensity,
+            transparent: true,
+            opacity: opacity,
+          });
 
-        mesh.material = material;
-      }
-    });
-  }, [clonedScene, preset, opacity]);
+          mesh.material = material;
+        }
+      });
+    }, [clonedScene, preset, opacity]);
 
-  if (!clonedScene) return null;
+    if (!clonedScene) return null;
 
-  return (
-    <Float speed={1.5} rotationIntensity={0.2} floatIntensity={0.5}>
-      <group ref={groupRef}>
-        <primitive object={clonedScene} />
-        <FitCameraToObject object={clonedScene} onReady={onCameraReady} />
-      </group>
-    </Float>
-  );
-}
+    return (
+      <Float speed={1.5} rotationIntensity={0.2} floatIntensity={0.5}>
+        <group ref={groupRef}>
+          <primitive object={clonedScene} />
+          <FitCameraToObject object={clonedScene} onReady={onCameraReady} />
+        </group>
+      </Float>
+    );
+  }
+);
 
-function LoadingFallback() {
-  return (
-    <mesh>
-      <boxGeometry args={[1, 1, 1]} />
-      <meshStandardMaterial color="hsl(var(--accent))" wireframe />
-    </mesh>
-  );
-}
+const LoadingFallback = forwardRef<THREE.Mesh, object>(
+  function LoadingFallback(_props, ref) {
+    return (
+      <mesh ref={ref}>
+        <boxGeometry args={[1, 1, 1]} />
+        <meshStandardMaterial color="hsl(var(--accent))" wireframe />
+      </mesh>
+    );
+  }
+);
 
 interface SceneProps {
   activeIndex: number;
@@ -170,78 +176,80 @@ interface SceneProps {
   onModelReady: () => void;
 }
 
-function Scene({ activeIndex, controlsRef, onInteractionStart, onInteractionEnd, onModelReady }: SceneProps) {
-  const model = HERO_MODELS[activeIndex];
-  const { camera } = useThree();
-  
-  // Reset camera and OrbitControls when slide changes
-  useEffect(() => {
-    // Reset camera to default position first
-    camera.position.set(0, 1, 8);
-    camera.lookAt(0, 0, 0);
-    camera.updateProjectionMatrix();
+const Scene = forwardRef<THREE.Group, SceneProps>(
+  function Scene({ activeIndex, controlsRef, onInteractionStart, onInteractionEnd, onModelReady }, _ref) {
+    const model = HERO_MODELS[activeIndex];
+    const { camera } = useThree();
     
-    if (controlsRef.current) {
-      controlsRef.current.reset();
-    }
-  }, [activeIndex, controlsRef, camera]);
-  
-  return (
-    <>
-      {/* Refined studio lighting */}
-      {/* Very low ambient - prevents crushed shadows */}
-      <ambientLight intensity={0.12} />
-      {/* Strong key light - main sculpting, top-left */}
-      <directionalLight 
-        position={[-4, 6, 4]} 
-        intensity={1.2} 
-        castShadow 
-        shadow-mapSize={[1024, 1024]}
-      />
-      {/* Weak fill - opposite side */}
-      <directionalLight position={[4, 2, 3]} intensity={0.2} />
-      {/* Strong rim light - outlines silhouette */}
-      <directionalLight position={[0, 4, -6]} intensity={0.8} />
-      {/* Accent light - subtle brand tint from below */}
-      <pointLight position={[0, -2, 2]} intensity={0.15} color="#7fbfb7" />
+    // Reset camera and OrbitControls when slide changes
+    useEffect(() => {
+      // Reset camera to default position first
+      camera.position.set(0, 1, 8);
+      camera.lookAt(0, 0, 0);
+      camera.updateProjectionMatrix();
       
-      {/* OrbitControls for drag-to-rotate */}
-      <OrbitControls
-        ref={controlsRef}
-        enableZoom={false}
-        enablePan={false}
-        enableDamping={true}
-        dampingFactor={0.05}
-        rotateSpeed={0.8}
-        minPolarAngle={Math.PI / 4}
-        maxPolarAngle={Math.PI / 1.5}
-        onStart={onInteractionStart}
-        onEnd={onInteractionEnd}
-      />
-      
-      <Suspense fallback={<LoadingFallback />}>
-        {/* Key forces remount when activeIndex changes, ensuring fresh camera fit */}
-        <Model 
-          key={activeIndex}
-          path={model.path} 
-          preset={model.preset as keyof typeof MATERIAL_PRESETS} 
-          opacity={1}
-          onCameraReady={onModelReady}
+      if (controlsRef.current) {
+        controlsRef.current.reset();
+      }
+    }, [activeIndex, controlsRef, camera]);
+    
+    return (
+      <>
+        {/* Refined studio lighting */}
+        {/* Very low ambient - prevents crushed shadows */}
+        <ambientLight intensity={0.12} />
+        {/* Strong key light - main sculpting, top-left */}
+        <directionalLight 
+          position={[-4, 6, 4]} 
+          intensity={1.2} 
+          castShadow 
+          shadow-mapSize={[1024, 1024]}
         />
-        {/* HDRI environment for realistic reflections - warehouse for gold contrast */}
-        <Environment preset="warehouse" background={false} />
-        {/* Stronger contact shadows to ground the model */}
-        <ContactShadows 
-          position={[0, -1.5, 0]} 
-          opacity={0.65} 
-          scale={8} 
-          blur={1.5}
-          far={4}
+        {/* Weak fill - opposite side */}
+        <directionalLight position={[4, 2, 3]} intensity={0.2} />
+        {/* Strong rim light - outlines silhouette */}
+        <directionalLight position={[0, 4, -6]} intensity={0.8} />
+        {/* Accent light - subtle brand tint from below */}
+        <pointLight position={[0, -2, 2]} intensity={0.15} color="#7fbfb7" />
+        
+        {/* OrbitControls for drag-to-rotate */}
+        <OrbitControls
+          ref={controlsRef}
+          enableZoom={false}
+          enablePan={false}
+          enableDamping={true}
+          dampingFactor={0.05}
+          rotateSpeed={0.8}
+          minPolarAngle={Math.PI / 4}
+          maxPolarAngle={Math.PI / 1.5}
+          onStart={onInteractionStart}
+          onEnd={onInteractionEnd}
         />
-      </Suspense>
-    </>
-  );
-}
+        
+        <Suspense fallback={<LoadingFallback />}>
+          {/* Key forces remount when activeIndex changes, ensuring fresh camera fit */}
+          <Model 
+            key={activeIndex}
+            path={model.path} 
+            preset={model.preset as keyof typeof MATERIAL_PRESETS} 
+            opacity={1}
+            onCameraReady={onModelReady}
+          />
+          {/* HDRI environment for realistic reflections - warehouse for gold contrast */}
+          <Environment preset="warehouse" background={false} />
+          {/* Stronger contact shadows to ground the model */}
+          <ContactShadows 
+            position={[0, -1.5, 0]} 
+            opacity={0.65} 
+            scale={8} 
+            blur={1.5}
+            far={4}
+          />
+        </Suspense>
+      </>
+    );
+  }
+);
 
 export function Hero3DModel() {
   const [activeIndex, setActiveIndex] = useState(0);
