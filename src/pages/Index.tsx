@@ -180,8 +180,8 @@ const Index = () => {
                   AI Receptionist
                 </h2>
                 <p className="text-muted-foreground leading-relaxed">
-                  Never miss a lead — even when you're busy on a job, with a client, or after hours.
-                  Our AI Receptionist responds instantly to calls, texts, and form submissions, qualifies inquiries, and routes real opportunities where they belong.
+                  Never miss a lead — even when you're on a job, with a client, or after hours.
+                  Our AI Receptionist answers calls, texts, and form submissions instantly, qualifies inquiries, and handles next steps automatically.
                 </p>
               </div>
               
@@ -196,12 +196,12 @@ const Index = () => {
                 </li>
                 <li className="flex items-start gap-3">
                   <CheckCircle className="h-5 w-5 text-accent mt-0.5 flex-shrink-0" />
-                  <span className="text-foreground">Automatically books appointments or routes priority leads</span>
+                  <span className="text-foreground">Automatically schedules appointments or escalates priority inquiries</span>
                 </li>
               </ul>
               
               <p className="text-sm text-muted-foreground">
-                Built for owner-operated and service businesses that can't always answer the phone — but don't want to miss work.
+                Built for service and owner-operated businesses that can't always answer the phone — but don't want to miss work.
               </p>
               
               <div className="flex flex-wrap gap-3">
