@@ -180,27 +180,28 @@ const Index = () => {
                   AI Receptionist
                 </h2>
                 <p className="text-muted-foreground leading-relaxed">
-                  Automatically respond to missed calls, texts, and form submissions — qualify leads, answer common questions, and route serious inquiries without interrupting your day.
+                  Never miss a lead — even when you're busy on a job, with a client, or after hours.
+                  Our AI Receptionist responds instantly to calls, texts, and form submissions, qualifies inquiries, and routes real opportunities where they belong.
                 </p>
               </div>
               
               <ul className="space-y-3">
                 <li className="flex items-start gap-3">
                   <CheckCircle className="h-5 w-5 text-accent mt-0.5 flex-shrink-0" />
-                  <span className="text-foreground">Instant responses to calls, texts, and form submissions</span>
+                  <span className="text-foreground">Instant responses to missed calls, texts, and website forms</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <CheckCircle className="h-5 w-5 text-accent mt-0.5 flex-shrink-0" />
-                  <span className="text-foreground">Smart qualifying questions before you ever pick up</span>
+                  <span className="text-foreground">Smart qualifying questions so you only deal with serious leads</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <CheckCircle className="h-5 w-5 text-accent mt-0.5 flex-shrink-0" />
-                  <span className="text-foreground">Seamless handoff to booking links or a real person</span>
+                  <span className="text-foreground">Automatically books appointments or routes priority leads</span>
                 </li>
               </ul>
               
               <p className="text-sm text-muted-foreground">
-                Works especially well for service businesses that miss calls during the day.
+                Built for owner-operated and service businesses that can't always answer the phone — but don't want to miss work.
               </p>
               
               <div className="flex flex-wrap gap-3">
