@@ -1,9 +1,10 @@
 import { Link } from "react-router-dom";
-import { ArrowLeft, Phone, Mail, MapPin, Star, CheckCircle, Clock, Shield } from "lucide-react";
+import { ArrowLeft, Phone, Mail, MapPin, Star, CheckCircle, Clock, Shield, Facebook, Instagram, Twitter } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FeatureSteps } from "@/components/ui/feature-section";
 import { FeaturesSectionWithHoverEffects } from "@/components/ui/feature-section-with-hover-effects";
 import { LampContainer } from "@/components/ui/lamp";
+import { TextHoverEffect, FooterBackgroundGradient } from "@/components/ui/hover-footer";
 import { motion } from "framer-motion";
 import rooferHero from "@/assets/demos/roofer-hero.jpeg";
 
@@ -158,45 +159,83 @@ const RooferDemo = () => {
       </section>
 
       {/* Footer */}
-      <footer className="bg-slate-800 py-12">
-        <div className="container mx-auto px-6">
-          <div className="grid md:grid-cols-3 gap-8">
+      <footer className="bg-slate-900 relative overflow-hidden">
+        <FooterBackgroundGradient />
+        
+        <div className="container mx-auto px-6 py-12 relative z-10">
+          <div className="grid md:grid-cols-4 gap-8">
+            {/* Brand */}
             <div>
-              <h3 className="font-bold text-lg mb-4">Summit Roofing Co.</h3>
-              <p className="text-slate-400 text-sm">
+              <h3 className="font-bold text-xl mb-4 flex items-center gap-2">
+                <span className="text-orange-400">🏠</span> Summit Roofing
+              </h3>
+              <p className="text-slate-400 text-sm leading-relaxed">
                 Professional roofing services you can trust. Family-owned and operated since 2004.
               </p>
             </div>
+
+            {/* Services */}
             <div>
-              <h4 className="font-medium mb-4">Contact</h4>
-              <div className="space-y-2 text-sm text-slate-400">
-                <div className="flex items-center gap-2">
-                  <Phone className="h-4 w-4" />
+              <h4 className="font-semibold text-white mb-4">Services</h4>
+              <ul className="space-y-2 text-sm">
+                {["Roof Replacement", "Roof Repair", "Inspections", "Storm Damage"].map((link) => (
+                  <li key={link}>
+                    <a href="#services" className="text-slate-400 hover:text-orange-400 transition-colors">
+                      {link}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Contact */}
+            <div>
+              <h4 className="font-semibold text-white mb-4">Contact Us</h4>
+              <div className="space-y-3 text-sm">
+                <a href="tel:+15551234567" className="flex items-center gap-2 text-slate-400 hover:text-orange-400 transition-colors">
+                  <Phone className="h-4 w-4 text-orange-400" />
                   <span>(555) 123-4567</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Mail className="h-4 w-4" />
+                </a>
+                <a href="mailto:info@summitroofing.com" className="flex items-center gap-2 text-slate-400 hover:text-orange-400 transition-colors">
+                  <Mail className="h-4 w-4 text-orange-400" />
                   <span>info@summitroofing.com</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <MapPin className="h-4 w-4" />
+                </a>
+                <div className="flex items-center gap-2 text-slate-400">
+                  <MapPin className="h-4 w-4 text-orange-400" />
                   <span>123 Main St, Anytown USA</span>
                 </div>
               </div>
             </div>
+
+            {/* Social */}
             <div>
-              <h4 className="font-medium mb-4">Service Areas</h4>
-              <p className="text-sm text-slate-400">
-                Metro City, Suburbs, Nearby Towns, and surrounding areas within 50 miles.
-              </p>
+              <h4 className="font-semibold text-white mb-4">Follow Us</h4>
+              <div className="flex gap-3">
+                {[Facebook, Instagram, Twitter].map((Icon, i) => (
+                  <a
+                    key={i}
+                    href="#"
+                    className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center text-slate-400 hover:bg-orange-500 hover:text-white transition-all"
+                  >
+                    <Icon className="h-5 w-5" />
+                  </a>
+                ))}
+              </div>
             </div>
           </div>
-          <div className="border-t border-slate-700 mt-8 pt-8 text-center text-sm text-slate-500">
-            <p>© 2024 Summit Roofing Co. All rights reserved.</p>
-            <p className="mt-2 text-xs">
+
+          {/* Divider & Copyright */}
+          <div className="border-t border-slate-800 mt-10 pt-6 flex flex-col md:flex-row justify-between items-center text-sm text-slate-500">
+            <p>© {new Date().getFullYear()} Summit Roofing Co. All rights reserved.</p>
+            <p className="mt-2 md:mt-0 text-xs">
               Demo site by <Link to="/" className="text-orange-400 hover:underline">Pleasant Cove Design</Link>
             </p>
           </div>
+        </div>
+
+        {/* Text Hover Effect Background */}
+        <div className="h-40 flex items-center justify-center">
+          <TextHoverEffect text="SUMMIT" />
         </div>
       </footer>
     </div>
