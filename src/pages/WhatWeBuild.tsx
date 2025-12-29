@@ -622,58 +622,72 @@ const WhatWeBuild = () => {
                   animate="visible"
                   className="grid grid-cols-2 md:grid-cols-4 gap-4 auto-rows-[180px] md:auto-rows-[200px]"
                 >
-                  {FEATURES.map((item, index) => (
-                    <motion.div
-                      key={item.id}
-                      className={cn(
-                        "relative overflow-hidden rounded-xl bg-card/50 border backdrop-blur-sm",
-                        item.span,
-                        activeId === item.id 
-                          ? "border-accent ring-2 ring-accent/30" 
-                          : "border-border/30 hover:border-accent/50"
-                      )}
-                      onClick={() => handleGalleryCardClick(item)}
-                      variants={{
-                        hidden: { y: 30, scale: 0.92, opacity: 0 },
-                        visible: {
-                          y: 0,
-                          scale: 1,
-                          opacity: 1,
-                          transition: {
-                            type: "spring",
-                            stiffness: 350,
-                            damping: 25,
-                            delay: index * 0.03,
+                  {FEATURES.map((item, index) => {
+                    const Icon = item.icon;
+                    return (
+                      <motion.div
+                        key={item.id}
+                        className={cn(
+                          "group relative overflow-hidden rounded-xl bg-card/50 border backdrop-blur-sm cursor-pointer",
+                          item.span,
+                          activeId === item.id 
+                            ? "border-accent ring-2 ring-accent/30" 
+                            : "border-border/30 hover:border-accent/50"
+                        )}
+                        onClick={() => handleGalleryCardClick(item)}
+                        variants={{
+                          hidden: { y: 30, scale: 0.92, opacity: 0 },
+                          visible: {
+                            y: 0,
+                            scale: 1,
+                            opacity: 1,
+                            transition: {
+                              type: "spring",
+                              stiffness: 350,
+                              damping: 25,
+                              delay: index * 0.03,
+                            },
                           },
-                        },
-                      }}
-                      whileHover={{
-                        scale: 1.015,
-                        boxShadow: "0 0 0 1px hsl(var(--accent) / 0.25)",
-                      }}
-                      drag
-                      dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
-                      dragElastic={1}
-                      onDragStart={() => setIsDragging(true)}
-                      onDragEnd={() => setIsDragging(false)}
-                    >
-                      <MediaItem
-                        item={item}
-                        className="absolute inset-0 w-full h-full"
-                      />
+                        }}
+                        whileHover={{
+                          scale: 1.02,
+                          y: -4,
+                          transition: { type: "spring", stiffness: 400, damping: 25 }
+                        }}
+                      >
+                        {/* Media with consistent overlay */}
+                        <MediaItem
+                          item={item}
+                          className="absolute inset-0 w-full h-full"
+                        />
+                        
+                        {/* Consistent dark overlay for all cards */}
+                        <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/30 to-background/10 group-hover:from-background/95 group-hover:via-background/40 transition-all duration-300" />
 
-                      <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-transparent">
-                        <div className="absolute bottom-0 left-0 right-0 p-4">
-                          <h3 className="text-foreground font-semibold text-sm md:text-base">
-                            {item.title}
-                          </h3>
-                          <p className="text-muted-foreground text-xs md:text-sm">
+                        {/* Content overlay */}
+                        <div className="absolute inset-0 flex flex-col justify-end p-4">
+                          {/* Icon badge */}
+                          <div className="flex items-center gap-2 mb-1">
+                            <div className="w-6 h-6 rounded-md bg-accent/20 flex items-center justify-center">
+                              <Icon className="h-3.5 w-3.5 text-accent" />
+                            </div>
+                            <h3 className="text-foreground font-semibold text-sm md:text-base">
+                              {item.title}
+                            </h3>
+                          </div>
+                          <p className="text-muted-foreground text-xs md:text-sm mb-2">
                             {item.shortDesc}
                           </p>
+                          
+                          {/* View details micro-cue */}
+                          <div className="flex items-center gap-1 text-xs text-accent opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                            <span>View details</span>
+                            <ArrowRight className="h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
+                          </div>
                         </div>
-                      </div>
-                    </motion.div>
-                  ))}
+                      </motion.div>
+                    );
+                  })}
                 </motion.div>
               )}
             </AnimatePresence>
@@ -684,6 +698,14 @@ const WhatWeBuild = () => {
       {/* Feature Carousel - synced with gallery */}
       <section ref={carouselRef} className="relative w-full py-16 overflow-hidden bg-background">
         <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          {/* Details header */}
+          <div className="text-center mb-8">
+            <p className="text-sm uppercase tracking-wider text-muted-foreground mb-2">Details</p>
+            <h3 className="font-serif text-2xl md:text-3xl font-bold text-foreground">
+              {FEATURES.find(f => f.id === activeId)?.title || "Explore Features"}
+            </h3>
+          </div>
+          
           <div className="relative h-[450px] sm:h-[500px] flex items-center justify-center">
             {carouselItems.map((item, index) => {
               const position =
