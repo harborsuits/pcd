@@ -243,11 +243,7 @@ const Index = () => {
                 </GlowCard>
               </div>
               
-              <p className="text-sm text-muted-foreground italic">
-                Built for service and owner-operated businesses that can't always answer the phone — but don't want to miss work.
-              </p>
-              
-              <div className="flex flex-wrap gap-4 pt-2">
+              <div className="flex flex-wrap justify-center gap-4 pt-2">
                 <a href="#demos">
                   <LiquidButton size="lg">
                     See How It Works
