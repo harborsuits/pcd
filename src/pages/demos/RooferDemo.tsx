@@ -62,10 +62,10 @@ const RooferDemo = () => {
             backgroundImage: `url(${rooferBg})`,
             backgroundSize: 'cover',
             backgroundPosition: 'center top',
-            opacity: 0.15,
+            opacity: 0.25,
           }}
         />
-        <div className="absolute inset-0 z-0 bg-gradient-to-b from-slate-950/50 via-slate-950/80 to-slate-950" />
+        <div className="absolute inset-0 z-[1] bg-gradient-to-b from-slate-950/40 via-slate-950/70 to-slate-950" />
         
         <LampContainer className="min-h-[700px] bg-transparent relative z-10">
         <motion.div
