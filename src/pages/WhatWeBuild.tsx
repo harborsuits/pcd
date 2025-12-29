@@ -7,6 +7,7 @@ import { StaggerTestimonials } from "@/components/ui/stagger-testimonials";
 import websitesConvertVideo from "@/assets/videos/websites-convert.mp4";
 import officeVideo from "@/assets/videos/office-video.mp4";
 import aiFrontDoorVideo from "@/assets/videos/ai-front-door.mp4";
+import clientPortalsVideo from "@/assets/videos/client-portals.mp4";
 
 const mediaItems = [
   {
@@ -35,10 +36,10 @@ const mediaItems = [
   },
   {
     id: 4,
-    type: "image" as const,
+    type: "video" as const,
     title: "Client Portals",
     desc: "One shared place for approvals and updates.",
-    url: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=1400&q=80",
+    url: clientPortalsVideo,
     span: "md:col-span-1 md:row-span-1 col-span-1 row-span-1",
   },
   {
