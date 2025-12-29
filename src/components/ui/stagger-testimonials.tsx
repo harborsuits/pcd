@@ -134,8 +134,18 @@ const TestimonialCard: React.FC<TestimonialCardProps> = ({
   );
 };
 
-export const StaggerTestimonials: React.FC = () => {
-  const [cardSize, setCardSize] = useState(365);
+interface StaggerTestimonialsProps {
+  embedded?: boolean;
+  height?: number;
+  className?: string;
+}
+
+export const StaggerTestimonials: React.FC<StaggerTestimonialsProps> = ({
+  embedded = false,
+  height = 500,
+  className,
+}) => {
+  const [cardSize, setCardSize] = useState(embedded ? 300 : 365);
   const [testimonialsList, setTestimonialsList] = useState(testimonials);
 
   const handleMove = (steps: number) => {
@@ -159,13 +169,70 @@ export const StaggerTestimonials: React.FC = () => {
   useEffect(() => {
     const updateSize = () => {
       const { matches } = window.matchMedia("(min-width: 640px)");
-      setCardSize(matches ? 365 : 290);
+      setCardSize(embedded ? (matches ? 300 : 260) : (matches ? 365 : 290));
     };
     updateSize();
     window.addEventListener("resize", updateSize);
     return () => window.removeEventListener("resize", updateSize);
-  }, []);
+  }, [embedded]);
 
+  // Embedded mode - just the carousel
+  if (embedded) {
+    return (
+      <div
+        className={cn("relative w-full overflow-hidden", className)}
+        style={{ height }}
+      >
+        {/* Carousel */}
+        <div className="relative h-full flex items-center justify-center">
+          {testimonialsList.map((t, index) => {
+            const position =
+              testimonialsList.length % 2
+                ? index - (testimonialsList.length + 1) / 2
+                : index - testimonialsList.length / 2;
+
+            return (
+              <TestimonialCard
+                key={t.tempId}
+                position={position}
+                testimonial={t}
+                handleMove={handleMove}
+                cardSize={cardSize}
+              />
+            );
+          })}
+
+          {/* Navigation */}
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-3">
+            <button
+              onClick={() => handleMove(-1)}
+              className={cn(
+                "flex h-10 w-10 items-center justify-center transition-colors rounded-lg",
+                "bg-background/80 border border-border hover:bg-primary hover:text-primary-foreground",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              )}
+              aria-label="Previous testimonial"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <button
+              onClick={() => handleMove(1)}
+              className={cn(
+                "flex h-10 w-10 items-center justify-center transition-colors rounded-lg",
+                "bg-background/80 border border-border hover:bg-primary hover:text-primary-foreground",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              )}
+              aria-label="Next testimonial"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Full section mode (default)
   return (
     <section className="relative w-full py-24 overflow-hidden bg-background">
       <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
