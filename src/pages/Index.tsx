@@ -127,17 +127,17 @@ const Index = () => {
             
             {/* CTAs */}
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8">
-              <LiquidButton asChild size="lg" className="group">
-                <a href="#demos">
+              <a href="#demos">
+                <LiquidButton size="lg" className="group">
                   Get a Demo
                   <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
-                </a>
-              </LiquidButton>
-              <LiquidButton asChild size="lg" className="group">
-                <Link to="/portal">
+                </LiquidButton>
+              </a>
+              <Link to="/portal">
+                <LiquidButton size="lg" className="group">
                   Client Portal
-                </Link>
-              </LiquidButton>
+                </LiquidButton>
+              </Link>
             </div>
             
             {/* Trust row */}
@@ -207,15 +207,17 @@ const Index = () => {
               </p>
               
               <div className="flex flex-wrap gap-3">
-                <LiquidButton asChild size="lg" className="group">
-                  <a href="#demos">
+                <a href="#demos">
+                  <LiquidButton size="lg" className="group">
                     See How It Works
                     <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
-                  </a>
-                </LiquidButton>
-                <LiquidButton asChild size="lg" className="group">
-                  <Link to="/get-demo">Add to My Project</Link>
-                </LiquidButton>
+                  </LiquidButton>
+                </a>
+                <Link to="/get-demo">
+                  <LiquidButton size="lg" className="group">
+                    Add to My Project
+                  </LiquidButton>
+                </Link>
               </div>
             </div>
             
@@ -281,12 +283,12 @@ const Index = () => {
           </div>
           
           <div className="text-center mt-10">
-            <LiquidButton asChild size="lg" className="group">
-              <Link to="/get-demo">
+            <Link to="/get-demo">
+              <LiquidButton size="lg" className="group">
                 Request a Custom Demo
                 <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
-              </Link>
-            </LiquidButton>
+              </LiquidButton>
+            </Link>
           </div>
         </div>
       </section>
@@ -336,12 +338,12 @@ const Index = () => {
           <p className="text-muted-foreground max-w-md mx-auto mb-6">
             Access your portal using the link we sent you, or log in below.
           </p>
-          <LiquidButton asChild size="lg" className="group">
-            <Link to="/portal">
+          <Link to="/portal">
+            <LiquidButton size="lg" className="group">
               <LogIn className="mr-2 h-4 w-4" />
               Log in to your portal
-            </Link>
-          </LiquidButton>
+            </LiquidButton>
+          </Link>
         </div>
       </section>
 
