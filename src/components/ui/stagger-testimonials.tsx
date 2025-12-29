@@ -234,7 +234,7 @@ export const StaggerTestimonials: React.FC<StaggerTestimonialsProps> = ({
 
   // Full section mode (default)
   return (
-    <section className="relative w-full py-24 overflow-hidden bg-background">
+    <section className="relative w-full py-16 overflow-hidden bg-background">
       <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="text-center mb-16">
