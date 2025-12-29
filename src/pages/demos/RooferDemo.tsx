@@ -7,6 +7,7 @@ import { LampContainer } from "@/components/ui/lamp";
 import { TextHoverEffect, FooterBackgroundGradient } from "@/components/ui/hover-footer";
 import { motion } from "framer-motion";
 import rooferHero from "@/assets/demos/roofer-hero.jpeg";
+import rooferBg from "@/assets/demos/roofer-bg.jpeg";
 
 const roofingFeatures = [
   { 
@@ -53,7 +54,20 @@ const RooferDemo = () => {
       </header>
 
       {/* Hero with Lamp Effect */}
-      <LampContainer className="min-h-[700px] bg-slate-950">
+      <div className="relative">
+        {/* Background Image */}
+        <div 
+          className="absolute inset-0 z-0"
+          style={{
+            backgroundImage: `url(${rooferBg})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center top',
+            opacity: 0.15,
+          }}
+        />
+        <div className="absolute inset-0 z-0 bg-gradient-to-b from-slate-950/50 via-slate-950/80 to-slate-950" />
+        
+        <LampContainer className="min-h-[700px] bg-transparent relative z-10">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -99,6 +113,7 @@ const RooferDemo = () => {
           </div>
         </motion.div>
       </LampContainer>
+      </div>
 
       {/* Feature Steps Section */}
       <section className="py-16 bg-slate-900">
