@@ -48,9 +48,9 @@ const RooferDemo = () => {
             <a href="#about" className="text-slate-300 hover:text-white transition-colors">About</a>
             <a href="#reviews" className="text-slate-300 hover:text-white transition-colors">Reviews</a>
             <ShimmerButton 
-              shimmerColor="#fb923c" 
-              background="rgba(249, 115, 22, 1)"
-              className="shadow-lg shadow-orange-500/25 text-sm font-medium px-4 py-2"
+              shimmerColor="#94a3b8" 
+              background="rgba(30, 41, 59, 0.9)"
+              className="text-sm font-medium px-6 py-2"
             >
               Get Free Estimate
             </ShimmerButton>
@@ -94,9 +94,9 @@ const RooferDemo = () => {
           
           <div className="flex flex-wrap justify-center gap-4 mb-8">
             <ShimmerButton 
-              shimmerColor="#fb923c" 
-              background="rgba(249, 115, 22, 1)"
-              className="shadow-lg shadow-orange-500/30 text-base font-medium"
+              shimmerColor="#94a3b8" 
+              background="rgba(30, 41, 59, 0.9)"
+              className="text-base font-medium px-6 py-3"
             >
               <Phone className="mr-2 h-5 w-5" />
               Call: (555) 123-4567
