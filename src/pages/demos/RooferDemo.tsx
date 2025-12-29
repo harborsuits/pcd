@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { ArrowLeft, Phone, Mail, MapPin, Star, CheckCircle, Clock, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import rooferHero from "@/assets/demos/roofer-hero.jpeg";
 
 const RooferDemo = () => {
   return (
@@ -29,7 +30,7 @@ const RooferDemo = () => {
       <section className="relative py-24 overflow-hidden">
         <div className="absolute inset-0">
           <img 
-            src="https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=1920&auto=format&fit=crop"
+            src={rooferHero}
             alt="Roofing work"
             className="w-full h-full object-cover opacity-30"
           />
