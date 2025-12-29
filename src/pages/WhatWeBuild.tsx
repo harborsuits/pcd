@@ -450,13 +450,31 @@ const FeatureCardView: React.FC<FeatureCardViewProps> = ({ position, item, handl
   );
 };
 
+// Calculate which index is the visual "center" for the stagger effect
+// For 6 items with position = index - length/2, the center (position 0) is at index 3
+const getCenterIndex = (length: number) => Math.floor(length / 2);
+
+// Create initial carousel order with "Websites" (index 0) centered
+const getInitialCarouselOrder = () => {
+  const centerPos = getCenterIndex(FEATURES.length);
+  // We need index 0 to appear at centerPos (index 3 for 6 items)
+  // So we rotate by -(centerPos) positions, which means moving last items to front
+  const rotations = centerPos; // Move 3 items from end to start
+  let items = [...FEATURES];
+  for (let i = 0; i < rotations; i++) {
+    const last = items.pop();
+    if (last) items.unshift({ ...last });
+  }
+  return items;
+};
+
 const WhatWeBuild = () => {
   // Shared state
   const [activeId, setActiveId] = useState<string>(FEATURES[0].id);
   const [selectedItem, setSelectedItem] = useState<FeatureItem | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [cardSize, setCardSize] = useState(340);
-  const [carouselItems, setCarouselItems] = useState(FEATURES);
+  const [carouselItems, setCarouselItems] = useState(getInitialCarouselOrder);
   const carouselRef = useRef<HTMLDivElement>(null);
 
   // Find the active index
@@ -472,26 +490,37 @@ const WhatWeBuild = () => {
     // Update active state
     setActiveId(item.id);
     
-    // Reorder carousel items to center the selected item
-    const targetIndex = FEATURES.findIndex(f => f.id === item.id);
-    const currentCenterIndex = carouselItems.findIndex(f => f.id === carouselItems[Math.floor(carouselItems.length / 2)]?.id);
+    // Find where this item needs to be in the array for it to appear centered
+    const targetFeatureIndex = FEATURES.findIndex(f => f.id === item.id);
+    const centerPos = getCenterIndex(FEATURES.length);
     
-    // Reorganize the array to put the selected item in the center
-    const newItems = [...FEATURES];
-    const itemsToMove = targetIndex;
-    for (let i = 0; i < itemsToMove; i++) {
-      const first = newItems.shift();
-      if (first) {
-        newItems.push({ ...first });
+    // Calculate how many positions to rotate
+    // We need targetFeatureIndex to end up at centerPos
+    const rotations = targetFeatureIndex - centerPos;
+    
+    // Rotate the array
+    let newItems = [...FEATURES];
+    if (rotations > 0) {
+      // Move items from start to end
+      for (let i = 0; i < rotations; i++) {
+        const first = newItems.shift();
+        if (first) newItems.push({ ...first });
+      }
+    } else if (rotations < 0) {
+      // Move items from end to start
+      for (let i = 0; i < Math.abs(rotations); i++) {
+        const last = newItems.pop();
+        if (last) newItems.unshift({ ...last });
       }
     }
+    
     setCarouselItems(newItems);
     
     // Scroll to carousel section
     if (carouselRef.current) {
       carouselRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
     }
-  }, [isDragging, carouselItems]);
+  }, [isDragging]);
 
   // Handle carousel navigation
   const handleCarouselMove = useCallback((steps: number) => {
@@ -512,7 +541,7 @@ const WhatWeBuild = () => {
     setCarouselItems(newList);
     
     // Update active ID based on new center item
-    const centerIndex = Math.floor(newList.length / 2);
+    const centerIndex = getCenterIndex(newList.length);
     const centerItem = newList[centerIndex];
     if (centerItem) {
       setActiveId(centerItem.id);
