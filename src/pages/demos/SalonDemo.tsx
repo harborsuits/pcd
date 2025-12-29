@@ -1,0 +1,252 @@
+import { Link } from "react-router-dom";
+import { ArrowLeft, Phone, MapPin, Clock, Star, Instagram, Scissors, Sparkles } from "lucide-react";
+import { Button } from "@/components/ui/button";
+
+const SalonDemo = () => {
+  return (
+    <div className="min-h-screen bg-rose-50 text-stone-800">
+      {/* Header */}
+      <header className="bg-white/80 backdrop-blur-sm border-b border-rose-100 sticky top-0 z-50">
+        <div className="container mx-auto px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Link to="/#demos" className="text-stone-400 hover:text-stone-800 transition-colors">
+              <ArrowLeft className="h-5 w-5" />
+            </Link>
+            <span className="font-serif text-2xl text-rose-900">Blush & Bloom</span>
+          </div>
+          <nav className="hidden md:flex items-center gap-6 text-sm">
+            <a href="#services" className="text-stone-600 hover:text-rose-700">Services</a>
+            <a href="#team" className="text-stone-600 hover:text-rose-700">Team</a>
+            <a href="#gallery" className="text-stone-600 hover:text-rose-700">Gallery</a>
+            <Button size="sm" className="bg-rose-500 hover:bg-rose-600">
+              Book Now
+            </Button>
+          </nav>
+        </div>
+      </header>
+
+      {/* Hero */}
+      <section className="relative py-24 overflow-hidden">
+        <div className="absolute inset-0">
+          <img 
+            src="https://images.unsplash.com/photo-1560066984-138dadb4c035?w=1920&auto=format&fit=crop"
+            alt="Salon interior"
+            className="w-full h-full object-cover opacity-20"
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-rose-50/50 to-rose-50" />
+        </div>
+        
+        <div className="relative container mx-auto px-6 text-center">
+          <Sparkles className="h-12 w-12 text-rose-400 mx-auto mb-6" />
+          <h1 className="font-serif text-5xl md:text-6xl lg:text-7xl mb-6 text-rose-900">
+            Blush & Bloom
+          </h1>
+          <p className="text-xl text-stone-600 mb-8 max-w-2xl mx-auto">
+            A modern beauty studio specializing in hair, nails, and self-care. 
+            Where you come to relax, refresh, and leave feeling your best.
+          </p>
+          <div className="flex flex-wrap justify-center gap-4">
+            <Button size="lg" className="bg-rose-500 hover:bg-rose-600">
+              Book an Appointment
+            </Button>
+            <Button size="lg" variant="outline" className="border-rose-300 text-rose-700 hover:bg-rose-100">
+              View Services
+            </Button>
+          </div>
+          
+          <div className="flex flex-wrap justify-center gap-8 mt-12 text-sm text-stone-600">
+            <div className="flex items-center gap-2">
+              <Clock className="h-5 w-5 text-rose-400" />
+              <span>Tue–Sat: 9AM–7PM</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Star className="h-5 w-5 text-rose-400" />
+              <span>4.9★ (320+ Reviews)</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <MapPin className="h-5 w-5 text-rose-400" />
+              <span>Uptown Village</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Services */}
+      <section id="services" className="py-20 bg-white">
+        <div className="container mx-auto px-6">
+          <h2 className="font-serif text-4xl text-center mb-4 text-rose-900">Our Services</h2>
+          <p className="text-stone-500 text-center mb-12 max-w-xl mx-auto">
+            Expert stylists. Premium products. Personalized care for every client.
+          </p>
+          
+          <div className="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
+            {[
+              { 
+                title: "Hair", 
+                services: ["Cuts & Styling", "Color & Highlights", "Treatments", "Blowouts"],
+                icon: Scissors,
+                from: "$45"
+              },
+              { 
+                title: "Nails", 
+                services: ["Manicures", "Pedicures", "Gel & Acrylics", "Nail Art"],
+                icon: Sparkles,
+                from: "$35"
+              },
+              { 
+                title: "Beauty", 
+                services: ["Facials", "Waxing", "Lash Extensions", "Makeup"],
+                icon: Star,
+                from: "$55"
+              },
+            ].map((category) => (
+              <div key={category.title} className="bg-rose-50 rounded-2xl p-8 text-center hover:shadow-lg transition-shadow">
+                <category.icon className="h-10 w-10 text-rose-400 mx-auto mb-4" />
+                <h3 className="font-serif text-2xl text-rose-900 mb-2">{category.title}</h3>
+                <p className="text-rose-400 text-sm mb-4">Starting from {category.from}</p>
+                <ul className="space-y-2 text-stone-600 text-sm">
+                  {category.services.map((service) => (
+                    <li key={service}>{service}</li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+          
+          <div className="text-center mt-12">
+            <Button className="bg-rose-500 hover:bg-rose-600">
+              View Full Menu & Pricing
+            </Button>
+          </div>
+        </div>
+      </section>
+
+      {/* Team */}
+      <section id="team" className="py-20 bg-rose-50">
+        <div className="container mx-auto px-6">
+          <h2 className="font-serif text-4xl text-center mb-4 text-rose-900">Meet Our Team</h2>
+          <p className="text-stone-500 text-center mb-12 max-w-xl mx-auto">
+            Passionate professionals dedicated to making you look and feel amazing.
+          </p>
+          
+          <div className="grid md:grid-cols-4 gap-6 max-w-4xl mx-auto">
+            {[
+              { name: "Sarah", role: "Owner & Senior Stylist", image: "https://images.unsplash.com/photo-1580618672591-eb180b1a973f?w=300&auto=format&fit=crop" },
+              { name: "Maya", role: "Color Specialist", image: "https://images.unsplash.com/photo-1594744803329-e58b31de8bf5?w=300&auto=format&fit=crop" },
+              { name: "Jessica", role: "Nail Technician", image: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=300&auto=format&fit=crop" },
+              { name: "Emma", role: "Esthetician", image: "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=300&auto=format&fit=crop" },
+            ].map((member) => (
+              <div key={member.name} className="text-center group">
+                <div className="aspect-square rounded-full overflow-hidden mb-4 mx-auto w-32 h-32 border-4 border-white shadow-lg">
+                  <img 
+                    src={member.image} 
+                    alt={member.name}
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                  />
+                </div>
+                <h3 className="font-medium text-rose-900">{member.name}</h3>
+                <p className="text-stone-500 text-sm">{member.role}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Gallery */}
+      <section id="gallery" className="py-20 bg-white">
+        <div className="container mx-auto px-6">
+          <h2 className="font-serif text-4xl text-center mb-12 text-rose-900">Our Work</h2>
+          
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto">
+            {[
+              "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=400&auto=format&fit=crop",
+              "https://images.unsplash.com/photo-1604654894610-df63bc536371?w=400&auto=format&fit=crop",
+              "https://images.unsplash.com/photo-1487412947147-5cebf100ffc2?w=400&auto=format&fit=crop",
+              "https://images.unsplash.com/photo-1519699047748-de8e457a634e?w=400&auto=format&fit=crop",
+            ].map((image, i) => (
+              <div key={i} className="aspect-square rounded-xl overflow-hidden">
+                <img 
+                  src={image} 
+                  alt={`Gallery ${i + 1}`}
+                  className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                />
+              </div>
+            ))}
+          </div>
+          
+          <div className="text-center mt-8">
+            <a href="#" className="inline-flex items-center gap-2 text-rose-500 hover:text-rose-600 font-medium">
+              <Instagram className="h-5 w-5" />
+              Follow us @blushandbloom
+            </a>
+          </div>
+        </div>
+      </section>
+
+      {/* Book CTA */}
+      <section className="py-20 bg-gradient-to-r from-rose-400 to-rose-500">
+        <div className="container mx-auto px-6 text-center">
+          <h2 className="font-serif text-4xl mb-4 text-white">Ready to Glow?</h2>
+          <p className="text-rose-100 mb-8 max-w-xl mx-auto">
+            Book your appointment online or give us a call. New clients always welcome!
+          </p>
+          <div className="flex flex-wrap justify-center gap-4">
+            <Button size="lg" className="bg-white text-rose-600 hover:bg-rose-50">
+              Book Online
+            </Button>
+            <Button size="lg" variant="outline" className="border-white text-white hover:bg-rose-600">
+              <Phone className="mr-2 h-5 w-5" />
+              (555) 456-7890
+            </Button>
+          </div>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="bg-rose-900 py-12 text-rose-100">
+        <div className="container mx-auto px-6">
+          <div className="grid md:grid-cols-3 gap-8">
+            <div>
+              <h3 className="font-serif text-2xl mb-4 text-white">Blush & Bloom</h3>
+              <p className="text-rose-200 text-sm">
+                Your neighborhood beauty destination for hair, nails, and self-care.
+              </p>
+              <div className="flex gap-4 mt-4">
+                <a href="#" className="text-rose-300 hover:text-white transition-colors">
+                  <Instagram className="h-5 w-5" />
+                </a>
+              </div>
+            </div>
+            <div>
+              <h4 className="font-medium mb-4 text-white">Hours</h4>
+              <div className="space-y-2 text-sm text-rose-200">
+                <p>Tuesday – Friday: 9AM – 7PM</p>
+                <p>Saturday: 9AM – 5PM</p>
+                <p>Sunday – Monday: Closed</p>
+              </div>
+            </div>
+            <div>
+              <h4 className="font-medium mb-4 text-white">Location</h4>
+              <div className="space-y-2 text-sm text-rose-200">
+                <p>789 Uptown Boulevard</p>
+                <p>Suite 101</p>
+                <p>Anytown, USA 12345</p>
+                <p className="mt-4">
+                  <a href="tel:5554567890" className="text-white hover:underline">(555) 456-7890</a>
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="border-t border-rose-800 mt-8 pt-8 text-center text-sm text-rose-300">
+            <p>© 2024 Blush & Bloom. All rights reserved.</p>
+            <p className="mt-2 text-xs">
+              Demo site by <Link to="/" className="text-white hover:underline">Pleasant Cove Design</Link>
+            </p>
+          </div>
+        </div>
+      </footer>
+    </div>
+  );
+};
+
+export default SalonDemo;

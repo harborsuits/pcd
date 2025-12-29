@@ -13,6 +13,9 @@ import PortalPage from "./pages/portal/PortalPage";
 import PortalHub from "./pages/PortalHub";
 import OnboardingWizard from "./pages/portal/OnboardingWizard";
 import OperatorLayout from "./pages/operator/OperatorLayout";
+import RooferDemo from "./pages/demos/RooferDemo";
+import RestaurantDemo from "./pages/demos/RestaurantDemo";
+import SalonDemo from "./pages/demos/SalonDemo";
 
 const queryClient = new QueryClient();
 
@@ -31,6 +34,11 @@ const App = () => (
           <Route path="/portal" element={<PortalHub />} />
           <Route path="/portal/new" element={<OnboardingWizard />} />
           <Route path="/login" element={<PortalHub />} />
+
+          {/* Demo Mockup Pages */}
+          <Route path="/demos/roofer" element={<RooferDemo />} />
+          <Route path="/demos/restaurant" element={<RestaurantDemo />} />
+          <Route path="/demos/salon" element={<SalonDemo />} />
 
           {/* Public Token Routes */}
           <Route path="/d/:token/:slug" element={<DemoPage />} />
