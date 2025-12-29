@@ -175,8 +175,13 @@ const RooferDemo = () => {
       </section>
 
       {/* CTA */}
-      <section className="py-16 bg-orange-500">
-        <div className="container mx-auto px-6 text-center">
+      <section className="relative py-16 bg-orange-500">
+        {/* Top blend strip (dark → orange) */}
+        <div className="pointer-events-none absolute inset-x-0 -top-10 h-10 bg-gradient-to-b from-slate-900 to-orange-500" />
+        {/* Subtle glow line */}
+        <div className="pointer-events-none absolute inset-x-0 -top-10 h-10 opacity-20 blur-xl bg-gradient-to-r from-transparent via-white to-transparent" />
+        
+        <div className="container mx-auto px-6 text-center relative z-10">
           <h2 className="text-3xl font-bold mb-4">Ready to Get Started?</h2>
           <p className="text-orange-100 mb-8 max-w-xl mx-auto">
             Get a free roof inspection and estimate. No pressure, just honest advice.
