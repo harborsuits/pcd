@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { ArrowLeft, Phone, Mail, MapPin, Star, CheckCircle, Clock, Shield, Facebook, Instagram, Twitter } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ShimmerButton } from "@/components/ui/shimmer-button";
 import { FeatureSteps } from "@/components/ui/feature-section";
 import { FeaturesSectionWithHoverEffects } from "@/components/ui/feature-section-with-hover-effects";
 import { LampContainer } from "@/components/ui/lamp";
@@ -88,13 +89,21 @@ const RooferDemo = () => {
           </p>
           
           <div className="flex flex-wrap justify-center gap-4 mb-8">
-            <Button size="lg" className="bg-orange-500 hover:bg-orange-600 shadow-lg shadow-orange-500/30 text-base">
+            <ShimmerButton 
+              shimmerColor="#fb923c" 
+              background="rgba(249, 115, 22, 1)"
+              className="shadow-lg shadow-orange-500/30 text-base font-medium"
+            >
               <Phone className="mr-2 h-5 w-5" />
               Call: (555) 123-4567
-            </Button>
-            <Button size="lg" variant="outline" className="border-slate-600 text-white hover:bg-slate-800/50 backdrop-blur text-base">
+            </ShimmerButton>
+            <ShimmerButton 
+              shimmerColor="#94a3b8" 
+              background="rgba(30, 41, 59, 0.8)"
+              className="backdrop-blur text-base font-medium"
+            >
               Schedule Inspection
-            </Button>
+            </ShimmerButton>
           </div>
           
           <div className="flex flex-wrap justify-center gap-6 text-sm text-slate-300">
