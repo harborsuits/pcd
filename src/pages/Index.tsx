@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { useMemo } from "react";
-import { ArrowRight, MessageSquare, FolderOpen, Sparkles, Shield, Smartphone, CreditCard, LogIn, Globe, CalendarCheck, Zap, Bot, Clock, CheckCircle } from "lucide-react";
+import { ArrowRight, MessageSquare, FolderOpen, Sparkles, Shield, Smartphone, CreditCard, LogIn, Globe, CalendarCheck, Zap, Bot, Clock, CheckCircle, Phone, Brain, Clock3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LiquidButton } from "@/components/ui/liquid-glass-button";
 import { GlowCard } from "@/components/ui/spotlight-card";
@@ -9,6 +9,8 @@ import { Hero3DModel } from "@/components/Hero3DModel";
 import { ErrorBoundary } from "@/components/common/ErrorBoundary";
 import { canUseWebGL } from "@/lib/webgl";
 import HeroStatic from "@/components/HeroStatic";
+import { AIReceptionistHero } from "@/components/ui/hero-video";
+import aiReceptionistVideo from "@/assets/videos/ai-front-door.mp4";
 const exampleDemos = [
   {
     name: "Roofer",
@@ -168,44 +170,78 @@ const Index = () => {
       </section>
 
       {/* AI Receptionist Highlight Section */}
-      <section className="py-16 border-t border-border bg-emerald-50/30">
+      <section className="py-20 md:py-28 border-t border-border bg-gradient-to-b from-emerald-50/30 via-background to-emerald-50/20 overflow-hidden">
         <div className="container mx-auto px-6">
-          <div className="max-w-5xl mx-auto grid md:grid-cols-2 gap-10 items-center">
-            {/* Left: Copy + CTA */}
-            <div className="space-y-6">
-              <div>
-                <p className="text-xs font-medium text-accent uppercase tracking-wide mb-2">
-                  Lead Handling & Follow-Ups
-                </p>
-                <h2 className="font-serif text-3xl md:text-4xl font-bold mb-4">
-                  AI Receptionist
-                </h2>
-                <p className="text-muted-foreground leading-relaxed">
-                  Never miss a lead — even when you're on a job, with a client, or after hours.
-                  Our AI Receptionist answers calls, texts, and form submissions instantly, qualifies inquiries, and handles next steps automatically.
-                </p>
+          {/* Section Header */}
+          <div className="text-center mb-12 md:mb-16">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-accent/10 border border-accent/20 mb-6">
+              <Bot className="h-4 w-4 text-accent" />
+              <span className="text-sm font-medium text-accent">AI-Powered Lead Handling</span>
+            </div>
+            <h2 className="font-serif text-4xl md:text-5xl lg:text-6xl font-bold mb-4">
+              Your AI Receptionist
+            </h2>
+            <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto">
+              Never miss a lead — even when you're on a job, with a client, or after hours.
+            </p>
+          </div>
+
+          <div className="max-w-6xl mx-auto grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+            {/* Left: Video with scroll animation */}
+            <div className="order-2 lg:order-1">
+              <AIReceptionistHero videoSrc={aiReceptionistVideo} />
+            </div>
+            
+            {/* Right: Features + CTA */}
+            <div className="order-1 lg:order-2 space-y-8">
+              <p className="text-muted-foreground leading-relaxed text-lg">
+                Our AI Receptionist answers calls, texts, and form submissions instantly, qualifies inquiries, and handles next steps automatically.
+              </p>
+              
+              {/* Feature Cards */}
+              <div className="space-y-4">
+                <GlowCard customSize glowColor="teal" className="p-5 bg-card/60">
+                  <div className="flex items-start gap-4">
+                    <div className="p-2 rounded-lg bg-accent/10">
+                      <Phone className="h-5 w-5 text-accent" />
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-foreground mb-1">Instant Response</h4>
+                      <p className="text-sm text-muted-foreground">Responds to missed calls, texts, and forms in seconds — not hours.</p>
+                    </div>
+                  </div>
+                </GlowCard>
+                
+                <GlowCard customSize glowColor="teal" className="p-5 bg-card/60">
+                  <div className="flex items-start gap-4">
+                    <div className="p-2 rounded-lg bg-accent/10">
+                      <Brain className="h-5 w-5 text-accent" />
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-foreground mb-1">Smart Qualification</h4>
+                      <p className="text-sm text-muted-foreground">Asks the right questions so you only deal with serious leads.</p>
+                    </div>
+                  </div>
+                </GlowCard>
+                
+                <GlowCard customSize glowColor="teal" className="p-5 bg-card/60">
+                  <div className="flex items-start gap-4">
+                    <div className="p-2 rounded-lg bg-accent/10">
+                      <Clock3 className="h-5 w-5 text-accent" />
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-foreground mb-1">24/7 Availability</h4>
+                      <p className="text-sm text-muted-foreground">Schedules appointments or escalates priority inquiries automatically.</p>
+                    </div>
+                  </div>
+                </GlowCard>
               </div>
               
-              <ul className="space-y-3">
-                <li className="flex items-start gap-3">
-                  <CheckCircle className="h-5 w-5 text-accent mt-0.5 flex-shrink-0" />
-                  <span className="text-foreground">Instant responses to missed calls, texts, and website forms</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <CheckCircle className="h-5 w-5 text-accent mt-0.5 flex-shrink-0" />
-                  <span className="text-foreground">Smart qualifying questions so you only deal with serious leads</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <CheckCircle className="h-5 w-5 text-accent mt-0.5 flex-shrink-0" />
-                  <span className="text-foreground">Automatically schedules appointments or escalates priority inquiries</span>
-                </li>
-              </ul>
-              
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-muted-foreground italic">
                 Built for service and owner-operated businesses that can't always answer the phone — but don't want to miss work.
               </p>
               
-              <div className="flex flex-wrap gap-3">
+              <div className="flex flex-wrap gap-4 pt-2">
                 <a href="#demos">
                   <LiquidButton size="lg">
                     See How It Works
@@ -216,19 +252,6 @@ const Index = () => {
                     Add to My Project
                   </LiquidButton>
                 </Link>
-              </div>
-            </div>
-            
-            {/* Right: Video */}
-            <div className="relative">
-              <div className="aspect-video border border-border rounded-xl shadow-lg overflow-hidden">
-                <iframe
-                  src="https://www.youtube.com/embed/9A8WrDvIyQA"
-                  title="AI Receptionist Demo"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                  className="w-full h-full"
-                />
               </div>
             </div>
           </div>
