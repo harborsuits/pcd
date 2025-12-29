@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { ArrowLeft, Phone, Mail, MapPin, Star, CheckCircle, Clock, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FeatureSteps } from "@/components/ui/feature-section";
+import { FeaturesSectionWithHoverEffects } from "@/components/ui/feature-section-with-hover-effects";
 import { LampContainer } from "@/components/ui/lamp";
 import { motion } from "framer-motion";
 import rooferHero from "@/assets/demos/roofer-hero.jpeg";
@@ -112,23 +113,11 @@ const RooferDemo = () => {
       </section>
 
       {/* Services */}
-      <section id="services" className="py-20 bg-slate-800">
-        <div className="container mx-auto px-6">
-          <h2 className="text-3xl font-bold text-center mb-12">Our Services</h2>
-          <div className="grid md:grid-cols-3 gap-8">
-            {[
-              { title: "Roof Replacement", desc: "Complete tear-off and installation with premium materials", icon: "🏠" },
-              { title: "Roof Repair", desc: "Fix leaks, storm damage, and worn shingles", icon: "🔧" },
-              { title: "Inspections", desc: "Comprehensive roof assessments and reports", icon: "🔍" },
-            ].map((service) => (
-              <div key={service.title} className="bg-slate-700 rounded-xl p-6 hover:bg-slate-600 transition-colors">
-                <span className="text-4xl mb-4 block">{service.icon}</span>
-                <h3 className="text-xl font-bold mb-2">{service.title}</h3>
-                <p className="text-slate-300">{service.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
+      <section id="services">
+        <FeaturesSectionWithHoverEffects 
+          title="Our Services"
+          className="bg-slate-800"
+        />
       </section>
 
       {/* Why Choose Us */}
