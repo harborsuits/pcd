@@ -189,7 +189,7 @@ const Index = () => {
             <div className="order-2 lg:order-1">
               <div className="relative aspect-video rounded-2xl overflow-hidden shadow-2xl border border-accent/20">
                 <iframe
-                  src="https://www.youtube.com/embed/YOUR_VIDEO_ID"
+                  src="https://www.youtube.com/embed/9A8WrDvIyQA"
                   title="AI Receptionist Demo"
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                   allowFullScreen
