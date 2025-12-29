@@ -54,14 +54,16 @@ const RooferDemo = () => {
       </header>
 
       {/* Hero with Lamp Effect */}
-      <div 
-        className="relative overflow-hidden [transform:translateZ(0)]"
-        style={{
-          backgroundImage: `url(${rooferBg})`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center top',
-        }}
-      >
+      <div className="relative overflow-hidden [transform:translateZ(0)]">
+        {/* Hero bg image layer - fades out smoothly via mask */}
+        <div
+          className="absolute inset-0 -z-10 bg-cover bg-center"
+          style={{
+            backgroundImage: `url(${rooferBg})`,
+            WebkitMaskImage: "linear-gradient(to bottom, black 0%, black 60%, transparent 100%)",
+            maskImage: "linear-gradient(to bottom, black 0%, black 60%, transparent 100%)",
+          }}
+        />
         {/* Dark overlay to blend with lamp */}
         <div className="absolute inset-0 bg-slate-950/60" />
         
@@ -112,12 +114,10 @@ const RooferDemo = () => {
         </motion.div>
       </LampContainer>
         
-        {/* Bottom fade – fades into page background (slate-950) */}
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-40 z-40 bg-gradient-to-b from-transparent to-slate-950" />
       </div>
 
       {/* Feature Steps Section */}
-      <section className="relative -mt-2 py-16 bg-transparent">
+      <section className="py-16">
         <div className="container mx-auto px-6">
           <FeatureSteps 
             features={roofingFeatures}
