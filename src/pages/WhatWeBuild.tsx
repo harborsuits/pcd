@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { ArrowRight, Globe, FolderOpen, CalendarCheck, Zap, Bot, Puzzle, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import InteractiveBentoGallery from "@/components/ui/interactive-bento-gallery";
+import { StaggerTestimonials } from "@/components/ui/stagger-testimonials";
 import websitesConvertVideo from "@/assets/videos/websites-convert.mp4";
 
 const mediaItems = [
@@ -206,6 +207,9 @@ const WhatWeBuild = () => {
           </div>
         </div>
       </section>
+
+      {/* Testimonials */}
+      <StaggerTestimonials />
 
       {/* CTA */}
       <section className="py-16 border-t border-border bg-accent/5">
