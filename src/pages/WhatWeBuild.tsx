@@ -1,6 +1,58 @@
 import { Link } from "react-router-dom";
 import { ArrowRight, Globe, FolderOpen, CalendarCheck, Zap, Bot, Puzzle, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import InteractiveBentoGallery from "@/components/ui/interactive-bento-gallery";
+
+const mediaItems = [
+  {
+    id: 1,
+    type: "image" as const,
+    title: "Websites that convert",
+    desc: "Clean design, fast load, mobile-first.",
+    url: "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1400&q=80",
+    span: "md:col-span-2 md:row-span-2 col-span-2 row-span-2",
+  },
+  {
+    id: 2,
+    type: "image" as const,
+    title: "AI Front Door",
+    desc: "Answer calls, capture info, route leads.",
+    url: "https://images.unsplash.com/photo-1553877522-43269d4ea984?auto=format&fit=crop&w=1400&q=80",
+    span: "md:col-span-2 md:row-span-1 col-span-1 row-span-1",
+  },
+  {
+    id: 3,
+    type: "image" as const,
+    title: "Booking + Intake",
+    desc: "Rules-based scheduling and forms.",
+    url: "https://images.unsplash.com/photo-1556761175-4b46a572b786?auto=format&fit=crop&w=1400&q=80",
+    span: "md:col-span-1 md:row-span-1 col-span-1 row-span-1",
+  },
+  {
+    id: 4,
+    type: "image" as const,
+    title: "Client Portals",
+    desc: "One shared place for approvals and updates.",
+    url: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=1400&q=80",
+    span: "md:col-span-1 md:row-span-1 col-span-1 row-span-1",
+  },
+  {
+    id: 5,
+    type: "image" as const,
+    title: "Automations",
+    desc: "Reminders, follow-ups, and workflows.",
+    url: "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=1400&q=80",
+    span: "md:col-span-2 md:row-span-1 col-span-1 row-span-1",
+  },
+  {
+    id: 6,
+    type: "image" as const,
+    title: "Design systems",
+    desc: "Consistent brand, consistent trust.",
+    url: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=1400&q=80",
+    span: "md:col-span-2 md:row-span-1 col-span-1 row-span-1",
+  },
+];
 
 const sections = [
   {
@@ -95,24 +147,23 @@ const WhatWeBuild = () => {
         </div>
       </header>
 
-      {/* Hero */}
-      <section className="py-16 md:py-20 border-b border-border bg-secondary/20">
-        <div className="container mx-auto px-6">
-          <Link 
-            to="/" 
-            className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-6 transition-colors"
-          >
-            <ArrowLeft className="mr-1 h-4 w-4" />
-            Back to home
-          </Link>
-          <h1 className="font-serif text-4xl md:text-5xl font-bold leading-tight mb-4">
-            What We Build
-          </h1>
-          <p className="text-lg md:text-xl text-muted-foreground max-w-2xl">
-            A complete system for client-facing work. Everything you need to look professional and run smoothly — nothing you don't.
-          </p>
-        </div>
-      </section>
+      {/* Back Link */}
+      <div className="container mx-auto px-6 pt-8">
+        <Link 
+          to="/" 
+          className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <ArrowLeft className="mr-1 h-4 w-4" />
+          Back to home
+        </Link>
+      </div>
+
+      {/* Bento Gallery Hero */}
+      <InteractiveBentoGallery
+        mediaItems={mediaItems}
+        title="What We Build"
+        description="A complete system for client-facing work. Everything you need to look professional and run smoothly — nothing you don't."
+      />
 
       {/* Sections */}
       <section className="py-16">
