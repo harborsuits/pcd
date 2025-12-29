@@ -128,9 +128,8 @@ const Index = () => {
             {/* CTAs */}
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8">
               <a href="#demos">
-                <LiquidButton size="lg" className="group">
+                <LiquidButton size="lg">
                   Get a Demo
-                  <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
                 </LiquidButton>
               </a>
               <Link to="/portal">
@@ -208,9 +207,8 @@ const Index = () => {
               
               <div className="flex flex-wrap gap-3">
                 <a href="#demos">
-                  <LiquidButton size="lg" className="group">
+                  <LiquidButton size="lg">
                     See How It Works
-                    <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
                   </LiquidButton>
                 </a>
                 <Link to="/get-demo">
@@ -284,9 +282,8 @@ const Index = () => {
           
           <div className="text-center mt-10">
             <Link to="/get-demo">
-              <LiquidButton size="lg" className="group">
+              <LiquidButton size="lg">
                 Request a Custom Demo
-                <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
               </LiquidButton>
             </Link>
           </div>
