@@ -183,8 +183,8 @@ const RooferDemo = () => {
           </p>
           <ShimmerButton 
             shimmerColor="#94a3b8" 
-            background="rgba(15, 23, 42, 1)"
-            className="text-base font-medium"
+            background="rgba(30, 41, 59, 0.9)"
+            className="text-base font-medium px-6 py-3 mx-auto"
           >
             Schedule Your Free Estimate
           </ShimmerButton>
