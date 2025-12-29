@@ -102,8 +102,6 @@ const WhatWeBuild = () => {
         description="A complete system for client-facing work. Everything you need to look professional and run smoothly — nothing you don't."
       />
 
-      {/* Feature Carousel - What We Build */}
-      <StaggerFeatureCarousel />
 
       {/* Testimonials */}
       <StaggerTestimonials />
