@@ -55,7 +55,7 @@ const RooferDemo = () => {
 
       {/* Hero with Lamp Effect */}
       <div 
-        className="relative overflow-hidden"
+        className="relative overflow-hidden [transform:translateZ(0)]"
         style={{
           backgroundImage: `url(${rooferBg})`,
           backgroundSize: 'cover',
@@ -112,12 +112,12 @@ const RooferDemo = () => {
         </motion.div>
       </LampContainer>
         
-        {/* Bottom fade – fully resolves to slate-900 */}
-        <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-48 z-40 bg-gradient-to-b from-transparent via-slate-900/70 to-slate-900" />
+        {/* Bottom fade – fades into page background (slate-950) */}
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-40 z-40 bg-gradient-to-b from-transparent to-slate-950" />
       </div>
 
       {/* Feature Steps Section */}
-      <section className="relative -mt-px py-16 bg-slate-900">
+      <section className="relative -mt-2 py-16 bg-transparent">
         <div className="container mx-auto px-6">
           <FeatureSteps 
             features={roofingFeatures}
