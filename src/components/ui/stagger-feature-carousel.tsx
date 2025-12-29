@@ -274,7 +274,7 @@ export const StaggerFeatureCarousel: React.FC<StaggerFeatureCarouselProps> = ({
 
   // Full section mode
   return (
-    <section className={cn("relative w-full py-24 overflow-hidden bg-background", className)}>
+    <section className={cn("relative w-full py-16 overflow-hidden bg-background", className)}>
       <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="text-center mb-16">
