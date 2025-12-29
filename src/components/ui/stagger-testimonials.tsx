@@ -7,44 +7,64 @@ import { cn } from "@/lib/utils";
 const testimonials = [
   {
     tempId: 0,
-    testimonial:
-      "We stopped missing calls and our booking process became way smoother in the first week.",
-    by: "Owner, Local Service Business",
-    imgSrc:
-      "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=300&q=80",
+    testimonial: "We stopped missing calls and our booking process became way smoother in the first week.",
+    by: "Alex, Owner at ServicePro",
+    imgSrc: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80"
   },
   {
     tempId: 1,
-    testimonial:
-      "The website finally explains what we do clearly — people come in already qualified.",
-    by: "Operator, Home Services",
-    imgSrc:
-      "https://images.unsplash.com/photo-1544723795-3fb6469f5b39?auto=format&fit=crop&w=300&q=80",
+    testimonial: "The website finally explains what we do clearly — people come in already qualified.",
+    by: "Dan, Operator at HomeWorks",
+    imgSrc: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=300&q=80"
   },
   {
     tempId: 2,
-    testimonial:
-      "Having one place for files + approvals eliminated the back-and-forth completely.",
-    by: "Manager, Small Team",
-    imgSrc:
-      "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=300&q=80",
+    testimonial: "Having one place for files + approvals eliminated the back-and-forth completely.",
+    by: "Stephanie, Manager at TeamSync",
+    imgSrc: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=300&q=80"
   },
   {
     tempId: 3,
-    testimonial:
-      "It feels like we added a receptionist and an ops system without adding overhead.",
-    by: "Owner, Appointment-Based Business",
-    imgSrc:
-      "https://images.unsplash.com/photo-1527980965255-d3b416303d12?auto=format&fit=crop&w=300&q=80",
+    testimonial: "It feels like we added a receptionist and an ops system without adding overhead.",
+    by: "Marie, Owner at BookingFlow",
+    imgSrc: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=300&q=80"
   },
   {
     tempId: 4,
-    testimonial:
-      "We look more professional instantly — and people trust us more on the first call.",
-    by: "Founder, Local Business",
-    imgSrc:
-      "https://images.unsplash.com/photo-1547425260-76bcadfb4f2c?auto=format&fit=crop&w=300&q=80",
+    testimonial: "We look more professional instantly — and people trust us more on the first call.",
+    by: "Andre, Founder at LocalBiz",
+    imgSrc: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=300&q=80"
   },
+  {
+    tempId: 5,
+    testimonial: "SO SO SO HAPPY WE FOUND YOU GUYS!!!! I'd bet you've saved me 100 hours so far.",
+    by: "Jeremy, Manager at TimeWise",
+    imgSrc: "https://images.unsplash.com/photo-1519345182560-3f2917c472ef?auto=format&fit=crop&w=300&q=80"
+  },
+  {
+    tempId: 6,
+    testimonial: "Took some convincing, but now that we're set up, we're never going back.",
+    by: "Pam, Director at BrandBuilders",
+    imgSrc: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80"
+  },
+  {
+    tempId: 7,
+    testimonial: "The ROI is EASILY 100X for us. Worth every penny.",
+    by: "Daniel, Analyst at GrowthCo",
+    imgSrc: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=300&q=80"
+  },
+  {
+    tempId: 8,
+    testimonial: "It's just the best. Period.",
+    by: "Fernando, Designer at UserFirst",
+    imgSrc: "https://images.unsplash.com/photo-1463453091185-61582044d556?auto=format&fit=crop&w=300&q=80"
+  },
+  {
+    tempId: 9,
+    testimonial: "I switched and never looked back.",
+    by: "Andy, Engineer at CloudMasters",
+    imgSrc: "https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?auto=format&fit=crop&w=300&q=80"
+  }
 ];
 
 interface TestimonialCardProps {
@@ -67,11 +87,11 @@ const TestimonialCard: React.FC<TestimonialCardProps> = ({
       key={testimonial.tempId}
       onClick={() => handleMove(position)}
       className={cn(
-        "absolute left-1/2 top-1/2 cursor-pointer border p-8 transition-all duration-500 ease-in-out select-none",
+        "absolute left-1/2 top-1/2 cursor-pointer border-2 p-8 transition-all duration-500 ease-in-out select-none",
         "rounded-2xl backdrop-blur-xl",
         isCenter
-          ? "z-10 bg-teal-500/10 text-white border-teal-300/40 shadow-[0_0_80px_rgba(45,212,191,0.25)]"
-          : "z-0 bg-white/5 text-white/85 border-white/10 hover:border-teal-300/25"
+          ? "z-10 bg-primary text-primary-foreground border-primary shadow-lg"
+          : "z-0 bg-card text-card-foreground border-border hover:border-primary/50"
       )}
       style={{
         width: cardSize,
@@ -85,18 +105,18 @@ const TestimonialCard: React.FC<TestimonialCardProps> = ({
           rotate(${isCenter ? 0 : position % 2 ? 2.5 : -2.5}deg)
         `,
         boxShadow: isCenter
-          ? "0px 10px 0px 4px rgba(255,255,255,0.06)"
+          ? "0px 8px 0px 4px hsl(var(--border))"
           : "0px 0px 0px 0px transparent",
       }}
     >
       {/* Corner accent */}
-      <div className="absolute top-0 right-0 w-[50px] h-[50px] bg-gradient-to-bl from-teal-400/20 to-transparent" />
+      <div className="absolute top-0 right-0 w-[50px] h-[50px] bg-gradient-to-bl from-primary/20 to-transparent" />
 
       {/* Avatar */}
       <img
         src={testimonial.imgSrc}
         alt={testimonial.by}
-        className="w-14 h-14 rounded-full object-cover border-2 border-teal-300/30 mb-4"
+        className="w-14 h-14 rounded-full object-cover border-2 border-primary/30 mb-4"
       />
 
       {/* Quote */}
@@ -106,8 +126,8 @@ const TestimonialCard: React.FC<TestimonialCardProps> = ({
 
       {/* Attribution */}
       <div className="mt-auto">
-        <span className="text-sm text-teal-200/80 font-medium">
-          — {testimonial.by}
+        <span className="text-sm opacity-80 font-medium">
+          - {testimonial.by}
         </span>
       </div>
     </div>
@@ -147,28 +167,14 @@ export const StaggerTestimonials: React.FC = () => {
   }, []);
 
   return (
-    <section className="relative w-full py-24 overflow-hidden bg-black">
-      {/* Subtle PCD grid glow */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div
-          className="absolute inset-0 opacity-[0.03]"
-          style={{
-            backgroundImage: `
-              linear-gradient(rgba(45,212,191,0.3) 1px, transparent 1px),
-              linear-gradient(90deg, rgba(45,212,191,0.3) 1px, transparent 1px)
-            `,
-            backgroundSize: "60px 60px",
-          }}
-        />
-      </div>
-
+    <section className="relative w-full py-24 overflow-hidden bg-background">
       <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="text-center mb-16">
-          <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">
+          <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-4">
             What clients say
           </h2>
-          <p className="text-white/60 text-lg max-w-xl mx-auto">
+          <p className="text-muted-foreground text-lg max-w-xl mx-auto">
             Real outcomes from websites, booking systems, and the AI Front Door.
           </p>
         </div>
@@ -197,9 +203,9 @@ export const StaggerTestimonials: React.FC = () => {
             <button
               onClick={() => handleMove(-1)}
               className={cn(
-                "flex h-12 w-12 items-center justify-center transition-colors",
-                "rounded-xl bg-white/5 border border-white/10 text-white/80 hover:text-white hover:border-teal-300/25",
-                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-300/40 focus-visible:ring-offset-2 focus-visible:ring-offset-black"
+                "flex h-14 w-14 items-center justify-center text-2xl transition-colors",
+                "bg-background border-2 border-border hover:bg-primary hover:text-primary-foreground",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               )}
               aria-label="Previous testimonial"
             >
@@ -208,9 +214,9 @@ export const StaggerTestimonials: React.FC = () => {
             <button
               onClick={() => handleMove(1)}
               className={cn(
-                "flex h-12 w-12 items-center justify-center transition-colors",
-                "rounded-xl bg-white/5 border border-white/10 text-white/80 hover:text-white hover:border-teal-300/25",
-                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-300/40 focus-visible:ring-offset-2 focus-visible:ring-offset-black"
+                "flex h-14 w-14 items-center justify-center text-2xl transition-colors",
+                "bg-background border-2 border-border hover:bg-primary hover:text-primary-foreground",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               )}
               aria-label="Next testimonial"
             >
