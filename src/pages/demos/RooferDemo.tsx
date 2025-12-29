@@ -55,7 +55,7 @@ const RooferDemo = () => {
 
       {/* Hero with Lamp Effect */}
       <div 
-        className="relative"
+        className="relative overflow-hidden"
         style={{
           backgroundImage: `url(${rooferBg})`,
           backgroundSize: 'cover',
@@ -111,6 +111,9 @@ const RooferDemo = () => {
           </div>
         </motion.div>
       </LampContainer>
+        
+        {/* Bottom fade to blend into next section */}
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-32 bg-gradient-to-b from-transparent to-slate-900 z-20" />
       </div>
 
       {/* Feature Steps Section */}
