@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
 
 interface AccordionItemData {
@@ -14,12 +14,14 @@ interface AccordionItemProps {
   item: AccordionItemData;
   isActive: boolean;
   onMouseEnter: () => void;
+  onClick: () => void;
 }
 
-const AccordionItem: React.FC<AccordionItemProps> = ({ item, isActive, onMouseEnter }) => {
+const AccordionItem: React.FC<AccordionItemProps> = ({ item, isActive, onMouseEnter, onClick }) => {
   return (
     <div
       onMouseEnter={onMouseEnter}
+      onClick={onClick}
       className={`
         relative overflow-hidden rounded-2xl cursor-pointer
         transition-all duration-500 ease-in-out
@@ -57,8 +59,7 @@ const AccordionItem: React.FC<AccordionItemProps> = ({ item, isActive, onMouseEn
         `}>
           {item.title}
         </h3>
-        <Link
-          to={item.demoUrl}
+        <span
           className={`
             inline-flex items-center gap-2 text-white/90 hover:text-white
             text-sm font-medium transition-all duration-300
@@ -66,7 +67,7 @@ const AccordionItem: React.FC<AccordionItemProps> = ({ item, isActive, onMouseEn
           `}
         >
           View Demo <ArrowRight className="w-4 h-4" />
-        </Link>
+        </span>
       </div>
     </div>
   );
@@ -81,22 +82,22 @@ const defaultItems: AccordionItemData[] = [
     id: 1,
     category: 'Contractor',
     title: 'Roofer',
-    imageUrl: 'https://images.unsplash.com/photo-1632778149955-e80f8ceca2e8?w=800&auto=format&fit=crop',
-    demoUrl: '/d/test-acme-plumbing-2024/acme-plumbing',
+    imageUrl: 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=800&auto=format&fit=crop',
+    demoUrl: '/demos/roofer',
   },
   {
     id: 2,
     category: 'Local Dining',
     title: 'Restaurant',
     imageUrl: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800&auto=format&fit=crop',
-    demoUrl: '/d/test-acme-plumbing-2024/acme-plumbing',
+    demoUrl: '/demos/restaurant',
   },
   {
     id: 3,
     category: 'Personal Care',
     title: 'Salon',
     imageUrl: 'https://images.unsplash.com/photo-1560066984-138dadb4c035?w=800&auto=format&fit=crop',
-    demoUrl: '/d/test-acme-plumbing-2024/acme-plumbing',
+    demoUrl: '/demos/salon',
   },
 ];
 
@@ -104,6 +105,11 @@ export const FeaturedDemosAccordion: React.FC<FeaturedDemosAccordionProps> = ({
   items = defaultItems 
 }) => {
   const [activeIndex, setActiveIndex] = useState(1);
+  const navigate = useNavigate();
+
+  const handleClick = (demoUrl: string) => {
+    navigate(demoUrl);
+  };
 
   return (
     <div className="flex gap-4 w-full">
@@ -113,6 +119,7 @@ export const FeaturedDemosAccordion: React.FC<FeaturedDemosAccordionProps> = ({
           item={item}
           isActive={index === activeIndex}
           onMouseEnter={() => setActiveIndex(index)}
+          onClick={() => handleClick(item.demoUrl)}
         />
       ))}
     </div>
