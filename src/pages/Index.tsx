@@ -9,8 +9,6 @@ import { Hero3DModel } from "@/components/Hero3DModel";
 import { ErrorBoundary } from "@/components/common/ErrorBoundary";
 import { canUseWebGL } from "@/lib/webgl";
 import HeroStatic from "@/components/HeroStatic";
-import { AIReceptionistHero } from "@/components/ui/hero-video";
-import aiReceptionistVideo from "@/assets/videos/ai-front-door.mp4";
 const exampleDemos = [
   {
     name: "Roofer",
@@ -187,9 +185,17 @@ const Index = () => {
           </div>
 
           <div className="max-w-6xl mx-auto grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
-            {/* Left: Video with scroll animation */}
+            {/* Left: Video */}
             <div className="order-2 lg:order-1">
-              <AIReceptionistHero videoSrc={aiReceptionistVideo} />
+              <div className="relative aspect-video rounded-2xl overflow-hidden shadow-2xl border border-accent/20">
+                <iframe
+                  src="https://www.youtube.com/embed/YOUR_VIDEO_ID"
+                  title="AI Receptionist Demo"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                  className="absolute inset-0 w-full h-full"
+                />
+              </div>
             </div>
             
             {/* Right: Features + CTA */}
