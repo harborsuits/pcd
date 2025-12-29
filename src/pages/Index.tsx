@@ -2,11 +2,11 @@ import { Link } from "react-router-dom";
 import { useMemo } from "react";
 import { ArrowRight, MessageSquare, FolderOpen, Sparkles, Shield, Smartphone, CreditCard, LogIn, Globe, CalendarCheck, Zap, Bot, Clock, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { GlowCard } from "@/components/ui/spotlight-card";
 import { Hero3DModel } from "@/components/Hero3DModel";
 import { ErrorBoundary } from "@/components/common/ErrorBoundary";
 import { canUseWebGL } from "@/lib/webgl";
 import HeroStatic from "@/components/HeroStatic";
-
 const exampleDemos = [
   {
     name: "Roofer",
@@ -247,14 +247,16 @@ const Index = () => {
           
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-4xl mx-auto">
             {capabilities.map((cap) => (
-              <div
+              <GlowCard
                 key={cap.title}
-                className="bg-secondary/30 border border-border rounded-lg p-5 hover:border-accent/30 hover:bg-secondary/50 transition-all"
+                customSize
+                glowColor="emerald"
+                className="bg-card/80 p-5 hover:bg-card transition-all"
               >
                 <cap.icon className="h-6 w-6 text-accent mb-3" />
                 <h3 className="font-medium text-foreground mb-1">{cap.title}</h3>
                 <p className="text-sm text-muted-foreground">{cap.description}</p>
-              </div>
+              </GlowCard>
             ))}
           </div>
         </div>
@@ -277,25 +279,31 @@ const Index = () => {
               <Link
                 key={project.name}
                 to={`/d/${project.token}/${project.slug}`}
-                className="group block bg-card border border-border rounded-lg overflow-hidden hover:shadow-lg hover:border-accent/30 transition-all"
+                className="group block"
               >
-                <div className="aspect-[4/3] bg-secondary/50 flex items-center justify-center">
-                  <span className="font-serif text-3xl text-muted-foreground/40 group-hover:text-accent transition-colors">
-                    {project.name.charAt(0)}
-                  </span>
-                </div>
-                <div className="p-5">
-                  <p className="text-xs font-medium text-accent uppercase tracking-wide mb-1">
-                    {project.category}
-                  </p>
-                  <h3 className="font-serif text-lg font-bold group-hover:text-accent transition-colors">
-                    {project.name}
-                  </h3>
-                  <span className="inline-flex items-center mt-3 text-sm text-muted-foreground group-hover:text-accent">
-                    View Demo
-                    <ArrowRight className="ml-1 h-3 w-3 group-hover:translate-x-1 transition-transform" />
-                  </span>
-                </div>
+                <GlowCard
+                  customSize
+                  glowColor="emerald"
+                  className="bg-card overflow-hidden hover:shadow-xl transition-all h-full"
+                >
+                  <div className="aspect-[4/3] bg-secondary/50 flex items-center justify-center">
+                    <span className="font-serif text-3xl text-muted-foreground/40 group-hover:text-accent transition-colors">
+                      {project.name.charAt(0)}
+                    </span>
+                  </div>
+                  <div className="p-5">
+                    <p className="text-xs font-medium text-accent uppercase tracking-wide mb-1">
+                      {project.category}
+                    </p>
+                    <h3 className="font-serif text-lg font-bold group-hover:text-accent transition-colors">
+                      {project.name}
+                    </h3>
+                    <span className="inline-flex items-center mt-3 text-sm text-muted-foreground group-hover:text-accent">
+                      View Demo
+                      <ArrowRight className="ml-1 h-3 w-3 group-hover:translate-x-1 transition-transform" />
+                    </span>
+                  </div>
+                </GlowCard>
               </Link>
             ))}
           </div>
@@ -324,34 +332,25 @@ const Index = () => {
           </div>
           
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 max-w-4xl mx-auto">
-            <div className="text-center">
-              <div className="w-10 h-10 rounded-full bg-accent/10 text-accent font-bold flex items-center justify-center mx-auto mb-3">
-                1
-              </div>
-              <h4 className="font-medium text-foreground mb-1">Quick call</h4>
-              <p className="text-sm text-muted-foreground">15 minutes to understand your business.</p>
-            </div>
-            <div className="text-center">
-              <div className="w-10 h-10 rounded-full bg-accent/10 text-accent font-bold flex items-center justify-center mx-auto mb-3">
-                2
-              </div>
-              <h4 className="font-medium text-foreground mb-1">We build</h4>
-              <p className="text-sm text-muted-foreground">Custom site + portal, no templates.</p>
-            </div>
-            <div className="text-center">
-              <div className="w-10 h-10 rounded-full bg-accent/10 text-accent font-bold flex items-center justify-center mx-auto mb-3">
-                3
-              </div>
-              <h4 className="font-medium text-foreground mb-1">You review</h4>
-              <p className="text-sm text-muted-foreground">Preview, feedback, approve — in your portal.</p>
-            </div>
-            <div className="text-center">
-              <div className="w-10 h-10 rounded-full bg-accent/10 text-accent font-bold flex items-center justify-center mx-auto mb-3">
-                4
-              </div>
-              <h4 className="font-medium text-foreground mb-1">Go live</h4>
-              <p className="text-sm text-muted-foreground">Launch + ongoing support included.</p>
-            </div>
+            {[
+              { num: 1, title: "Quick call", desc: "15 minutes to understand your business." },
+              { num: 2, title: "We build", desc: "Custom site + portal, no templates." },
+              { num: 3, title: "You review", desc: "Preview, feedback, approve — in your portal." },
+              { num: 4, title: "Go live", desc: "Launch + ongoing support included." },
+            ].map((step) => (
+              <GlowCard
+                key={step.num}
+                customSize
+                glowColor="emerald"
+                className="bg-card/60 p-5 text-center"
+              >
+                <div className="w-10 h-10 rounded-full bg-accent/10 text-accent font-bold flex items-center justify-center mx-auto mb-3">
+                  {step.num}
+                </div>
+                <h4 className="font-medium text-foreground mb-1">{step.title}</h4>
+                <p className="text-sm text-muted-foreground">{step.desc}</p>
+              </GlowCard>
+            ))}
           </div>
         </div>
       </section>
