@@ -112,12 +112,12 @@ const RooferDemo = () => {
         </motion.div>
       </LampContainer>
         
-        {/* Bottom fade to blend into next section */}
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-32 bg-gradient-to-b from-transparent to-slate-900 z-20" />
+        {/* Bottom fade – fully resolves to slate-900 */}
+        <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-48 z-40 bg-gradient-to-b from-transparent via-slate-900/70 to-slate-900" />
       </div>
 
       {/* Feature Steps Section */}
-      <section className="py-16 bg-slate-900">
+      <section className="relative -mt-px py-16 bg-slate-900">
         <div className="container mx-auto px-6">
           <FeatureSteps 
             features={roofingFeatures}
