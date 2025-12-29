@@ -21,6 +21,7 @@ const plans = [
       "Essential website + hosting + AI Front Door. The clean baseline for owner-operators.",
     monthlyPrice: 575,
     yearlyPrice: 6100,
+    buildRange: "$750–$1,250",
     badge: "Most common",
     cta: "Start with Starter",
     popular: false,
@@ -40,6 +41,7 @@ const plans = [
       "Booking + stronger lead capture + CRM basics. Built for businesses that live on appointments.",
     monthlyPrice: 875,
     yearlyPrice: 9300,
+    buildRange: "$1,500–$2,500",
     badge: "Best value",
     cta: "Upgrade to Growth",
     popular: true,
@@ -48,7 +50,7 @@ const plans = [
       "Conversion-focused layout",
       "Booking or intake integration",
       "Lead capture flows + light animations",
-      "AI Front Door + Booking (availability-based scheduling)",
+      "AI Front Door + Booking (single or multi-staff scheduling via your booking system)",
       "Confirmation texts/emails",
       "CRM basics (lead tracking + tagging)",
     ],
@@ -59,6 +61,7 @@ const plans = [
       "Premium site + AI + booking + CRM context + managed updates. The full system.",
     monthlyPrice: 1100,
     yearlyPrice: 11800,
+    buildRange: "$2,500–$4,000+",
     badge: "Highest impact",
     cta: "Go Full Ops",
     popular: false,
@@ -71,6 +74,7 @@ const plans = [
       "Managed updates & tuning (pricing, seasonal messaging)",
       "Priority support for digital operations",
     ],
+    note: "CRM context focuses on intake, tagging, routing, and follow-ups — not enterprise CRM replacement.",
   },
 ];
 
@@ -195,7 +199,13 @@ export default function PricingSection() {
           </TimelineContent>
 
           <TimelineContent animationNum={2} timelineRef={pricingRef}>
+            <p className="text-sm text-muted-foreground mb-6">
+              Bundles include a one-time website build plus ongoing monthly services.
+            </p>
             <PricingSwitch onSwitch={setPeriod} />
+            <p className="text-xs text-muted-foreground/70 -mt-6">
+              Yearly pricing is an optional prepaid discount (available on request).
+            </p>
           </TimelineContent>
         </div>
 
@@ -237,8 +247,14 @@ export default function PricingSection() {
                         /{period === "yearly" ? "year" : "month"}
                       </span>
                     </div>
+                    <p className="text-xs text-muted-foreground/70">
+                      Monthly services{period === "yearly" ? " (prepaid)" : ""}
+                    </p>
+                    <p className="text-xs text-accent/80 font-medium">
+                      + one-time build: {plan.buildRange}
+                    </p>
 
-                    <p className="text-sm text-muted-foreground leading-relaxed">
+                    <p className="text-sm text-muted-foreground leading-relaxed mt-2">
                       {plan.description}
                     </p>
                   </div>
@@ -274,9 +290,22 @@ export default function PricingSection() {
           ))}
         </div>
 
-        {/* Boundaries note */}
+        {/* Pilot section */}
         <TimelineContent animationNum={7} timelineRef={pricingRef}>
-          <div className="text-center mt-12 max-w-2xl mx-auto">
+          <div className="text-center mt-16 max-w-xl mx-auto p-6 rounded-xl bg-card/50 border border-border/50 backdrop-blur-sm">
+            <h3 className="font-serif text-xl font-bold mb-2">7-Day Pilot</h3>
+            <p className="text-sm text-muted-foreground mb-1">
+              Full functionality on real call traffic. Limited availability.
+            </p>
+            <p className="text-xs text-muted-foreground/70">
+              Select businesses only.
+            </p>
+          </div>
+        </TimelineContent>
+
+        {/* Boundaries note */}
+        <TimelineContent animationNum={8} timelineRef={pricingRef}>
+          <div className="text-center mt-8 max-w-2xl mx-auto">
             <p className="text-sm text-muted-foreground">
               <span className="font-medium">Important Boundaries:</span> PCD provides coverage, responsiveness, and operational relief — 
               not a replacement for employees, medical records handling, or enterprise compliance.
