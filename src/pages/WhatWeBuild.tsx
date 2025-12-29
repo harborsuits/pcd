@@ -2,14 +2,15 @@ import { Link } from "react-router-dom";
 import { ArrowRight, Globe, FolderOpen, CalendarCheck, Zap, Bot, Puzzle, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import InteractiveBentoGallery from "@/components/ui/interactive-bento-gallery";
+import websitesConvertVideo from "@/assets/videos/websites-convert.mp4";
 
 const mediaItems = [
   {
     id: 1,
-    type: "image" as const,
+    type: "video" as const,
     title: "Websites that convert",
     desc: "Clean design, fast load, mobile-first.",
-    url: "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1400&q=80",
+    url: websitesConvertVideo,
     span: "md:col-span-2 md:row-span-2 col-span-2 row-span-2",
   },
   {
