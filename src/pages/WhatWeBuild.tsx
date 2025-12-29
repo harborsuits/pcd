@@ -5,6 +5,7 @@ import InteractiveBentoGallery from "@/components/ui/interactive-bento-gallery";
 import { StaggerFeatureCarousel } from "@/components/ui/stagger-feature-carousel";
 import { StaggerTestimonials } from "@/components/ui/stagger-testimonials";
 import websitesConvertVideo from "@/assets/videos/websites-convert.mp4";
+import officeVideo from "@/assets/videos/office-video.mp4";
 
 const mediaItems = [
   {
@@ -41,10 +42,10 @@ const mediaItems = [
   },
   {
     id: 5,
-    type: "image" as const,
+    type: "video" as const,
     title: "Automations",
     desc: "Reminders, follow-ups, and workflows.",
-    url: "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=1400&q=80",
+    url: officeVideo,
     span: "md:col-span-2 md:row-span-1 col-span-1 row-span-1",
   },
   {
