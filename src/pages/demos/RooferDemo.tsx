@@ -54,20 +54,18 @@ const RooferDemo = () => {
       </header>
 
       {/* Hero with Lamp Effect */}
-      <div className="relative">
-        {/* Background Image */}
-        <div 
-          className="absolute inset-0 z-0"
-          style={{
-            backgroundImage: `url(${rooferBg})`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center top',
-            opacity: 0.25,
-          }}
-        />
-        <div className="absolute inset-0 z-[1] bg-gradient-to-b from-slate-950/40 via-slate-950/70 to-slate-950" />
+      <div 
+        className="relative"
+        style={{
+          backgroundImage: `url(${rooferBg})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center top',
+        }}
+      >
+        {/* Dark overlay to blend with lamp */}
+        <div className="absolute inset-0 bg-slate-950/60" />
         
-        <LampContainer className="min-h-[700px] bg-transparent relative z-10">
+        <LampContainer className="min-h-[700px] relative z-10">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
