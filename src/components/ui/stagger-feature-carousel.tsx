@@ -8,7 +8,6 @@ type FeatureCard = {
   tempId: number;
   title: string;
   subtitle: string;
-  badge?: string;
   bullets: string[];
   icon: LucideIcon;
 };
@@ -16,74 +15,80 @@ type FeatureCard = {
 const features: FeatureCard[] = [
   {
     tempId: 0,
-    title: "Websites",
-    subtitle: "Your public face. Fast, modern, and built to convert.",
-    icon: Globe,
+    icon: Bot,
+    title: "AI Receptionist",
+    subtitle: "An AI-powered front door for your business.",
     bullets: [
-      "Marketing sites that explain what you do in seconds",
-      "Service pages designed to answer questions before the phone rings",
-      "Simple landing pages for offers, locations, or campaigns",
-      "Clean, SEO-ready foundations without bloated plugins",
+      "Answers common questions instantly (services, hours, pricing ranges, next steps)",
+      "Handles calls and messages when you're unavailable",
+      "Collects structured lead info before handing off",
+      "Routes high-intent requests appropriately",
+      "Reduces interruptions during focused work",
+      "Always clearly identified as AI",
     ],
   },
   {
     tempId: 1,
-    title: "Client Portals",
-    subtitle: "A private workspace for you and your clients.",
-    icon: FolderOpen,
+    icon: Globe,
+    title: "Websites",
+    subtitle: "Your public face — fast, modern, and built to convert.",
     bullets: [
-      "One shared place for messages, files, approvals, and updates",
-      "No more email threads, lost attachments, or confusion",
-      "Clients always know where to go — and what's next",
-      "Built to scale from one project to many",
+      "Marketing sites that explain what you do in seconds, not paragraphs",
+      "Service pages that answer questions before the phone rings",
+      "Landing pages for specific offers, locations, or campaigns",
+      "Clean, SEO-ready foundations without bloated plugins",
+      "Designed to work with your booking and intake flow",
     ],
   },
   {
     tempId: 2,
-    title: "Booking & Intake",
-    subtitle: "Structured information instead of back-and-forth.",
-    icon: CalendarCheck,
+    icon: FolderOpen,
+    title: "Client Portals",
+    subtitle: "A private workspace for you and your clients.",
     bullets: [
-      "Smart intake forms that gather the right info upfront",
-      "Booking flows that respect your availability and rules",
-      "Automatic routing based on service type or request",
-      "You start projects with context, not confusion",
+      "One shared place for messages, files, approvals, and updates",
+      "No more email threads, lost attachments, or 'did you see this?'",
+      "Clear visibility into what's done and what's next",
+      "Built to scale from one project to many",
+      "Reduces friction on both sides of the relationship",
     ],
   },
   {
     tempId: 3,
-    title: "Automations",
-    subtitle: "Small automations that remove friction — not replace you.",
-    icon: Zap,
+    icon: CalendarCheck,
+    title: "Booking & Intake",
+    subtitle: "Structured information instead of back-and-forth.",
     bullets: [
-      "Automatic confirmations and status updates",
-      "File upload reminders when something is missing",
-      "Internal notifications so nothing slips through cracks",
-      "Less manual admin, more focused work",
+      "Smart intake forms that gather the right info upfront",
+      "Booking flows that respect your availability and rules",
+      "Routing based on service type or request",
+      "Seamless handoff into your workflow",
+      "You start projects with context — not confusion",
     ],
   },
   {
     tempId: 4,
-    title: "AI Receptionist",
-    subtitle: "An assistant for first contact — not a replacement.",
-    badge: "Optional Add-on",
-    icon: Bot,
+    icon: Zap,
+    title: "Automations",
+    subtitle: "Quiet systems that remove friction — not control.",
     bullets: [
-      "Answers common questions instantly",
-      "Collects basic info before handing things off",
-      "Helps reduce interruptions during focused work",
-      "Always clearly identified as automated",
+      "Automatic confirmations and status updates",
+      "File upload reminders when something is missing",
+      "Internal notifications so nothing slips through cracks",
+      "Fewer manual steps, fewer mistakes",
+      "Built to support your work, not replace it",
     ],
   },
   {
     tempId: 5,
+    icon: Puzzle,
     title: "Custom & Integrations",
     subtitle: "Built around how you actually work.",
-    icon: Puzzle,
     bullets: [
       "Integrations with tools you already use",
       "Custom workflows for unique processes",
-      "Room to grow as your business evolves",
+      "Flexible enough to evolve as your business grows",
+      "No rigid platforms forcing bad habits",
       "The system adapts to your business — not the other way around",
     ],
   },
@@ -139,14 +144,6 @@ const FeatureCardView: React.FC<CardProps> = ({ position, item, handleMove, card
           <Icon className={cn("h-4 w-4", isCenter ? "text-primary-foreground" : "text-accent")} />
         </div>
         <h3 className="font-bold text-lg leading-tight">{item.title}</h3>
-        {item.badge && (
-          <span className={cn(
-            "text-xs font-medium px-2 py-0.5 rounded-full flex-shrink-0",
-            isCenter ? "bg-primary-foreground/20 text-primary-foreground" : "bg-accent/10 text-accent"
-          )}>
-            {item.badge}
-          </span>
-        )}
       </div>
 
       {/* Subtitle */}
