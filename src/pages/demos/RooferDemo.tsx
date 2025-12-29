@@ -1,7 +1,29 @@
 import { Link } from "react-router-dom";
 import { ArrowLeft, Phone, Mail, MapPin, Star, CheckCircle, Clock, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { FeatureSteps } from "@/components/ui/feature-section";
 import rooferHero from "@/assets/demos/roofer-hero.jpeg";
+
+const roofingFeatures = [
+  { 
+    step: 'Step 1', 
+    title: 'Free Inspection',
+    content: 'Our certified experts assess your roof condition with a comprehensive no-obligation inspection.', 
+    image: rooferHero
+  },
+  { 
+    step: 'Step 2',
+    title: 'Detailed Estimate',
+    content: 'Receive a transparent quote with all materials, labor, and timeline clearly outlined.',
+    image: 'https://images.unsplash.com/photo-1632759145351-1d592919f522?w=800&auto=format&fit=crop'
+  },
+  { 
+    step: 'Step 3',
+    title: 'Expert Installation',
+    content: 'Our licensed team completes your project on time with premium materials and a 25-year warranty.',
+    image: 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=800&auto=format&fit=crop'
+  },
+];
 
 const RooferDemo = () => {
   return (
@@ -26,50 +48,50 @@ const RooferDemo = () => {
         </div>
       </header>
 
-      {/* Hero */}
-      <section className="relative py-24 overflow-hidden">
-        <div className="absolute inset-0">
-          <img 
-            src={rooferHero}
-            alt="Roofing work"
-            className="w-full h-full object-cover opacity-30"
-          />
-          <div className="absolute inset-0 bg-gradient-to-r from-slate-900 via-slate-900/90 to-transparent" />
-        </div>
-        
-        <div className="relative container mx-auto px-6">
-          <div className="max-w-2xl">
+      {/* Hero with Feature Steps */}
+      <section className="relative py-12 md:py-20 bg-gradient-to-b from-slate-800 to-slate-900">
+        <div className="container mx-auto px-6">
+          <div className="text-center mb-8">
             <p className="text-orange-400 font-medium mb-4">Licensed & Insured Roofing Experts</p>
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 leading-tight">
               Protecting Your Home From the Top Down
             </h1>
-            <p className="text-xl text-slate-300 mb-8">
+            <p className="text-xl text-slate-300 max-w-2xl mx-auto">
               Professional roof repair, replacement, and installation services. 
               Serving the greater metro area for over 20 years.
             </p>
-            <div className="flex flex-wrap gap-4">
-              <Button size="lg" className="bg-orange-500 hover:bg-orange-600">
-                <Phone className="mr-2 h-5 w-5" />
-                Call Now: (555) 123-4567
-              </Button>
-              <Button size="lg" variant="outline" className="border-slate-500 text-white hover:bg-slate-800">
-                Schedule Inspection
-              </Button>
+          </div>
+          
+          <FeatureSteps 
+            features={roofingFeatures}
+            title="Our Simple Process"
+            autoPlayInterval={4000}
+            imageHeight="h-[350px] md:h-[400px]"
+            className="bg-slate-800/50 rounded-2xl border border-slate-700"
+          />
+          
+          <div className="flex flex-wrap justify-center gap-4 mt-10">
+            <Button size="lg" className="bg-orange-500 hover:bg-orange-600">
+              <Phone className="mr-2 h-5 w-5" />
+              Call Now: (555) 123-4567
+            </Button>
+            <Button size="lg" variant="outline" className="border-slate-500 text-white hover:bg-slate-800">
+              Schedule Inspection
+            </Button>
+          </div>
+          
+          <div className="flex flex-wrap justify-center gap-6 mt-8 text-sm">
+            <div className="flex items-center gap-2">
+              <Shield className="h-5 w-5 text-orange-400" />
+              <span>25-Year Warranty</span>
             </div>
-            
-            <div className="flex flex-wrap gap-6 mt-10 text-sm">
-              <div className="flex items-center gap-2">
-                <Shield className="h-5 w-5 text-orange-400" />
-                <span>25-Year Warranty</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Clock className="h-5 w-5 text-orange-400" />
-                <span>Same-Day Estimates</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Star className="h-5 w-5 text-orange-400" />
-                <span>4.9★ Rating (200+ Reviews)</span>
-              </div>
+            <div className="flex items-center gap-2">
+              <Clock className="h-5 w-5 text-orange-400" />
+              <span>Same-Day Estimates</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Star className="h-5 w-5 text-orange-400" />
+              <span>4.9★ Rating (200+ Reviews)</span>
             </div>
           </div>
         </div>
