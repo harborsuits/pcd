@@ -103,6 +103,9 @@ const WhatWeBuild = () => {
       />
 
 
+      {/* Feature Carousel */}
+      <StaggerFeatureCarousel hideTitle />
+
       {/* Testimonials */}
       <StaggerTestimonials />
 
