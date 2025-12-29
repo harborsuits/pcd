@@ -47,9 +47,13 @@ const RooferDemo = () => {
             <a href="#services" className="text-slate-300 hover:text-white transition-colors">Services</a>
             <a href="#about" className="text-slate-300 hover:text-white transition-colors">About</a>
             <a href="#reviews" className="text-slate-300 hover:text-white transition-colors">Reviews</a>
-            <Button size="sm" className="bg-orange-500 hover:bg-orange-600 shadow-lg shadow-orange-500/25">
+            <ShimmerButton 
+              shimmerColor="#fb923c" 
+              background="rgba(249, 115, 22, 1)"
+              className="shadow-lg shadow-orange-500/25 text-sm font-medium px-4 py-2"
+            >
               Get Free Estimate
-            </Button>
+            </ShimmerButton>
           </nav>
         </div>
       </header>
@@ -177,9 +181,13 @@ const RooferDemo = () => {
           <p className="text-orange-100 mb-8 max-w-xl mx-auto">
             Get a free roof inspection and estimate. No pressure, just honest advice.
           </p>
-          <Button size="lg" className="bg-slate-900 hover:bg-slate-800 text-white">
+          <ShimmerButton 
+            shimmerColor="#94a3b8" 
+            background="rgba(15, 23, 42, 1)"
+            className="text-base font-medium"
+          >
             Schedule Your Free Estimate
-          </Button>
+          </ShimmerButton>
         </div>
       </section>
 
