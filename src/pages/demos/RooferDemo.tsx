@@ -72,7 +72,7 @@ const RooferDemo = () => {
           transition={{ delay: 0.5, duration: 0.8 }}
           className="text-center"
         >
-          <p className="text-orange-400 font-medium mb-4 tracking-wider uppercase text-sm">
+          <p className="text-white font-medium mb-4 tracking-wider uppercase text-sm">
             Licensed & Insured Roofing Experts
           </p>
           <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 leading-tight bg-gradient-to-b from-white to-slate-400 bg-clip-text text-transparent">
