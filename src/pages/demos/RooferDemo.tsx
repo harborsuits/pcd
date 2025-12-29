@@ -2,6 +2,8 @@ import { Link } from "react-router-dom";
 import { ArrowLeft, Phone, Mail, MapPin, Star, CheckCircle, Clock, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FeatureSteps } from "@/components/ui/feature-section";
+import { LampContainer } from "@/components/ui/lamp";
+import { motion } from "framer-motion";
 import rooferHero from "@/assets/demos/roofer-hero.jpeg";
 
 const roofingFeatures = [
@@ -27,9 +29,9 @@ const roofingFeatures = [
 
 const RooferDemo = () => {
   return (
-    <div className="min-h-screen bg-slate-900 text-white">
+    <div className="min-h-screen bg-slate-950 text-white">
       {/* Header */}
-      <header className="bg-slate-800 border-b border-slate-700 sticky top-0 z-50">
+      <header className="bg-slate-950/80 backdrop-blur-md border-b border-slate-800 sticky top-0 z-50">
         <div className="container mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Link to="/#demos" className="text-slate-400 hover:text-white transition-colors">
@@ -38,49 +40,48 @@ const RooferDemo = () => {
             <span className="font-bold text-xl">Summit Roofing Co.</span>
           </div>
           <nav className="hidden md:flex items-center gap-6 text-sm">
-            <a href="#services" className="text-slate-300 hover:text-white">Services</a>
-            <a href="#about" className="text-slate-300 hover:text-white">About</a>
-            <a href="#reviews" className="text-slate-300 hover:text-white">Reviews</a>
-            <Button size="sm" className="bg-orange-500 hover:bg-orange-600">
+            <a href="#services" className="text-slate-300 hover:text-white transition-colors">Services</a>
+            <a href="#about" className="text-slate-300 hover:text-white transition-colors">About</a>
+            <a href="#reviews" className="text-slate-300 hover:text-white transition-colors">Reviews</a>
+            <Button size="sm" className="bg-orange-500 hover:bg-orange-600 shadow-lg shadow-orange-500/25">
               Get Free Estimate
             </Button>
           </nav>
         </div>
       </header>
 
-      {/* Hero with Feature Steps */}
-      <section className="relative py-12 md:py-20 bg-gradient-to-b from-slate-800 to-slate-900">
-        <div className="container mx-auto px-6">
-          <div className="text-center mb-8">
-            <p className="text-orange-400 font-medium mb-4">Licensed & Insured Roofing Experts</p>
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 leading-tight">
-              Protecting Your Home From the Top Down
-            </h1>
-            <p className="text-xl text-slate-300 max-w-2xl mx-auto">
-              Professional roof repair, replacement, and installation services. 
-              Serving the greater metro area for over 20 years.
-            </p>
-          </div>
+      {/* Hero with Lamp Effect */}
+      <LampContainer className="min-h-[700px] bg-slate-950">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5, duration: 0.8 }}
+          className="text-center"
+        >
+          <p className="text-orange-400 font-medium mb-4 tracking-wider uppercase text-sm">
+            Licensed & Insured Roofing Experts
+          </p>
+          <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 leading-tight bg-gradient-to-b from-white to-slate-400 bg-clip-text text-transparent">
+            Protecting Your Home
+            <br />
+            From the Top Down
+          </h1>
+          <p className="text-lg md:text-xl text-slate-400 max-w-2xl mx-auto mb-8">
+            Professional roof repair, replacement, and installation services. 
+            Serving the greater metro area for over 20 years.
+          </p>
           
-          <FeatureSteps 
-            features={roofingFeatures}
-            title="Our Simple Process"
-            autoPlayInterval={4000}
-            imageHeight="h-[350px] md:h-[400px]"
-            className="bg-slate-800/50 rounded-2xl border border-slate-700"
-          />
-          
-          <div className="flex flex-wrap justify-center gap-4 mt-10">
-            <Button size="lg" className="bg-orange-500 hover:bg-orange-600">
+          <div className="flex flex-wrap justify-center gap-4 mb-8">
+            <Button size="lg" className="bg-orange-500 hover:bg-orange-600 shadow-lg shadow-orange-500/30 text-base">
               <Phone className="mr-2 h-5 w-5" />
-              Call Now: (555) 123-4567
+              Call: (555) 123-4567
             </Button>
-            <Button size="lg" variant="outline" className="border-slate-500 text-white hover:bg-slate-800">
+            <Button size="lg" variant="outline" className="border-slate-600 text-white hover:bg-slate-800/50 backdrop-blur text-base">
               Schedule Inspection
             </Button>
           </div>
           
-          <div className="flex flex-wrap justify-center gap-6 mt-8 text-sm">
+          <div className="flex flex-wrap justify-center gap-6 text-sm text-slate-300">
             <div className="flex items-center gap-2">
               <Shield className="h-5 w-5 text-orange-400" />
               <span>25-Year Warranty</span>
@@ -91,9 +92,22 @@ const RooferDemo = () => {
             </div>
             <div className="flex items-center gap-2">
               <Star className="h-5 w-5 text-orange-400" />
-              <span>4.9★ Rating (200+ Reviews)</span>
+              <span>4.9★ (200+ Reviews)</span>
             </div>
           </div>
+        </motion.div>
+      </LampContainer>
+
+      {/* Feature Steps Section */}
+      <section className="py-16 bg-slate-900">
+        <div className="container mx-auto px-6">
+          <FeatureSteps 
+            features={roofingFeatures}
+            title="Our Simple Process"
+            autoPlayInterval={4000}
+            imageHeight="h-[350px] md:h-[400px]"
+            className="bg-slate-800/50 rounded-2xl border border-slate-700/50"
+          />
         </div>
       </section>
 
