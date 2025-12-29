@@ -167,49 +167,58 @@ const WhatWeBuild = () => {
         description="A complete system for client-facing work. Everything you need to look professional and run smoothly — nothing you don't."
       />
 
-      {/* Sections */}
-      <section className="py-16">
+      {/* Two-Column: What We Build + Testimonials */}
+      <section className="py-16 bg-accent/5 border-t border-border">
         <div className="container mx-auto px-6">
-          <div className="space-y-16">
-            {sections.map((section, index) => (
-              <div 
-                key={section.title}
-                className="grid md:grid-cols-2 gap-8 items-start"
-              >
-                <div className={index % 2 === 1 ? "md:order-2" : ""}>
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center">
-                      <section.icon className="h-5 w-5 text-accent" />
-                    </div>
-                    <h2 className="font-serif text-2xl font-bold">{section.title}</h2>
-                    {section.badge && (
-                      <span className="text-xs font-medium bg-accent/10 text-accent px-2 py-1 rounded-full">
-                        {section.badge}
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-muted-foreground text-lg mb-4">
-                    {section.description}
-                  </p>
-                </div>
-                <div className={`bg-card border border-border rounded-lg p-6 ${index % 2 === 1 ? "md:order-1" : ""}`}>
-                  <ul className="space-y-3">
-                    {section.details.map((detail) => (
-                      <li key={detail} className="flex items-start gap-3">
-                        <div className="w-1.5 h-1.5 rounded-full bg-accent mt-2 flex-shrink-0" />
-                        <span className="text-foreground">{detail}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+          <div className="grid lg:grid-cols-2 gap-12 items-start">
+            {/* LEFT: What We Build Details */}
+            <div className="space-y-8">
+              <div>
+                <h2 className="font-serif text-3xl font-bold text-foreground mb-2">
+                  What clients say
+                </h2>
+                <p className="text-muted-foreground text-lg">
+                  The systems we build — explained clearly.
+                </p>
               </div>
-            ))}
+
+              <div className="space-y-6">
+                {sections.map((section) => (
+                  <div key={section.title} className="bg-card border border-border rounded-lg p-5">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center flex-shrink-0">
+                        <section.icon className="h-4 w-4 text-accent" />
+                      </div>
+                      <h3 className="font-semibold text-foreground">{section.title}</h3>
+                      {section.badge && (
+                        <span className="text-xs font-medium bg-accent/10 text-accent px-2 py-0.5 rounded-full">
+                          {section.badge}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-sm text-muted-foreground mb-3">
+                      {section.description}
+                    </p>
+                    <ul className="space-y-1.5">
+                      {section.details.slice(0, 2).map((detail) => (
+                        <li key={detail} className="flex items-start gap-2 text-sm text-foreground/80">
+                          <div className="w-1 h-1 rounded-full bg-accent mt-2 flex-shrink-0" />
+                          <span>{detail}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* RIGHT: Staggered Testimonials */}
+            <div className="lg:sticky lg:top-24">
+              <StaggerTestimonials embedded height={600} />
+            </div>
           </div>
         </div>
       </section>
-
-      {/* Testimonials */}
-      <StaggerTestimonials />
 
       {/* CTA */}
       <section className="py-16 border-t border-border bg-accent/5">
