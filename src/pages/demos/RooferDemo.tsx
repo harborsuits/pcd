@@ -130,7 +130,7 @@ const RooferDemo = () => {
       </div>
 
       {/* Feature Steps Section */}
-      <section className="py-16">
+      <section className="py-12 bg-slate-800/50">
         <div className="container mx-auto px-6">
           <FeatureSteps 
             features={roofingFeatures}
