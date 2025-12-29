@@ -6,6 +6,7 @@ import { StaggerFeatureCarousel } from "@/components/ui/stagger-feature-carousel
 import { StaggerTestimonials } from "@/components/ui/stagger-testimonials";
 import websitesConvertVideo from "@/assets/videos/websites-convert.mp4";
 import officeVideo from "@/assets/videos/office-video.mp4";
+import aiFrontDoorVideo from "@/assets/videos/ai-front-door.mp4";
 
 const mediaItems = [
   {
@@ -18,10 +19,10 @@ const mediaItems = [
   },
   {
     id: 2,
-    type: "image" as const,
+    type: "video" as const,
     title: "AI Front Door",
     desc: "Answer calls, capture info, route leads.",
-    url: "https://images.unsplash.com/photo-1553877522-43269d4ea984?auto=format&fit=crop&w=1400&q=80",
+    url: aiFrontDoorVideo,
     span: "md:col-span-2 md:row-span-1 col-span-1 row-span-1",
   },
   {
