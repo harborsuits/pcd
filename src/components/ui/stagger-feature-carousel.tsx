@@ -179,12 +179,14 @@ interface StaggerFeatureCarouselProps {
   embedded?: boolean;
   height?: number;
   className?: string;
+  hideTitle?: boolean;
 }
 
 export const StaggerFeatureCarousel: React.FC<StaggerFeatureCarouselProps> = ({
   embedded = false,
   height = 500,
   className,
+  hideTitle = false,
 }) => {
   const [cardSize, setCardSize] = useState(340);
   const [items, setItems] = useState(features);
@@ -277,14 +279,16 @@ export const StaggerFeatureCarousel: React.FC<StaggerFeatureCarouselProps> = ({
     <section className={cn("relative w-full py-16 overflow-hidden bg-background", className)}>
       <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         {/* Header */}
-        <div className="text-center mb-16">
-          <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-4">
-            What we build
-          </h2>
-          <p className="text-muted-foreground text-lg max-w-xl mx-auto">
-            Websites, portals, booking, automations, and AI — packaged as a clean system.
-          </p>
-        </div>
+        {!hideTitle && (
+          <div className="text-center mb-16">
+            <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-4">
+              What we build
+            </h2>
+            <p className="text-muted-foreground text-lg max-w-xl mx-auto">
+              Websites, portals, booking, automations, and AI — packaged as a clean system.
+            </p>
+          </div>
+        )}
 
         {/* Carousel */}
         <div className="relative h-[450px] sm:h-[500px] flex items-center justify-center">
