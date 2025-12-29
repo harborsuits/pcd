@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
+import rooferImage from '@/assets/demos/roofer-hero.jpeg';
 
 interface AccordionItemData {
   id: number;
@@ -82,7 +83,7 @@ const defaultItems: AccordionItemData[] = [
     id: 1,
     category: 'Contractor',
     title: 'Roofer',
-    imageUrl: 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=800&auto=format&fit=crop',
+    imageUrl: rooferImage,
     demoUrl: '/demos/roofer',
   },
   {
