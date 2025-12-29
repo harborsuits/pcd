@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { useMemo } from "react";
 import { ArrowRight, MessageSquare, FolderOpen, Sparkles, Shield, Smartphone, CreditCard, LogIn, Globe, CalendarCheck, Zap, Bot, Clock, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { LiquidButton } from "@/components/ui/liquid-glass-button";
 import { GlowCard } from "@/components/ui/spotlight-card";
 import { FeaturedDemosAccordion } from "@/components/ui/interactive-image-accordion";
 import { Hero3DModel } from "@/components/Hero3DModel";
@@ -126,17 +127,17 @@ const Index = () => {
             
             {/* CTAs */}
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8">
-              <Button asChild size="lg" className="group">
+              <LiquidButton asChild size="lg" className="group">
                 <a href="#demos">
                   Get a Demo
                   <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
                 </a>
-              </Button>
-              <Button asChild variant="outline" size="lg">
+              </LiquidButton>
+              <LiquidButton asChild size="lg" className="group">
                 <Link to="/portal">
                   Client Portal
                 </Link>
-              </Button>
+              </LiquidButton>
             </div>
             
             {/* Trust row */}
@@ -206,15 +207,15 @@ const Index = () => {
               </p>
               
               <div className="flex flex-wrap gap-3">
-                <Button asChild>
+                <LiquidButton asChild size="lg" className="group">
                   <a href="#demos">
                     See How It Works
-                    <ArrowRight className="ml-2 h-4 w-4" />
+                    <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
                   </a>
-                </Button>
-                <Button asChild variant="outline">
+                </LiquidButton>
+                <LiquidButton asChild size="lg" className="group">
                   <Link to="/get-demo">Add to My Project</Link>
-                </Button>
+                </LiquidButton>
               </div>
             </div>
             
@@ -280,12 +281,12 @@ const Index = () => {
           </div>
           
           <div className="text-center mt-10">
-            <Button asChild variant="outline">
+            <LiquidButton asChild size="lg" className="group">
               <Link to="/get-demo">
                 Request a Custom Demo
-                <ArrowRight className="ml-2 h-4 w-4" />
+                <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
               </Link>
-            </Button>
+            </LiquidButton>
           </div>
         </div>
       </section>
@@ -335,12 +336,12 @@ const Index = () => {
           <p className="text-muted-foreground max-w-md mx-auto mb-6">
             Access your portal using the link we sent you, or log in below.
           </p>
-          <Button asChild variant="outline">
+          <LiquidButton asChild size="lg" className="group">
             <Link to="/portal">
               <LogIn className="mr-2 h-4 w-4" />
               Log in to your portal
             </Link>
-          </Button>
+          </LiquidButton>
         </div>
       </section>
 
