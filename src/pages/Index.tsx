@@ -3,6 +3,7 @@ import { useMemo } from "react";
 import { ArrowRight, MessageSquare, FolderOpen, Sparkles, Shield, Smartphone, CreditCard, LogIn, Globe, CalendarCheck, Zap, Bot, Clock, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { GlowCard } from "@/components/ui/spotlight-card";
+import { FeaturedDemosAccordion } from "@/components/ui/interactive-image-accordion";
 import { Hero3DModel } from "@/components/Hero3DModel";
 import { ErrorBoundary } from "@/components/common/ErrorBoundary";
 import { canUseWebGL } from "@/lib/webgl";
@@ -274,41 +275,11 @@ const Index = () => {
             </p>
           </div>
           
-          <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
-            {exampleDemos.map((project) => (
-              <Link
-                key={project.name}
-                to={`/d/${project.token}/${project.slug}`}
-                className="group block"
-              >
-                <GlowCard
-                  customSize
-                  glowColor="emerald"
-                  className="bg-card overflow-hidden hover:shadow-xl transition-all h-full"
-                >
-                  <div className="aspect-[4/3] bg-secondary/50 flex items-center justify-center">
-                    <span className="font-serif text-3xl text-muted-foreground/40 group-hover:text-accent transition-colors">
-                      {project.name.charAt(0)}
-                    </span>
-                  </div>
-                  <div className="p-5">
-                    <p className="text-xs font-medium text-accent uppercase tracking-wide mb-1">
-                      {project.category}
-                    </p>
-                    <h3 className="font-serif text-lg font-bold group-hover:text-accent transition-colors">
-                      {project.name}
-                    </h3>
-                    <span className="inline-flex items-center mt-3 text-sm text-muted-foreground group-hover:text-accent">
-                      View Demo
-                      <ArrowRight className="ml-1 h-3 w-3 group-hover:translate-x-1 transition-transform" />
-                    </span>
-                  </div>
-                </GlowCard>
-              </Link>
-            ))}
+          <div className="max-w-5xl mx-auto">
+            <FeaturedDemosAccordion />
           </div>
           
-          <div className="text-center mt-8">
+          <div className="text-center mt-10">
             <Button asChild variant="outline">
               <Link to="/get-demo">
                 Request a Custom Demo
