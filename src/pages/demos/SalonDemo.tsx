@@ -171,17 +171,19 @@ const SalonDemo = () => {
               { name: "Emma", role: "Esthetician", image: "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=300&auto=format&fit=crop" },
             ].map((member) => (
               <div key={member.name} className="text-center group">
-                <GlowCard 
-                  glowColor="rose" 
-                  customSize 
-                  className="!rounded-full w-32 h-32 mx-auto mb-4 p-0 overflow-hidden"
-                >
-                  <img 
-                    src={member.image} 
-                    alt={member.name}
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300 relative z-10"
-                  />
-                </GlowCard>
+                <div className="w-32 h-32 mx-auto mb-4 relative">
+                  <GlowCard 
+                    glowColor="rose" 
+                    customSize 
+                    className="!rounded-full w-full h-full p-0"
+                  >
+                    <img 
+                      src={member.image} 
+                      alt={member.name}
+                      className="w-full h-full object-cover rounded-full group-hover:scale-110 transition-transform duration-300"
+                    />
+                  </GlowCard>
+                </div>
                 <h3 className="font-medium text-rose-900">{member.name}</h3>
                 <p className="text-stone-500 text-sm">{member.role}</p>
               </div>
