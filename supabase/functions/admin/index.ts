@@ -1345,6 +1345,8 @@ async function handleProjects(req: Request): Promise<Response> {
     const projectIds = (projects || []).map(p => p.id);
     let intakesMap: Record<string, unknown> = {};
     let unreadCountsMap: Record<string, number> = {};
+    let quoteCountsMap: Record<string, number> = {};
+    let hasClaimMap: Record<string, boolean> = {};
     
     if (projectIds.length > 0) {
       // Fetch intakes (including id and intake_status)
@@ -1362,29 +1364,53 @@ async function handleProjects(req: Request): Promise<Response> {
         }, {});
       }
 
-      // Fetch unread client messages count per project
-      const { data: unreadCounts, error: unreadError } = await supabase
+      // Fetch all client messages to count unread and quote requests
+      const { data: clientMessages, error: messagesError } = await supabase
         .from("messages")
-        .select("project_id")
+        .select("project_id, content, read_at")
         .in("project_id", projectIds)
-        .eq("sender_type", "client")
-        .is("read_at", null);
+        .eq("sender_type", "client");
 
-      if (unreadError) {
-        console.error("Unread counts fetch error:", unreadError);
+      if (messagesError) {
+        console.error("Messages fetch error:", messagesError);
       } else {
-        // Count messages per project
-        (unreadCounts || []).forEach(msg => {
-          unreadCountsMap[msg.project_id] = (unreadCountsMap[msg.project_id] || 0) + 1;
+        // Count unread messages and quote requests per project
+        (clientMessages || []).forEach(msg => {
+          // Unread count
+          if (!msg.read_at) {
+            unreadCountsMap[msg.project_id] = (unreadCountsMap[msg.project_id] || 0) + 1;
+          }
+          // Quote request count (tagged with [QUOTE_REQUEST] marker)
+          if (msg.content?.includes("[QUOTE_REQUEST]")) {
+            quoteCountsMap[msg.project_id] = (quoteCountsMap[msg.project_id] || 0) + 1;
+          }
+        });
+      }
+
+      // Check for design claims by looking for lead outreach events with "claimed" status
+      const { data: claimEvents } = await supabase
+        .from("lead_outreach_events")
+        .select("lead_id, status, leads!inner(demo_project_id)")
+        .eq("status", "claimed");
+      
+      if (claimEvents) {
+        claimEvents.forEach((event) => {
+          // leads is an array from the join, get the first one
+          const leadData = event.leads as unknown as { demo_project_id: string }[];
+          if (Array.isArray(leadData) && leadData[0]?.demo_project_id) {
+            hasClaimMap[leadData[0].demo_project_id] = true;
+          }
         });
       }
     }
 
-    // Combine projects with their intakes and unread counts
+    // Combine projects with their intakes, unread counts, and inquiry data
     const projectsWithIntakes = (projects || []).map(project => ({
       ...project,
       intake: intakesMap[project.id] || null,
       unread_count: unreadCountsMap[project.id] || 0,
+      quote_count: quoteCountsMap[project.id] || 0,
+      has_claim: hasClaimMap[project.id] || project.status === "interested" || project.status === "client",
     }));
 
     console.log(`Projects fetched: ${projectsWithIntakes.length}`);
