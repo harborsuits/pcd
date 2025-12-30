@@ -47,10 +47,10 @@ export const AnimatedTestimonials = ({
   };
 
   return (
-    <div className={cn("max-w-sm md:max-w-4xl mx-auto antialiased font-sans px-4 md:px-8 lg:px-12 py-20", className)}>
-      <div className="relative grid grid-cols-1 md:grid-cols-2 gap-20">
+    <div className={cn("max-w-sm md:max-w-4xl mx-auto antialiased px-4 md:px-8 lg:px-12 py-12", className)}>
+      <div className="relative grid grid-cols-1 md:grid-cols-2 gap-12 md:gap-20">
         <div>
-          <div className="relative h-80 w-full">
+          <div className="relative h-72 md:h-80 w-full">
             <AnimatePresence>
               {testimonials.map((testimonial, index) => (
                 <motion.div
@@ -87,7 +87,7 @@ export const AnimatedTestimonials = ({
                     src={testimonial.src}
                     alt={testimonial.name}
                     draggable={false}
-                    className="h-full w-full rounded-3xl object-cover object-center"
+                    className="h-full w-full rounded-2xl object-cover object-center border border-border shadow-lg"
                   />
                 </motion.div>
               ))}
@@ -114,13 +114,13 @@ export const AnimatedTestimonials = ({
               ease: "easeInOut",
             }}
           >
-            <h3 className="text-2xl font-bold text-foreground">
+            <h3 className="text-2xl font-serif font-bold text-foreground">
               {testimonials[active].name}
             </h3>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm font-sans text-muted-foreground">
               {testimonials[active].designation}
             </p>
-            <motion.p className="text-lg text-muted-foreground mt-8">
+            <motion.p className="text-base font-sans text-foreground/80 mt-6 leading-relaxed">
               {testimonials[active].quote.split(" ").map((word, index) => (
                 <motion.span
                   key={index}
@@ -146,18 +146,18 @@ export const AnimatedTestimonials = ({
               ))}
             </motion.p>
           </motion.div>
-          <div className="flex gap-4 pt-12 md:pt-0">
+          <div className="flex gap-4 pt-8 md:pt-0">
             <button
               onClick={handlePrev}
-              className="h-10 w-10 rounded-full bg-secondary flex items-center justify-center group/button hover:bg-primary transition-colors"
+              className="h-11 w-11 rounded-lg bg-secondary border border-border flex items-center justify-center group/button hover:bg-primary hover:border-primary transition-colors"
             >
-              <ArrowLeft className="h-5 w-5 text-foreground group-hover/button:text-primary-foreground group-hover/button:rotate-12 transition-transform duration-300" />
+              <ArrowLeft className="h-5 w-5 text-foreground group-hover/button:text-primary-foreground transition-colors" />
             </button>
             <button
               onClick={handleNext}
-              className="h-10 w-10 rounded-full bg-secondary flex items-center justify-center group/button hover:bg-primary transition-colors"
+              className="h-11 w-11 rounded-lg bg-secondary border border-border flex items-center justify-center group/button hover:bg-primary hover:border-primary transition-colors"
             >
-              <ArrowRight className="h-5 w-5 text-foreground group-hover/button:text-primary-foreground group-hover/button:-rotate-12 transition-transform duration-300" />
+              <ArrowRight className="h-5 w-5 text-foreground group-hover/button:text-primary-foreground transition-colors" />
             </button>
           </div>
         </div>
