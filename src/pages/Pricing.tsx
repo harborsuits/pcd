@@ -70,27 +70,6 @@ const Pricing = () => {
         </div>
       </section>
 
-      {/* CTA */}
-      <section className="py-20 bg-gradient-to-b from-background to-accent/5">
-        <div className="container mx-auto px-6 text-center">
-          <h2 className="font-serif text-3xl md:text-4xl font-bold mb-4">
-            Ready to get started?
-          </h2>
-          <p className="text-muted-foreground max-w-lg mx-auto mb-8">
-            See what we can build for your business — no commitment, just a preview.
-          </p>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link to="/get-demo">
-              <LiquidButton variant="dark" size="lg">
-                Get My Demo
-              </LiquidButton>
-            </Link>
-            <Button asChild variant="outline" size="lg">
-              <a href="mailto:hello@pleasantcove.design">Contact Us</a>
-            </Button>
-          </div>
-        </div>
-      </section>
 
       {/* Footer */}
       <footer className="border-t border-border py-8 bg-card">
