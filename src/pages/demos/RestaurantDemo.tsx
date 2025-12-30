@@ -97,11 +97,6 @@ const RestaurantDemo = () => {
         <div className="absolute inset-0 bg-gradient-to-b from-stone-950/30 via-stone-950/40 to-stone-950/60" />
       </div>
 
-      {/* Tubelight Navigation - z-40 */}
-      <NavBar 
-        items={navItems} 
-        activeColor="hsl(45 93% 47%)"
-      />
 
       {/* Scroll Expansion Hero */}
       <section id="hero" className="relative z-10">
