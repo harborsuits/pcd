@@ -1,5 +1,7 @@
-import { useParams, useSearchParams } from "react-router-dom";
+import { useParams, useSearchParams, Link } from "react-router-dom";
 import { useState, useEffect, useMemo } from "react";
+import { ArrowLeft, Home } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { themes, ThemeId, getHeroImage, getGalleryImagesForBusiness } from "@/components/demo/themes";
 import { ThemeSwitcher } from "@/components/demo/ThemeSwitcher";
 import { QuoteModal } from "@/components/demo/QuoteModal";
@@ -169,13 +171,20 @@ export default function DemoPage() {
         templateType={data.demo.template_type}
       />
       
-      {/* Preview Explanation Strip */}
+      {/* Preview Explanation Strip with Back Button */}
       <div className="bg-accent/10 border-b border-accent/20">
-        <div className="container mx-auto px-4 py-2 text-center">
-          <p className="text-sm text-foreground/70">
+        <div className="container mx-auto px-4 py-2 flex items-center justify-between gap-4">
+          <Button variant="ghost" size="sm" asChild className="gap-1.5 -ml-2">
+            <Link to="/">
+              <ArrowLeft className="h-4 w-4" />
+              <span className="hidden sm:inline">Back to site</span>
+            </Link>
+          </Button>
+          <p className="text-sm text-foreground/70 text-center flex-1">
             This is a preview website built specifically for <span className="font-medium text-foreground">{data.business.name}</span>.
             <span className="hidden sm:inline"> You are not committed to anything.</span>
           </p>
+          <div className="w-[80px] hidden sm:block" /> {/* Spacer for centering */}
         </div>
       </div>
 

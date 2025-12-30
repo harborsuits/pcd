@@ -1325,6 +1325,7 @@ async function handleProjects(req: Request): Promise<Response> {
         state,
         zip,
         source,
+        notes,
         owner_user_id,
         created_at,
         updated_at
