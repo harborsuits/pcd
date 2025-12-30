@@ -136,15 +136,15 @@ export function ProjectsTab() {
         </div>
       </CardHeader>
       <CardContent className="p-0">
-        {/* Pipeline filter tabs */}
-        <div className="px-4 border-b">
+        {/* Pipeline filter tabs - horizontal scroll on mobile */}
+        <div className="border-b overflow-x-auto scrollbar-hide">
           <Tabs value={pipelineFilter} onValueChange={(v) => setPipelineFilter(v as PipelineFilter)}>
-            <TabsList className="w-full justify-start h-auto p-0 bg-transparent flex-wrap">
+            <TabsList className="inline-flex justify-start h-auto p-0 bg-transparent min-w-max px-4">
               {PIPELINE_FILTERS.map((filter) => (
                 <TabsTrigger
                   key={filter.value}
                   value={filter.value}
-                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-3 py-2 text-sm"
+                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-3 py-2 text-sm whitespace-nowrap"
                 >
                   {filter.label}
                   {stageCounts[filter.value] > 0 && (
@@ -173,30 +173,36 @@ export function ProjectsTab() {
               {filteredProjects.map((project) => (
                 <div
                   key={project.id}
-                  className="p-4 hover:bg-muted/50 cursor-pointer transition-colors group"
+                  className="p-3 sm:p-4 hover:bg-muted/50 cursor-pointer transition-colors group"
                   onClick={() => setSelectedProject(project)}
                 >
-                  <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-start justify-between gap-2 sm:gap-4">
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1 flex-wrap">
-                        <span className="font-medium truncate">
+                      {/* Row 1: Name + location + stage */}
+                      <div className="flex items-center gap-1.5 sm:gap-2 mb-1 flex-wrap">
+                        <span className="font-medium text-sm sm:text-base truncate max-w-[180px] sm:max-w-none">
                           {project.business_name}
                         </span>
                         {project.city && (
-                          <span className="text-xs text-muted-foreground">
+                          <span className="text-xs text-muted-foreground hidden sm:inline">
                             {project.city}{project.state ? `, ${project.state}` : ""}
                           </span>
                         )}
-                        {/* Pipeline stage badge - the key CRM indicator */}
                         <StageBadge stage={project.pipeline_stage} />
-                        {project.source === "request_demo" && (
+                      </div>
+                      
+                      {/* Row 2: Demo request badge (mobile: own row) */}
+                      {project.source === "request_demo" && (
+                        <div className="mb-1.5">
                           <Badge variant="outline" className="text-xs gap-1">
                             <Sparkles className="h-3 w-3" />
                             Demo Request
                           </Badge>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-3 text-sm text-muted-foreground flex-wrap">
+                        </div>
+                      )}
+                      
+                      {/* Row 3: Meta info - simplified on mobile */}
+                      <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm text-muted-foreground flex-wrap">
                         <span className="flex items-center gap-1">
                           <Clock className="h-3 w-3" />
                           {formatDate(project.created_at)}
@@ -204,7 +210,7 @@ export function ProjectsTab() {
                         {project.unread_count > 0 && (
                           <span className="flex items-center gap-1 text-primary font-medium">
                             <MessageSquare className="h-3 w-3" />
-                            {project.unread_count} unread
+                            {project.unread_count}
                           </span>
                         )}
                         {project.intake && (
@@ -214,43 +220,48 @@ export function ProjectsTab() {
                           </span>
                         )}
                         {project.contact_phone && (
-                          <span className="truncate max-w-[150px]">
+                          <span className="truncate max-w-[120px] sm:max-w-[150px]">
                             {project.contact_phone}
                           </span>
                         )}
-                        {project.contact_email && (
-                          <span className="truncate max-w-[200px]">
-                            {project.contact_email}
-                          </span>
-                        )}
                       </div>
-                      {/* Show notes for context */}
+                      
+                      {/* Row 4: Email - own row on mobile for readability */}
+                      {project.contact_email && (
+                        <div className="mt-1 text-xs sm:text-sm text-muted-foreground truncate">
+                          {project.contact_email}
+                        </div>
+                      )}
+                      
+                      {/* Notes preview */}
                       {project.notes && (
-                        <div className="mt-2 text-xs text-muted-foreground bg-muted/50 rounded px-2 py-1 whitespace-pre-line max-w-md line-clamp-2">
+                        <div className="mt-2 text-xs text-muted-foreground bg-muted/50 rounded px-2 py-1 whitespace-pre-line line-clamp-2">
                           {project.notes}
                         </div>
                       )}
                     </div>
-                    <div className="flex items-center gap-2">
-                      {/* Preview demo button for demo sources */}
+                    
+                    {/* Actions - simplified on mobile */}
+                    <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+                      {/* Preview demo button - hidden on mobile, shown on hover */}
                       {project.source === "request_demo" && (
                         <Button
                           variant="outline"
                           size="sm"
-                          className="gap-1.5"
+                          className="gap-1.5 hidden sm:flex"
                           onClick={(e) => {
                             e.stopPropagation();
                             window.open(`/d/${project.project_token}/${project.business_slug}`, "_blank");
                           }}
                         >
                           <Eye className="h-4 w-4" />
-                          Preview Demo
+                          <span className="hidden md:inline">Preview Demo</span>
                         </Button>
                       )}
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="opacity-0 group-hover:opacity-100 transition-opacity hidden sm:flex"
                         onClick={(e) => {
                           e.stopPropagation();
                           window.open(`/p/${project.project_token}`, "_blank");
