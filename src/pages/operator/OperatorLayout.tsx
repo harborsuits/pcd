@@ -290,92 +290,97 @@ export default function OperatorLayout() {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="border-b border-border bg-card sticky top-0 z-10">
-        <div className="container mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Activity className="h-6 w-6 text-primary" />
-            <h1 className="text-xl font-bold">Operator Console</h1>
-            {currentProjectToken && (
-              <Badge variant="secondary" className="text-xs font-normal">
-                {currentProjectName || `Project • ${currentProjectToken.slice(0, 6)}…`}
+        <div className="container mx-auto px-2 sm:px-4 py-2 sm:py-3">
+          {/* Mobile: Stack vertically, Desktop: Row */}
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+              <Activity className="h-5 w-5 sm:h-6 sm:w-6 text-primary flex-shrink-0" />
+              <h1 className="text-base sm:text-xl font-bold truncate">Operator Console</h1>
+            </div>
+            <div className="flex items-center gap-1 sm:gap-3 flex-shrink-0">
+              {/* Data freshness - compact on mobile */}
+              <DataFreshnessPill
+                staleAfterSeconds={60}
+                queryKeys={[
+                  ["admin-projects"],
+                  ["admin-inbox"],
+                ]}
+              />
+              {/* Session status - simplified on mobile */}
+              <Badge 
+                variant="outline" 
+                className="gap-1 sm:gap-1.5 text-xs font-normal"
+                title={[
+                  `Storage: ${storageMode}`,
+                  keySetAt ? `Key set: ${formatTimeAgo(keySetAt)}` : null,
+                  last401At ? `Last 401: ${formatTimeAgo(last401At)}` : null
+                ].filter(Boolean).join('\n')}
+              >
+                <ShieldCheck className="h-3 w-3 text-green-500" />
+                <span className="hidden sm:inline">Authed</span>
+                <span className="hidden sm:inline text-muted-foreground">•</span>
+                <span className="text-muted-foreground">{storageMode}</span>
               </Badge>
-            )}
-          </div>
-          <div className="flex items-center gap-3">
-            {/* Data freshness indicator */}
-            <DataFreshnessPill
-              staleAfterSeconds={60}
-              queryKeys={[
-                ["admin-projects"],
-                ["admin-inbox"],
-              ]}
-            />
-            {/* Session status pill */}
-            <Badge 
-              variant="outline" 
-              className="gap-1.5 text-xs font-normal"
-              title={[
-                `Storage: ${storageMode}`,
-                keySetAt ? `Key set: ${formatTimeAgo(keySetAt)}` : null,
-                last401At ? `Last 401: ${formatTimeAgo(last401At)}` : null
-              ].filter(Boolean).join('\n')}
-            >
-              <ShieldCheck className="h-3 w-3 text-green-500" />
-              <span>Authed</span>
-              <span className="text-muted-foreground">•</span>
-              <span className="text-muted-foreground">{storageMode}</span>
-            </Badge>
-            <Button variant="ghost" size="sm" asChild>
-              <Link to="/">
-                <Home className="h-4 w-4 mr-2" />
-                Home
-              </Link>
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                clearAdminKey();
-                setAdminKeyInput("");
-                setIsAuthed(false);
-                toast.success("Admin key cleared. Please re-authenticate.");
-              }}
-            >
-              <KeyRound className="h-4 w-4 mr-2" />
-              Rotate Key
-            </Button>
-            <Button variant="ghost" size="sm" onClick={handleLogout}>
-              <LogOut className="h-4 w-4 mr-2" />
-              Logout
-            </Button>
+              {/* Home - icon only on mobile */}
+              <Button variant="ghost" size="sm" className="px-2 sm:px-3" asChild>
+                <Link to="/">
+                  <Home className="h-4 w-4" />
+                  <span className="hidden sm:inline ml-2">Home</span>
+                </Link>
+              </Button>
+              {/* Rotate key - icon only on mobile */}
+              <Button
+                variant="outline"
+                size="sm"
+                className="px-2 sm:px-3"
+                onClick={() => {
+                  clearAdminKey();
+                  setAdminKeyInput("");
+                  setIsAuthed(false);
+                  toast.success("Admin key cleared. Please re-authenticate.");
+                }}
+              >
+                <KeyRound className="h-4 w-4" />
+                <span className="hidden sm:inline ml-2">Rotate Key</span>
+              </Button>
+              {/* Logout - hidden on mobile, use rotate key instead */}
+              <Button variant="ghost" size="sm" onClick={handleLogout} className="hidden sm:flex">
+                <LogOut className="h-4 w-4 mr-2" />
+                Logout
+              </Button>
+            </div>
           </div>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="container mx-auto px-4 py-6">
-        <Tabs defaultValue="projects" className="space-y-6">
-          <TabsList className="grid w-full max-w-3xl grid-cols-5">
-            <TabsTrigger value="projects" className="gap-2">
-              <FolderOpen className="h-4 w-4" />
-              Projects
-            </TabsTrigger>
-            <TabsTrigger value="inbox" className="gap-2">
-              <Inbox className="h-4 w-4" />
-              Inbox
-            </TabsTrigger>
-            <TabsTrigger value="accounts" className="gap-2">
-              <Users className="h-4 w-4" />
-              Accounts
-            </TabsTrigger>
-            <TabsTrigger value="leads" className="gap-2">
-              <Rocket className="h-4 w-4" />
-              Leads
-            </TabsTrigger>
-            <TabsTrigger value="outreach" className="gap-2">
-              <Send className="h-4 w-4" />
-              Outreach
-            </TabsTrigger>
-          </TabsList>
+      <main className="container mx-auto px-2 sm:px-4 py-3 sm:py-6">
+        <Tabs defaultValue="projects" className="space-y-4 sm:space-y-6">
+          {/* Main tabs - horizontal scroll on mobile */}
+          <div className="overflow-x-auto scrollbar-hide -mx-2 px-2">
+            <TabsList className="inline-flex w-auto min-w-max sm:grid sm:w-full sm:max-w-3xl sm:grid-cols-5">
+              <TabsTrigger value="projects" className="gap-1.5 sm:gap-2 px-3 sm:px-4">
+                <FolderOpen className="h-4 w-4" />
+                <span className="text-xs sm:text-sm">Projects</span>
+              </TabsTrigger>
+              <TabsTrigger value="inbox" className="gap-1.5 sm:gap-2 px-3 sm:px-4">
+                <Inbox className="h-4 w-4" />
+                <span className="text-xs sm:text-sm">Inbox</span>
+              </TabsTrigger>
+              <TabsTrigger value="accounts" className="gap-1.5 sm:gap-2 px-3 sm:px-4">
+                <Users className="h-4 w-4" />
+                <span className="text-xs sm:text-sm">Accounts</span>
+              </TabsTrigger>
+              <TabsTrigger value="leads" className="gap-1.5 sm:gap-2 px-3 sm:px-4">
+                <Rocket className="h-4 w-4" />
+                <span className="text-xs sm:text-sm">Leads</span>
+              </TabsTrigger>
+              <TabsTrigger value="outreach" className="gap-1.5 sm:gap-2 px-3 sm:px-4">
+                <Send className="h-4 w-4" />
+                <span className="text-xs sm:text-sm">Outreach</span>
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
           <TabsContent value="projects">
             <ProjectsTab />
