@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { ArrowRight, ArrowLeft, ChevronLeft, ChevronRight, Globe, FolderOpen, CalendarCheck, Zap, Bot, Puzzle, LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { StaggerTestimonials } from "@/components/ui/stagger-testimonials";
+import { AnimatedTestimonials } from "@/components/ui/animated-testimonials";
 import websitesConvertVideo from "@/assets/videos/websites-convert.mp4";
 import officeVideo from "@/assets/videos/office-video.mp4";
 import aiFrontDoorVideo from "@/assets/videos/ai-front-door.mp4";
@@ -753,8 +753,52 @@ const WhatWeBuild = () => {
         </div>
       </section>
 
-      {/* Testimonials */}
-      <StaggerTestimonials />
+      {/* What Clients Say */}
+      <section className="py-16 border-t border-border bg-card/50">
+        <div className="container mx-auto px-6">
+          <div className="text-center mb-4">
+            <p className="text-sm uppercase tracking-wider text-muted-foreground mb-2">What Clients Say</p>
+            <h2 className="font-serif text-2xl md:text-3xl font-bold text-foreground">
+              Real Results, Real Feedback
+            </h2>
+          </div>
+          <AnimatedTestimonials
+            testimonials={[
+              {
+                quote: "The attention to detail and innovative features have completely transformed our workflow. This is exactly what we've been looking for.",
+                name: "Sarah Chen",
+                designation: "Product Manager at TechFlow",
+                src: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=3560&auto=format&fit=crop",
+              },
+              {
+                quote: "Implementation was seamless and the results exceeded our expectations. The platform's flexibility is remarkable.",
+                name: "Michael Rodriguez",
+                designation: "CTO at InnovateSphere",
+                src: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?q=80&w=3540&auto=format&fit=crop",
+              },
+              {
+                quote: "This solution has significantly improved our team's productivity. The intuitive interface makes complex tasks simple.",
+                name: "Emily Watson",
+                designation: "Operations Director at CloudScale",
+                src: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?q=80&w=3540&auto=format&fit=crop",
+              },
+              {
+                quote: "Outstanding support and robust features. It's rare to find a product that delivers on all its promises.",
+                name: "James Kim",
+                designation: "Engineering Lead at DataPro",
+                src: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=3464&auto=format&fit=crop",
+              },
+              {
+                quote: "The scalability and performance have been game-changing for our organization. Highly recommend to any growing business.",
+                name: "Lisa Thompson",
+                designation: "VP of Technology at FutureNet",
+                src: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=2592&auto=format&fit=crop",
+              },
+            ]}
+            autoplay
+          />
+        </div>
+      </section>
 
       {/* CTA */}
       <section className="py-16 border-t border-border bg-accent/5">
