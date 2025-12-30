@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { ArrowLeft, Phone, MapPin, Clock, Star, Instagram, Scissors, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ShaderAnimation } from "@/components/ui/shader-animation";
 
 const SalonDemo = () => {
   return (
@@ -9,11 +10,12 @@ const SalonDemo = () => {
       <header className="bg-white/80 backdrop-blur-sm border-b border-rose-100 sticky top-0 z-50">
         <div className="container mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Link to="/#demos" className="text-stone-400 hover:text-stone-800 transition-colors">
-              <ArrowLeft className="h-5 w-5" />
+            <Link to="/" className="text-rose-400 hover:text-rose-600 transition-colors text-sm font-medium flex items-center gap-1">
+              <ArrowLeft className="h-4 w-4" />
+              Pleasant Cove Design
             </Link>
-            <span className="font-serif text-2xl text-rose-900">Blush & Bloom</span>
           </div>
+          <span className="font-serif text-2xl text-rose-900">Blush & Bloom</span>
           <nav className="hidden md:flex items-center gap-6 text-sm">
             <a href="#services" className="text-stone-600 hover:text-rose-700">Services</a>
             <a href="#team" className="text-stone-600 hover:text-rose-700">Team</a>
@@ -25,20 +27,19 @@ const SalonDemo = () => {
         </div>
       </header>
 
-      {/* Hero */}
-      <section className="relative py-24 overflow-hidden">
-        <div className="absolute inset-0">
-          <img 
-            src="https://images.unsplash.com/photo-1560066984-138dadb4c035?w=1920&auto=format&fit=crop"
-            alt="Salon interior"
-            className="w-full h-full object-cover opacity-20"
-          />
-          <div className="absolute inset-0 bg-gradient-to-b from-rose-50/50 to-rose-50" />
+      {/* Hero with Shader Animation */}
+      <section className="relative min-h-[80vh] overflow-hidden flex items-center justify-center">
+        {/* Shader Background */}
+        <div className="absolute inset-0 z-0">
+          <ShaderAnimation className="opacity-30" />
         </div>
         
-        <div className="relative container mx-auto px-6 text-center">
-          <Sparkles className="h-12 w-12 text-rose-400 mx-auto mb-6" />
-          <h1 className="font-serif text-5xl md:text-6xl lg:text-7xl mb-6 text-rose-900">
+        {/* Gradient Overlay for readability */}
+        <div className="absolute inset-0 bg-gradient-to-b from-rose-50/70 via-rose-50/50 to-rose-50 z-10" />
+        
+        <div className="relative z-20 container mx-auto px-6 text-center py-24">
+          <Sparkles className="h-12 w-12 text-rose-400 mx-auto mb-6 animate-pulse" />
+          <h1 className="font-serif text-5xl md:text-6xl lg:text-7xl mb-6 text-rose-900" style={{ textShadow: "0 2px 20px rgba(255,255,255,0.8)" }}>
             Blush & Bloom
           </h1>
           <p className="text-xl text-stone-600 mb-8 max-w-2xl mx-auto">
@@ -46,24 +47,24 @@ const SalonDemo = () => {
             Where you come to relax, refresh, and leave feeling your best.
           </p>
           <div className="flex flex-wrap justify-center gap-4">
-            <Button size="lg" className="bg-rose-500 hover:bg-rose-600">
+            <Button size="lg" className="bg-rose-500 hover:bg-rose-600 shadow-lg shadow-rose-500/30">
               Book an Appointment
             </Button>
-            <Button size="lg" variant="outline" className="border-rose-300 text-rose-700 hover:bg-rose-100">
+            <Button size="lg" variant="outline" className="border-rose-300 text-rose-700 hover:bg-rose-100 bg-white/50 backdrop-blur-sm">
               View Services
             </Button>
           </div>
           
           <div className="flex flex-wrap justify-center gap-8 mt-12 text-sm text-stone-600">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 bg-white/60 backdrop-blur-sm px-4 py-2 rounded-full">
               <Clock className="h-5 w-5 text-rose-400" />
               <span>Tue–Sat: 9AM–7PM</span>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 bg-white/60 backdrop-blur-sm px-4 py-2 rounded-full">
               <Star className="h-5 w-5 text-rose-400" />
               <span>4.9★ (320+ Reviews)</span>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 bg-white/60 backdrop-blur-sm px-4 py-2 rounded-full">
               <MapPin className="h-5 w-5 text-rose-400" />
               <span>Uptown Village</span>
             </div>
