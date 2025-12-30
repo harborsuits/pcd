@@ -114,6 +114,13 @@ Deno.serve(async (req) => {
     return handleUpdateProjectStatus(req, token);
   }
 
+  // Route: PATCH /admin/projects/:token/stage - Update pipeline stage
+  if (subPath.match(/^projects\/[^\/]+\/stage$/) && req.method === "PATCH") {
+    const parts = subPath.split("/");
+    const token = parts[1];
+    return handleUpdatePipelineStage(req, token);
+  }
+
   // Route: PATCH /admin/intake/:intakeId/approve
   if (subPath.match(/^intake\/[^\/]+\/approve$/) && req.method === "PATCH") {
     const parts = subPath.split("/");
@@ -1491,6 +1498,121 @@ async function handleUpdateProjectStatus(req: Request, token: string): Promise<R
 
   } catch (error) {
     console.error("Status update error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+}
+
+// PATCH /admin/projects/:token/stage - Update pipeline stage with audit trail
+async function handleUpdatePipelineStage(req: Request, token: string): Promise<Response> {
+  const authError = validateAdminKey(req);
+  if (authError) return authError;
+
+  if (!isValidToken(token)) {
+    return new Response(
+      JSON.stringify({ error: "Invalid token format" }),
+      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  try {
+    const body = await req.json();
+    const { stage } = body;
+
+    const validStages = ["new", "demo_requested", "quote_requested", "claimed", "contacted", "qualified", "won", "lost"];
+    if (!stage || !validStages.includes(stage)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid stage value" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log(`Updating project ${token} pipeline_stage to: ${stage}`);
+
+    const supabase = getSupabaseClient();
+
+    // First get current stage for audit message
+    const { data: currentProject, error: fetchError } = await supabase
+      .from("projects")
+      .select("id, project_token, pipeline_stage")
+      .eq("project_token", token)
+      .is("deleted_at", null)
+      .maybeSingle();
+
+    if (fetchError || !currentProject) {
+      console.error("Project fetch error:", fetchError);
+      return new Response(
+        JSON.stringify({ error: "Project not found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const previousStage = currentProject.pipeline_stage || "new";
+
+    // Don't update if same stage
+    if (previousStage === stage) {
+      return new Response(
+        JSON.stringify({ success: true, project: currentProject, message: "No change" }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Update the pipeline stage
+    const { data, error } = await supabase
+      .from("projects")
+      .update({ pipeline_stage: stage, updated_at: new Date().toISOString() })
+      .eq("project_token", token)
+      .is("deleted_at", null)
+      .select("id, project_token, pipeline_stage")
+      .single();
+
+    if (error) {
+      console.error("Stage update error:", error);
+      return new Response(
+        JSON.stringify({ error: "Database error" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Insert audit message for stage change
+    const stageLabels: Record<string, string> = {
+      new: "New",
+      demo_requested: "Demo Requested",
+      quote_requested: "Quote Requested",
+      claimed: "Claimed",
+      contacted: "Contacted",
+      qualified: "Qualified",
+      won: "Won",
+      lost: "Lost",
+    };
+
+    const auditContent = `[SYSTEM] Pipeline stage changed: ${stageLabels[previousStage] || previousStage} → ${stageLabels[stage] || stage}`;
+
+    const { error: messageError } = await supabase
+      .from("messages")
+      .insert({
+        project_id: currentProject.id,
+        project_token: currentProject.project_token,
+        sender_type: "system",
+        content: auditContent,
+      });
+
+    if (messageError) {
+      console.error("Audit message insert error:", messageError);
+      // Don't fail the request, just log
+    }
+
+    console.log(`Project ${token} pipeline_stage updated: ${previousStage} → ${stage}`);
+
+    return new Response(
+      JSON.stringify({ success: true, project: data, previous_stage: previousStage }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+
+  } catch (error) {
+    console.error("Stage update error:", error);
     return new Response(
       JSON.stringify({ error: "Internal server error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }

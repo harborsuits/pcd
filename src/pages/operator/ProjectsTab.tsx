@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,13 +7,14 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   FolderOpen, Loader2, Clock, FileText, 
-  MessageSquare, ExternalLink, ChevronRight, Sparkles, Eye
+  MessageSquare, ExternalLink, ChevronRight, Sparkles, Eye, ArrowRight
 } from "lucide-react";
 import { format } from "date-fns";
+import { toast } from "sonner";
 import { ProjectWorkSurface } from "./ProjectWorkSurface";
 import { adminFetch } from "@/lib/adminFetch";
 import { useOperatorContext } from "./OperatorLayout";
-import { StageBadge, PIPELINE_FILTERS, PipelineFilter } from "@/components/operator/StageBadge";
+import { StageBadge, PIPELINE_FILTERS, PipelineFilter, getNextStage, STAGE_CONFIG, PipelineStage } from "@/components/operator/StageBadge";
 
 interface ProjectIntake {
   id: string;
@@ -54,6 +55,7 @@ export function ProjectsTab() {
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [pipelineFilter, setPipelineFilter] = useState<PipelineFilter>("all");
   const { setCurrentProjectToken, setCurrentProjectName, registerCloseProject } = useOperatorContext();
+  const queryClient = useQueryClient();
 
   // Sync selected project to context for global shortcuts
   useEffect(() => {
@@ -85,6 +87,33 @@ export function ProjectsTab() {
   });
 
   const projects = projectsData?.projects || [];
+
+  // Mutation to advance pipeline stage
+  const advanceStageMutation = useMutation({
+    mutationFn: async ({ token, stage }: { token: string; stage: PipelineStage }) => {
+      const res = await adminFetch(`/admin/projects/${token}/stage`, {
+        method: "PATCH",
+        body: JSON.stringify({ stage }),
+      });
+      if (!res.ok) throw new Error("Failed to update stage");
+      return res.json();
+    },
+    onSuccess: (_, variables) => {
+      const stageLabel = STAGE_CONFIG[variables.stage]?.label || variables.stage;
+      toast.success(`Moved to ${stageLabel}`);
+      queryClient.invalidateQueries({ queryKey: ["admin-projects"] });
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
+  // Handle advance to next stage
+  const handleAdvanceStage = (e: React.MouseEvent, project: Project) => {
+    e.stopPropagation();
+    const nextStage = getNextStage(project.pipeline_stage);
+    if (nextStage) {
+      advanceStageMutation.mutate({ token: project.project_token, stage: nextStage });
+    }
+  };
 
   // Filter projects by pipeline stage
   const filteredProjects = useMemo(() => {
@@ -243,6 +272,21 @@ export function ProjectsTab() {
                     
                     {/* Actions - simplified on mobile */}
                     <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+                      {/* Advance stage button */}
+                      {getNextStage(project.pipeline_stage) && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-1 text-xs h-7 px-2"
+                          disabled={advanceStageMutation.isPending}
+                          onClick={(e) => handleAdvanceStage(e, project)}
+                        >
+                          <ArrowRight className="h-3 w-3" />
+                          <span className="hidden sm:inline">
+                            {STAGE_CONFIG[getNextStage(project.pipeline_stage)!]?.label}
+                          </span>
+                        </Button>
+                      )}
                       {/* Preview demo button - hidden on mobile, shown on hover */}
                       {project.source === "request_demo" && (
                         <Button
