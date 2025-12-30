@@ -13,7 +13,7 @@ import {
   MessageSquare, Send, Loader2, CheckCircle,
   Trash2, Plus, Eye, MessageCirclePlus,
   X, MessageSquareDot, Filter, Check, Circle,
-  ImageIcon, FileIcon, Upload, Download, Copy, Link2, Building2, Rocket, Target
+  ImageIcon, FileIcon, Upload, Download, Copy, Link2, Building2, Rocket, Target, ArrowRight
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -23,6 +23,7 @@ import { IntakeOverviewPanel } from "@/components/operator/IntakeOverviewPanel";
 import { LaunchChecklist } from "@/components/operator/LaunchChecklist";
 import { DeliverablesMilestones } from "@/components/operator/DeliverablesMilestones";
 import { adminFetch, AdminAuthError } from "@/lib/adminFetch";
+import { StageBadge, STAGE_CONFIG, getNextStage, getValidTargetStages, PipelineStage } from "@/components/operator/StageBadge";
 
 interface Project {
   id: string;
@@ -30,6 +31,7 @@ interface Project {
   business_slug: string;
   project_token: string;
   status: string;
+  pipeline_stage?: string | null;
   contact_name: string | null;
   contact_phone: string | null;
   contact_email: string | null;
@@ -243,6 +245,25 @@ export function ProjectWorkSurface({ project, onBack, onStatusChange }: ProjectW
     },
     onSuccess: () => {
       toast.success("Status updated");
+      queryClient.invalidateQueries({ queryKey: ["admin-projects"] });
+      onStatusChange();
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
+  // Update pipeline stage mutation
+  const updateStageMutation = useMutation({
+    mutationFn: async (newStage: PipelineStage) => {
+      const res = await adminFetch(`/admin/projects/${project.project_token}/stage`, {
+        method: "PATCH",
+        body: JSON.stringify({ stage: newStage }),
+      });
+      if (!res.ok) throw new Error("Failed to update stage");
+      return res.json();
+    },
+    onSuccess: (_, newStage) => {
+      const stageLabel = STAGE_CONFIG[newStage]?.label || newStage;
+      toast.success(`Stage updated to ${stageLabel}`);
       queryClient.invalidateQueries({ queryKey: ["admin-projects"] });
       onStatusChange();
     },
@@ -496,8 +517,48 @@ export function ProjectWorkSurface({ project, onBack, onStatusChange }: ProjectW
               ["project-prototypes", project.project_token],
             ]}
           />
+          
+          {/* Pipeline Stage with Advance button */}
+          <div className="flex items-center gap-1">
+            <StageBadge stage={project.pipeline_stage} />
+            {getNextStage(project.pipeline_stage) && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 px-2 text-xs gap-1"
+                disabled={updateStageMutation.isPending}
+                onClick={() => {
+                  const next = getNextStage(project.pipeline_stage);
+                  if (next) updateStageMutation.mutate(next);
+                }}
+              >
+                <ArrowRight className="h-3 w-3" />
+                {STAGE_CONFIG[getNextStage(project.pipeline_stage)!]?.label}
+              </Button>
+            )}
+            {/* Move to dropdown for override */}
+            <Select 
+              value={project.pipeline_stage || "new"} 
+              onValueChange={(v) => updateStageMutation.mutate(v as PipelineStage)} 
+              disabled={updateStageMutation.isPending}
+            >
+              <SelectTrigger className="w-8 h-6 px-1 border-0 bg-transparent">
+                <span className="sr-only">Move to...</span>
+              </SelectTrigger>
+              <SelectContent>
+                {getValidTargetStages(project.pipeline_stage).map(stage => (
+                  <SelectItem key={stage} value={stage}>
+                    {STAGE_CONFIG[stage]?.label || stage}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <div className="h-4 w-px bg-border hidden sm:block" />
+          
           <Select value={project.status} onValueChange={(v) => updateStatusMutation.mutate(v)} disabled={updateStatusMutation.isPending}>
-            <SelectTrigger className="w-[120px] h-8 text-xs">
+            <SelectTrigger className="w-[100px] h-8 text-xs hidden sm:flex">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
