@@ -232,7 +232,7 @@ const SalonDemo = () => {
               <Button size="lg" className="bg-white text-rose-600 hover:bg-rose-50 px-8">
                 Book Online
               </Button>
-              <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/10 px-8">
+              <Button size="lg" variant="outline" className="border-white/50 text-white/80 hover:bg-white/10 px-8">
                 <Phone className="mr-2 h-5 w-5" />
                 (555) 456-7890
               </Button>
@@ -247,7 +247,7 @@ const SalonDemo = () => {
               <div>
                 <h3 className="font-serif text-2xl mb-4 text-white">Blush & Bloom</h3>
                 <p className="text-rose-200 text-sm">
-                  Your neighborhood beauty destination for hair, nails, and self-care.
+                  Your neighborhood destination for hair, nails, and self-care.
                 </p>
                 <div className="flex gap-4 mt-4">
                   <a href="#" className="text-rose-300 hover:text-white transition-colors">
