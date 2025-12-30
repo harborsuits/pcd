@@ -1533,10 +1533,10 @@ async function handleUpdatePipelineStage(req: Request, token: string): Promise<R
 
     const supabase = getSupabaseClient();
 
-    // First get current stage for audit message
+    // First get current stage and project info for audit message + notification
     const { data: currentProject, error: fetchError } = await supabase
       .from("projects")
-      .select("id, project_token, pipeline_stage")
+      .select("id, project_token, pipeline_stage, business_name, contact_name, contact_phone, contact_email")
       .eq("project_token", token)
       .is("deleted_at", null)
       .maybeSingle();
@@ -1605,6 +1605,50 @@ async function handleUpdatePipelineStage(req: Request, token: string): Promise<R
     }
 
     console.log(`Project ${token} pipeline_stage updated: ${previousStage} → ${stage}`);
+
+    // Send Telegram notification for high-signal stages only
+    const notifyStages = ["quote_requested", "claimed", "won", "lost"];
+    if (notifyStages.includes(stage)) {
+      try {
+        const telegramBotToken = Deno.env.get("TELEGRAM_BOT_TOKEN");
+        const telegramChatId = Deno.env.get("TELEGRAM_CHAT_ID");
+        const baseUrl = Deno.env.get("PUBLIC_BASE_URL") || "https://ararrbvhzaudfaxjwdrc.lovableproject.com";
+
+        if (telegramBotToken && telegramChatId) {
+          // Build contact info string
+          const contactParts: string[] = [];
+          if (currentProject.contact_name) contactParts.push(currentProject.contact_name);
+          if (currentProject.contact_phone) contactParts.push(currentProject.contact_phone);
+          if (currentProject.contact_email) contactParts.push(currentProject.contact_email);
+          const contactInfo = contactParts.length > 0 ? contactParts.join(" • ") : "No contact info";
+
+          // Build notification message
+          const stageEmoji = stage === "won" ? "🎉" : stage === "lost" ? "❌" : stage === "claimed" ? "✅" : "📋";
+          const telegramText = 
+            `${stageEmoji} <b>Stage: ${stageLabels[previousStage]} → ${stageLabels[stage]}</b>\n\n` +
+            `<b>Business:</b> ${currentProject.business_name || "Unknown"}\n` +
+            `<b>Contact:</b> ${contactInfo}\n\n` +
+            `<a href="${baseUrl}/operator?project=${token}">Open Operator</a> • ` +
+            `<a href="${baseUrl}/p/${token}">View Portal</a>`;
+
+          await fetch(`https://api.telegram.org/bot${telegramBotToken}/sendMessage`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              chat_id: telegramChatId,
+              text: telegramText,
+              parse_mode: "HTML",
+              disable_web_page_preview: true,
+            }),
+          });
+
+          console.log(`Telegram notification sent for stage change: ${stage}`);
+        }
+      } catch (telegramError) {
+        console.error("Telegram notification error:", telegramError);
+        // Don't fail the request for notification errors
+      }
+    }
 
     return new Response(
       JSON.stringify({ success: true, project: data, previous_stage: previousStage }),
