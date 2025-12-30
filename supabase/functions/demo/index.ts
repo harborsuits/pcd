@@ -1,4 +1,4 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -8,6 +8,25 @@ const corsHeaders = {
 // Token validation: alphanumeric + hyphens, 12-128 chars
 function isValidToken(token: string): boolean {
   return /^[a-zA-Z0-9\-_]{12,128}$/.test(token);
+}
+
+// Generate a URL-safe token
+function generateToken(): string {
+  const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
+  let token = "";
+  for (let i = 0; i < 24; i++) {
+    token += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return token;
+}
+
+// Generate a URL slug from business name
+function generateSlug(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 50);
 }
 
 // Send Telegram notification (non-blocking)
@@ -39,6 +58,126 @@ async function notifyTelegram(text: string): Promise<void> {
   } catch (error) {
     console.error("Telegram notification error:", error);
   }
+}
+
+// ============================================================================
+// CRM CORE: Find existing prospect or create new project
+// Matches by email OR phone to prevent duplicates
+// ============================================================================
+interface ProspectInfo {
+  name: string;
+  email?: string;
+  phone?: string;
+  sourceDemoToken?: string;
+  sourceDemoBusinessName?: string;
+  pipelineStage: "quote_requested" | "claimed";
+}
+
+interface ProspectResult {
+  projectId: string;
+  projectToken: string;
+  businessName: string;
+  isNew: boolean;
+}
+
+async function findOrCreateProspectProject(
+  supabase: SupabaseClient,
+  info: ProspectInfo
+): Promise<ProspectResult | null> {
+  const { name, email, phone, sourceDemoToken, sourceDemoBusinessName, pipelineStage } = info;
+
+  // Try to find existing project by email OR phone
+  let existingProject = null;
+
+  if (email) {
+    const { data } = await supabase
+      .from("projects")
+      .select("id, project_token, business_name")
+      .eq("contact_email", email)
+      .is("deleted_at", null)
+      .maybeSingle();
+    if (data) existingProject = data;
+  }
+
+  if (!existingProject && phone) {
+    const { data } = await supabase
+      .from("projects")
+      .select("id, project_token, business_name")
+      .eq("contact_phone", phone)
+      .is("deleted_at", null)
+      .maybeSingle();
+    if (data) existingProject = data;
+  }
+
+  if (existingProject) {
+    // Update existing project with latest info and advance pipeline
+    await supabase
+      .from("projects")
+      .update({
+        pipeline_stage: pipelineStage,
+        contact_name: name || existingProject.business_name,
+        ...(email && { contact_email: email }),
+        ...(phone && { contact_phone: phone }),
+        ...(sourceDemoToken && { source_demo_token: sourceDemoToken }),
+      })
+      .eq("id", existingProject.id);
+
+    console.log(`Found existing project for ${email || phone}: ${existingProject.business_name}`);
+    return {
+      projectId: existingProject.id,
+      projectToken: existingProject.project_token,
+      businessName: existingProject.business_name,
+      isNew: false,
+    };
+  }
+
+  // Create new project for this prospect
+  const businessName = name || "New Prospect";
+  const projectToken = generateToken();
+  const businessSlug = generateSlug(businessName);
+
+  const { data: newProject, error } = await supabase
+    .from("projects")
+    .insert({
+      business_name: businessName,
+      business_slug: businessSlug,
+      project_token: projectToken,
+      contact_name: name,
+      contact_email: email || null,
+      contact_phone: phone || null,
+      source: pipelineStage === "quote_requested" ? "quote_request" : "claim",
+      pipeline_stage: pipelineStage,
+      status: "lead",
+      source_demo_token: sourceDemoToken || null,
+    })
+    .select("id, project_token, business_name")
+    .single();
+
+  if (error || !newProject) {
+    console.error("Failed to create prospect project:", error);
+    return null;
+  }
+
+  console.log(`Created new prospect project: ${newProject.business_name} (${newProject.project_token})`);
+
+  // Insert welcome message so portal is never empty
+  const welcomeMsg = pipelineStage === "claimed"
+    ? `Hey! Thanks for claiming your design${sourceDemoBusinessName ? ` based on ${sourceDemoBusinessName}` : ""}. I'm excited to bring this to life for you!\n\nQuick question: do you have a logo, or should we start fresh?`
+    : `Thanks for requesting a quote! I'll get back to you within 1 business day with pricing details.\n\nIn the meantime, feel free to share any additional details about your project here.`;
+
+  await supabase.from("messages").insert({
+    project_id: newProject.id,
+    project_token: projectToken,
+    sender_type: "admin",
+    content: welcomeMsg,
+  });
+
+  return {
+    projectId: newProject.id,
+    projectToken: newProject.project_token,
+    businessName: newProject.business_name,
+    isNew: true,
+  };
 }
 
 Deno.serve(async (req) => {
@@ -78,7 +217,8 @@ Deno.serve(async (req) => {
   );
 });
 
-// POST /demo/claim - Handle claim submissions
+// POST /demo/claim - Handle claim submissions (legacy, non-auth)
+// Now creates a prospect project for CRM tracking
 async function handleClaim(req: Request): Promise<Response> {
   try {
     const body = await req.json();
@@ -102,87 +242,93 @@ async function handleClaim(req: Request): Promise<Response> {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Find the project
-    const { data: project, error: projectError } = await supabase
+    // Find the DEMO project (this is the demo they're claiming from)
+    const { data: demoProject, error: projectError } = await supabase
       .from("projects")
       .select("id, business_name")
       .eq("project_token", project_token)
       .is("deleted_at", null)
       .maybeSingle();
 
-    if (projectError || !project) {
-      console.error("Project not found for claim:", project_token);
+    if (projectError || !demoProject) {
+      console.error("Demo project not found for claim:", project_token);
       return new Response(
-        JSON.stringify({ error: "Project not found" }),
+        JSON.stringify({ error: "Demo not found" }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Find associated lead
+    // ========================================================================
+    // CRM: Find or create a PROSPECT project for this person
+    // ========================================================================
+    const prospectResult = await findOrCreateProspectProject(supabase, {
+      name: name || demoProject.business_name,
+      email,
+      phone,
+      sourceDemoToken: project_token,
+      sourceDemoBusinessName: demoProject.business_name,
+      pipelineStage: "claimed",
+    });
+
+    if (!prospectResult) {
+      return new Response(
+        JSON.stringify({ error: "Failed to create prospect record" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Find associated lead from the demo and record event
     const { data: lead } = await supabase
       .from("leads")
       .select("id")
-      .eq("demo_project_id", project.id)
+      .eq("demo_project_id", demoProject.id)
       .maybeSingle();
 
-    // Record the claim as a lead outreach event (inbound)
     if (lead) {
       await supabase.from("lead_outreach_events").insert({
         lead_id: lead.id,
         channel: "web",
         status: "claimed",
-        message: JSON.stringify({ name, phone, email, notes }),
+        message: JSON.stringify({ name, phone, email, notes, prospect_token: prospectResult.projectToken }),
       });
 
-      // Update lead status
       await supabase
         .from("leads")
         .update({ outreach_status: "replied" })
         .eq("id", lead.id);
     }
 
-    // Also update project status to interested
-    await supabase
-      .from("projects")
-      .update({ 
-        status: "interested",
-        contact_name: name || null,
-        contact_phone: phone || null,
-        contact_email: email || null,
-        notes: notes || null,
-      })
-      .eq("id", project.id);
+    // If they provided notes, add as a message
+    if (notes) {
+      await supabase.from("messages").insert({
+        project_id: prospectResult.projectId,
+        project_token: prospectResult.projectToken,
+        sender_type: "client",
+        content: notes,
+      });
+    }
 
-    console.log(`Claim received for ${project.business_name}`);
+    console.log(`Claim: prospect ${prospectResult.projectToken} from demo ${project_token}`);
 
-    // Insert welcome message from admin (so portal is never empty)
-    const welcomeMessage = `Hey! Thanks for claiming your design. I'm going to refine this to fit ${project.business_name} better.\n\nQuick question: do you have a logo, or should we start fresh?`;
-    
-    await supabase.from("messages").insert({
-      project_id: project.id,
-      project_token: project_token,
-      sender_type: "admin",
-      content: welcomeMessage,
-    });
-
-    console.log(`Welcome message inserted for ${project.business_name}`);
-
-    // Send Telegram notification (non-blocking)
+    // Send Telegram notification
     const baseUrl = Deno.env.get("PUBLIC_BASE_URL") || "https://ararrbvhzaudfaxjwdrc.lovableproject.com";
     const telegramMsg =
-      `🟢 <b>New Design Claim</b>\n` +
-      `• <b>Business:</b> ${project.business_name}\n` +
-      `• <b>Name:</b> ${name || "—"}\n` +
+      `🟢 <b>Design Claim!</b>\n` +
+      `• <b>Prospect:</b> ${name || "—"}\n` +
       `• <b>Phone:</b> ${phone || "—"}\n` +
       `• <b>Email:</b> ${email || "—"}\n` +
-      (notes ? `• <b>Notes:</b> ${notes}\n` : "") +
-      `• <b>Token:</b> <code>${project_token}</code>\n` +
-      `• <b>Portal:</b> ${baseUrl}/portal/${project_token}`;
+      `• <b>From Demo:</b> ${demoProject.business_name}\n` +
+      `• <b>Status:</b> ${prospectResult.isNew ? "🆕 New" : "📎 Existing"}\n\n` +
+      `🔗 <a href="${baseUrl}/p/${prospectResult.projectToken}">View Portal</a>`;
     
     try { await notifyTelegram(telegramMsg); } catch (_) { /* fail silently */ }
 
     return new Response(
-      JSON.stringify({ ok: true }),
+      JSON.stringify({ 
+        ok: true,
+        portal_token: prospectResult.projectToken,
+        is_new: prospectResult.isNew,
+      }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
@@ -195,6 +341,7 @@ async function handleClaim(req: Request): Promise<Response> {
 }
 
 // POST /demo/claim-with-auth - Handle authenticated claim (extracts user from JWT)
+// Now creates a prospect project for CRM tracking
 async function handleClaimWithAuth(req: Request): Promise<Response> {
   try {
     // Extract user from JWT
@@ -238,45 +385,50 @@ async function handleClaimWithAuth(req: Request): Promise<Response> {
       );
     }
 
-    // Find the project
-    const { data: project, error: projectError } = await supabase
+    // Find the DEMO project (this is the demo they're claiming from)
+    const { data: demoProject, error: projectError } = await supabase
       .from("projects")
-      .select("id, business_name, owner_user_id")
+      .select("id, business_name")
       .eq("project_token", project_token)
       .is("deleted_at", null)
       .maybeSingle();
 
-    if (projectError || !project) {
+    if (projectError || !demoProject) {
       return new Response(
-        JSON.stringify({ error: "Project not found" }),
+        JSON.stringify({ error: "Demo not found" }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Check if already claimed by someone else
-    if (project.owner_user_id && project.owner_user_id !== user.id) {
+    // ========================================================================
+    // CRM: Find or create a PROSPECT project for this authenticated user
+    // ========================================================================
+    const prospectResult = await findOrCreateProspectProject(supabase, {
+      name: name || user.user_metadata?.full_name || demoProject.business_name,
+      email: user.email,
+      sourceDemoToken: project_token,
+      sourceDemoBusinessName: demoProject.business_name,
+      pipelineStage: "claimed",
+    });
+
+    if (!prospectResult) {
       return new Response(
-        JSON.stringify({ error: "Project already claimed" }),
-        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ error: "Failed to create prospect record" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Update project with owner and contact info
+    // Link the prospect project to this authenticated user
     await supabase
       .from("projects")
-      .update({ 
-        status: "interested",
-        owner_user_id: user.id,
-        contact_name: name || null,
-        contact_email: user.email || null,
-      })
-      .eq("id", project.id);
+      .update({ owner_user_id: user.id })
+      .eq("id", prospectResult.projectId);
 
-    // Find associated lead and update
+    // Find associated lead from the demo and record event
     const { data: lead } = await supabase
       .from("leads")
       .select("id")
-      .eq("demo_project_id", project.id)
+      .eq("demo_project_id", demoProject.id)
       .maybeSingle();
 
     if (lead) {
@@ -284,7 +436,7 @@ async function handleClaimWithAuth(req: Request): Promise<Response> {
         lead_id: lead.id,
         channel: "web",
         status: "claimed",
-        message: JSON.stringify({ name, email: user.email, auth: true }),
+        message: JSON.stringify({ name, email: user.email, auth: true, prospect_token: prospectResult.projectToken }),
       });
 
       await supabase
@@ -293,29 +445,26 @@ async function handleClaimWithAuth(req: Request): Promise<Response> {
         .eq("id", lead.id);
     }
 
-    // Insert welcome message
-    const welcomeMessage = `Hey! Thanks for claiming your design. I'm going to refine this to fit ${project.business_name} better.\n\nQuick question: do you have a logo, or should we start fresh?`;
-    
-    await supabase.from("messages").insert({
-      project_id: project.id,
-      project_token: project_token,
-      sender_type: "admin",
-      content: welcomeMessage,
-    });
+    console.log(`Auth claim: prospect ${prospectResult.projectToken} from demo ${project_token}`);
 
     // Send Telegram notification
     const baseUrl = Deno.env.get("PUBLIC_BASE_URL") || "https://ararrbvhzaudfaxjwdrc.lovableproject.com";
     const telegramMsg =
-      `🟢 <b>New Design Claim (Auth)</b>\n` +
-      `• <b>Business:</b> ${project.business_name}\n` +
-      `• <b>Name:</b> ${name || "—"}\n` +
+      `🟢 <b>Design Claim (Auth)</b>\n` +
+      `• <b>Prospect:</b> ${name || user.user_metadata?.full_name || "—"}\n` +
       `• <b>Email:</b> ${user.email || "—"}\n` +
-      `• <b>Portal:</b> ${baseUrl}/p/${project_token}`;
+      `• <b>From Demo:</b> ${demoProject.business_name}\n` +
+      `• <b>Status:</b> ${prospectResult.isNew ? "🆕 New" : "📎 Existing"}\n\n` +
+      `🔗 <a href="${baseUrl}/p/${prospectResult.projectToken}">View Portal</a>`;
     
     try { await notifyTelegram(telegramMsg); } catch (_) { /* fail silently */ }
 
     return new Response(
-      JSON.stringify({ ok: true }),
+      JSON.stringify({ 
+        ok: true,
+        portal_token: prospectResult.projectToken,
+        is_new: prospectResult.isNew,
+      }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
@@ -474,6 +623,7 @@ async function handleGetDemo(req: Request): Promise<Response> {
 }
 
 // POST /demo/quote - Handle quote requests from demo page visitors
+// Now creates/attaches a prospect project for CRM tracking
 async function handleQuoteRequest(req: Request): Promise<Response> {
   try {
     const body = await req.json();
@@ -504,71 +654,93 @@ async function handleQuoteRequest(req: Request): Promise<Response> {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    console.log(`Quote request for project ${project_token} from ${name}`);
+    console.log(`Quote request for demo ${project_token} from ${name}`);
 
-    // Find the project
-    const { data: project, error: projectError } = await supabase
+    // Find the DEMO project (this is the demo they're viewing, not their prospect project)
+    const { data: demoProject, error: projectError } = await supabase
       .from("projects")
       .select("id, business_name, project_token")
       .eq("project_token", project_token)
       .is("deleted_at", null)
-      .single();
+      .maybeSingle();
 
-    if (projectError || !project) {
-      console.error("Project not found:", projectError);
+    if (projectError || !demoProject) {
+      console.error("Demo project not found:", projectError);
       return new Response(
-        JSON.stringify({ error: "Project not found" }),
+        JSON.stringify({ error: "Demo not found" }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Find the associated lead using demo_project_id (NOT demo_token - that was a bug)
+    // ========================================================================
+    // CRM: Find or create a PROSPECT project for this person
+    // This is their personal project, not the demo they viewed
+    // ========================================================================
+    const prospectResult = await findOrCreateProspectProject(supabase, {
+      name,
+      email,
+      phone,
+      sourceDemoToken: project_token,
+      sourceDemoBusinessName: demoProject.business_name,
+      pipelineStage: "quote_requested",
+    });
+
+    if (!prospectResult) {
+      return new Response(
+        JSON.stringify({ error: "Failed to create prospect record" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Find the associated lead (if this demo came from lead gen)
     const { data: lead } = await supabase
       .from("leads")
       .select("id")
-      .eq("demo_project_id", project.id)
+      .eq("demo_project_id", demoProject.id)
       .maybeSingle();
 
     // Record the quote request as an outreach event
     if (lead) {
-      await supabase
-        .from("lead_outreach_events")
-        .insert({
-          lead_id: lead.id,
-          channel: "web",
-          status: "quote_requested",
-          message: JSON.stringify({ name, email, phone, service, message }),
-        });
+      await supabase.from("lead_outreach_events").insert({
+        lead_id: lead.id,
+        channel: "web",
+        status: "quote_requested",
+        message: JSON.stringify({ name, email, phone, service, message, prospect_token: prospectResult.projectToken }),
+      });
     }
 
-    // Also create a message in the project's message thread so it shows in the portal
+    // Create quote request message in the PROSPECT's project thread
     // Tag with [QUOTE_REQUEST] marker for easy filtering
-    await supabase
-      .from("messages")
-      .insert({
-        project_id: project.id,
-        project_token: project_token,
-        sender_type: "client",
-        content: `[QUOTE_REQUEST]\n📝 **Quote Request**\n\n**Name:** ${name}\n**Phone:** ${phone}\n**Email:** ${email}\n**Service:** ${service || "Not specified"}\n**Details:** ${message || "None provided"}`,
-      });
+    await supabase.from("messages").insert({
+      project_id: prospectResult.projectId,
+      project_token: prospectResult.projectToken,
+      sender_type: "client",
+      content: `[QUOTE_REQUEST]\n📝 **Quote Request**\n\n**Service:** ${service || "Not specified"}\n**Details:** ${message || "None provided"}\n\n_Requested from demo: ${demoProject.business_name}_`,
+    });
 
     // Send Telegram notification with actionable links
     const baseUrl = Deno.env.get("PUBLIC_BASE_URL") || "https://ararrbvhzaudfaxjwdrc.lovableproject.com";
     const telegramText = `🔔 <b>Quote Request!</b>\n\n` +
-      `<b>Business:</b> ${project.business_name}\n` +
-      `<b>From:</b> ${name}\n` +
+      `<b>Prospect:</b> ${name}\n` +
       `<b>Phone:</b> ${phone}\n` +
       `<b>Email:</b> ${email}\n` +
       `<b>Service:</b> ${service || "Not specified"}\n` +
-      `<b>Message:</b> ${message || "None"}\n\n` +
-      `🔗 <a href="${baseUrl}/operator">Open Operator</a>`;
+      `<b>From Demo:</b> ${demoProject.business_name}\n` +
+      `<b>Status:</b> ${prospectResult.isNew ? "🆕 New prospect" : "📎 Existing prospect"}\n\n` +
+      `🔗 <a href="${baseUrl}/p/${prospectResult.projectToken}">View Portal</a> | ` +
+      `<a href="${baseUrl}/operator">Open Operator</a>`;
     
     notifyTelegram(telegramText);
 
-    console.log(`Quote request saved for ${project.business_name}`);
+    console.log(`Quote request saved, prospect: ${prospectResult.projectToken} (new: ${prospectResult.isNew})`);
 
+    // Return success with the prospect's portal token so frontend can show link
     return new Response(
-      JSON.stringify({ ok: true }),
+      JSON.stringify({ 
+        ok: true,
+        portal_token: prospectResult.projectToken,
+        is_new: prospectResult.isNew,
+      }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
 
