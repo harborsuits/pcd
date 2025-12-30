@@ -86,7 +86,7 @@ const experienceOptions = [
 
 const RestaurantDemo = () => {
   return (
-    <div className="min-h-screen bg-stone-950 text-stone-100">
+    <div className="min-h-screen bg-stone-950 text-stone-100 overflow-x-hidden">
       {/* Tubelight Navigation */}
       <NavBar 
         items={navItems} 
@@ -104,16 +104,16 @@ const RestaurantDemo = () => {
           scrollToExpand="Scroll to explore"
         >
           {/* About Section - inside hero expansion */}
-          <div id="about" className="container mx-auto px-6 py-16">
+          <div id="about" className="container mx-auto px-6 py-16 relative z-20">
             <div className="max-w-4xl mx-auto text-center mb-20">
-              <p className="text-amber-400 font-medium mb-4 tracking-widest uppercase text-sm">Our Story</p>
-              <h2 className="font-serif text-4xl md:text-5xl mb-8">A Passion for Excellence</h2>
-              <p className="text-stone-300 text-lg leading-relaxed mb-6">
+              <p className="text-amber-400 font-medium mb-4 tracking-widest uppercase text-sm drop-shadow-lg">Our Story</p>
+              <h2 className="font-serif text-4xl md:text-5xl mb-8 text-stone-100 drop-shadow-lg">A Passion for Excellence</h2>
+              <p className="text-stone-200 text-lg leading-relaxed mb-6">
                 Founded by Chef Maria Chen after two decades of culinary exploration across Europe and Asia, 
                 The Golden Fork represents the culmination of a lifelong dream: to create a dining experience 
                 that honors tradition while embracing innovation.
               </p>
-              <p className="text-stone-400 leading-relaxed">
+              <p className="text-stone-300 leading-relaxed">
                 Every dish tells a story. From our hand-selected local farmers to our carefully curated wine list, 
                 every detail is thoughtfully considered to create moments worth savoring. We believe that exceptional 
                 dining is about more than just food—it's about connection, celebration, and creating memories.
@@ -121,13 +121,13 @@ const RestaurantDemo = () => {
             </div>
 
             {/* Signature Dishes with GlowCards */}
-            <div id="menu" className="mb-20">
-              <h2 className="font-serif text-3xl md:text-4xl text-center mb-4">Signature Dishes</h2>
-              <p className="text-stone-400 text-center mb-12 max-w-xl mx-auto">
+            <div id="menu" className="mb-20 relative z-20">
+              <h2 className="font-serif text-3xl md:text-4xl text-center mb-4 text-stone-100 drop-shadow-lg">Signature Dishes</h2>
+              <p className="text-stone-300 text-center mb-12 max-w-xl mx-auto">
                 Seasonal favorites crafted by Chef Maria. All dishes made with locally-sourced ingredients.
               </p>
               
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 relative z-20">
                 {signatureDishes.map((dish) => {
                   const Icon = dish.icon;
                   return (
@@ -135,9 +135,9 @@ const RestaurantDemo = () => {
                       key={dish.name}
                       glowColor="orange"
                       customSize
-                      className="p-6"
+                      className="p-6 bg-stone-900/60 backdrop-blur-sm border border-stone-700/40"
                     >
-                      <div className="flex flex-col h-full">
+                      <div className="flex flex-col h-full relative z-10">
                         <div className="flex items-start justify-between mb-4">
                           <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20">
                             <Icon className="h-6 w-6 text-amber-400" />
@@ -145,14 +145,14 @@ const RestaurantDemo = () => {
                           <span className="text-amber-400 font-bold text-lg">{dish.price}</span>
                         </div>
                         <h3 className="font-serif text-xl text-stone-100 mb-2">{dish.name}</h3>
-                        <p className="text-stone-400 text-sm flex-grow">{dish.desc}</p>
+                        <p className="text-stone-300 text-sm flex-grow">{dish.desc}</p>
                       </div>
                     </GlowCard>
                   );
                 })}
               </div>
               
-              <div className="text-center mt-12">
+              <div className="text-center mt-12 relative z-20">
                 <MetalButton variant="gold">
                   View Full Menu
                 </MetalButton>
@@ -162,23 +162,32 @@ const RestaurantDemo = () => {
         </ScrollExpandMedia>
       </section>
 
+      {/* Gradient bridge to next section */}
+      <div className="h-32 bg-gradient-to-b from-stone-950 via-stone-950/90 to-stone-900" />
+
       {/* Interactive Experience Selector */}
-      <section className="bg-stone-900 border-t border-stone-800">
-        <InteractiveSelector
-          title="Explore the Experience"
-          options={experienceOptions}
-        />
+      <section className="bg-stone-900 relative z-20">
+        <div className="absolute inset-0 bg-gradient-to-b from-stone-900 via-stone-900 to-stone-900/95" />
+        <div className="relative z-10">
+          <InteractiveSelector
+            title="Explore the Experience"
+            options={experienceOptions}
+          />
+        </div>
       </section>
 
+      {/* Gradient bridge */}
+      <div className="h-24 bg-gradient-to-b from-stone-900 via-stone-900/80 to-stone-950" />
+
       {/* Press & Awards Section */}
-      <section className="py-20 bg-stone-950 border-t border-stone-800">
-        <div className="container mx-auto px-6">
-          <h2 className="font-serif text-3xl md:text-4xl text-center mb-4">Press & Awards</h2>
-          <p className="text-stone-400 text-center mb-12 max-w-xl mx-auto">
+      <section className="py-20 bg-stone-950 relative z-20">
+        <div className="container mx-auto px-6 relative z-10">
+          <h2 className="font-serif text-3xl md:text-4xl text-center mb-4 text-stone-100 drop-shadow-lg">Press & Awards</h2>
+          <p className="text-stone-300 text-center mb-12 max-w-xl mx-auto">
             Recognized for excellence in fine dining and hospitality.
           </p>
           
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 max-w-5xl mx-auto">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 max-w-5xl mx-auto relative z-20">
             <AwardBadge
               title="Best Fine Dining"
               subtitle="City Dining Awards"
@@ -211,28 +220,34 @@ const RestaurantDemo = () => {
         </div>
       </section>
 
+      {/* Gradient bridge */}
+      <div className="h-16 bg-gradient-to-b from-stone-950 to-stone-900" />
+
       {/* Quick Info Bar */}
-      <section className="py-8 bg-stone-900 border-t border-stone-800">
+      <section className="py-8 bg-stone-900 relative z-20">
         <div className="container mx-auto px-6">
           <div className="flex flex-wrap justify-center gap-8 text-sm">
             <div className="flex items-center gap-2">
               <Clock className="h-5 w-5 text-amber-400" />
-              <span>Tue–Sun: 5PM–10PM</span>
+              <span className="text-stone-200">Tue–Sun: 5PM–10PM</span>
             </div>
             <div className="flex items-center gap-2">
               <Star className="h-5 w-5 text-amber-400" />
-              <span>4.8★ (450+ Reviews)</span>
+              <span className="text-stone-200">4.8★ (450+ Reviews)</span>
             </div>
             <div className="flex items-center gap-2">
               <MapPin className="h-5 w-5 text-amber-400" />
-              <span>Downtown District</span>
+              <span className="text-stone-200">Downtown District</span>
             </div>
           </div>
         </div>
       </section>
 
+      {/* Gradient bridge to CTA */}
+      <div className="h-20 bg-gradient-to-b from-stone-900 via-amber-900/20 to-amber-600/30" />
+
       {/* Reservation CTA */}
-      <section className="py-20 bg-gradient-to-br from-amber-600 via-amber-500 to-yellow-500">
+      <section className="py-20 bg-gradient-to-br from-amber-600 via-amber-500 to-yellow-500 relative z-20">
         <div className="container mx-auto px-6 text-center">
           <h2 className="font-serif text-4xl mb-4 text-stone-950">Reserve Your Table</h2>
           <p className="text-amber-900 mb-8 max-w-xl mx-auto">
@@ -250,13 +265,16 @@ const RestaurantDemo = () => {
         </div>
       </section>
 
+      {/* Gradient bridge to footer */}
+      <div className="h-12 bg-gradient-to-b from-yellow-500/30 via-amber-900/20 to-stone-900" />
+
       {/* Footer */}
-      <footer id="contact" className="bg-stone-900 py-12 border-t border-stone-800">
+      <footer id="contact" className="bg-stone-900 py-12 relative z-20">
         <div className="container mx-auto px-6">
           <div className="grid md:grid-cols-3 gap-8">
             <div>
-              <h3 className="font-serif text-2xl mb-4">The Golden Fork</h3>
-              <p className="text-stone-400 text-sm">
+              <h3 className="font-serif text-2xl mb-4 text-stone-100">The Golden Fork</h3>
+              <p className="text-stone-300 text-sm">
                 An elevated dining experience in the heart of downtown.
               </p>
               <div className="flex gap-4 mt-4">
@@ -269,8 +287,8 @@ const RestaurantDemo = () => {
               </div>
             </div>
             <div>
-              <h4 className="font-medium mb-4">Hours</h4>
-              <div className="space-y-2 text-sm text-stone-400">
+              <h4 className="font-medium mb-4 text-stone-100">Hours</h4>
+              <div className="space-y-2 text-sm text-stone-300">
                 <p>Tuesday – Thursday: 5PM – 10PM</p>
                 <p>Friday – Saturday: 5PM – 11PM</p>
                 <p>Sunday: 5PM – 9PM</p>
@@ -278,8 +296,8 @@ const RestaurantDemo = () => {
               </div>
             </div>
             <div>
-              <h4 className="font-medium mb-4">Location</h4>
-              <div className="space-y-2 text-sm text-stone-400">
+              <h4 className="font-medium mb-4 text-stone-100">Location</h4>
+              <div className="space-y-2 text-sm text-stone-300">
                 <p>456 Main Street</p>
                 <p>Downtown District</p>
                 <p>Anytown, USA 12345</p>
@@ -289,7 +307,7 @@ const RestaurantDemo = () => {
               </div>
             </div>
           </div>
-          <div className="border-t border-stone-800 mt-8 pt-8 text-center text-sm text-stone-500">
+          <div className="border-t border-stone-800 mt-8 pt-8 text-center text-sm text-stone-400">
             <p>© 2024 The Golden Fork. All rights reserved.</p>
             <p className="mt-2 text-xs">
               Demo site by <Link to="/" className="text-amber-400 hover:underline">Pleasant Cove Design</Link>
