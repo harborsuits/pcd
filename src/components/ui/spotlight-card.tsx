@@ -19,7 +19,7 @@ const glowColorMap = {
   red: { base: 0, spread: 200 },
   orange: { base: 30, spread: 200 },
   emerald: { base: 175, spread: 30 },
-  rose: { base: 350, spread: 30 }
+  rose: { base: 350, spread: 0 }
 };
 
 const sizeMap = {
