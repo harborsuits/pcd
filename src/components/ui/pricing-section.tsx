@@ -155,7 +155,7 @@ export default function PricingSection() {
   return (
     <section
       ref={pricingRef}
-      className="relative pt-8 pb-20 overflow-hidden bg-gradient-to-b from-transparent via-background to-background"
+      className="relative pt-8 pb-20 overflow-hidden"
     >
       {/* Subtle grid + sparkles */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">

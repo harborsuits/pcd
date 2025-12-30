@@ -4,7 +4,7 @@ import PricingSection from "@/components/ui/pricing-section";
 
 const Pricing = () => {
   return (
-    <div className="min-h-screen flex flex-col bg-background text-foreground">
+    <div className="min-h-screen flex flex-col bg-accent/5 text-foreground">
       {/* Header */}
       <header className="border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-6 py-4 flex items-center justify-between">
@@ -26,7 +26,7 @@ const Pricing = () => {
       </header>
 
       {/* Hero */}
-      <section className="pt-12 pb-6 md:pt-16 md:pb-8 relative overflow-hidden bg-gradient-to-b from-accent/10 via-background to-transparent">
+      <section className="pt-12 pb-6 md:pt-16 md:pb-8 relative overflow-hidden">
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute -top-32 -right-32 h-[520px] w-[520px] rounded-full bg-accent/15 blur-3xl" />
           <div className="absolute -bottom-40 -left-40 h-[620px] w-[620px] rounded-full bg-primary/10 blur-3xl" />
@@ -53,7 +53,7 @@ const Pricing = () => {
 
 
       {/* Footer */}
-      <footer className="border-t border-border py-8 bg-card">
+      <footer className="border-t border-border/50 py-8">
         <div className="container mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4">
           <p className="font-serif text-sm text-muted-foreground">
             © {new Date().getFullYear()} Pleasant Cove Design
