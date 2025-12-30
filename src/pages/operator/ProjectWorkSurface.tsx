@@ -23,7 +23,7 @@ import { IntakeOverviewPanel } from "@/components/operator/IntakeOverviewPanel";
 import { LaunchChecklist } from "@/components/operator/LaunchChecklist";
 import { DeliverablesMilestones } from "@/components/operator/DeliverablesMilestones";
 import { adminFetch, AdminAuthError } from "@/lib/adminFetch";
-import { StageBadge, STAGE_CONFIG, getNextStage, getValidTargetStages, PipelineStage } from "@/components/operator/StageBadge";
+import { StageBadge, STAGE_CONFIG, getNextStage, getValidTargetStages, PipelineStage, isSystemMessage, parseSystemMessage } from "@/components/operator/StageBadge";
 
 interface Project {
   id: string;
@@ -846,10 +846,35 @@ export function ProjectWorkSurface({ project, onBack, onStatusChange }: ProjectW
                       <p className="text-sm">No messages yet</p>
                     </div>
                   ) : (
-                    <div className="space-y-2 pr-2">
+                  <div className="space-y-2 pr-2">
                       {messages.map((msg) => {
                         const isAdmin = msg.sender_type === "admin";
+                        const isSystem = isSystemMessage(msg.content);
                         const isLinkedToComment = linkedMessageIds.has(msg.id);
+                        
+                        // Render system messages differently
+                        if (isSystem) {
+                          const parsed = parseSystemMessage(msg.content);
+                          return (
+                            <div key={msg.id} className="flex justify-center">
+                              <div className="flex items-center gap-2 px-3 py-1.5 bg-muted/50 border border-border/50 rounded-full text-xs text-muted-foreground">
+                                <ArrowRight className="h-3 w-3" />
+                                {parsed.type === "stage_change" ? (
+                                  <span>
+                                    Stage: <span className="font-medium">{STAGE_CONFIG[parsed.from as PipelineStage]?.label || parsed.from}</span>
+                                    {" → "}
+                                    <span className="font-medium">{STAGE_CONFIG[parsed.to as PipelineStage]?.label || parsed.to}</span>
+                                  </span>
+                                ) : (
+                                  <span>{parsed.text}</span>
+                                )}
+                                <span className="opacity-60">•</span>
+                                <span className="opacity-60">{format(new Date(msg.created_at), "MMM d, h:mm a")}</span>
+                              </div>
+                            </div>
+                          );
+                        }
+                        
                         return (
                           <div key={msg.id} className={`flex group ${isAdmin ? "justify-end" : "justify-start"}`}>
                             <div className="flex items-start gap-1 max-w-[85%]">
