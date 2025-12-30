@@ -93,6 +93,9 @@ function getSecurityHeaders(contentType: string, size: number, corsHeaders: Reco
   };
 }
 
+// Signed URL expiration time (1 hour in seconds)
+const SIGNED_URL_EXPIRATION = 3600;
+
 function errorResponse(status: number, message: string, corsHeaders: Record<string, string>): Response {
   return new Response(JSON.stringify({ error: message }), {
     status,
@@ -159,6 +162,7 @@ Deno.serve(async (req) => {
 
   try {
     // Mode 1: Fetch file by ID from our database + storage (REQUIRES TOKEN)
+    // Returns a short-lived signed URL for enhanced security
     if (fileId && fileId !== "media" && !proxyUrl) {
       // Require valid token for file ID mode
       if (!isValidToken(token)) {
@@ -199,6 +203,40 @@ Deno.serve(async (req) => {
       const bucket = storageParts[0];
       const filePath = storageParts.slice(1).join("/");
 
+      // Check if client wants a signed URL (for enhanced security) or direct content
+      const wantSignedUrl = url.searchParams.get("signed") === "true";
+      
+      if (wantSignedUrl) {
+        // Generate a short-lived signed URL (1 hour expiration)
+        const { data: signedUrlData, error: signedUrlError } = await supabase.storage
+          .from(bucket)
+          .createSignedUrl(filePath, SIGNED_URL_EXPIRATION);
+
+        if (signedUrlError || !signedUrlData?.signedUrl) {
+          console.error("[Media] Signed URL error:", signedUrlError);
+          return errorResponse(500, "Failed to generate signed URL", corsHeaders);
+        }
+
+        // Return the signed URL as JSON
+        return new Response(
+          JSON.stringify({
+            signedUrl: signedUrlData.signedUrl,
+            expiresIn: SIGNED_URL_EXPIRATION,
+            fileName: file.file_name,
+            fileType: file.file_type,
+          }),
+          {
+            status: 200,
+            headers: {
+              ...corsHeaders,
+              "Content-Type": "application/json",
+              "Cache-Control": "no-store", // Don't cache signed URL responses
+            },
+          }
+        );
+      }
+
+      // Direct content mode (backward compatible)
       const { data: fileData, error: storageError } = await supabase.storage
         .from(bucket)
         .download(filePath);
