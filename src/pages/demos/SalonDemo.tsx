@@ -10,6 +10,7 @@ import salonHair1 from "@/assets/salon/hair1.jpg";
 import salonHair2 from "@/assets/salon/hair2.jpeg";
 import salonNails from "@/assets/salon/nails.jpeg";
 import salonWaxing from "@/assets/salon/waxing.jpeg";
+import salonOwner from "@/assets/salon/salon-owner.jpeg";
 
 const SalonDemo = () => {
   return (
@@ -165,7 +166,7 @@ const SalonDemo = () => {
           
           <div className="grid md:grid-cols-4 gap-6 max-w-4xl mx-auto">
             {[
-              { name: "Sarah", role: "Owner & Senior Stylist", image: "https://images.unsplash.com/photo-1580618672591-eb180b1a973f?w=300&auto=format&fit=crop" },
+              { name: "Sarah", role: "Owner & Senior Stylist", image: salonOwner },
               { name: "Maya", role: "Color Specialist", image: "https://images.unsplash.com/photo-1594744803329-e58b31de8bf5?w=300&auto=format&fit=crop" },
               { name: "Jessica", role: "Nail Technician", image: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=300&auto=format&fit=crop" },
               { name: "Emma", role: "Esthetician", image: "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=300&auto=format&fit=crop" },
