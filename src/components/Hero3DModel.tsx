@@ -398,15 +398,6 @@ export function Hero3DModel() {
           />
         ))}
       </div>
-
-      {/* Subtle caption */}
-      <p 
-        className={`text-center text-xs text-muted-foreground mt-2 transition-opacity duration-300 ${
-          isTransitioning ? 'opacity-0' : 'opacity-100'
-        }`}
-      >
-        {HERO_MODELS[activeIndex].caption}
-      </p>
     </div>
   );
 }
