@@ -58,7 +58,7 @@ const experienceOptions = [
     id: "dining",
     label: "Fine Dining",
     icon: UtensilsCrossed,
-    description: "Experience culinary artistry in our elegant main dining room. Each dish is crafted with locally-sourced ingredients and presented with meticulous attention to detail. Our tasting menu offers a journey through seasonal flavors curated by Chef Maria.",
+    description: "Experience culinary artistry in our elegant main dining room. Each dish is crafted with locally-sourced ingredients and presented with meticulous attention to detail. Our tasting menu offers a journey through seasonal flavors curated by Chef Max Powers.",
     image: "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=800&auto=format&fit=crop",
   },
   {
@@ -79,7 +79,7 @@ const experienceOptions = [
     id: "chef",
     label: "Chef's Table",
     icon: ChefHat,
-    description: "The ultimate culinary experience. Sit just steps from the kitchen and watch Chef Maria and her team create your personalized multi-course tasting menu. Limited to 6 guests per evening, this intimate experience includes wine pairings and behind-the-scenes stories.",
+    description: "The ultimate culinary experience. Sit just steps from the kitchen and watch Chef Max Powers and his team create your personalized multi-course tasting menu. Limited to 6 guests per evening, this intimate experience includes wine pairings and behind-the-scenes stories.",
     image: "https://images.unsplash.com/photo-1577219491135-ce391730fb2c?w=800&auto=format&fit=crop",
   },
 ];
@@ -119,7 +119,7 @@ const RestaurantDemo = () => {
                 A Passion for Excellence
               </h2>
               <p className="text-stone-200 text-lg leading-relaxed mb-3">
-                Founded by Chef Maria Chen after two decades of culinary exploration across Europe and Asia, 
+                Founded by Chef Max Powers after two decades of culinary exploration across Europe and Asia, 
                 The Golden Fork represents the culmination of a lifelong dream.
               </p>
               <p className="text-stone-300 leading-relaxed">
@@ -137,7 +137,7 @@ const RestaurantDemo = () => {
                 Signature Dishes
               </h2>
               <p className="text-stone-300 text-center mb-5 max-w-xl mx-auto">
-                Seasonal favorites crafted by Chef Maria.
+                Seasonal favorites crafted by Chef Max Powers.
               </p>
               
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3 relative z-20">
