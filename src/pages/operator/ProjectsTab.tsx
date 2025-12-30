@@ -7,7 +7,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   FolderOpen, Loader2, Clock, CheckCircle, FileText, 
-  MessageSquare, ExternalLink, ChevronRight, Sparkles, Eye
+  MessageSquare, ExternalLink, ChevronRight, Sparkles, Eye, FileQuestion, UserCheck
 } from "lucide-react";
 import { format } from "date-fns";
 import { ProjectWorkSurface } from "./ProjectWorkSurface";
@@ -43,6 +43,8 @@ interface Project {
   updated_at: string;
   intake: ProjectIntake | null;
   unread_count: number;
+  quote_count: number;
+  has_claim: boolean;
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -229,8 +231,20 @@ export function ProjectsTab() {
                                 {project.unread_count} unread
                               </span>
                             )}
-                            {project.intake && (
+                            {project.quote_count > 0 && (
+                              <span className="flex items-center gap-1 text-amber-600 font-medium">
+                                <FileQuestion className="h-3 w-3" />
+                                {project.quote_count} quote{project.quote_count > 1 ? "s" : ""}
+                              </span>
+                            )}
+                            {project.has_claim && (
                               <span className="flex items-center gap-1 text-green-600">
+                                <UserCheck className="h-3 w-3" />
+                                Claimed
+                              </span>
+                            )}
+                            {project.intake && (
+                              <span className="flex items-center gap-1 text-blue-600">
                                 <FileText className="h-3 w-3" />
                                 Intake
                               </span>

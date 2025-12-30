@@ -522,12 +522,12 @@ async function handleQuoteRequest(req: Request): Promise<Response> {
       );
     }
 
-    // Find the associated lead (if any)
+    // Find the associated lead using demo_project_id (NOT demo_token - that was a bug)
     const { data: lead } = await supabase
       .from("leads")
       .select("id")
-      .eq("demo_token", project_token)
-      .single();
+      .eq("demo_project_id", project.id)
+      .maybeSingle();
 
     // Record the quote request as an outreach event
     if (lead) {
@@ -542,23 +542,26 @@ async function handleQuoteRequest(req: Request): Promise<Response> {
     }
 
     // Also create a message in the project's message thread so it shows in the portal
+    // Tag with [QUOTE_REQUEST] marker for easy filtering
     await supabase
       .from("messages")
       .insert({
         project_id: project.id,
         project_token: project_token,
         sender_type: "client",
-        content: `📝 **Quote Request**\n\n**Name:** ${name}\n**Phone:** ${phone}\n**Email:** ${email}\n**Service:** ${service || "Not specified"}\n**Details:** ${message || "None provided"}`,
+        content: `[QUOTE_REQUEST]\n📝 **Quote Request**\n\n**Name:** ${name}\n**Phone:** ${phone}\n**Email:** ${email}\n**Service:** ${service || "Not specified"}\n**Details:** ${message || "None provided"}`,
       });
 
-    // Send Telegram notification
+    // Send Telegram notification with actionable links
+    const baseUrl = Deno.env.get("PUBLIC_BASE_URL") || "https://ararrbvhzaudfaxjwdrc.lovableproject.com";
     const telegramText = `🔔 <b>Quote Request!</b>\n\n` +
       `<b>Business:</b> ${project.business_name}\n` +
       `<b>From:</b> ${name}\n` +
       `<b>Phone:</b> ${phone}\n` +
       `<b>Email:</b> ${email}\n` +
       `<b>Service:</b> ${service || "Not specified"}\n` +
-      `<b>Message:</b> ${message || "None"}`;
+      `<b>Message:</b> ${message || "None"}\n\n` +
+      `🔗 <a href="${baseUrl}/operator">Open Operator</a>`;
     
     notifyTelegram(telegramText);
 
