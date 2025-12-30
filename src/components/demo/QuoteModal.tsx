@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Dialog,
   DialogContent,
@@ -10,14 +11,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Loader2 } from "lucide-react";
 
 interface QuoteModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   businessName: string;
+  projectToken: string;
 }
 
-export function QuoteModal({ open, onOpenChange, businessName }: QuoteModalProps) {
+export function QuoteModal({ open, onOpenChange, businessName, projectToken }: QuoteModalProps) {
   const [formData, setFormData] = useState({
     name: "",
     phone: "",
@@ -26,12 +29,39 @@ export function QuoteModal({ open, onOpenChange, businessName }: QuoteModalProps
     message: "",
   });
   const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // In production, this would save to the database
-    console.log("Quote request submitted:", formData);
-    setSubmitted(true);
+    setLoading(true);
+    setError(null);
+
+    try {
+      const { error: invokeError } = await supabase.functions.invoke("demo/quote", {
+        body: {
+          project_token: projectToken,
+          name: formData.name,
+          phone: formData.phone,
+          email: formData.email,
+          service: formData.service,
+          message: formData.message,
+        },
+      });
+
+      if (invokeError) {
+        console.error("Quote request error:", invokeError);
+        setError("Something went wrong. Please try again.");
+        return;
+      }
+
+      setSubmitted(true);
+    } catch (err) {
+      console.error("Quote request error:", err);
+      setError("Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleChange = (field: string, value: string) => {
@@ -125,17 +155,26 @@ export function QuoteModal({ open, onOpenChange, businessName }: QuoteModalProps
             />
           </div>
           
+          {error && <p className="text-sm text-destructive">{error}</p>}
+          
           <div className="pt-4 flex gap-3">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="flex-1">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="flex-1" disabled={loading}>
               Cancel
             </Button>
-            <Button type="submit" className="flex-1">
-              Submit Request
+            <Button type="submit" className="flex-1" disabled={loading}>
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Sending...
+                </>
+              ) : (
+                "Submit Request"
+              )}
             </Button>
           </div>
           
           <p className="text-xs text-muted-foreground text-center">
-            We'll text you back within 1 business day.
+            We'll get back to you within 1 business day.
           </p>
         </form>
       </DialogContent>
