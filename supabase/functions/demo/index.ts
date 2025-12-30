@@ -62,6 +62,11 @@ Deno.serve(async (req) => {
     return handleClaimWithAuth(req);
   }
 
+  // Route: POST /demo/quote - Handle quote requests from demo visitors
+  if (subPath === "quote" && req.method === "POST") {
+    return handleQuoteRequest(req);
+  }
+
   // Route: GET /demo/:token (existing)
   if (req.method === "GET") {
     return handleGetDemo(req);
@@ -461,6 +466,111 @@ async function handleGetDemo(req: Request): Promise<Response> {
 
   } catch (error) {
     console.error("Unexpected error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+}
+
+// POST /demo/quote - Handle quote requests from demo page visitors
+async function handleQuoteRequest(req: Request): Promise<Response> {
+  try {
+    const body = await req.json();
+    const { project_token, name, phone, email, service, message } = body;
+
+    if (!project_token) {
+      return new Response(
+        JSON.stringify({ error: "project_token required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (!isValidToken(project_token)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid token" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (!name || !phone || !email) {
+      return new Response(
+        JSON.stringify({ error: "name, phone, and email are required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    console.log(`Quote request for project ${project_token} from ${name}`);
+
+    // Find the project
+    const { data: project, error: projectError } = await supabase
+      .from("projects")
+      .select("id, business_name, project_token")
+      .eq("project_token", project_token)
+      .is("deleted_at", null)
+      .single();
+
+    if (projectError || !project) {
+      console.error("Project not found:", projectError);
+      return new Response(
+        JSON.stringify({ error: "Project not found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Find the associated lead (if any)
+    const { data: lead } = await supabase
+      .from("leads")
+      .select("id")
+      .eq("demo_token", project_token)
+      .single();
+
+    // Record the quote request as an outreach event
+    if (lead) {
+      await supabase
+        .from("lead_outreach_events")
+        .insert({
+          lead_id: lead.id,
+          channel: "web",
+          status: "quote_requested",
+          message: JSON.stringify({ name, email, phone, service, message }),
+        });
+    }
+
+    // Also create a message in the project's message thread so it shows in the portal
+    await supabase
+      .from("messages")
+      .insert({
+        project_id: project.id,
+        project_token: project_token,
+        sender_type: "client",
+        content: `📝 **Quote Request**\n\n**Name:** ${name}\n**Phone:** ${phone}\n**Email:** ${email}\n**Service:** ${service || "Not specified"}\n**Details:** ${message || "None provided"}`,
+      });
+
+    // Send Telegram notification
+    const telegramText = `🔔 <b>Quote Request!</b>\n\n` +
+      `<b>Business:</b> ${project.business_name}\n` +
+      `<b>From:</b> ${name}\n` +
+      `<b>Phone:</b> ${phone}\n` +
+      `<b>Email:</b> ${email}\n` +
+      `<b>Service:</b> ${service || "Not specified"}\n` +
+      `<b>Message:</b> ${message || "None"}`;
+    
+    notifyTelegram(telegramText);
+
+    console.log(`Quote request saved for ${project.business_name}`);
+
+    return new Response(
+      JSON.stringify({ ok: true }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+
+  } catch (error) {
+    console.error("Quote request error:", error);
     return new Response(
       JSON.stringify({ error: "Internal server error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }

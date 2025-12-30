@@ -218,6 +218,7 @@ export default function DemoPage() {
         open={quoteOpen} 
         onOpenChange={setQuoteOpen}
         businessName={data.business.name}
+        projectToken={data.project_token}
       />
 
       <ClaimAuthModal
