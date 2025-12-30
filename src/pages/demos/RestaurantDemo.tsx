@@ -86,7 +86,17 @@ const experienceOptions = [
 
 const RestaurantDemo = () => {
   return (
-    <div className="min-h-screen bg-stone-950 text-stone-100 overflow-x-hidden">
+    <div className="min-h-screen bg-stone-950 text-stone-100 overflow-x-hidden relative">
+      {/* Fixed background that extends through entire page */}
+      <div className="fixed inset-0 z-0">
+        <img
+          src="https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=1920&auto=format&fit=crop"
+          alt="Background"
+          className="w-full h-full object-cover opacity-15"
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-stone-950/30 via-stone-950/50 to-stone-950/70" />
+      </div>
+
       {/* Tubelight Navigation */}
       <NavBar 
         items={navItems} 
@@ -94,7 +104,7 @@ const RestaurantDemo = () => {
       />
 
       {/* Scroll Expansion Hero */}
-      <section id="hero">
+      <section id="hero" className="relative z-10">
         <ScrollExpandMedia
           mediaType="image"
           mediaSrc="https://images.unsplash.com/photo-1600891964092-4316c288032e?w=1920&auto=format&fit=crop"
@@ -135,7 +145,7 @@ const RestaurantDemo = () => {
                       key={dish.name}
                       glowColor="orange"
                       customSize
-                      className="p-6 bg-stone-900/60 backdrop-blur-sm border border-stone-700/40"
+                      className="p-6 bg-stone-900/40 backdrop-blur-sm border border-stone-700/30"
                     >
                       <div className="flex flex-col h-full relative z-10">
                         <div className="flex items-start justify-between mb-4">
@@ -162,25 +172,16 @@ const RestaurantDemo = () => {
         </ScrollExpandMedia>
       </section>
 
-      {/* Gradient bridge to next section */}
-      <div className="h-32 bg-gradient-to-b from-stone-950 via-stone-950/90 to-stone-900" />
-
-      {/* Interactive Experience Selector */}
-      <section className="bg-stone-900 relative z-20">
-        <div className="absolute inset-0 bg-gradient-to-b from-stone-900 via-stone-900 to-stone-900/95" />
-        <div className="relative z-10">
-          <InteractiveSelector
-            title="Explore the Experience"
-            options={experienceOptions}
-          />
-        </div>
+      {/* Interactive Experience Selector - transparent background */}
+      <section className="relative z-10 py-20">
+        <InteractiveSelector
+          title="Explore the Experience"
+          options={experienceOptions}
+        />
       </section>
 
-      {/* Gradient bridge */}
-      <div className="h-24 bg-gradient-to-b from-stone-900 via-stone-900/80 to-stone-950" />
-
-      {/* Press & Awards Section */}
-      <section className="py-20 bg-stone-950 relative z-20">
+      {/* Press & Awards Section - transparent background */}
+      <section className="py-20 relative z-10">
         <div className="container mx-auto px-6 relative z-10">
           <h2 className="font-serif text-3xl md:text-4xl text-center mb-4 text-stone-100 drop-shadow-lg">Press & Awards</h2>
           <p className="text-stone-300 text-center mb-12 max-w-xl mx-auto">
@@ -220,11 +221,8 @@ const RestaurantDemo = () => {
         </div>
       </section>
 
-      {/* Gradient bridge */}
-      <div className="h-16 bg-gradient-to-b from-stone-950 to-stone-900" />
-
-      {/* Quick Info Bar */}
-      <section className="py-8 bg-stone-900 relative z-20">
+      {/* Quick Info Bar - slight background for contrast */}
+      <section className="py-8 relative z-10 bg-stone-900/30 backdrop-blur-sm">
         <div className="container mx-auto px-6">
           <div className="flex flex-wrap justify-center gap-8 text-sm">
             <div className="flex items-center gap-2">
@@ -243,11 +241,8 @@ const RestaurantDemo = () => {
         </div>
       </section>
 
-      {/* Gradient bridge to CTA */}
-      <div className="h-20 bg-gradient-to-b from-stone-900 via-amber-900/20 to-amber-600/30" />
-
       {/* Reservation CTA */}
-      <section className="py-20 bg-gradient-to-br from-amber-600 via-amber-500 to-yellow-500 relative z-20">
+      <section className="py-20 bg-gradient-to-br from-amber-600/90 via-amber-500/90 to-yellow-500/90 backdrop-blur-sm relative z-10">
         <div className="container mx-auto px-6 text-center">
           <h2 className="font-serif text-4xl mb-4 text-stone-950">Reserve Your Table</h2>
           <p className="text-amber-900 mb-8 max-w-xl mx-auto">
@@ -265,11 +260,8 @@ const RestaurantDemo = () => {
         </div>
       </section>
 
-      {/* Gradient bridge to footer */}
-      <div className="h-12 bg-gradient-to-b from-yellow-500/30 via-amber-900/20 to-stone-900" />
-
-      {/* Footer */}
-      <footer id="contact" className="bg-stone-900 py-12 relative z-20">
+      {/* Footer - slight background for legibility */}
+      <footer id="contact" className="bg-stone-900/50 backdrop-blur-sm py-12 relative z-10">
         <div className="container mx-auto px-6">
           <div className="grid md:grid-cols-3 gap-8">
             <div>
@@ -307,7 +299,7 @@ const RestaurantDemo = () => {
               </div>
             </div>
           </div>
-          <div className="border-t border-stone-800 mt-8 pt-8 text-center text-sm text-stone-400">
+          <div className="border-t border-stone-700/50 mt-8 pt-8 text-center text-sm text-stone-400">
             <p>© 2024 The Golden Fork. All rights reserved.</p>
             <p className="mt-2 text-xs">
               Demo site by <Link to="/" className="text-amber-400 hover:underline">Pleasant Cove Design</Link>
