@@ -1326,7 +1326,17 @@ async function handleGenerateDemo(req: Request, leadId: string): Promise<Respons
 // POST /leads/request-demo - Public endpoint for lead capture + auto demo generation
 async function handleRequestDemo(req: Request): Promise<Response> {
   try {
-    let body: { business_name?: string; city?: string; phone?: string; website?: string };
+    let body: { 
+      business_name?: string; 
+      city?: string; 
+      phone?: string; 
+      website?: string;
+      occupation?: string;
+      expectations?: string;
+      demo_type?: string;
+      website_style?: string;
+      receptionist_focus?: string;
+    };
     try {
       body = await req.json();
     } catch {
@@ -1336,7 +1346,27 @@ async function handleRequestDemo(req: Request): Promise<Response> {
       );
     }
 
-    const { business_name, city, phone, website } = body;
+    const { 
+      business_name, 
+      city, 
+      phone, 
+      website,
+      occupation,
+      expectations,
+      demo_type,
+      website_style,
+      receptionist_focus
+    } = body;
+    
+    // Build request metadata for operator visibility
+    const requestMeta = {
+      occupation: occupation || null,
+      expectations: expectations || null,
+      demo_type: demo_type || null,
+      website_style: website_style || null,
+      receptionist_focus: receptionist_focus || null,
+      requested_at: new Date().toISOString(),
+    };
 
     if (!business_name || !city) {
       return new Response(
@@ -1516,6 +1546,15 @@ async function handleRequestDemo(req: Request): Promise<Response> {
     const projectToken = generateToken();
     const bestPhone = phoneE164 || phoneRaw;
 
+    // Build notes from request metadata for operator visibility
+    const notesLines = [];
+    if (occupation) notesLines.push(`Occupation: ${occupation}`);
+    if (demo_type) notesLines.push(`Interested in: ${demo_type}`);
+    if (website_style) notesLines.push(`Website style: ${website_style}`);
+    if (receptionist_focus) notesLines.push(`AI focus: ${receptionist_focus}`);
+    if (expectations) notesLines.push(`Expectations: ${expectations}`);
+    const projectNotes = notesLines.length > 0 ? notesLines.join('\n') : null;
+
     // Create project
     const { data: newProject, error: projectError } = await supabase
       .from("projects")
@@ -1528,6 +1567,7 @@ async function handleRequestDemo(req: Request): Promise<Response> {
         city: city,
         source: "request_demo",
         status: "lead",
+        notes: projectNotes,
       })
       .select("id, project_token")
       .single();
