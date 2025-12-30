@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { ArrowLeft, Phone, MapPin, Clock, Star, Instagram, Scissors, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ShaderAnimation } from "@/components/ui/shader-animation";
+import salonHeroModel from "@/assets/salon/salon-hero-model.png";
 
 const SalonDemo = () => {
   return (
@@ -29,9 +30,18 @@ const SalonDemo = () => {
 
       {/* Hero with Shader Animation */}
       <section className="relative min-h-[80vh] overflow-hidden flex items-center justify-center">
-        {/* Shader Background */}
-        <div className="absolute inset-0 z-0">
-          <ShaderAnimation className="opacity-30" />
+        {/* Hero Image Background */}
+        <div className="absolute inset-0 z-0 flex justify-end items-end pointer-events-none">
+          <img 
+            src={salonHeroModel} 
+            alt="" 
+            className="h-full w-auto max-w-none object-contain object-right-bottom opacity-40"
+          />
+        </div>
+        
+        {/* Shader Background on top of image */}
+        <div className="absolute inset-0 z-[5]">
+          <ShaderAnimation className="opacity-25" />
         </div>
         
         {/* Gradient Overlay for readability */}
