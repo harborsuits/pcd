@@ -1,7 +1,40 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
-import { MessageSquare, X, Send, Loader2, ChevronUp, Minus } from "lucide-react";
+import { MessageSquare, X, Send, Loader2, ChevronUp, Minus, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+
+// Helper to check if a message is a system message
+function isSystemMessage(content: string): boolean {
+  return content.startsWith("[SYSTEM]");
+}
+
+// Parse system message for display
+function parseSystemMessage(content: string): string {
+  if (!content.startsWith("[SYSTEM]")) return content;
+  
+  const stripped = content.replace("[SYSTEM] ", "");
+  
+  // Simplify stage change messages for client view
+  const stageMatch = stripped.match(/Pipeline stage changed: (\w+) → (\w+)/);
+  if (stageMatch) {
+    // Map internal stage names to friendly labels
+    const stageLabels: Record<string, string> = {
+      new: "New",
+      demo_requested: "Demo",
+      quote_requested: "Quote Received",
+      claimed: "Claimed",
+      contacted: "In Contact",
+      qualified: "Qualified",
+      won: "Project Started",
+      lost: "Closed",
+    };
+    const from = stageLabels[stageMatch[1]] || stageMatch[1];
+    const to = stageLabels[stageMatch[2]] || stageMatch[2];
+    return `Project status updated: ${to}`;
+  }
+  
+  return stripped;
+}
 
 interface ChatMessage {
   id: string;
@@ -509,12 +542,27 @@ export function FloatingChatOrb({
               </div>
             ) : (
               <>
-                {messages.map((msg, index) => {
+              {messages.map((msg, index) => {
                   const isClient = msg.sender_type === "client";
+                  const isSystem = isSystemMessage(msg.content);
                   const isLastClientMsg = isClient && index === lastClientMsgIndex;
 
                   const isNewMsg = !seenMessageIds.current.has(msg.id);
                   if (isNewMsg) seenMessageIds.current.add(msg.id);
+
+                  // Render system messages as centered, muted timeline items
+                  if (isSystem) {
+                    return (
+                      <div key={msg.id} className={`flex w-full justify-center ${isNewMsg ? "bubble-in" : ""}`}>
+                        <div className="flex items-center gap-1.5 px-2.5 py-1 bg-muted/40 border border-border/30 rounded-full">
+                          <ArrowRight className="h-2.5 w-2.5 text-muted-foreground" />
+                          <span className="text-[11px] text-muted-foreground">
+                            {parseSystemMessage(msg.content)}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  }
 
                   return (
                     <div

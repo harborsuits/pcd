@@ -86,15 +86,42 @@ export function getNextStage(current: string | null | undefined): PipelineStage 
 // Get valid target stages (forward + lost for override)
 export function getValidTargetStages(current: string | null | undefined): PipelineStage[] {
   const normalized = (current || "new") as PipelineStage;
-  const currentIndex = STAGE_ORDER.indexOf(normalized);
   
-  // If already won or lost, only allow moving to other terminal states
+  // Terminal states: only allow moving to the other terminal
   if (normalized === "won") return ["lost"];
-  if (normalized === "lost") return ["won", ...STAGE_ORDER.slice(currentIndex >= 0 ? currentIndex : 0)];
+  if (normalized === "lost") return ["won"];
   
-  // Forward stages + lost
-  const forwardStages = STAGE_ORDER.slice(currentIndex + 1);
-  return [...forwardStages, "lost"];
+  // For all other stages: forward stages + lost (admin override)
+  const idx = STAGE_ORDER.indexOf(normalized);
+  const forward = idx === -1 ? STAGE_ORDER.slice(1) : STAGE_ORDER.slice(idx + 1);
+  return [...forward, "lost"];
+}
+
+// Helper to check if a message is a system message
+export function isSystemMessage(content: string): boolean {
+  return content.startsWith("[SYSTEM]");
+}
+
+// Parse system message to get a cleaner display
+export function parseSystemMessage(content: string): { type: "stage_change" | "other"; from?: string; to?: string; text: string } {
+  if (!content.startsWith("[SYSTEM]")) {
+    return { type: "other", text: content };
+  }
+  
+  const stripped = content.replace("[SYSTEM] ", "");
+  
+  // Check for stage change pattern: "Pipeline stage changed: X → Y"
+  const stageMatch = stripped.match(/Pipeline stage changed: (\w+) → (\w+)/);
+  if (stageMatch) {
+    return {
+      type: "stage_change",
+      from: stageMatch[1],
+      to: stageMatch[2],
+      text: stripped,
+    };
+  }
+  
+  return { type: "other", text: stripped };
 }
 
 export function StageBadge({ stage, className }: StageBadgeProps) {
