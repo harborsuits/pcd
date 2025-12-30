@@ -130,11 +130,14 @@ const Index = () => {
       <section className="pt-12 md:pt-16 pb-20 md:pb-28 overflow-hidden">
         <div className="container mx-auto px-6">
           <div className="text-center mb-8 md:mb-10">
-            <h2 className="font-serif text-4xl md:text-5xl lg:text-6xl font-bold mb-4">
+            <h2 className="font-serif text-4xl md:text-5xl lg:text-6xl font-bold mb-2">
               Your AI Receptionist
             </h2>
-            <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto">
+            <p className="text-xl md:text-2xl text-foreground/80 font-medium max-w-2xl mx-auto mb-3">
               Never miss a lead — even when you're on a job, with a client, or after hours.
+            </p>
+            <p className="text-base md:text-lg text-muted-foreground max-w-2xl mx-auto">
+              Our AI Receptionist answers calls, texts, and form submissions instantly, qualifies inquiries, and handles next steps automatically.
             </p>
           </div>
 
@@ -151,10 +154,7 @@ const Index = () => {
               </div>
             </div>
             
-            <div className="order-1 lg:order-2 space-y-8 text-center lg:text-left">
-              <p className="text-muted-foreground leading-relaxed text-lg max-w-xl mx-auto lg:mx-0">
-                Our AI Receptionist answers calls, texts, and form submissions instantly, qualifies inquiries, and handles next steps automatically.
-              </p>
+            <div className="order-1 lg:order-2 space-y-4 text-center lg:text-left">
               
               <div className="space-y-4 max-w-xl mx-auto lg:mx-0">
                 <GlowCard customSize glowColor="teal" className="p-5 bg-card/60">
