@@ -204,7 +204,25 @@ const Index = () => {
         </div>
       </section>
 
-      {/* 3️⃣ Logos / Trust Row - Quiet Credibility */}
+      {/* 3️⃣ Demos / Proof - Moved up */}
+      <section id="demos" className="py-16 border-t border-border bg-card">
+        <div className="container mx-auto px-6">
+          <div className="text-center mb-10">
+            <h2 className="font-serif text-3xl md:text-4xl font-bold mb-3">
+              See It In Action
+            </h2>
+            <p className="text-muted-foreground">
+              Click any demo to explore — no commitment, just a preview.
+            </p>
+          </div>
+          
+          <div className="max-w-5xl mx-auto">
+            <FeaturedDemosAccordion />
+          </div>
+        </div>
+      </section>
+
+      {/* 4️⃣ Logos / Trust Row - Quiet Credibility */}
       <section className="py-10 border-t border-border bg-card/50">
         <div className="container mx-auto px-6">
           <div className="flex flex-wrap items-center justify-center gap-8 text-sm text-muted-foreground">
@@ -228,7 +246,7 @@ const Index = () => {
         </div>
       </section>
 
-      {/* 4️⃣ What We Build - Preview */}
+      {/* 5️⃣ What We Build - Preview */}
       <section className="py-16 border-t border-border bg-card">
         <div className="container mx-auto px-6">
           <div className="text-center mb-12">
@@ -266,7 +284,7 @@ const Index = () => {
         </div>
       </section>
 
-      {/* 5️⃣ How It Works */}
+      {/* 6️⃣ How It Works */}
       <section className="py-16 border-t border-border bg-secondary/20">
         <div className="container mx-auto px-6">
           <div className="text-center mb-10">
@@ -298,24 +316,6 @@ const Index = () => {
                 <p className="text-sm text-muted-foreground">{step.desc}</p>
               </GlowCard>
             ))}
-          </div>
-        </div>
-      </section>
-
-      {/* 6️⃣ Demos / Proof */}
-      <section id="demos" className="py-16 border-t border-border bg-card">
-        <div className="container mx-auto px-6">
-          <div className="text-center mb-10">
-            <h2 className="font-serif text-3xl md:text-4xl font-bold mb-3">
-              See It In Action
-            </h2>
-            <p className="text-muted-foreground">
-              Click any demo to explore — no commitment, just a preview.
-            </p>
-          </div>
-          
-          <div className="max-w-5xl mx-auto">
-            <FeaturedDemosAccordion />
           </div>
         </div>
       </section>
