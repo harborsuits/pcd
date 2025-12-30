@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useRef, useEffect, useState } from "react";
-import { motion, useScroll, useTransform, useMotionValueEvent } from "framer-motion";
+import { motion, useScroll, useTransform } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 interface ScrollExpandMediaProps {
@@ -42,37 +42,35 @@ export default function ScrollExpandMedia({
     offset: ["start start", "end end"],
   });
 
-  // Debug: verify progress increases when scrolling down (remove after confirming)
-  useMotionValueEvent(scrollYProgress, "change", (v) => {
-    console.log("scrollYProgress", v);
-  });
+  // Invert progress once - all animations drive off this
+  const p = useTransform(scrollYProgress, (v) => 1 - v);
 
   // ============================================
   // PHASE A (0% → 65%): Hero expands, content HIDDEN
   // ============================================
-  const mediaScale = useTransform(scrollYProgress, [0, 0.65], [0.45, 1]);
-  const mediaBorderRadius = useTransform(scrollYProgress, [0, 0.65], [40, 0]);
-  const mediaOpacity = useTransform(scrollYProgress, [0, 0.4, 0.65], [0.5, 0.8, 1]);
-  const mediaY = useTransform(scrollYProgress, [0, 0.65], [140, 0]); // Start 140px lower
+  const mediaScale = useTransform(p, [0, 0.65], [0.45, 1]);
+  const mediaBorderRadius = useTransform(p, [0, 0.65], [40, 0]);
+  const mediaOpacity = useTransform(p, [0, 0.4, 0.65], [0.5, 0.8, 1]);
+  const mediaY = useTransform(p, [0, 0.65], [140, 0]);
   
   // Title fades out during Phase A
-  const titleOpacity = useTransform(scrollYProgress, [0, 0.25, 0.45], [1, 0.5, 0]);
-  const titleY = useTransform(scrollYProgress, [0, 0.45], [0, -100]);
-  const titleScale = useTransform(scrollYProgress, [0, 0.45], [1, 0.9]);
+  const titleOpacity = useTransform(p, [0, 0.25, 0.45], [1, 0.5, 0]);
+  const titleY = useTransform(p, [0, 0.45], [0, -100]);
+  const titleScale = useTransform(p, [0, 0.45], [1, 0.9]);
   
   // ============================================
   // PHASE B (65% → 80%): Content fades in
   // ============================================
-  const contentOpacity = useTransform(scrollYProgress, [0.65, 0.80], [0, 1]);
-  const contentY = useTransform(scrollYProgress, [0.65, 0.80], [48, 0]);
+  const contentOpacity = useTransform(p, [0.65, 0.80], [0, 1]);
+  const contentY = useTransform(p, [0.65, 0.80], [48, 0]);
 
   // ============================================
   // Overlay: STRONG during Phase A (0.62), fades in B+C
   // ============================================
-  const overlayOpacity = useTransform(scrollYProgress, [0, 0.65, 1], [0.62, 0.40, 0.18]);
+  const overlayOpacity = useTransform(p, [0, 0.65, 1], [0.62, 0.40, 0.18]);
 
   // Background parallax
-  const bgY = useTransform(scrollYProgress, [0, 1], [0, -50]);
+  const bgY = useTransform(p, [0, 1], [0, -50]);
 
   return (
     <div
