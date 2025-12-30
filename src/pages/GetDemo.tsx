@@ -4,6 +4,7 @@ import { ArrowLeft, Loader2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -21,6 +22,8 @@ const GetDemo = () => {
     city: "",
     phone: "",
     website: "",
+    occupation: "",
+    expectations: "",
     demoType: "" as DemoType | "",
     websiteStyle: "" as WebsiteStyle | "",
     receptionistFocus: "" as ReceptionistFocus | "",
@@ -47,6 +50,8 @@ const GetDemo = () => {
           city: formData.city.trim(),
           phone: formData.phone.trim() || null,
           website: formData.website.trim() || null,
+          occupation: formData.occupation.trim() || null,
+          expectations: formData.expectations.trim() || null,
           demo_type: formData.demoType,
           website_style: formData.websiteStyle || null,
           receptionist_focus: formData.receptionistFocus || null,
@@ -128,6 +133,19 @@ const GetDemo = () => {
             </div>
 
             <div className="space-y-2">
+              <Label htmlFor="occupation">What does your business do? *</Label>
+              <Input
+                id="occupation"
+                type="text"
+                placeholder="e.g. Residential plumbing, HVAC repair, Landscaping"
+                value={formData.occupation}
+                onChange={(e) => setFormData({ ...formData, occupation: e.target.value })}
+                disabled={isLoading}
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
               <Label htmlFor="city">City / Service Area *</Label>
               <Input
                 id="city"
@@ -168,6 +186,19 @@ const GetDemo = () => {
               <p className="text-xs text-muted-foreground">
                 Optional — leave blank if you don't have one
               </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="expectations">What are you hoping we can help with?</Label>
+              <Textarea
+                id="expectations"
+                placeholder="e.g. More leads, better online presence, handling calls when I'm busy..."
+                value={formData.expectations}
+                onChange={(e) => setFormData({ ...formData, expectations: e.target.value })}
+                disabled={isLoading}
+                rows={3}
+                className="resize-none"
+              />
             </div>
 
             {/* Demo Type Selection */}
