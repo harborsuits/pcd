@@ -76,7 +76,7 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-background text-foreground">
+    <div className="min-h-screen flex flex-col bg-page-bg text-foreground">
       {/* Header */}
       <header className="border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-6 py-4 flex items-center justify-between">
@@ -98,13 +98,7 @@ const Index = () => {
       </header>
 
       {/* 1️⃣ Hero - Simplified, one CTA */}
-      <section className="pt-16 md:pt-20 pb-8 md:pb-12 relative overflow-hidden bg-gradient-to-b from-accent/10 via-background to-accent/5">
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute -top-32 -right-32 h-[520px] w-[520px] rounded-full bg-accent/20 blur-3xl" />
-          <div className="absolute -bottom-40 -left-40 h-[620px] w-[620px] rounded-full bg-accent/15 blur-3xl" />
-          <div className="absolute inset-0 bg-gradient-to-b from-accent/5 via-background/40 to-transparent" />
-        </div>
-        
+      <section className="pt-16 md:pt-20 pb-8 md:pb-12 relative overflow-hidden">
         <div className="relative container mx-auto px-6">
           <div className="text-center max-w-3xl mx-auto">
             <h1 className="font-serif text-4xl md:text-5xl lg:text-6xl font-bold leading-tight mb-4">
@@ -133,7 +127,7 @@ const Index = () => {
       </section>
 
       {/* 2️⃣ AI Receptionist - The Hook */}
-      <section className="pt-12 md:pt-16 pb-20 md:pb-28 bg-gradient-to-b from-accent/5 via-background to-accent/5 overflow-hidden">
+      <section className="pt-12 md:pt-16 pb-20 md:pb-28 overflow-hidden">
         <div className="container mx-auto px-6">
           <div className="text-center mb-12 md:mb-16">
             <h2 className="font-serif text-4xl md:text-5xl lg:text-6xl font-bold mb-4">
@@ -205,7 +199,7 @@ const Index = () => {
       </section>
 
       {/* 3️⃣ Demos / Proof - Moved up */}
-      <section id="demos" className="py-16 border-t border-border bg-card">
+      <section id="demos" className="py-16 border-t border-border">
         <div className="container mx-auto px-6">
           <div className="text-center mb-10">
             <h2 className="font-serif text-3xl md:text-4xl font-bold mb-3">
@@ -223,7 +217,7 @@ const Index = () => {
       </section>
 
       {/* 4️⃣ Logos / Trust Row - Quiet Credibility */}
-      <section className="py-10 border-t border-border bg-card/50">
+      <section className="py-10 border-t border-border">
         <div className="container mx-auto px-6">
           <div className="flex flex-wrap items-center justify-center gap-8 text-sm text-muted-foreground">
             <div className="flex items-center gap-2">
@@ -247,7 +241,7 @@ const Index = () => {
       </section>
 
       {/* 5️⃣ What We Build - Preview */}
-      <section className="py-16 border-t border-border bg-card">
+      <section className="py-16 border-t border-border">
         <div className="container mx-auto px-6">
           <div className="text-center mb-12">
             <h2 className="font-serif text-3xl md:text-4xl font-bold mb-3">
@@ -285,7 +279,7 @@ const Index = () => {
       </section>
 
       {/* 6️⃣ How It Works */}
-      <section className="py-16 border-t border-border bg-secondary/20">
+      <section className="py-16 border-t border-border">
         <div className="container mx-auto px-6">
           <div className="text-center mb-10">
             <h2 className="font-serif text-2xl md:text-3xl font-bold mb-2">
@@ -321,7 +315,7 @@ const Index = () => {
       </section>
 
       {/* 7️⃣ Trust Strip - Compact */}
-      <section className="py-6 border-t border-border bg-card/30">
+      <section className="py-6 border-t border-border">
         <div className="container mx-auto px-6">
           <div className="max-w-md mx-auto">
             <HeroVisual />
@@ -330,7 +324,7 @@ const Index = () => {
       </section>
 
       {/* 8️⃣ Final CTA - Single, calm */}
-      <section className="py-16 border-t border-border bg-gradient-to-b from-accent/5 to-background">
+      <section className="py-16 border-t border-border">
         <div className="container mx-auto px-6 text-center">
           <h2 className="font-serif text-3xl md:text-4xl font-bold mb-4">
             Ready to see it for your business?
@@ -347,7 +341,7 @@ const Index = () => {
       </section>
 
       {/* Already a Client */}
-      <section className="py-10 border-t border-border bg-card/50">
+      <section className="py-10 border-t border-border">
         <div className="container mx-auto px-6 text-center">
           <p className="text-muted-foreground mb-4">
             Already a client? <Link to="/portal" className="text-accent hover:underline">Log in to your portal</Link>
@@ -356,7 +350,7 @@ const Index = () => {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-border py-8 bg-card">
+      <footer className="border-t border-border py-8">
         <div className="container mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4">
           <p className="font-serif text-sm text-muted-foreground">
             © {new Date().getFullYear()} Pleasant Cove Design
