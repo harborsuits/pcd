@@ -37,9 +37,10 @@ const RooferDemo = () => {
       {/* Header */}
       <header className="bg-slate-950/80 backdrop-blur-md border-b border-slate-800 sticky top-0 z-50">
         <div className="container mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Link to="/#demos" className="text-slate-400 hover:text-white transition-colors">
-              <ArrowLeft className="h-5 w-5" />
+          <div className="flex items-center gap-6">
+            <Link to="/" className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors text-sm">
+              <ArrowLeft className="h-4 w-4" />
+              <span className="font-medium">Pleasant Cove Design</span>
             </Link>
             <span className="font-bold text-xl">Summit Roofing Co.</span>
           </div>
