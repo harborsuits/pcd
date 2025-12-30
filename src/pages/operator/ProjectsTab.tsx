@@ -7,7 +7,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   FolderOpen, Loader2, Clock, CheckCircle, FileText, 
-  MessageSquare, ExternalLink, ChevronRight 
+  MessageSquare, ExternalLink, ChevronRight, Sparkles, Eye
 } from "lucide-react";
 import { format } from "date-fns";
 import { ProjectWorkSurface } from "./ProjectWorkSurface";
@@ -37,6 +37,7 @@ interface Project {
   state: string | null;
   zip: string | null;
   source: string;
+  notes: string | null;
   owner_user_id: string | null;
   created_at: string;
   updated_at: string;
@@ -55,7 +56,7 @@ const STATUS_COLORS: Record<string, string> = {
 
 export function ProjectsTab() {
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
-  const [activeTab, setActiveTab] = useState<"new" | "active" | "completed">("new");
+  const [activeTab, setActiveTab] = useState<"requests" | "new" | "active" | "completed">("requests");
   const { setCurrentProjectToken, setCurrentProjectName, registerCloseProject } = useOperatorContext();
 
   // Sync selected project to context for global shortcuts
@@ -90,7 +91,8 @@ export function ProjectsTab() {
   const projects = projectsData?.projects || [];
 
   // Categorize projects
-  const newProjects = projects.filter(p => ["lead", "contacted"].includes(p.status));
+  const demoRequests = projects.filter(p => p.source === "request_demo" && p.status === "lead");
+  const newProjects = projects.filter(p => ["lead", "contacted"].includes(p.status) && p.source !== "request_demo");
   const activeProjects = projects.filter(p => ["interested", "client"].includes(p.status));
   const completedProjects = projects.filter(p => ["completed", "archived"].includes(p.status));
 
@@ -107,6 +109,7 @@ export function ProjectsTab() {
 
   const getDisplayProjects = () => {
     switch (activeTab) {
+      case "requests": return demoRequests;
       case "new": return newProjects;
       case "active": return activeProjects;
       case "completed": return completedProjects;
@@ -144,6 +147,13 @@ export function ProjectsTab() {
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)}>
           <div className="px-4 border-b">
             <TabsList className="w-full justify-start h-auto p-0 bg-transparent">
+              <TabsTrigger 
+                value="requests" 
+                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 py-2 gap-1.5"
+              >
+                <Sparkles className="h-3.5 w-3.5" />
+                Demo Requests ({demoRequests.length})
+              </TabsTrigger>
               <TabsTrigger 
                 value="new" 
                 className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 py-2"
@@ -190,12 +200,23 @@ export function ProjectsTab() {
                             <span className="font-medium truncate">
                               {project.business_name}
                             </span>
+                            {project.city && (
+                              <span className="text-xs text-muted-foreground">
+                                {project.city}{project.state ? `, ${project.state}` : ""}
+                              </span>
+                            )}
                             <Badge 
                               variant="secondary" 
                               className={`text-xs ${STATUS_COLORS[project.status] || ""}`}
                             >
                               {project.status}
                             </Badge>
+                            {project.source === "request_demo" && (
+                              <Badge variant="outline" className="text-xs gap-1">
+                                <Sparkles className="h-3 w-3" />
+                                Demo Request
+                              </Badge>
+                            )}
                           </div>
                           <div className="flex items-center gap-3 text-sm text-muted-foreground">
                             <span className="flex items-center gap-1">
@@ -214,14 +235,40 @@ export function ProjectsTab() {
                                 Intake
                               </span>
                             )}
+                            {project.contact_phone && (
+                              <span className="truncate max-w-[150px]">
+                                {project.contact_phone}
+                              </span>
+                            )}
                             {project.contact_email && (
                               <span className="truncate max-w-[200px]">
                                 {project.contact_email}
                               </span>
                             )}
                           </div>
+                          {/* Show notes (form responses) for demo requests */}
+                          {project.notes && activeTab === "requests" && (
+                            <div className="mt-2 text-xs text-muted-foreground bg-muted/50 rounded px-2 py-1 whitespace-pre-line max-w-md">
+                              {project.notes}
+                            </div>
+                          )}
                         </div>
                         <div className="flex items-center gap-2">
+                          {/* Preview demo button for demo requests */}
+                          {project.source === "request_demo" && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="gap-1.5"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                window.open(`/d/${project.project_token}/${project.business_slug}`, "_blank");
+                              }}
+                            >
+                              <Eye className="h-4 w-4" />
+                              Preview Demo
+                            </Button>
+                          )}
                           <Button
                             variant="ghost"
                             size="sm"
