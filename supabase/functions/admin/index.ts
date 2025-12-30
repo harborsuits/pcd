@@ -1317,6 +1317,8 @@ async function handleProjects(req: Request): Promise<Response> {
         business_slug,
         project_token,
         status,
+        pipeline_stage,
+        source_demo_token,
         contact_name,
         contact_phone,
         contact_email,
