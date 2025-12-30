@@ -6,6 +6,7 @@ import { NavBar } from "@/components/ui/tubelight-navbar";
 import InteractiveSelector from "@/components/ui/interactive-selector";
 import { GlowCard } from "@/components/ui/spotlight-card";
 import { AwardBadge } from "@/components/ui/award-badge";
+import lobsterHero from "@/assets/restaurant/lobster-thermidor-hero.webp";
 
 const navItems = [
   { label: "Home", href: "#hero", icon: Home },
@@ -102,7 +103,7 @@ const RestaurantDemo = () => {
       <section id="hero" className="relative z-10">
         <ScrollExpandMedia
           mediaType="image"
-          mediaSrc="https://images.unsplash.com/photo-1600891964092-4316c288032e?w=1920&auto=format&fit=crop"
+          mediaSrc={lobsterHero}
           bgImageSrc="https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=1920&auto=format&fit=crop"
           title="The Golden Fork"
           date="EST. 2015"
