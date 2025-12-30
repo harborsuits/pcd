@@ -35,39 +35,40 @@ export default function ScrollExpandMedia({
 
   // =============================
   // Phase timing
-  // A: 0 → 0.62 expand ONLY, content hidden
-  // B: 0.62 → 0.80 content fades in
-  // C: 0.80 → 1 settle
+  // A: 0 → 0.55 expand, content hidden
+  // B: 0.55 → 0.75 content fades in
+  // C: 0.75 → 1 settle
   // =============================
 
-  // NO aggressive zoom - subtle settle (0.92 → 1) instead of 0.45 → 1
-  const mediaScale = useTransform(scrollYProgress, [0, 0.62], [0.92, 1]);
-  const mediaY = useTransform(scrollYProgress, [0, 0.62], [90, 0]);
-  const mediaRadius = useTransform(scrollYProgress, [0, 0.62], [32, 0]);
+  // Subtle scale settle (NO aggressive zoom)
+  const mediaScale = useTransform(scrollYProgress, [0, 0.55], [0.92, 1]);
+  const mediaY = useTransform(scrollYProgress, [0, 0.55], [90, 0]);
+  const mediaRadius = useTransform(scrollYProgress, [0, 0.55], [32, 0]);
 
-  // Stronger early overlay, then lighten later
-  const overlayOpacity = useTransform(scrollYProgress, [0, 0.62, 1], [0.72, 0.50, 0.18]);
+  // Overlay stays STRONG early (0.75), relaxes to readable level (0.35) - never too light
+  const overlayOpacity = useTransform(scrollYProgress, [0, 0.55, 1], [0.75, 0.55, 0.35]);
 
-  // Title fades out DURING expansion, but not too early
+  // Title fades out during expansion
   const titleOpacity = useTransform(scrollYProgress, [0, 0.25, 0.50], [1, 0.9, 0]);
   const titleY = useTransform(scrollYProgress, [0, 0.50], [0, -60]);
 
-  // Content appears ONLY AFTER expansion is basically done
-  const contentOpacity = useTransform(scrollYProgress, [0.62, 0.80], [0, 1]);
-  const contentY = useTransform(scrollYProgress, [0.62, 0.80], [40, 0]);
+  // Content appears earlier at ~55% (not 62%)
+  const contentOpacity = useTransform(scrollYProgress, [0.55, 0.75], [0, 1]);
+  const contentY = useTransform(scrollYProgress, [0.55, 0.75], [40, 0]);
 
   return (
     <section
       ref={containerRef}
       className={cn("relative min-h-[260vh] overflow-x-hidden", className)}
     >
-      {/* Fixed background */}
+      {/* Fixed background - stays at FULL OPACITY, never fades out */}
       {bgImageSrc && (
         <div className="pointer-events-none fixed inset-0 -z-10">
           <div
             className="absolute inset-0 bg-cover bg-center"
             style={{ backgroundImage: `url(${bgImageSrc})` }}
           />
+          {/* Stronger overlay for readability */}
           <div className="absolute inset-0 bg-black/40" />
         </div>
       )}
@@ -111,7 +112,7 @@ export default function ScrollExpandMedia({
             <img className="h-full w-full object-cover" src={mediaSrc} alt="Hero media" />
           )}
 
-          {/* Overlay that fades out later (prevents "washed transparent" look) */}
+          {/* Overlay that stays stronger - prevents "washed out" look */}
           <motion.div
             style={{ opacity: overlayOpacity }}
             className="absolute inset-0 bg-black"
@@ -119,12 +120,15 @@ export default function ScrollExpandMedia({
         </motion.div>
       </div>
 
-      {/* Content handoff (fade in later, no dead-zone) */}
+      {/* Content handoff with GLASS BACKING for readability */}
       <motion.div
         style={{ opacity: contentOpacity, y: contentY }}
         className="relative z-20 mx-auto max-w-6xl px-6 pt-[110vh]"
       >
-        {children}
+        {/* Glass panel wrapper for content readability */}
+        <div className="rounded-3xl bg-black/35 backdrop-blur-md border border-white/10 p-6 md:p-10">
+          {children}
+        </div>
       </motion.div>
     </section>
   );
