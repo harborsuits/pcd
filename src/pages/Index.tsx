@@ -90,9 +90,6 @@ const Index = () => {
             <Button asChild variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
               <Link to="/pricing">Pricing</Link>
             </Button>
-            <Button asChild variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
-              <a href="#demos">Demos</a>
-            </Button>
             <Button asChild variant="outline" size="sm">
               <Link to="/portal">Client Portal</Link>
             </Button>
@@ -100,9 +97,8 @@ const Index = () => {
         </div>
       </header>
 
-      {/* Hero - Text first, then 3D carousel as proof */}
+      {/* 1️⃣ Hero - Simplified, one CTA */}
       <section className="py-16 md:py-20 relative overflow-hidden bg-gradient-to-b from-accent/10 via-background to-background">
-        {/* Background layers */}
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute -top-32 -right-32 h-[520px] w-[520px] rounded-full bg-accent/20 blur-3xl" />
           <div className="absolute -bottom-40 -left-40 h-[620px] w-[620px] rounded-full bg-accent/15 blur-3xl" />
@@ -110,7 +106,6 @@ const Index = () => {
         </div>
         
         <div className="relative container mx-auto px-6">
-          {/* Hero Text - Centered */}
           <div className="text-center max-w-3xl mx-auto mb-12">
             <h1 className="font-serif text-4xl md:text-5xl lg:text-6xl font-bold leading-tight mb-4">
               Websites with a
@@ -125,49 +120,25 @@ const Index = () => {
               We build your site. You manage everything in one place — messaging, files, payments.
             </p>
             
-            {/* CTAs - Single dominant action */}
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8">
-              <a href="#demos">
+            {/* Single dominant CTA */}
+            <div className="mb-8">
+              <Link to="/get-demo">
                 <LiquidButton size="lg">
                   Get a Demo
                 </LiquidButton>
-              </a>
-              <Link to="/what-we-build">
-                <Button variant="ghost" size="lg" className="text-muted-foreground hover:text-foreground">
-                  What We Build
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
               </Link>
-            </div>
-            
-            {/* Trust row */}
-            <div className="flex flex-wrap items-center justify-center gap-6 text-sm text-muted-foreground">
-              <div className="flex items-center gap-2">
-                <Shield className="h-4 w-4 text-accent" />
-                <span>Made for local businesses</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <MessageSquare className="h-4 w-4 text-accent" />
-                <span>Portal + messaging</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Smartphone className="h-4 w-4 text-accent" />
-                <span>Mobile-friendly</span>
-              </div>
             </div>
           </div>
           
-          {/* 3D Carousel - as proof gallery */}
           <div className="max-w-2xl mx-auto">
             <HeroVisual />
           </div>
         </div>
       </section>
 
-      {/* AI Receptionist Highlight Section */}
+      {/* 2️⃣ AI Receptionist - The Hook */}
       <section className="py-20 md:py-28 border-t border-border bg-gradient-to-b from-accent/5 via-background to-accent/5 overflow-hidden">
         <div className="container mx-auto px-6">
-          {/* Section Header */}
           <div className="text-center mb-12 md:mb-16">
             <h2 className="font-serif text-4xl md:text-5xl lg:text-6xl font-bold mb-4">
               Your AI Receptionist
@@ -178,7 +149,6 @@ const Index = () => {
           </div>
 
           <div className="max-w-6xl mx-auto grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
-            {/* Left: Video */}
             <div className="order-2 lg:order-1">
               <div className="relative aspect-video rounded-2xl overflow-hidden shadow-2xl border border-accent/20">
                 <iframe
@@ -191,13 +161,11 @@ const Index = () => {
               </div>
             </div>
             
-            {/* Right: Features + CTA */}
             <div className="order-1 lg:order-2 space-y-8">
               <p className="text-muted-foreground leading-relaxed text-lg">
                 Our AI Receptionist answers calls, texts, and form submissions instantly, qualifies inquiries, and handles next steps automatically.
               </p>
               
-              {/* Feature Cards */}
               <div className="space-y-4">
                 <GlowCard customSize glowColor="teal" className="p-5 bg-card/60">
                   <div className="flex items-start gap-4">
@@ -235,20 +203,36 @@ const Index = () => {
                   </div>
                 </GlowCard>
               </div>
-              
-              <div className="pt-4">
-                <a href="#demos">
-                  <LiquidButton variant="teal" size="lg">
-                    See It In Action
-                  </LiquidButton>
-                </a>
-              </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* What We Build - Capabilities Grid */}
+      {/* 3️⃣ Logos / Trust Row - Quiet Credibility */}
+      <section className="py-10 border-t border-border bg-card/50">
+        <div className="container mx-auto px-6">
+          <div className="flex flex-wrap items-center justify-center gap-8 text-sm text-muted-foreground">
+            <div className="flex items-center gap-2">
+              <Shield className="h-5 w-5 text-accent" />
+              <span>Made for local businesses</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <MessageSquare className="h-5 w-5 text-accent" />
+              <span>Portal + messaging included</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Smartphone className="h-5 w-5 text-accent" />
+              <span>Mobile-friendly</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <CheckCircle className="h-5 w-5 text-accent" />
+              <span>No templates — custom built</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 4️⃣ What We Build - Preview */}
       <section className="py-16 border-t border-border bg-card">
         <div className="container mx-auto px-6">
           <div className="text-center mb-12">
@@ -260,7 +244,7 @@ const Index = () => {
             </p>
           </div>
           
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-4xl mx-auto">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-4xl mx-auto mb-10">
             {capabilities.map((cap) => (
               <GlowCard
                 key={cap.title}
@@ -274,37 +258,20 @@ const Index = () => {
               </GlowCard>
             ))}
           </div>
-        </div>
-      </section>
-
-      {/* Featured Demos */}
-      <section id="demos" className="py-16 border-t border-border bg-secondary/20">
-        <div className="container mx-auto px-6">
-          <div className="text-center mb-10">
-            <h2 className="font-serif text-3xl md:text-4xl font-bold mb-3">
-              Featured Demos
-            </h2>
-            <p className="text-muted-foreground">
-              Click any demo to explore — no commitment, just a preview.
-            </p>
-          </div>
           
-          <div className="max-w-5xl mx-auto">
-            <FeaturedDemosAccordion />
-          </div>
-          
-          <div className="text-center mt-10">
-            <Link to="/get-demo">
-              <LiquidButton size="lg">
-                Request a Custom Demo
-              </LiquidButton>
+          <div className="text-center">
+            <Link to="/what-we-build">
+              <Button variant="ghost" size="lg" className="text-muted-foreground hover:text-foreground">
+                See Everything We Build
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
             </Link>
           </div>
         </div>
       </section>
 
-      {/* How It Works - 4 Steps */}
-      <section className="py-16 border-t border-border bg-card">
+      {/* 5️⃣ How It Works */}
+      <section className="py-16 border-t border-border bg-secondary/20">
         <div className="container mx-auto px-6">
           <div className="text-center mb-10">
             <h2 className="font-serif text-2xl md:text-3xl font-bold mb-2">
@@ -339,21 +306,47 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Already a Client */}
-      <section className="py-12 border-t border-border bg-secondary/30">
+      {/* 6️⃣ Demos / Proof */}
+      <section id="demos" className="py-16 border-t border-border bg-card">
+        <div className="container mx-auto px-6">
+          <div className="text-center mb-10">
+            <h2 className="font-serif text-3xl md:text-4xl font-bold mb-3">
+              See It In Action
+            </h2>
+            <p className="text-muted-foreground">
+              Click any demo to explore — no commitment, just a preview.
+            </p>
+          </div>
+          
+          <div className="max-w-5xl mx-auto">
+            <FeaturedDemosAccordion />
+          </div>
+        </div>
+      </section>
+
+      {/* 7️⃣ Final CTA - Single, calm */}
+      <section className="py-16 border-t border-border bg-gradient-to-b from-accent/5 to-background">
         <div className="container mx-auto px-6 text-center">
-          <h2 className="font-serif text-2xl font-bold mb-2">
-            Already a client?
+          <h2 className="font-serif text-3xl md:text-4xl font-bold mb-4">
+            Ready to see it for your business?
           </h2>
-          <p className="text-muted-foreground max-w-md mx-auto mb-6">
-            Access your portal using the link we sent you, or log in below.
+          <p className="text-muted-foreground max-w-md mx-auto mb-8">
+            Get a personalized demo — no pressure, no commitment.
           </p>
-          <Link to="/portal">
-            <LiquidButton size="lg" className="group">
-              <LogIn className="mr-2 h-4 w-4" />
-              Log in to your portal
+          <Link to="/get-demo">
+            <LiquidButton size="lg">
+              Get Your Demo
             </LiquidButton>
           </Link>
+        </div>
+      </section>
+
+      {/* Already a Client */}
+      <section className="py-10 border-t border-border bg-card/50">
+        <div className="container mx-auto px-6 text-center">
+          <p className="text-muted-foreground mb-4">
+            Already a client? <Link to="/portal" className="text-accent hover:underline">Log in to your portal</Link>
+          </p>
         </div>
       </section>
 
