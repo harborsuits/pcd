@@ -83,8 +83,17 @@ const SalonDemo = () => {
       </section>
 
       {/* Services */}
-      <section id="services" className="py-20 bg-white">
-        <div className="container mx-auto px-6">
+      <section id="services" className="py-20 bg-white relative overflow-hidden">
+        {/* Decorative background image */}
+        <div className="absolute right-0 top-0 h-full w-1/2 pointer-events-none">
+          <img 
+            src={salonHeroModel} 
+            alt="" 
+            className="h-full w-auto object-contain object-right opacity-10"
+          />
+        </div>
+        
+        <div className="container mx-auto px-6 relative z-10">
           <h2 className="font-serif text-4xl text-center mb-4 text-rose-900">Our Services</h2>
           <p className="text-stone-500 text-center mb-12 max-w-xl mx-auto">
             Expert stylists. Premium products. Personalized care for every client.
@@ -111,7 +120,7 @@ const SalonDemo = () => {
                 from: "$55"
               },
             ].map((category) => (
-              <div key={category.title} className="bg-rose-50 rounded-2xl p-8 text-center hover:shadow-lg transition-shadow">
+              <div key={category.title} className="bg-rose-50/80 backdrop-blur-sm rounded-2xl p-8 text-center hover:shadow-lg transition-shadow">
                 <category.icon className="h-10 w-10 text-rose-400 mx-auto mb-4" />
                 <h3 className="font-serif text-2xl text-rose-900 mb-2">{category.title}</h3>
                 <p className="text-rose-400 text-sm mb-4">Starting from {category.from}</p>
