@@ -14,6 +14,8 @@ const liquidbuttonVariants = cva(
           "text-slate-900 hover:brightness-105 active:brightness-95",
         dark:
           "text-white hover:brightness-110 active:brightness-95",
+        teal:
+          "text-accent-foreground hover:brightness-105 active:brightness-95",
       },
       size: {
         sm: "h-9 px-4 rounded-full text-sm",
@@ -41,6 +43,7 @@ export function LiquidButton({
   }) {
   const Comp = asChild ? Slot : "button"
   const isDark = variant === "dark"
+  const isTeal = variant === "teal"
 
   return (
     <Comp
@@ -57,7 +60,9 @@ export function LiquidButton({
           "absolute inset-0 -z-10 rounded-full backdrop-blur-md border transition-colors",
           isDark 
             ? "bg-slate-900/70 border-white/20 group-hover:bg-slate-900/85" 
-            : "bg-white/60 border-slate-900/40 group-hover:bg-white/75 group-hover:border-slate-900/60"
+            : isTeal
+              ? "bg-[hsl(175_35%_45%)] border-[hsl(175_35%_35%)] group-hover:bg-[hsl(175_35%_40%)]"
+              : "bg-white/60 border-slate-900/40 group-hover:bg-white/75 group-hover:border-slate-900/60"
         )} 
       />
 
@@ -67,17 +72,22 @@ export function LiquidButton({
           "absolute inset-0 -z-10 rounded-full bg-gradient-to-b opacity-80",
           isDark 
             ? "from-white/10 via-white/5 to-transparent" 
-            : "from-white/40 via-white/20 to-transparent"
+            : isTeal
+              ? "from-white/25 via-white/10 to-transparent"
+              : "from-white/40 via-white/20 to-transparent"
         )} 
       />
 
       {/* soft edge shadow + ring for silhouette */}
-      <span className="absolute inset-0 -z-10 rounded-full shadow-[0_4px_20px_rgba(0,0,0,0.15)] ring-1 ring-black/10" />
+      <span className={cn(
+        "absolute inset-0 -z-10 rounded-full shadow-[0_4px_20px_rgba(0,0,0,0.15)]",
+        isTeal ? "ring-1 ring-[hsl(175_35%_35%)]" : "ring-1 ring-black/10"
+      )} />
 
       {/* content */}
       <span className={cn(
         "relative z-10 font-medium",
-        isDark ? "text-white" : "text-slate-900"
+        isDark ? "text-white" : isTeal ? "text-white" : "text-slate-900"
       )}>
         {children}
       </span>
