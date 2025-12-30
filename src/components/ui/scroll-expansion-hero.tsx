@@ -42,11 +42,11 @@ export default function ScrollExpandMedia({
     offset: ["start start", "end start"],
   });
 
-  // Media expansion transforms - start lower, smoother easing
-  const mediaScale = useTransform(scrollYProgress, [0, 0.35], [0.55, 1]);
-  const mediaBorderRadius = useTransform(scrollYProgress, [0, 0.35], [28, 0]);
-  const mediaOpacity = useTransform(scrollYProgress, [0, 0.2, 0.35], [0.6, 0.85, 1]);
-  const mediaY = useTransform(scrollYProgress, [0, 0.35], [24, 0]);
+  // Media expansion transforms - start much lower and smaller
+  const mediaScale = useTransform(scrollYProgress, [0, 0.35], [0.5, 1]);
+  const mediaBorderRadius = useTransform(scrollYProgress, [0, 0.35], [32, 0]);
+  const mediaOpacity = useTransform(scrollYProgress, [0, 0.2, 0.35], [0.5, 0.8, 1]);
+  const mediaY = useTransform(scrollYProgress, [0, 0.35], [60, 0]);
   
   // Title transforms - smoother fade
   const titleOpacity = useTransform(scrollYProgress, [0, 0.12, 0.2], [1, 0.8, 0]);
@@ -59,10 +59,6 @@ export default function ScrollExpandMedia({
 
   // Background parallax + fade
   const bgY = useTransform(scrollYProgress, [0, 1], [0, -80]);
-  const bgOpacity = useTransform(scrollYProgress, [0, 0.4], [0.25, 0.15]);
-
-  // Overlay fade - reduce darkness as we scroll
-  const overlayOpacity = useTransform(scrollYProgress, [0, 0.3], [0.2, 0.1]);
 
   return (
     <div
@@ -72,24 +68,23 @@ export default function ScrollExpandMedia({
         className
       )}
     >
-      {/* Background image with parallax */}
+      {/* Background image with parallax - covers entire scroll area */}
       {bgImageSrc && (
         <motion.div
           className="fixed inset-0 z-0"
           style={{ y: bgY }}
         >
-          <motion.img
+          <img
             src={bgImageSrc}
             alt="Background"
-            className="w-full h-full object-cover"
-            style={{ opacity: bgOpacity }}
+            className="w-full h-full object-cover opacity-20"
           />
-          <div className="absolute inset-0 bg-gradient-to-b from-stone-950/50 via-stone-950/70 to-stone-950 transition-opacity duration-700" />
+          <div className="absolute inset-0 bg-gradient-to-b from-stone-950/40 via-stone-950/50 to-stone-950/60" />
         </motion.div>
       )}
 
-      {/* Fixed hero section with top padding for navbar */}
-      <div className="sticky top-0 h-screen overflow-hidden pt-16 md:pt-20">
+      {/* Fixed hero section with more top padding */}
+      <div className="sticky top-0 h-screen overflow-hidden pt-20 md:pt-24">
         {/* Title overlay - highest z-index for readability */}
         <motion.div
           className="absolute inset-0 z-30 flex flex-col items-center justify-center pointer-events-none px-4"
@@ -109,9 +104,9 @@ export default function ScrollExpandMedia({
           </p>
         </motion.div>
 
-        {/* Expanding media container - starts lower */}
+        {/* Expanding media container - starts much lower with more inset */}
         <motion.div
-          className="absolute inset-4 md:inset-8 lg:inset-12 top-20 md:top-24 z-10 overflow-hidden"
+          className="absolute inset-8 md:inset-16 lg:inset-20 z-10 overflow-hidden"
           style={{
             scale: mediaScale,
             borderRadius: mediaBorderRadius,
@@ -135,23 +130,20 @@ export default function ScrollExpandMedia({
               className="w-full h-full object-cover"
             />
           )}
-          {/* Reduced overlay darkness */}
-          <motion.div 
-            className="absolute inset-0 bg-gradient-to-t from-stone-950 via-stone-950/15 to-transparent transition-opacity duration-500"
-            style={{ opacity: overlayOpacity }}
-          />
+          {/* Subtle gradient overlay */}
+          <div className="absolute inset-0 bg-gradient-to-t from-stone-950/80 via-stone-950/10 to-transparent" />
         </motion.div>
       </div>
 
-      {/* Expanded content area with smooth transition */}
+      {/* Expanded content area - transparent, not solid bg */}
       <motion.div
         className="relative z-20 -mt-[50vh]"
         style={{ opacity: contentOpacity, y: contentY }}
       >
         {/* Gradient bridge from hero to content */}
-        <div className="h-32 bg-gradient-to-b from-transparent via-stone-950/80 to-stone-950" />
+        <div className="h-40 bg-gradient-to-b from-transparent via-stone-950/60 to-stone-950/80" />
         
-        <div className="bg-stone-950 min-h-screen pt-8">
+        <div className="min-h-screen pt-8">
           {children}
         </div>
       </motion.div>
