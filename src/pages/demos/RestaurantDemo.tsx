@@ -87,17 +87,17 @@ const experienceOptions = [
 const RestaurantDemo = () => {
   return (
     <div className="min-h-screen bg-stone-950 text-stone-100 overflow-x-hidden relative">
-      {/* Fixed background that extends through entire page */}
+      {/* Fixed background - z-0 */}
       <div className="fixed inset-0 z-0">
         <img
           src="https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=1920&auto=format&fit=crop"
           alt="Background"
           className="w-full h-full object-cover opacity-15"
         />
-        <div className="absolute inset-0 bg-gradient-to-b from-stone-950/30 via-stone-950/50 to-stone-950/70" />
+        <div className="absolute inset-0 bg-gradient-to-b from-stone-950/30 via-stone-950/40 to-stone-950/60" />
       </div>
 
-      {/* Tubelight Navigation */}
+      {/* Tubelight Navigation - z-40 */}
       <NavBar 
         items={navItems} 
         activeColor="hsl(45 93% 47%)"
@@ -113,15 +113,19 @@ const RestaurantDemo = () => {
           date="EST. 2015"
           scrollToExpand="Scroll to explore"
         >
-          {/* About Section - inside hero expansion */}
-          <div id="about" className="container mx-auto px-6 pt-24 pb-12 relative z-20">
-            <div className="max-w-4xl mx-auto text-center mb-12">
-              <p className="text-amber-400 font-medium mb-4 tracking-widest uppercase text-sm drop-shadow-lg">Our Story</p>
-              <h2 className="font-serif text-4xl md:text-5xl mb-6 text-stone-100 drop-shadow-lg">A Passion for Excellence</h2>
+          {/* About Section - z-20, relative positioning */}
+          <div id="about" className="container mx-auto px-6 pt-20 pb-8 relative z-20">
+            <div className="max-w-4xl mx-auto text-center mb-10">
+              <p className="text-amber-400 font-medium mb-3 tracking-widest uppercase text-sm drop-shadow-[0_2px_8px_rgba(0,0,0,0.6)]">Our Story</p>
+              <h2 
+                className="font-serif text-4xl md:text-5xl mb-5 text-stone-100"
+                style={{ textShadow: "0 2px 12px rgba(0,0,0,0.5)" }}
+              >
+                A Passion for Excellence
+              </h2>
               <p className="text-stone-200 text-lg leading-relaxed mb-4">
                 Founded by Chef Maria Chen after two decades of culinary exploration across Europe and Asia, 
-                The Golden Fork represents the culmination of a lifelong dream: to create a dining experience 
-                that honors tradition while embracing innovation.
+                The Golden Fork represents the culmination of a lifelong dream.
               </p>
               <p className="text-stone-300 leading-relaxed">
                 Every dish tells a story. From our hand-selected local farmers to our carefully curated wine list, 
@@ -129,14 +133,19 @@ const RestaurantDemo = () => {
               </p>
             </div>
 
-            {/* Signature Dishes with GlowCards */}
-            <div id="menu" className="mb-12 relative z-20">
-              <h2 className="font-serif text-3xl md:text-4xl text-center mb-3 text-stone-100 drop-shadow-lg">Signature Dishes</h2>
-              <p className="text-stone-300 text-center mb-8 max-w-xl mx-auto">
+            {/* Signature Dishes - z-20 */}
+            <div id="menu" className="mb-10 relative z-20">
+              <h2 
+                className="font-serif text-3xl md:text-4xl text-center mb-2 text-stone-100"
+                style={{ textShadow: "0 2px 12px rgba(0,0,0,0.5)" }}
+              >
+                Signature Dishes
+              </h2>
+              <p className="text-stone-300 text-center mb-6 max-w-xl mx-auto">
                 Seasonal favorites crafted by Chef Maria.
               </p>
               
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 relative z-20">
                 {signatureDishes.map((dish) => {
                   const Icon = dish.icon;
                   return (
@@ -144,7 +153,7 @@ const RestaurantDemo = () => {
                       key={dish.name}
                       glowColor="orange"
                       customSize
-                      className="p-5 bg-stone-900/40 backdrop-blur-sm border border-stone-700/30"
+                      className="p-5 bg-stone-900/40 backdrop-blur-sm border border-stone-700/40"
                     >
                       <div className="flex flex-col h-full relative z-10">
                         <div className="flex items-start justify-between mb-3">
@@ -161,7 +170,7 @@ const RestaurantDemo = () => {
                 })}
               </div>
               
-              <div className="text-center mt-8 relative z-20">
+              <div className="text-center mt-6 relative z-20">
                 <MetalButton variant="gold">
                   View Full Menu
                 </MetalButton>
@@ -171,20 +180,31 @@ const RestaurantDemo = () => {
         </ScrollExpandMedia>
       </section>
 
-      {/* Interactive Experience Selector - transparent background, reduced padding */}
-      <section className="relative z-10 py-12">
+      {/* Bridge gradient */}
+      <div className="h-12 bg-gradient-to-b from-transparent via-stone-950/10 to-transparent relative z-10" />
+
+      {/* Interactive Experience Selector - transparent, z-10 */}
+      <section className="relative z-10 py-10">
         <InteractiveSelector
           title="Explore the Experience"
           options={experienceOptions}
         />
       </section>
 
-      {/* Press & Awards Section - transparent background, reduced padding */}
-      <section className="py-12 relative z-10">
-        <div className="container mx-auto px-6 relative z-10">
-          <h2 className="font-serif text-3xl md:text-4xl text-center mb-3 text-stone-100 drop-shadow-lg">Press & Awards</h2>
-          <p className="text-stone-300 text-center mb-8 max-w-xl mx-auto">
-            Recognized for excellence in fine dining and hospitality.
+      {/* Bridge gradient */}
+      <div className="h-10 bg-gradient-to-b from-transparent via-stone-950/10 to-transparent relative z-10" />
+
+      {/* Press & Awards - transparent, z-10 */}
+      <section className="py-10 relative z-10">
+        <div className="container mx-auto px-6">
+          <h2 
+            className="font-serif text-3xl md:text-4xl text-center mb-2 text-stone-100"
+            style={{ textShadow: "0 2px 12px rgba(0,0,0,0.5)" }}
+          >
+            Press & Awards
+          </h2>
+          <p className="text-stone-300 text-center mb-6 max-w-xl mx-auto">
+            Recognized for excellence in fine dining.
           </p>
           
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 max-w-5xl mx-auto relative z-20">
@@ -221,9 +241,9 @@ const RestaurantDemo = () => {
       </section>
 
       {/* Quick Info Bar */}
-      <section className="py-6 relative z-10 bg-stone-900/30 backdrop-blur-sm">
+      <section className="py-5 relative z-10 bg-stone-900/30 backdrop-blur-sm">
         <div className="container mx-auto px-6">
-          <div className="flex flex-wrap justify-center gap-8 text-sm">
+          <div className="flex flex-wrap justify-center gap-6 text-sm">
             <div className="flex items-center gap-2">
               <Clock className="h-5 w-5 text-amber-400" />
               <span className="text-stone-200">Tue–Sun: 5PM–10PM</span>
@@ -241,11 +261,11 @@ const RestaurantDemo = () => {
       </section>
 
       {/* Reservation CTA */}
-      <section className="py-16 bg-gradient-to-br from-amber-600/90 via-amber-500/90 to-yellow-500/90 backdrop-blur-sm relative z-10">
+      <section className="py-14 bg-gradient-to-br from-amber-600/90 via-amber-500/90 to-yellow-500/90 backdrop-blur-sm relative z-10">
         <div className="container mx-auto px-6 text-center">
           <h2 className="font-serif text-4xl mb-3 text-stone-950">Reserve Your Table</h2>
-          <p className="text-amber-900 mb-6 max-w-xl mx-auto">
-            Join us for an unforgettable evening. Reservations recommended.
+          <p className="text-amber-900 mb-5 max-w-xl mx-auto">
+            Join us for an unforgettable evening.
           </p>
           <div className="flex flex-wrap justify-center gap-4">
             <MetalButton variant="bronze">
@@ -260,7 +280,7 @@ const RestaurantDemo = () => {
       </section>
 
       {/* Footer */}
-      <footer id="contact" className="bg-stone-900/50 backdrop-blur-sm py-10 relative z-10">
+      <footer id="contact" className="bg-stone-900/50 backdrop-blur-sm py-8 relative z-10">
         <div className="container mx-auto px-6">
           <div className="grid md:grid-cols-3 gap-6">
             <div>
@@ -279,7 +299,7 @@ const RestaurantDemo = () => {
             </div>
             <div>
               <h4 className="font-medium mb-3 text-stone-100">Hours</h4>
-              <div className="space-y-1.5 text-sm text-stone-300">
+              <div className="space-y-1 text-sm text-stone-300">
                 <p>Tuesday – Thursday: 5PM – 10PM</p>
                 <p>Friday – Saturday: 5PM – 11PM</p>
                 <p>Sunday: 5PM – 9PM</p>
@@ -288,11 +308,10 @@ const RestaurantDemo = () => {
             </div>
             <div>
               <h4 className="font-medium mb-3 text-stone-100">Location</h4>
-              <div className="space-y-1.5 text-sm text-stone-300">
-                <p>456 Main Street</p>
-                <p>Downtown District</p>
+              <div className="space-y-1 text-sm text-stone-300">
+                <p>456 Main Street, Downtown District</p>
                 <p>Anytown, USA 12345</p>
-                <p className="mt-3">
+                <p className="mt-2">
                   <a href="tel:5559876543" className="text-amber-400 hover:underline">(555) 987-6543</a>
                 </p>
               </div>
