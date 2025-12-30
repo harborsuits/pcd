@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { ArrowLeft, Phone, MapPin, Clock, Star, Instagram, Scissors, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ShaderAnimation } from "@/components/ui/shader-animation";
+import { ImageAutoSlider } from "@/components/ui/image-auto-slider";
 import salonHeroModel from "@/assets/salon/salon-hero-model.png";
 import salonMakeup from "@/assets/salon/makeup.jpg";
 import salonHair1 from "@/assets/salon/hair1.jpg";
@@ -178,34 +179,26 @@ const SalonDemo = () => {
       </section>
 
       {/* Gallery */}
-      <section id="gallery" className="py-20 bg-rose-50/50">
+      <section id="gallery" className="py-20 bg-rose-50/50 overflow-hidden">
         <div className="container mx-auto px-6">
           <h2 className="font-serif text-5xl text-center mb-16 text-rose-800">Our Work</h2>
-          
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-6 max-w-6xl mx-auto">
-            {[
-              { src: salonHair1, alt: "Balayage hair styling" },
-              { src: salonNails, alt: "Pink nail art" },
-              { src: salonMakeup, alt: "Bridal makeup" },
-              { src: salonHair2, alt: "Ombre highlights" },
-              { src: salonWaxing, alt: "Waxing service" },
-            ].map((image, i) => (
-              <div key={i} className="aspect-[4/5] rounded-3xl overflow-hidden shadow-sm group cursor-pointer">
-                <img 
-                  src={image.src} 
-                  alt={image.alt}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                />
-              </div>
-            ))}
-          </div>
-          
-          <div className="text-center mt-12">
-            <a href="#" className="inline-flex items-center gap-3 text-rose-500 hover:text-rose-600 font-medium text-lg transition-colors">
-              <Instagram className="h-6 w-6" />
-              Follow us @blushandbloom
-            </a>
-          </div>
+        </div>
+        
+        <ImageAutoSlider 
+          images={[
+            { src: salonHair1, alt: "Balayage hair styling" },
+            { src: salonNails, alt: "Pink nail art" },
+            { src: salonMakeup, alt: "Bridal makeup" },
+            { src: salonHair2, alt: "Ombre highlights" },
+            { src: salonWaxing, alt: "Waxing service" },
+          ]}
+        />
+        
+        <div className="text-center mt-12">
+          <a href="#" className="inline-flex items-center gap-3 text-rose-500 hover:text-rose-600 font-medium text-lg transition-colors">
+            <Instagram className="h-6 w-6" />
+            Follow us @blushandbloom
+          </a>
         </div>
       </section>
 
