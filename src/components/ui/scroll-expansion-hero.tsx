@@ -42,29 +42,29 @@ export default function ScrollExpandMedia({
     offset: ["start start", "end start"],
   });
 
-  // Media expansion transforms - start much lower and smaller
-  const mediaScale = useTransform(scrollYProgress, [0, 0.35], [0.5, 1]);
-  const mediaBorderRadius = useTransform(scrollYProgress, [0, 0.35], [32, 0]);
-  const mediaOpacity = useTransform(scrollYProgress, [0, 0.2, 0.35], [0.5, 0.8, 1]);
-  const mediaY = useTransform(scrollYProgress, [0, 0.35], [60, 0]);
+  // Media expansion - fully expands by 40% scroll
+  const mediaScale = useTransform(scrollYProgress, [0, 0.4], [0.5, 1]);
+  const mediaBorderRadius = useTransform(scrollYProgress, [0, 0.4], [32, 0]);
+  const mediaOpacity = useTransform(scrollYProgress, [0, 0.25, 0.4], [0.5, 0.8, 1]);
+  const mediaY = useTransform(scrollYProgress, [0, 0.4], [60, 0]);
   
-  // Title transforms - smoother fade
-  const titleOpacity = useTransform(scrollYProgress, [0, 0.12, 0.2], [1, 0.8, 0]);
-  const titleY = useTransform(scrollYProgress, [0, 0.2], [0, -60]);
-  const titleScale = useTransform(scrollYProgress, [0, 0.2], [1, 0.95]);
+  // Title fades out as media expands
+  const titleOpacity = useTransform(scrollYProgress, [0, 0.15, 0.25], [1, 0.7, 0]);
+  const titleY = useTransform(scrollYProgress, [0, 0.25], [0, -60]);
+  const titleScale = useTransform(scrollYProgress, [0, 0.25], [1, 0.95]);
   
-  // Content reveal - smoother transition
-  const contentOpacity = useTransform(scrollYProgress, [0.28, 0.45], [0, 1]);
-  const contentY = useTransform(scrollYProgress, [0.28, 0.45], [40, 0]);
+  // Content reveals AFTER media is fully expanded (starts at 45%, done by 60%)
+  const contentOpacity = useTransform(scrollYProgress, [0.45, 0.6], [0, 1]);
+  const contentY = useTransform(scrollYProgress, [0.45, 0.6], [30, 0]);
 
-  // Background parallax + fade
+  // Background parallax
   const bgY = useTransform(scrollYProgress, [0, 1], [0, -80]);
 
   return (
     <div
       ref={containerRef}
       className={cn(
-        "relative min-h-[250vh] overflow-x-hidden",
+        "relative min-h-[200vh] overflow-x-hidden",
         className
       )}
     >
@@ -83,9 +83,9 @@ export default function ScrollExpandMedia({
         </motion.div>
       )}
 
-      {/* Fixed hero section with more top padding */}
-      <div className="sticky top-0 h-screen overflow-hidden pt-20 md:pt-24">
-        {/* Title overlay - highest z-index for readability */}
+      {/* Fixed hero section */}
+      <div className="sticky top-0 h-screen overflow-hidden pt-16 md:pt-20">
+        {/* Title overlay */}
         <motion.div
           className="absolute inset-0 z-30 flex flex-col items-center justify-center pointer-events-none px-4"
           style={{ opacity: titleOpacity, y: titleY, scale: titleScale }}
@@ -104,9 +104,9 @@ export default function ScrollExpandMedia({
           </p>
         </motion.div>
 
-        {/* Expanding media container - starts much lower with more inset */}
+        {/* Expanding media container */}
         <motion.div
-          className="absolute inset-8 md:inset-16 lg:inset-20 z-10 overflow-hidden"
+          className="absolute inset-6 md:inset-12 lg:inset-16 z-10 overflow-hidden"
           style={{
             scale: mediaScale,
             borderRadius: mediaBorderRadius,
@@ -130,20 +130,16 @@ export default function ScrollExpandMedia({
               className="w-full h-full object-cover"
             />
           )}
-          {/* Subtle gradient overlay */}
           <div className="absolute inset-0 bg-gradient-to-t from-stone-950/80 via-stone-950/10 to-transparent" />
         </motion.div>
       </div>
 
-      {/* Expanded content area - transparent, not solid bg */}
+      {/* Expanded content area - appears after hero fully expanded */}
       <motion.div
-        className="relative z-20 -mt-[50vh]"
+        className="relative z-20 -mt-[30vh]"
         style={{ opacity: contentOpacity, y: contentY }}
       >
-        {/* Gradient bridge from hero to content */}
-        <div className="h-40 bg-gradient-to-b from-transparent via-stone-950/60 to-stone-950/80" />
-        
-        <div className="min-h-screen pt-8">
+        <div className="min-h-screen">
           {children}
         </div>
       </motion.div>
