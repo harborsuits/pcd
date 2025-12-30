@@ -186,7 +186,7 @@ const RestaurantDemo = () => {
       </section>
 
       {/* Interactive Experience Selector */}
-      <section className="relative z-10 py-8 md:py-10">
+      <section className="relative z-10 py-8 md:py-10 bg-stone-950/20 backdrop-blur-sm">
         <InteractiveSelector
           title="Explore the Experience"
           options={experienceOptions}
