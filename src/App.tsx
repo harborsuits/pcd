@@ -38,6 +38,7 @@ const App = () => (
           <Route path="/login" element={<PortalHub />} />
 
           {/* Demo Mockup Pages */}
+          <Route path="/demos" element={<Navigate to="/what-we-build" replace />} />
           <Route path="/demos/roofer" element={<RooferDemo />} />
           <Route path="/demos/restaurant" element={<RestaurantDemo />} />
           <Route path="/demos/salon" element={<SalonDemo />} />
