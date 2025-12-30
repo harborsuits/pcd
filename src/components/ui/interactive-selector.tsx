@@ -90,7 +90,7 @@ export default function InteractiveSelector({
                 <h3 className="font-serif text-2xl md:text-3xl mb-4 text-stone-100">
                   {activeOption.label}
                 </h3>
-                <p className="text-stone-400 leading-relaxed mb-6">
+                <p className="text-white leading-relaxed mb-6">
                   {activeOption.description}
                 </p>
                 {activeOption.content}
