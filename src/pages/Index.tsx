@@ -245,12 +245,12 @@ const Index = () => {
               
               <div className="flex flex-wrap justify-center gap-4 pt-2">
                 <a href="#demos">
-                  <LiquidButton size="lg">
+                  <LiquidButton variant="teal" size="lg">
                     See How It Works
                   </LiquidButton>
                 </a>
                 <Link to="/get-demo">
-                  <LiquidButton size="lg" className="group">
+                  <LiquidButton variant="teal" size="lg" className="group">
                     Add to My Project
                   </LiquidButton>
                 </Link>
