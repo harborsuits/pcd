@@ -1622,14 +1622,16 @@ async function handleUpdatePipelineStage(req: Request, token: string): Promise<R
           if (currentProject.contact_email) contactParts.push(currentProject.contact_email);
           const contactInfo = contactParts.length > 0 ? contactParts.join(" • ") : "No contact info";
 
-          // Build notification message
+          // Build notification message (plain text - Telegram auto-linkifies)
           const stageEmoji = stage === "won" ? "🎉" : stage === "lost" ? "❌" : stage === "claimed" ? "✅" : "📋";
           const telegramText = 
-            `${stageEmoji} <b>Stage: ${stageLabels[previousStage]} → ${stageLabels[stage]}</b>\n\n` +
-            `<b>Business:</b> ${currentProject.business_name || "Unknown"}\n` +
-            `<b>Contact:</b> ${contactInfo}\n\n` +
-            `<a href="${baseUrl}/operator?project=${token}">Open Operator</a> • ` +
-            `<a href="${baseUrl}/p/${token}">View Portal</a>`;
+            `${stageEmoji} Stage: ${stageLabels[previousStage] || previousStage} → ${stageLabels[stage] || stage}\n\n` +
+            `Business: ${currentProject.business_name || "Unknown"}\n` +
+            `Contact: ${contactInfo}`;
+
+          // Build URLs for inline keyboard buttons
+          const operatorUrl = `${baseUrl}/operator?project=${currentProject.project_token}`;
+          const portalUrl = `${baseUrl}/p/${currentProject.project_token}`;
 
           await fetch(`https://api.telegram.org/bot${telegramBotToken}/sendMessage`, {
             method: "POST",
@@ -1637,8 +1639,15 @@ async function handleUpdatePipelineStage(req: Request, token: string): Promise<R
             body: JSON.stringify({
               chat_id: telegramChatId,
               text: telegramText,
-              parse_mode: "HTML",
               disable_web_page_preview: true,
+              reply_markup: {
+                inline_keyboard: [
+                  [
+                    { text: "Open Operator", url: operatorUrl },
+                    { text: "View Portal", url: portalUrl },
+                  ],
+                ],
+              },
             }),
           });
 
