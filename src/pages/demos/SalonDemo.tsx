@@ -232,7 +232,7 @@ const SalonDemo = () => {
         </div>
         
         {/* Footer Content */}
-        <div className="relative z-10 py-12 border-t border-rose-700/50">
+        <div className="relative z-10 py-12">
           <div className="container mx-auto px-6">
             <div className="grid md:grid-cols-3 gap-8">
               <div>
