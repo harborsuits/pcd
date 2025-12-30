@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useRef, useEffect, useState } from "react";
-import { motion, useScroll, useTransform } from "framer-motion";
+import { motion, useScroll, useTransform, useMotionValueEvent } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 interface ScrollExpandMediaProps {
@@ -39,7 +39,12 @@ export default function ScrollExpandMedia({
 
   const { scrollYProgress } = useScroll({
     target: containerRef,
-    offset: ["start start", "end start"],
+    offset: ["start start", "end end"],
+  });
+
+  // Debug: verify progress increases when scrolling down (remove after confirming)
+  useMotionValueEvent(scrollYProgress, "change", (v) => {
+    console.log("scrollYProgress", v);
   });
 
   // ============================================
