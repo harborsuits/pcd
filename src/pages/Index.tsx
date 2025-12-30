@@ -106,7 +106,7 @@ const Index = () => {
         </div>
         
         <div className="relative container mx-auto px-6">
-          <div className="text-center max-w-3xl mx-auto mb-12">
+          <div className="text-center max-w-3xl mx-auto">
             <h1 className="font-serif text-4xl md:text-5xl lg:text-6xl font-bold leading-tight mb-4">
               Websites with a
               <span className="block text-accent">built-in client portal.</span>
@@ -128,10 +128,6 @@ const Index = () => {
                 </LiquidButton>
               </Link>
             </div>
-          </div>
-          
-          <div className="max-w-2xl mx-auto">
-            <HeroVisual />
           </div>
         </div>
       </section>
@@ -324,7 +320,16 @@ const Index = () => {
         </div>
       </section>
 
-      {/* 7️⃣ Final CTA - Single, calm */}
+      {/* 7️⃣ Trust Strip - Compact */}
+      <section className="py-6 border-t border-border bg-card/30">
+        <div className="container mx-auto px-6">
+          <div className="max-w-md mx-auto">
+            <HeroVisual />
+          </div>
+        </div>
+      </section>
+
+      {/* 8️⃣ Final CTA - Single, calm */}
       <section className="py-16 border-t border-border bg-gradient-to-b from-accent/5 to-background">
         <div className="container mx-auto px-6 text-center">
           <h2 className="font-serif text-3xl md:text-4xl font-bold mb-4">
