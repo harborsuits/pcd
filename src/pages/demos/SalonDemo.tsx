@@ -173,30 +173,30 @@ const SalonDemo = () => {
       </section>
 
       {/* Gallery */}
-      <section id="gallery" className="py-20 bg-white">
+      <section id="gallery" className="py-20 bg-rose-50/50">
         <div className="container mx-auto px-6">
-          <h2 className="font-serif text-4xl text-center mb-12 text-rose-900">Our Work</h2>
+          <h2 className="font-serif text-5xl text-center mb-16 text-rose-800">Our Work</h2>
           
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-6xl mx-auto">
             {[
-              "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=400&auto=format&fit=crop",
-              "https://images.unsplash.com/photo-1604654894610-df63bc536371?w=400&auto=format&fit=crop",
-              "https://images.unsplash.com/photo-1487412947147-5cebf100ffc2?w=400&auto=format&fit=crop",
-              "https://images.unsplash.com/photo-1519699047748-de8e457a634e?w=400&auto=format&fit=crop",
+              { src: "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=500&auto=format&fit=crop", alt: "Hair styling" },
+              { src: "https://images.unsplash.com/photo-1604654894610-df63bc536371?w=500&auto=format&fit=crop", alt: "Nail art" },
+              { src: "https://images.unsplash.com/photo-1516975080664-ed2fc6a32937?w=500&auto=format&fit=crop", alt: "Makeup application" },
+              { src: "https://images.unsplash.com/photo-1522337094846-8a818192de1f?w=500&auto=format&fit=crop", alt: "Hair care" },
             ].map((image, i) => (
-              <div key={i} className="aspect-square rounded-xl overflow-hidden">
+              <div key={i} className="aspect-[4/5] rounded-3xl overflow-hidden shadow-sm group cursor-pointer">
                 <img 
-                  src={image} 
-                  alt={`Gallery ${i + 1}`}
-                  className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                  src={image.src} 
+                  alt={image.alt}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                 />
               </div>
             ))}
           </div>
           
-          <div className="text-center mt-8">
-            <a href="#" className="inline-flex items-center gap-2 text-rose-500 hover:text-rose-600 font-medium">
-              <Instagram className="h-5 w-5" />
+          <div className="text-center mt-12">
+            <a href="#" className="inline-flex items-center gap-3 text-rose-500 hover:text-rose-600 font-medium text-lg transition-colors">
+              <Instagram className="h-6 w-6" />
               Follow us @blushandbloom
             </a>
           </div>
