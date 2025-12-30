@@ -76,7 +76,7 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-emerald-100/60 text-foreground">
+    <div className="min-h-screen flex flex-col bg-background text-foreground">
       {/* Header */}
       <header className="border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-6 py-4 flex items-center justify-between">
@@ -101,12 +101,12 @@ const Index = () => {
       </header>
 
       {/* Hero - Text first, then 3D carousel as proof */}
-      <section className="py-16 md:py-20 relative overflow-hidden bg-emerald-50/50">
+      <section className="py-16 md:py-20 relative overflow-hidden bg-gradient-to-b from-accent/10 via-background to-background">
         {/* Background layers */}
         <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute -top-32 -right-32 h-[520px] w-[520px] rounded-full bg-emerald-400/25 blur-3xl" />
-          <div className="absolute -bottom-40 -left-40 h-[620px] w-[620px] rounded-full bg-emerald-300/20 blur-3xl" />
-          <div className="absolute inset-0 bg-gradient-to-b from-emerald-50/0 via-emerald-50/40 to-emerald-100/50" />
+          <div className="absolute -top-32 -right-32 h-[520px] w-[520px] rounded-full bg-accent/20 blur-3xl" />
+          <div className="absolute -bottom-40 -left-40 h-[620px] w-[620px] rounded-full bg-accent/15 blur-3xl" />
+          <div className="absolute inset-0 bg-gradient-to-b from-accent/5 via-background/40 to-background" />
         </div>
         
         <div className="relative container mx-auto px-6">
@@ -164,7 +164,7 @@ const Index = () => {
       </section>
 
       {/* AI Receptionist Highlight Section */}
-      <section className="py-20 md:py-28 border-t border-border bg-gradient-to-b from-emerald-50/30 via-background to-emerald-50/20 overflow-hidden">
+      <section className="py-20 md:py-28 border-t border-border bg-gradient-to-b from-accent/5 via-background to-accent/5 overflow-hidden">
         <div className="container mx-auto px-6">
           {/* Section Header */}
           <div className="text-center mb-12 md:mb-16">
