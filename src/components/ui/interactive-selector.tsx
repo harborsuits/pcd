@@ -50,13 +50,13 @@ export default function InteractiveSelector({
                 onClick={() => setActiveId(option.id)}
                 className={cn(
                   "relative flex items-center gap-2 px-4 md:px-6 py-3 rounded-full transition-all duration-300",
-                  "border border-stone-700/50",
+                  "border-2 shadow-lg",
                   isActive
-                    ? "bg-amber-500 text-stone-950 border-amber-500"
-                    : "bg-stone-800/50 text-stone-300 hover:bg-stone-800 hover:text-stone-100"
+                    ? "bg-gradient-to-b from-amber-300 via-amber-400 to-amber-600 text-stone-950 border-amber-300/50 shadow-amber-500/30"
+                    : "bg-gradient-to-b from-stone-600 via-stone-700 to-stone-800 text-stone-200 border-stone-500/30 hover:from-stone-500 hover:via-stone-600 hover:to-stone-700 hover:text-white shadow-stone-900/50"
                 )}
               >
-                {Icon && <Icon className="h-4 w-4" />}
+                {Icon && <Icon className={cn("h-4 w-4", isActive ? "text-stone-950" : "text-amber-400")} />}
                 <span className="text-sm font-medium">{option.label}</span>
               </button>
             );
