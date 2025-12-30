@@ -157,28 +157,17 @@ export default function PricingSection() {
       ref={pricingRef}
       className="relative pt-8 pb-20 overflow-hidden"
     >
-      {/* Subtle grid + sparkles */}
+      {/* Subtle sparkles only - no grid or glow to avoid color mismatch */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div
-          className="absolute inset-0 opacity-[0.03]"
-          style={{
-            backgroundImage: `linear-gradient(hsl(var(--primary) / 0.3) 1px, transparent 1px),
-                              linear-gradient(90deg, hsl(var(--primary) / 0.3) 1px, transparent 1px)`,
-            backgroundSize: "60px 60px",
-          }}
-        />
         <Sparkles
           className="absolute inset-0"
           color="hsl(var(--accent))"
           size={1.2}
-          density={100}
+          density={60}
           speed={0.3}
-          opacity={0.4}
+          opacity={0.25}
         />
       </div>
-
-      {/* Accent glow */}
-      <div className="pointer-events-none absolute -top-40 left-1/2 -translate-x-1/2 w-[800px] h-[400px] rounded-full bg-accent/20 blur-3xl opacity-60" />
 
       <div className="container mx-auto px-6 relative z-10">
         {/* Pricing Controls */}
