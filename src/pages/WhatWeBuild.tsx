@@ -560,7 +560,7 @@ const WhatWeBuild = () => {
   }, []);
 
   return (
-    <div className="min-h-screen flex flex-col bg-background text-foreground">
+    <div className="min-h-screen flex flex-col bg-page-bg text-foreground">
       {/* Header */}
       <header className="border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-6 py-4 flex items-center justify-between">
@@ -593,9 +593,7 @@ const WhatWeBuild = () => {
       </div>
 
       {/* Bento Gallery */}
-      <section className="relative w-full min-h-[80vh] py-16 overflow-hidden bg-gradient-to-b from-background via-primary/5 to-background">
-        <div className="pointer-events-none absolute -top-40 left-1/2 -translate-x-1/2 w-[800px] h-[400px] rounded-full bg-accent/10 blur-3xl opacity-60" />
-
+      <section className="relative w-full min-h-[80vh] py-16 overflow-hidden">
         <div className="container mx-auto px-6 relative z-10">
           <div className="text-center mb-12">
             <h2 className="font-serif text-3xl md:text-4xl lg:text-5xl font-bold mb-3 text-foreground">
@@ -696,7 +694,7 @@ const WhatWeBuild = () => {
       </section>
 
       {/* Feature Carousel - synced with gallery */}
-      <section ref={carouselRef} className="relative w-full py-16 overflow-hidden bg-background">
+      <section ref={carouselRef} className="relative w-full py-16 overflow-hidden">
         <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           {/* Details header */}
           <div className="text-center mb-8">
@@ -754,7 +752,7 @@ const WhatWeBuild = () => {
       </section>
 
       {/* What Clients Say */}
-      <section className="py-16 border-t border-accent/20 bg-gradient-to-b from-accent/5 via-accent/10 to-accent/5">
+      <section className="py-16 border-t border-border">
         <div className="container mx-auto px-6">
           <div className="text-center mb-4">
             <p className="text-sm uppercase tracking-wider text-accent mb-2">What Clients Say</p>
@@ -801,7 +799,7 @@ const WhatWeBuild = () => {
       </section>
 
       {/* CTA */}
-      <section className="py-20 border-t border-border bg-accent/5">
+      <section className="py-20 border-t border-border">
         <div className="container mx-auto px-6 text-center">
           <h2 className="font-serif text-2xl md:text-3xl font-bold mb-6">
             Ready to see yours?
@@ -816,7 +814,7 @@ const WhatWeBuild = () => {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-border py-8 bg-card mt-auto">
+      <footer className="border-t border-border py-8 mt-auto">
         <div className="container mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4">
           <p className="font-serif text-sm text-muted-foreground">
             © {new Date().getFullYear()} Pleasant Cove Design

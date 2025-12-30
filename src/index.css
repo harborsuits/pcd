@@ -57,6 +57,9 @@ All colors MUST be HSL.
     --hero-gradient-start: 175 30% 85%;
     --hero-gradient-mid: 210 33% 96%;
     --hero-gradient-end: 210 25% 92%;
+    
+    /* Unified page background - the teal/mint from hero */
+    --page-bg: 175 25% 95%;
   }
 
   .dark {
@@ -101,6 +104,9 @@ All colors MUST be HSL.
     --hero-gradient-start: 175 25% 18%;
     --hero-gradient-mid: 210 29% 12%;
     --hero-gradient-end: 210 25% 8%;
+    
+    /* Unified page background (dark) */
+    --page-bg: 175 20% 12%;
   }
 }
 
