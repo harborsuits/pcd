@@ -671,7 +671,7 @@ const WhatWeBuild = () => {
                             <div className="w-6 h-6 rounded-md bg-accent/20 flex items-center justify-center">
                               <Icon className="h-3.5 w-3.5 text-accent" />
                             </div>
-                            <h3 className="text-foreground font-semibold text-sm md:text-base">
+                            <h3 className="text-foreground font-bold text-sm md:text-base">
                               {item.title}
                             </h3>
                           </div>
