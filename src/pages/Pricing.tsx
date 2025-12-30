@@ -26,7 +26,7 @@ const Pricing = () => {
       </header>
 
       {/* Hero */}
-      <section className="py-16 md:py-20 relative overflow-hidden bg-gradient-to-b from-accent/10 via-background to-background">
+      <section className="pt-12 pb-6 md:pt-16 md:pb-8 relative overflow-hidden bg-gradient-to-b from-accent/10 via-background to-transparent">
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute -top-32 -right-32 h-[520px] w-[520px] rounded-full bg-accent/15 blur-3xl" />
           <div className="absolute -bottom-40 -left-40 h-[620px] w-[620px] rounded-full bg-primary/10 blur-3xl" />
