@@ -580,16 +580,6 @@ const WhatWeBuild = () => {
         </div>
       </header>
 
-      {/* Back Link */}
-      <div className="container mx-auto px-6 pt-8">
-        <Link 
-          to="/" 
-          className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <ArrowLeft className="mr-1 h-4 w-4" />
-          Back to home
-        </Link>
-      </div>
 
       {/* Bento Gallery */}
       <section className="relative w-full min-h-[80vh] py-16 overflow-hidden">
