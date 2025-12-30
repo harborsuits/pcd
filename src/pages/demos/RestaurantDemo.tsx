@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { ArrowLeft, Phone, MapPin, Clock, Star, Instagram, Facebook } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { MetalButton } from "@/components/ui/liquid-glass-button";
 
 const RestaurantDemo = () => {
   return (
@@ -18,9 +18,9 @@ const RestaurantDemo = () => {
             <a href="#menu" className="text-stone-300 hover:text-white">Menu</a>
             <a href="#about" className="text-stone-300 hover:text-white">About</a>
             <a href="#contact" className="text-stone-300 hover:text-white">Contact</a>
-            <Button size="sm" className="bg-amber-600 hover:bg-amber-700">
+            <MetalButton variant="gold">
               Reserve a Table
-            </Button>
+            </MetalButton>
           </nav>
         </div>
       </header>
@@ -46,12 +46,12 @@ const RestaurantDemo = () => {
             in an unforgettable atmosphere.
           </p>
           <div className="flex flex-wrap justify-center gap-4">
-            <Button size="lg" className="bg-amber-600 hover:bg-amber-700">
+            <MetalButton variant="gold">
               Reserve a Table
-            </Button>
-            <Button size="lg" variant="outline" className="border-stone-600 text-white hover:bg-stone-800">
+            </MetalButton>
+            <MetalButton variant="default">
               View Menu
-            </Button>
+            </MetalButton>
           </div>
           
           <div className="flex flex-wrap justify-center gap-8 mt-12 text-sm">
@@ -118,9 +118,9 @@ const RestaurantDemo = () => {
           </div>
           
           <div className="text-center mt-12">
-            <Button variant="outline" className="border-stone-600 text-white hover:bg-stone-800">
+            <MetalButton variant="default">
               View Full Menu
-            </Button>
+            </MetalButton>
           </div>
         </div>
       </section>
@@ -161,13 +161,13 @@ const RestaurantDemo = () => {
             Join us for an unforgettable evening. Reservations recommended for weekend dining.
           </p>
           <div className="flex flex-wrap justify-center gap-4">
-            <Button size="lg" className="bg-stone-950 hover:bg-stone-900 text-white">
+            <MetalButton variant="bronze">
               Book Online
-            </Button>
-            <Button size="lg" variant="outline" className="border-stone-950 text-stone-950 hover:bg-amber-700">
+            </MetalButton>
+            <MetalButton variant="default">
               <Phone className="mr-2 h-5 w-5" />
               (555) 987-6543
-            </Button>
+            </MetalButton>
           </div>
         </div>
       </section>
