@@ -48,7 +48,7 @@ export function QuoteModal({ open, onOpenChange, businessName }: QuoteModalProps
             </div>
             <h3 className="text-xl font-semibold text-foreground mb-2">Request Received!</h3>
             <p className="text-muted-foreground">
-              We'll be in touch with {businessName} on your behalf.
+              {businessName} will be in touch with you shortly.
             </p>
           </div>
         </DialogContent>
