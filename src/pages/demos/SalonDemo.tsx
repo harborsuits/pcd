@@ -3,6 +3,11 @@ import { ArrowLeft, Phone, MapPin, Clock, Star, Instagram, Scissors, Sparkles } 
 import { Button } from "@/components/ui/button";
 import { ShaderAnimation } from "@/components/ui/shader-animation";
 import salonHeroModel from "@/assets/salon/salon-hero-model.png";
+import salonMakeup from "@/assets/salon/makeup.jpg";
+import salonHair1 from "@/assets/salon/hair1.jpg";
+import salonHair2 from "@/assets/salon/hair2.jpeg";
+import salonNails from "@/assets/salon/nails.jpeg";
+import salonWaxing from "@/assets/salon/waxing.jpeg";
 
 const SalonDemo = () => {
   return (
@@ -177,12 +182,13 @@ const SalonDemo = () => {
         <div className="container mx-auto px-6">
           <h2 className="font-serif text-5xl text-center mb-16 text-rose-800">Our Work</h2>
           
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-6xl mx-auto">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-6 max-w-6xl mx-auto">
             {[
-              { src: "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=500&auto=format&fit=crop", alt: "Hair styling" },
-              { src: "https://images.unsplash.com/photo-1604654894610-df63bc536371?w=500&auto=format&fit=crop", alt: "Nail art" },
-              { src: "https://images.unsplash.com/photo-1516975080664-ed2fc6a32937?w=500&auto=format&fit=crop", alt: "Makeup application" },
-              { src: "https://images.unsplash.com/photo-1522337094846-8a818192de1f?w=500&auto=format&fit=crop", alt: "Hair care" },
+              { src: salonHair1, alt: "Balayage hair styling" },
+              { src: salonNails, alt: "Pink nail art" },
+              { src: salonMakeup, alt: "Bridal makeup" },
+              { src: salonHair2, alt: "Ombre highlights" },
+              { src: salonWaxing, alt: "Waxing service" },
             ].map((image, i) => (
               <div key={i} className="aspect-[4/5] rounded-3xl overflow-hidden shadow-sm group cursor-pointer">
                 <img 
