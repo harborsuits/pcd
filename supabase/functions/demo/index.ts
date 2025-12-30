@@ -160,10 +160,10 @@ async function findOrCreateProspectProject(
 
   console.log(`Created new prospect project: ${newProject.business_name} (${newProject.project_token})`);
 
-  // Insert welcome message so portal is never empty
+  // Insert welcome message so portal is never empty - actionable upload guidance
   const welcomeMsg = pipelineStage === "claimed"
-    ? `Hey! Thanks for claiming your design${sourceDemoBusinessName ? ` based on ${sourceDemoBusinessName}` : ""}. I'm excited to bring this to life for you!\n\nQuick question: do you have a logo, or should we start fresh?`
-    : `Thanks for requesting a quote! I'll get back to you within 1 business day with pricing details.\n\nIn the meantime, feel free to share any additional details about your project here.`;
+    ? `Hey! Thanks for claiming your design${sourceDemoBusinessName ? ` based on ${sourceDemoBusinessName}` : ""}. I'm excited to bring this to life for you!\n\nTo get started, please upload:\n• Your logo (PNG or SVG preferred)\n• 3-5 photos of your work or team\n• Any brand colors or fonts you use\n\nTap the 📎 button below to add files.`
+    : `Thanks for requesting a quote! I'll get back to you within 1 business day with pricing.\n\nMeanwhile, feel free to upload:\n• Your current logo\n• Photos of your work\n• Any examples of sites you like\n\nThis helps me give you an accurate quote!`;
 
   await supabase.from("messages").insert({
     project_id: newProject.id,

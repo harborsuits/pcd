@@ -958,12 +958,12 @@ async function handleCreateProject(
       payload: { business_name: intake.businessName, email: user.email },
     });
 
-    // Send auto-welcome message
+    // Send auto-welcome message with actionable upload guidance
     await supabase.from("messages").insert({
       project_id: project.id,
       project_token: projectToken,
       sender_type: "system",
-      content: `Hey — I've got everything I need to start on ${intake.businessName}. I'll send a first version soon. You can upload logos or photos anytime here.`,
+      content: `Hey — I'm starting on ${intake.businessName} now!\n\nTo help me get your site looking perfect, please upload:\n• Your logo (PNG or SVG preferred)\n• 3-5 photos of your work or team\n• Any brand colors or fonts you use\n\nTap the 📎 button below to add files anytime.`,
     });
 
     // Send Telegram notification
