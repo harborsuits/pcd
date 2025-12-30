@@ -1609,31 +1609,46 @@ async function handleUpdatePipelineStage(req: Request, token: string): Promise<R
     // Send Telegram notification for high-signal stages only
     const notifyStages = ["quote_requested", "claimed", "won", "lost"];
     if (notifyStages.includes(stage)) {
-      try {
-        const telegramBotToken = Deno.env.get("TELEGRAM_BOT_TOKEN");
-        const telegramChatId = Deno.env.get("TELEGRAM_CHAT_ID");
-        const baseUrl = Deno.env.get("PUBLIC_BASE_URL") || "https://ararrbvhzaudfaxjwdrc.lovableproject.com";
+      const telegramBotToken = Deno.env.get("TELEGRAM_BOT_TOKEN");
+      const telegramChatId = Deno.env.get("TELEGRAM_CHAT_ID");
+      const baseUrl = Deno.env.get("PUBLIC_BASE_URL") || "https://ararrbvhzaudfaxjwdrc.lovableproject.com";
 
-        if (telegramBotToken && telegramChatId) {
-          // Build contact info string
-          const contactParts: string[] = [];
-          if (currentProject.contact_name) contactParts.push(currentProject.contact_name);
-          if (currentProject.contact_phone) contactParts.push(currentProject.contact_phone);
-          if (currentProject.contact_email) contactParts.push(currentProject.contact_email);
-          const contactInfo = contactParts.length > 0 ? contactParts.join(" • ") : "No contact info";
+      // Build contact info string
+      const contactParts: string[] = [];
+      if (currentProject.contact_name) contactParts.push(currentProject.contact_name);
+      if (currentProject.contact_phone) contactParts.push(currentProject.contact_phone);
+      if (currentProject.contact_email) contactParts.push(currentProject.contact_email);
+      const contactInfo = contactParts.length > 0 ? contactParts.join(" • ") : "No contact info";
 
-          // Build notification message (plain text - Telegram auto-linkifies)
-          const stageEmoji = stage === "won" ? "🎉" : stage === "lost" ? "❌" : stage === "claimed" ? "✅" : "📋";
-          const telegramText = 
-            `${stageEmoji} Stage: ${stageLabels[previousStage] || previousStage} → ${stageLabels[stage] || stage}\n\n` +
-            `Business: ${currentProject.business_name || "Unknown"}\n` +
-            `Contact: ${contactInfo}`;
+      // Build notification message (plain text - Telegram auto-linkifies)
+      const stageEmoji = stage === "won" ? "🎉" : stage === "lost" ? "❌" : stage === "claimed" ? "✅" : "📋";
+      const telegramText = 
+        `${stageEmoji} Stage: ${stageLabels[previousStage] || previousStage} → ${stageLabels[stage] || stage}\n\n` +
+        `Business: ${currentProject.business_name || "Unknown"}\n` +
+        `Contact: ${contactInfo}`;
 
-          // Build URLs for inline keyboard buttons
-          const operatorUrl = `${baseUrl}/operator?project=${currentProject.project_token}`;
-          const portalUrl = `${baseUrl}/p/${currentProject.project_token}`;
+      // Build URLs for inline keyboard buttons (URL-encode token for safety)
+      const t = encodeURIComponent(currentProject.project_token);
+      const operatorUrl = `${baseUrl}/operator?project=${t}`;
+      const portalUrl = `${baseUrl}/p/${t}`;
 
-          await fetch(`https://api.telegram.org/bot${telegramBotToken}/sendMessage`, {
+      // Prepare audit payload
+      const notificationPayload = {
+        channel: "telegram",
+        stage_from: previousStage,
+        stage_to: stage,
+        business_name: currentProject.business_name,
+        contact_info: contactInfo,
+        operator_url: operatorUrl,
+        portal_url: portalUrl,
+      };
+
+      let notificationStatus = "sent";
+      let notificationError: string | null = null;
+
+      if (telegramBotToken && telegramChatId) {
+        try {
+          const res = await fetch(`https://api.telegram.org/bot${telegramBotToken}/sendMessage`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -1651,11 +1666,40 @@ async function handleUpdatePipelineStage(req: Request, token: string): Promise<R
             }),
           });
 
-          console.log(`Telegram notification sent for stage change: ${stage}`);
+          if (!res.ok) {
+            const errText = await res.text();
+            console.error("Telegram sendMessage failed:", res.status, errText);
+            notificationStatus = "failed";
+            notificationError = `${res.status}: ${errText.slice(0, 200)}`;
+          } else {
+            console.log(`Telegram notification sent for stage change: ${stage}`);
+          }
+        } catch (telegramError) {
+          console.error("Telegram notification error:", telegramError);
+          notificationStatus = "failed";
+          notificationError = telegramError instanceof Error ? telegramError.message : String(telegramError);
         }
-      } catch (telegramError) {
-        console.error("Telegram notification error:", telegramError);
-        // Don't fail the request for notification errors
+      } else {
+        notificationStatus = "skipped";
+        notificationError = "Telegram credentials not configured";
+        console.warn("Telegram notification skipped: missing credentials");
+      }
+
+      // Insert notification audit log
+      try {
+        await supabase.from("notification_events").insert({
+          project_id: currentProject.id,
+          project_token: currentProject.project_token,
+          event_type: `pipeline_stage_${notificationStatus}`,
+          payload: {
+            ...notificationPayload,
+            status: notificationStatus,
+            error: notificationError,
+          },
+          sent_at: notificationStatus === "sent" ? new Date().toISOString() : null,
+        });
+      } catch (auditError) {
+        console.error("Notification audit log error:", auditError);
       }
     }
 
