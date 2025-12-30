@@ -129,7 +129,7 @@ const Index = () => {
       {/* 2️⃣ AI Receptionist - The Hook */}
       <section className="pt-12 md:pt-16 pb-20 md:pb-28 overflow-hidden">
         <div className="container mx-auto px-6">
-          <div className="text-center mb-12 md:mb-16">
+          <div className="text-center mb-8 md:mb-10">
             <h2 className="font-serif text-4xl md:text-5xl lg:text-6xl font-bold mb-4">
               Your AI Receptionist
             </h2>
