@@ -202,68 +202,79 @@ const SalonDemo = () => {
         </div>
       </section>
 
-      {/* Book CTA */}
-      <section className="py-20 bg-gradient-to-r from-rose-400 to-rose-500">
-        <div className="container mx-auto px-6 text-center">
-          <h2 className="font-serif text-4xl mb-4 text-white">Ready to Glow?</h2>
-          <p className="text-rose-100 mb-8 max-w-xl mx-auto">
-            Book your appointment online or give us a call. New clients always welcome!
-          </p>
-          <div className="flex flex-wrap justify-center gap-4">
-            <Button size="lg" className="bg-white text-rose-600 hover:bg-rose-50">
-              Book Online
-            </Button>
-            <Button size="lg" variant="outline" className="border-white text-white hover:bg-rose-600">
-              <Phone className="mr-2 h-5 w-5" />
-              (555) 456-7890
-            </Button>
+      {/* Combined CTA + Footer Section with Shader */}
+      <section className="relative overflow-hidden">
+        {/* Shader Background */}
+        <div className="absolute inset-0 z-0">
+          <ShaderAnimation className="opacity-60" />
+        </div>
+        
+        {/* Gradient overlay for better text readability */}
+        <div className="absolute inset-0 z-[1] bg-gradient-to-b from-rose-500/80 via-rose-600/85 to-rose-900/95" />
+        
+        {/* CTA Content */}
+        <div className="relative z-10 py-20">
+          <div className="container mx-auto px-6 text-center">
+            <h2 className="font-serif text-5xl mb-4 text-white">Ready to Glow?</h2>
+            <p className="text-rose-100 mb-8 max-w-xl mx-auto text-lg">
+              Book your appointment online or give us a call. New clients always welcome!
+            </p>
+            <div className="flex flex-wrap justify-center gap-4">
+              <Button size="lg" className="bg-white text-rose-600 hover:bg-rose-50 px-8">
+                Book Online
+              </Button>
+              <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/10 px-8">
+                <Phone className="mr-2 h-5 w-5" />
+                (555) 456-7890
+              </Button>
+            </div>
+          </div>
+        </div>
+        
+        {/* Footer Content */}
+        <div className="relative z-10 py-12 border-t border-rose-700/50">
+          <div className="container mx-auto px-6">
+            <div className="grid md:grid-cols-3 gap-8">
+              <div>
+                <h3 className="font-serif text-2xl mb-4 text-white">Blush & Bloom</h3>
+                <p className="text-rose-200 text-sm">
+                  Your neighborhood beauty destination for hair, nails, and self-care.
+                </p>
+                <div className="flex gap-4 mt-4">
+                  <a href="#" className="text-rose-300 hover:text-white transition-colors">
+                    <Instagram className="h-6 w-6" />
+                  </a>
+                </div>
+              </div>
+              <div>
+                <h4 className="font-medium mb-4 text-white">Hours</h4>
+                <div className="space-y-2 text-sm text-rose-200">
+                  <p>Tuesday – Friday: 9AM – 7PM</p>
+                  <p>Saturday: 9AM – 5PM</p>
+                  <p>Sunday – Monday: Closed</p>
+                </div>
+              </div>
+              <div>
+                <h4 className="font-medium mb-4 text-white">Location</h4>
+                <div className="space-y-2 text-sm text-rose-200">
+                  <p>789 Uptown Boulevard</p>
+                  <p>Suite 101</p>
+                  <p>Anytown, USA 12345</p>
+                  <p className="mt-4">
+                    <a href="tel:5554567890" className="text-white hover:underline">(555) 456-7890</a>
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="border-t border-rose-700/50 mt-8 pt-8 text-center text-sm text-rose-300">
+              <p>© 2024 Blush & Bloom. All rights reserved.</p>
+              <p className="mt-2 text-xs">
+                Demo site by <Link to="/" className="text-white hover:underline">Pleasant Cove Design</Link>
+              </p>
+            </div>
           </div>
         </div>
       </section>
-
-      {/* Footer */}
-      <footer className="bg-rose-900 py-12 text-rose-100">
-        <div className="container mx-auto px-6">
-          <div className="grid md:grid-cols-3 gap-8">
-            <div>
-              <h3 className="font-serif text-2xl mb-4 text-white">Blush & Bloom</h3>
-              <p className="text-rose-200 text-sm">
-                Your neighborhood beauty destination for hair, nails, and self-care.
-              </p>
-              <div className="flex gap-4 mt-4">
-                <a href="#" className="text-rose-300 hover:text-white transition-colors">
-                  <Instagram className="h-5 w-5" />
-                </a>
-              </div>
-            </div>
-            <div>
-              <h4 className="font-medium mb-4 text-white">Hours</h4>
-              <div className="space-y-2 text-sm text-rose-200">
-                <p>Tuesday – Friday: 9AM – 7PM</p>
-                <p>Saturday: 9AM – 5PM</p>
-                <p>Sunday – Monday: Closed</p>
-              </div>
-            </div>
-            <div>
-              <h4 className="font-medium mb-4 text-white">Location</h4>
-              <div className="space-y-2 text-sm text-rose-200">
-                <p>789 Uptown Boulevard</p>
-                <p>Suite 101</p>
-                <p>Anytown, USA 12345</p>
-                <p className="mt-4">
-                  <a href="tel:5554567890" className="text-white hover:underline">(555) 456-7890</a>
-                </p>
-              </div>
-            </div>
-          </div>
-          <div className="border-t border-rose-800 mt-8 pt-8 text-center text-sm text-rose-300">
-            <p>© 2024 Blush & Bloom. All rights reserved.</p>
-            <p className="mt-2 text-xs">
-              Demo site by <Link to="/" className="text-white hover:underline">Pleasant Cove Design</Link>
-            </p>
-          </div>
-        </div>
-      </footer>
     </div>
   );
 };
