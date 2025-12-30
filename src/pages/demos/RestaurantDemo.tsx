@@ -113,17 +113,17 @@ const RestaurantDemo = () => {
           date="EST. 2015"
           scrollToExpand="Scroll to explore"
         >
-          {/* About Section - z-20, relative positioning */}
-          <div id="about" className="container mx-auto px-6 pt-20 pb-8 relative z-20">
-            <div className="max-w-4xl mx-auto text-center mb-10">
+          {/* About Section - reduced padding */}
+          <div id="about" className="container mx-auto px-6 pt-10 md:pt-12 pb-6 relative z-20">
+            <div className="max-w-4xl mx-auto text-center mb-8">
               <p className="text-amber-400 font-medium mb-3 tracking-widest uppercase text-sm drop-shadow-[0_2px_8px_rgba(0,0,0,0.6)]">Our Story</p>
               <h2 
-                className="font-serif text-4xl md:text-5xl mb-5 text-stone-100"
+                className="font-serif text-4xl md:text-5xl mb-4 text-stone-100"
                 style={{ textShadow: "0 2px 12px rgba(0,0,0,0.5)" }}
               >
                 A Passion for Excellence
               </h2>
-              <p className="text-stone-200 text-lg leading-relaxed mb-4">
+              <p className="text-stone-200 text-lg leading-relaxed mb-3">
                 Founded by Chef Maria Chen after two decades of culinary exploration across Europe and Asia, 
                 The Golden Fork represents the culmination of a lifelong dream.
               </p>
@@ -133,19 +133,19 @@ const RestaurantDemo = () => {
               </p>
             </div>
 
-            {/* Signature Dishes - z-20 */}
-            <div id="menu" className="mb-10 relative z-20">
+            {/* Signature Dishes */}
+            <div id="menu" className="mb-8 relative z-20">
               <h2 
                 className="font-serif text-3xl md:text-4xl text-center mb-2 text-stone-100"
                 style={{ textShadow: "0 2px 12px rgba(0,0,0,0.5)" }}
               >
                 Signature Dishes
               </h2>
-              <p className="text-stone-300 text-center mb-6 max-w-xl mx-auto">
+              <p className="text-stone-300 text-center mb-5 max-w-xl mx-auto">
                 Seasonal favorites crafted by Chef Maria.
               </p>
               
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 relative z-20">
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3 relative z-20">
                 {signatureDishes.map((dish) => {
                   const Icon = dish.icon;
                   return (
@@ -153,24 +153,24 @@ const RestaurantDemo = () => {
                       key={dish.name}
                       glowColor="orange"
                       customSize
-                      className="p-5 bg-stone-900/40 backdrop-blur-sm border border-stone-700/40"
+                      className="p-4 bg-stone-900/40 backdrop-blur-sm border border-stone-700/40"
                     >
                       <div className="flex flex-col h-full relative z-10">
-                        <div className="flex items-start justify-between mb-3">
-                          <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20">
-                            <Icon className="h-5 w-5 text-amber-400" />
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="p-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                            <Icon className="h-4 w-4 text-amber-400" />
                           </div>
-                          <span className="text-amber-400 font-bold text-lg">{dish.price}</span>
+                          <span className="text-amber-400 font-bold">{dish.price}</span>
                         </div>
-                        <h3 className="font-serif text-lg text-stone-100 mb-1.5">{dish.name}</h3>
-                        <p className="text-stone-300 text-sm flex-grow">{dish.desc}</p>
+                        <h3 className="font-serif text-lg text-stone-100 mb-1">{dish.name}</h3>
+                        <p className="text-stone-300 text-sm">{dish.desc}</p>
                       </div>
                     </GlowCard>
                   );
                 })}
               </div>
               
-              <div className="text-center mt-6 relative z-20">
+              <div className="text-center mt-5 relative z-20">
                 <MetalButton variant="gold">
                   View Full Menu
                 </MetalButton>
@@ -180,22 +180,16 @@ const RestaurantDemo = () => {
         </ScrollExpandMedia>
       </section>
 
-      {/* Bridge gradient */}
-      <div className="h-12 bg-gradient-to-b from-transparent via-stone-950/10 to-transparent relative z-10" />
-
-      {/* Interactive Experience Selector - transparent, z-10 */}
-      <section className="relative z-10 py-10">
+      {/* Interactive Experience Selector */}
+      <section className="relative z-10 py-8 md:py-10">
         <InteractiveSelector
           title="Explore the Experience"
           options={experienceOptions}
         />
       </section>
 
-      {/* Bridge gradient */}
-      <div className="h-10 bg-gradient-to-b from-transparent via-stone-950/10 to-transparent relative z-10" />
-
-      {/* Press & Awards - transparent, z-10 */}
-      <section className="py-10 relative z-10">
+      {/* Press & Awards */}
+      <section className="py-8 md:py-10 relative z-10">
         <div className="container mx-auto px-6">
           <h2 
             className="font-serif text-3xl md:text-4xl text-center mb-2 text-stone-100"
@@ -203,11 +197,11 @@ const RestaurantDemo = () => {
           >
             Press & Awards
           </h2>
-          <p className="text-stone-300 text-center mb-6 max-w-xl mx-auto">
+          <p className="text-stone-300 text-center mb-5 max-w-xl mx-auto">
             Recognized for excellence in fine dining.
           </p>
           
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 max-w-5xl mx-auto relative z-20">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 max-w-5xl mx-auto relative z-20">
             <AwardBadge
               title="Best Fine Dining"
               subtitle="City Dining Awards"
@@ -241,7 +235,7 @@ const RestaurantDemo = () => {
       </section>
 
       {/* Quick Info Bar */}
-      <section className="py-5 relative z-10 bg-stone-900/30 backdrop-blur-sm">
+      <section className="py-4 relative z-10 bg-stone-900/30 backdrop-blur-sm">
         <div className="container mx-auto px-6">
           <div className="flex flex-wrap justify-center gap-6 text-sm">
             <div className="flex items-center gap-2">
@@ -261,10 +255,10 @@ const RestaurantDemo = () => {
       </section>
 
       {/* Reservation CTA */}
-      <section className="py-14 bg-gradient-to-br from-amber-600/90 via-amber-500/90 to-yellow-500/90 backdrop-blur-sm relative z-10">
+      <section className="py-12 bg-gradient-to-br from-amber-600/90 via-amber-500/90 to-yellow-500/90 backdrop-blur-sm relative z-10">
         <div className="container mx-auto px-6 text-center">
-          <h2 className="font-serif text-4xl mb-3 text-stone-950">Reserve Your Table</h2>
-          <p className="text-amber-900 mb-5 max-w-xl mx-auto">
+          <h2 className="font-serif text-4xl mb-2 text-stone-950">Reserve Your Table</h2>
+          <p className="text-amber-900 mb-4 max-w-xl mx-auto">
             Join us for an unforgettable evening.
           </p>
           <div className="flex flex-wrap justify-center gap-4">
@@ -284,11 +278,11 @@ const RestaurantDemo = () => {
         <div className="container mx-auto px-6">
           <div className="grid md:grid-cols-3 gap-6">
             <div>
-              <h3 className="font-serif text-2xl mb-3 text-stone-100">The Golden Fork</h3>
+              <h3 className="font-serif text-2xl mb-2 text-stone-100">The Golden Fork</h3>
               <p className="text-stone-300 text-sm">
                 An elevated dining experience in the heart of downtown.
               </p>
-              <div className="flex gap-4 mt-3">
+              <div className="flex gap-4 mt-2">
                 <a href="#" className="text-stone-400 hover:text-amber-400 transition-colors">
                   <Instagram className="h-5 w-5" />
                 </a>
@@ -298,18 +292,17 @@ const RestaurantDemo = () => {
               </div>
             </div>
             <div>
-              <h4 className="font-medium mb-3 text-stone-100">Hours</h4>
+              <h4 className="font-medium mb-2 text-stone-100">Hours</h4>
               <div className="space-y-1 text-sm text-stone-300">
-                <p>Tuesday – Thursday: 5PM – 10PM</p>
-                <p>Friday – Saturday: 5PM – 11PM</p>
-                <p>Sunday: 5PM – 9PM</p>
-                <p>Monday: Closed</p>
+                <p>Tue–Thu: 5PM – 10PM</p>
+                <p>Fri–Sat: 5PM – 11PM</p>
+                <p>Sun: 5PM – 9PM | Mon: Closed</p>
               </div>
             </div>
             <div>
-              <h4 className="font-medium mb-3 text-stone-100">Location</h4>
+              <h4 className="font-medium mb-2 text-stone-100">Location</h4>
               <div className="space-y-1 text-sm text-stone-300">
-                <p>456 Main Street, Downtown District</p>
+                <p>456 Main Street, Downtown</p>
                 <p>Anytown, USA 12345</p>
                 <p className="mt-2">
                   <a href="tel:5559876543" className="text-amber-400 hover:underline">(555) 987-6543</a>
@@ -317,11 +310,8 @@ const RestaurantDemo = () => {
               </div>
             </div>
           </div>
-          <div className="border-t border-stone-700/50 mt-6 pt-6 text-center text-sm text-stone-400">
-            <p>© 2024 The Golden Fork. All rights reserved.</p>
-            <p className="mt-1 text-xs">
-              Demo site by <Link to="/" className="text-amber-400 hover:underline">Pleasant Cove Design</Link>
-            </p>
+          <div className="border-t border-stone-700/50 mt-5 pt-5 text-center text-sm text-stone-400">
+            <p>© 2024 The Golden Fork. Demo by <Link to="/" className="text-amber-400 hover:underline">Pleasant Cove Design</Link></p>
           </div>
         </div>
       </footer>

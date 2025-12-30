@@ -43,41 +43,42 @@ export default function ScrollExpandMedia({
   });
 
   // ============================================
-  // PHASE A (0% → 55%): Hero expands, content hidden
+  // PHASE A (0% → 65%): Hero expands, content HIDDEN
   // ============================================
-  const mediaScale = useTransform(scrollYProgress, [0, 0.55], [0.5, 1]);
-  const mediaBorderRadius = useTransform(scrollYProgress, [0, 0.55], [36, 0]);
-  const mediaOpacity = useTransform(scrollYProgress, [0, 0.35, 0.55], [0.6, 0.85, 1]);
-  const mediaY = useTransform(scrollYProgress, [0, 0.55], [100, 0]); // Start 100px lower
+  const mediaScale = useTransform(scrollYProgress, [0, 0.65], [0.45, 1]);
+  const mediaBorderRadius = useTransform(scrollYProgress, [0, 0.65], [40, 0]);
+  const mediaOpacity = useTransform(scrollYProgress, [0, 0.4, 0.65], [0.5, 0.8, 1]);
+  const mediaY = useTransform(scrollYProgress, [0, 0.65], [140, 0]); // Start 140px lower
   
   // Title fades out during Phase A
-  const titleOpacity = useTransform(scrollYProgress, [0, 0.2, 0.35], [1, 0.6, 0]);
-  const titleY = useTransform(scrollYProgress, [0, 0.35], [0, -80]);
-  const titleScale = useTransform(scrollYProgress, [0, 0.35], [1, 0.92]);
+  const titleOpacity = useTransform(scrollYProgress, [0, 0.25, 0.45], [1, 0.5, 0]);
+  const titleY = useTransform(scrollYProgress, [0, 0.45], [0, -100]);
+  const titleScale = useTransform(scrollYProgress, [0, 0.45], [1, 0.9]);
   
   // ============================================
-  // PHASE B (55% → 70%): Content fades in, overlay begins fading
+  // PHASE B (65% → 80%): Content fades in
   // ============================================
-  const contentOpacity = useTransform(scrollYProgress, [0.55, 0.70], [0, 1]);
-  const contentY = useTransform(scrollYProgress, [0.55, 0.70], [40, 0]);
+  const contentOpacity = useTransform(scrollYProgress, [0.65, 0.80], [0, 1]);
+  const contentY = useTransform(scrollYProgress, [0.65, 0.80], [48, 0]);
 
   // ============================================
-  // Overlay: Stronger during Phase A (0.45), fades during B+C
+  // Overlay: STRONG during Phase A (0.62), fades in B+C
   // ============================================
-  const overlayOpacity = useTransform(scrollYProgress, [0, 0.55, 1.0], [0.45, 0.35, 0.15]);
+  const overlayOpacity = useTransform(scrollYProgress, [0, 0.65, 1], [0.62, 0.40, 0.18]);
 
   // Background parallax
-  const bgY = useTransform(scrollYProgress, [0, 1], [0, -60]);
+  const bgY = useTransform(scrollYProgress, [0, 1], [0, -50]);
 
   return (
     <div
       ref={containerRef}
       className={cn(
-        "relative min-h-[200vh] overflow-x-hidden",
+        // Taller container so Phase A has time to complete
+        "relative min-h-[260vh] md:min-h-[240vh] overflow-x-hidden",
         className
       )}
     >
-      {/* Background image with parallax - z-0 */}
+      {/* Background image - z-0 */}
       {bgImageSrc && (
         <motion.div
           className="fixed inset-0 z-0"
@@ -92,30 +93,30 @@ export default function ScrollExpandMedia({
         </motion.div>
       )}
 
-      {/* Fixed hero section - increased top padding */}
-      <div className="sticky top-0 h-screen overflow-visible pt-24 md:pt-28">
-        {/* Title overlay - z-30 always on top */}
+      {/* Fixed hero section - h-screen */}
+      <div className="sticky top-0 h-screen overflow-visible">
+        {/* Title overlay - z-30 */}
         <motion.div
-          className="absolute inset-0 z-30 flex flex-col items-center justify-center pointer-events-none px-4"
+          className="absolute inset-0 z-30 flex flex-col items-center justify-center pointer-events-none px-4 pt-16"
           style={{ opacity: titleOpacity, y: titleY, scale: titleScale }}
         >
-          <p className="text-amber-400 font-medium mb-4 tracking-widest uppercase text-sm drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]">
+          <p className="text-amber-400 font-medium mb-4 tracking-widest uppercase text-sm drop-shadow-[0_2px_10px_rgba(0,0,0,0.9)]">
             {date}
           </p>
           <h1 
             className="font-serif text-5xl md:text-7xl lg:text-8xl text-center text-stone-100"
-            style={{ textShadow: "0 4px 24px rgba(0,0,0,0.7), 0 2px 8px rgba(0,0,0,0.5)" }}
+            style={{ textShadow: "0 4px 30px rgba(0,0,0,0.8), 0 2px 10px rgba(0,0,0,0.6)" }}
           >
             {title}
           </h1>
-          <p className="mt-8 text-stone-200 text-sm animate-bounce drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]">
+          <p className="mt-8 text-stone-100 text-sm animate-bounce drop-shadow-[0_2px_10px_rgba(0,0,0,0.9)]">
             {scrollToExpand}
           </p>
         </motion.div>
 
-        {/* Expanding media container - starts lower with larger inset */}
+        {/* Expanding media container - z-10, starts very low with large inset */}
         <motion.div
-          className="absolute inset-10 md:inset-16 lg:inset-20 top-14 md:top-16 z-10 overflow-hidden"
+          className="absolute inset-10 md:inset-20 lg:inset-24 z-10 overflow-hidden"
           style={{
             scale: mediaScale,
             borderRadius: mediaBorderRadius,
@@ -139,22 +140,19 @@ export default function ScrollExpandMedia({
               className="w-full h-full object-cover"
             />
           )}
-          {/* Hero overlay - controlled opacity for readability */}
+          {/* Overlay - z-20, STRONG during expansion */}
           <motion.div 
-            className="absolute inset-0 bg-gradient-to-t from-stone-950 via-stone-950/30 to-stone-950/10"
+            className="absolute inset-0 z-20 bg-gradient-to-t from-stone-950 via-stone-950/50 to-stone-950/30"
             style={{ opacity: overlayOpacity }}
           />
         </motion.div>
       </div>
 
-      {/* Content area - fades in during Phase B (55-70%) */}
+      {/* Content area - z-20, fades in during Phase B (65-80%) */}
       <motion.div
-        className="relative z-20 -mt-[25vh]"
+        className="relative z-20 -mt-[20vh]"
         style={{ opacity: contentOpacity, y: contentY }}
       >
-        {/* Bridge gradient for smooth transition */}
-        <div className="h-16 bg-gradient-to-b from-transparent via-stone-950/10 to-transparent" />
-        
         <div className="min-h-screen">
           {children}
         </div>
