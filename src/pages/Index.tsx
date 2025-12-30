@@ -158,10 +158,6 @@ const Index = () => {
           
           {/* 3D Carousel - as proof gallery */}
           <div className="max-w-2xl mx-auto">
-            <div className="text-center mb-4">
-              <p className="text-sm text-muted-foreground">Examples of branded client portals</p>
-              <p className="text-xs text-accent">Different industries. Same system.</p>
-            </div>
             <HeroVisual />
           </div>
         </div>
@@ -172,10 +168,6 @@ const Index = () => {
         <div className="container mx-auto px-6">
           {/* Section Header */}
           <div className="text-center mb-12 md:mb-16">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-accent/10 border border-accent/20 mb-6">
-              <Bot className="h-4 w-4 text-accent" />
-              <span className="text-sm font-medium text-accent">AI-Powered Lead Handling</span>
-            </div>
             <h2 className="font-serif text-4xl md:text-5xl lg:text-6xl font-bold mb-4">
               Your AI Receptionist
             </h2>
