@@ -4,8 +4,13 @@ import { ArrowLeft, Loader2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+
+type DemoType = "website" | "receptionist" | "both" | "recommend";
+type WebsiteStyle = "simple" | "full" | "unsure";
+type ReceptionistFocus = "answering" | "qualifying" | "everything";
 
 const GetDemo = () => {
   const navigate = useNavigate();
@@ -16,15 +21,18 @@ const GetDemo = () => {
     city: "",
     phone: "",
     website: "",
+    demoType: "" as DemoType | "",
+    websiteStyle: "" as WebsiteStyle | "",
+    receptionistFocus: "" as ReceptionistFocus | "",
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.businessName.trim() || !formData.city.trim()) {
+    if (!formData.businessName.trim() || !formData.city.trim() || !formData.demoType) {
       toast({
         title: "Missing information",
-        description: "Please enter your business name and city.",
+        description: "Please enter your business name, city, and what you'd like to see.",
         variant: "destructive",
       });
       return;
@@ -39,6 +47,9 @@ const GetDemo = () => {
           city: formData.city.trim(),
           phone: formData.phone.trim() || null,
           website: formData.website.trim() || null,
+          demo_type: formData.demoType,
+          website_style: formData.websiteStyle || null,
+          receptionist_focus: formData.receptionistFocus || null,
         },
       });
 
@@ -158,6 +169,91 @@ const GetDemo = () => {
                 Optional — leave blank if you don't have one
               </p>
             </div>
+
+            {/* Demo Type Selection */}
+            <div className="space-y-3 pt-2">
+              <Label>What would you like to see in your demo? *</Label>
+              <RadioGroup
+                value={formData.demoType}
+                onValueChange={(value: DemoType) => setFormData({ 
+                  ...formData, 
+                  demoType: value,
+                  websiteStyle: "",
+                  receptionistFocus: ""
+                })}
+                className="grid gap-2"
+                disabled={isLoading}
+              >
+                <div className="flex items-center space-x-3 p-3 rounded-lg border border-border hover:bg-secondary/50 transition-colors cursor-pointer">
+                  <RadioGroupItem value="website" id="website-demo" />
+                  <Label htmlFor="website-demo" className="cursor-pointer font-normal flex-1">A website demo</Label>
+                </div>
+                <div className="flex items-center space-x-3 p-3 rounded-lg border border-border hover:bg-secondary/50 transition-colors cursor-pointer">
+                  <RadioGroupItem value="receptionist" id="receptionist-demo" />
+                  <Label htmlFor="receptionist-demo" className="cursor-pointer font-normal flex-1">An AI receptionist demo</Label>
+                </div>
+                <div className="flex items-center space-x-3 p-3 rounded-lg border border-border hover:bg-secondary/50 transition-colors cursor-pointer">
+                  <RadioGroupItem value="both" id="both-demo" />
+                  <Label htmlFor="both-demo" className="cursor-pointer font-normal flex-1">Both working together</Label>
+                </div>
+                <div className="flex items-center space-x-3 p-3 rounded-lg border border-border hover:bg-secondary/50 transition-colors cursor-pointer">
+                  <RadioGroupItem value="recommend" id="recommend-demo" />
+                  <Label htmlFor="recommend-demo" className="cursor-pointer font-normal flex-1">Not sure — show me what you recommend</Label>
+                </div>
+              </RadioGroup>
+            </div>
+
+            {/* Conditional: Website Style */}
+            {(formData.demoType === "website" || formData.demoType === "both") && (
+              <div className="space-y-3 pt-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                <Label>What kind of website fits you best right now?</Label>
+                <RadioGroup
+                  value={formData.websiteStyle}
+                  onValueChange={(value: WebsiteStyle) => setFormData({ ...formData, websiteStyle: value })}
+                  className="grid gap-2"
+                  disabled={isLoading}
+                >
+                  <div className="flex items-center space-x-3 p-3 rounded-lg border border-border hover:bg-secondary/50 transition-colors cursor-pointer">
+                    <RadioGroupItem value="simple" id="simple-site" />
+                    <Label htmlFor="simple-site" className="cursor-pointer font-normal flex-1">Simple and clean</Label>
+                  </div>
+                  <div className="flex items-center space-x-3 p-3 rounded-lg border border-border hover:bg-secondary/50 transition-colors cursor-pointer">
+                    <RadioGroupItem value="full" id="full-site" />
+                    <Label htmlFor="full-site" className="cursor-pointer font-normal flex-1">Full service website</Label>
+                  </div>
+                  <div className="flex items-center space-x-3 p-3 rounded-lg border border-border hover:bg-secondary/50 transition-colors cursor-pointer">
+                    <RadioGroupItem value="unsure" id="unsure-site" />
+                    <Label htmlFor="unsure-site" className="cursor-pointer font-normal flex-1">Not sure yet</Label>
+                  </div>
+                </RadioGroup>
+              </div>
+            )}
+
+            {/* Conditional: Receptionist Focus */}
+            {(formData.demoType === "receptionist" || formData.demoType === "both") && (
+              <div className="space-y-3 pt-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                <Label>What should the receptionist help with?</Label>
+                <RadioGroup
+                  value={formData.receptionistFocus}
+                  onValueChange={(value: ReceptionistFocus) => setFormData({ ...formData, receptionistFocus: value })}
+                  className="grid gap-2"
+                  disabled={isLoading}
+                >
+                  <div className="flex items-center space-x-3 p-3 rounded-lg border border-border hover:bg-secondary/50 transition-colors cursor-pointer">
+                    <RadioGroupItem value="answering" id="answering" />
+                    <Label htmlFor="answering" className="cursor-pointer font-normal flex-1">Answering calls & messages</Label>
+                  </div>
+                  <div className="flex items-center space-x-3 p-3 rounded-lg border border-border hover:bg-secondary/50 transition-colors cursor-pointer">
+                    <RadioGroupItem value="qualifying" id="qualifying" />
+                    <Label htmlFor="qualifying" className="cursor-pointer font-normal flex-1">Qualifying leads & booking</Label>
+                  </div>
+                  <div className="flex items-center space-x-3 p-3 rounded-lg border border-border hover:bg-secondary/50 transition-colors cursor-pointer">
+                    <RadioGroupItem value="everything" id="everything" />
+                    <Label htmlFor="everything" className="cursor-pointer font-normal flex-1">Handling everything automatically</Label>
+                  </div>
+                </RadioGroup>
+              </div>
+            )}
 
             <Button
               type="submit"
