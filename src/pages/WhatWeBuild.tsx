@@ -598,11 +598,11 @@ const WhatWeBuild = () => {
 
         <div className="container mx-auto px-6 relative z-10">
           <div className="text-center mb-12">
-            <h2 className="font-serif text-3xl md:text-4xl lg:text-5xl font-bold mb-4 text-foreground">
+            <h2 className="font-serif text-3xl md:text-4xl lg:text-5xl font-bold mb-3 text-foreground">
               What We Build
             </h2>
-            <p className="text-muted-foreground max-w-xl mx-auto text-lg">
-              A complete system for client-facing work. Everything you need to look professional and run smoothly — nothing you don't.
+            <p className="text-muted-foreground max-w-md mx-auto">
+              Tools that help you look sharp and run smooth.
             </p>
           </div>
 
@@ -700,7 +700,7 @@ const WhatWeBuild = () => {
         <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           {/* Details header */}
           <div className="text-center mb-8">
-            <p className="text-sm uppercase tracking-wider text-muted-foreground mb-2">Details</p>
+            <p className="text-sm uppercase tracking-wider text-accent mb-2">Here's what that includes</p>
             <h3 className="font-serif text-2xl md:text-3xl font-bold text-foreground">
               {FEATURES.find(f => f.id === activeId)?.title || "Explore Features"}
             </h3>
@@ -801,25 +801,17 @@ const WhatWeBuild = () => {
       </section>
 
       {/* CTA */}
-      <section className="py-16 border-t border-border bg-accent/5">
+      <section className="py-20 border-t border-border bg-accent/5">
         <div className="container mx-auto px-6 text-center">
-          <h2 className="font-serif text-2xl md:text-3xl font-bold mb-3">
-            Ready to see it in action?
+          <h2 className="font-serif text-2xl md:text-3xl font-bold mb-6">
+            Ready to see yours?
           </h2>
-          <p className="text-muted-foreground max-w-md mx-auto mb-6">
-            Explore our demos or request a custom preview for your business.
-          </p>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Button asChild size="lg" className="group">
-              <Link to="/get-demo">
-                Get a Demo
-                <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
-              </Link>
-            </Button>
-            <Button asChild variant="outline" size="lg">
-              <Link to="/demos">See Examples</Link>
-            </Button>
-          </div>
+          <Button asChild size="lg" className="group">
+            <Link to="/get-demo">
+              Get Your Demo
+              <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+            </Link>
+          </Button>
         </div>
       </section>
 
