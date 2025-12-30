@@ -125,17 +125,18 @@ const Index = () => {
               We build your site. You manage everything in one place — messaging, files, payments.
             </p>
             
-            {/* CTAs */}
+            {/* CTAs - Single dominant action */}
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8">
               <a href="#demos">
                 <LiquidButton size="lg">
                   Get a Demo
                 </LiquidButton>
               </a>
-              <Link to="/portal">
-                <LiquidButton size="lg" className="group">
-                  Client Portal
-                </LiquidButton>
+              <Link to="/what-we-build">
+                <Button variant="ghost" size="lg" className="text-muted-foreground hover:text-foreground">
+                  What We Build
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
               </Link>
             </div>
             
@@ -235,17 +236,12 @@ const Index = () => {
                 </GlowCard>
               </div>
               
-              <div className="flex flex-wrap justify-center gap-4 pt-2">
+              <div className="pt-4">
                 <a href="#demos">
                   <LiquidButton variant="teal" size="lg">
-                    See How It Works
+                    See It In Action
                   </LiquidButton>
                 </a>
-                <Link to="/get-demo">
-                  <LiquidButton variant="teal" size="lg" className="group">
-                    Add to My Project
-                  </LiquidButton>
-                </Link>
               </div>
             </div>
           </div>

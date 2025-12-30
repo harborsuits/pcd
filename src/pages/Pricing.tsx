@@ -35,8 +35,11 @@ const Pricing = () => {
           <h1 className="font-serif text-4xl md:text-5xl lg:text-6xl font-bold leading-tight mb-4">
             Pricing & Services
           </h1>
-          <p className="text-lg md:text-xl text-muted-foreground leading-relaxed max-w-2xl mx-auto">
+          <p className="text-lg md:text-xl text-muted-foreground leading-relaxed max-w-2xl mx-auto mb-3">
             Digital infrastructure, websites & AI reception services for local businesses.
+          </p>
+          <p className="text-sm text-muted-foreground/70">
+            Most clients start with a free demo — then choose a plan that fits.
           </p>
         </div>
       </section>
