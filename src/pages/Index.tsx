@@ -151,12 +151,12 @@ const Index = () => {
               </div>
             </div>
             
-            <div className="order-1 lg:order-2 space-y-8">
-              <p className="text-muted-foreground leading-relaxed text-lg">
+            <div className="order-1 lg:order-2 space-y-8 text-center lg:text-left">
+              <p className="text-muted-foreground leading-relaxed text-lg max-w-xl mx-auto lg:mx-0">
                 Our AI Receptionist answers calls, texts, and form submissions instantly, qualifies inquiries, and handles next steps automatically.
               </p>
               
-              <div className="space-y-4">
+              <div className="space-y-4 max-w-xl mx-auto lg:mx-0">
                 <GlowCard customSize glowColor="teal" className="p-5 bg-card/60">
                   <div className="flex items-start gap-4">
                     <div className="p-2 rounded-lg bg-accent/10">
