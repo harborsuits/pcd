@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Dialog,
@@ -11,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Loader2 } from "lucide-react";
+import { Loader2, ArrowRight, Check } from "lucide-react";
 
 interface QuoteModalProps {
   open: boolean;
@@ -20,7 +21,14 @@ interface QuoteModalProps {
   projectToken: string;
 }
 
+interface QuoteResponse {
+  ok: boolean;
+  portal_token?: string;
+  is_new?: boolean;
+}
+
 export function QuoteModal({ open, onOpenChange, businessName, projectToken }: QuoteModalProps) {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     name: "",
     phone: "",
@@ -29,6 +37,7 @@ export function QuoteModal({ open, onOpenChange, businessName, projectToken }: Q
     message: "",
   });
   const [submitted, setSubmitted] = useState(false);
+  const [portalToken, setPortalToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -38,7 +47,7 @@ export function QuoteModal({ open, onOpenChange, businessName, projectToken }: Q
     setError(null);
 
     try {
-      const { error: invokeError } = await supabase.functions.invoke("demo/quote", {
+      const { data, error: invokeError } = await supabase.functions.invoke<QuoteResponse>("demo/quote", {
         body: {
           project_token: projectToken,
           name: formData.name,
@@ -55,6 +64,10 @@ export function QuoteModal({ open, onOpenChange, businessName, projectToken }: Q
         return;
       }
 
+      // Store portal token for "View Portal" button
+      if (data?.portal_token) {
+        setPortalToken(data.portal_token);
+      }
       setSubmitted(true);
     } catch (err) {
       console.error("Quote request error:", err);
@@ -68,18 +81,41 @@ export function QuoteModal({ open, onOpenChange, businessName, projectToken }: Q
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
+  const handleOpenPortal = () => {
+    if (portalToken) {
+      onOpenChange(false);
+      navigate(`/p/${portalToken}`);
+    }
+  };
+
   if (submitted) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="sm:max-w-md">
-          <div className="text-center py-8">
+          <div className="text-center py-6">
             <div className="w-16 h-16 bg-accent/10 rounded-full flex items-center justify-center mx-auto mb-4">
-              <span className="text-accent text-3xl">✓</span>
+              <Check className="h-8 w-8 text-accent" />
             </div>
             <h3 className="text-xl font-semibold text-foreground mb-2">Request Received!</h3>
-            <p className="text-muted-foreground">
-              {businessName} will be in touch with you shortly.
+            <p className="text-muted-foreground mb-6">
+              We'll get back to you within 1 business day with pricing details.
             </p>
+            
+            {portalToken ? (
+              <div className="space-y-3">
+                <Button onClick={handleOpenPortal} className="w-full group">
+                  View Your Project Portal
+                  <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                </Button>
+                <p className="text-xs text-muted-foreground">
+                  Your portal is ready — upload files, chat with us, and track progress.
+                </p>
+              </div>
+            ) : (
+              <Button onClick={() => onOpenChange(false)} variant="outline" className="w-full">
+                Close
+              </Button>
+            )}
           </div>
         </DialogContent>
       </Dialog>

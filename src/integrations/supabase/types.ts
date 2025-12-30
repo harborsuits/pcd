@@ -805,8 +805,10 @@ export type Database = {
           id: string
           notes: string | null
           owner_user_id: string | null
+          pipeline_stage: string
           project_token: string
           source: string
+          source_demo_token: string | null
           state: string | null
           status: Database["public"]["Enums"]["project_status"]
           updated_at: string
@@ -828,8 +830,10 @@ export type Database = {
           id?: string
           notes?: string | null
           owner_user_id?: string | null
+          pipeline_stage?: string
           project_token: string
           source?: string
+          source_demo_token?: string | null
           state?: string | null
           status?: Database["public"]["Enums"]["project_status"]
           updated_at?: string
@@ -851,8 +855,10 @@ export type Database = {
           id?: string
           notes?: string | null
           owner_user_id?: string | null
+          pipeline_stage?: string
           project_token?: string
           source?: string
+          source_demo_token?: string | null
           state?: string | null
           status?: Database["public"]["Enums"]["project_status"]
           updated_at?: string

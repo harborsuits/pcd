@@ -47,6 +47,7 @@ export function ClaimDesignModal({ open, onOpenChange, businessName, projectToke
   // Flow state
   const [claimSuccess, setClaimSuccess] = useState(false);
   const [claiming, setClaiming] = useState(false);
+  const [portalToken, setPortalToken] = useState<string | null>(null);
 
   // Check auth on mount
   useEffect(() => {
@@ -90,10 +91,13 @@ export function ClaimDesignModal({ open, onOpenChange, businessName, projectToke
         }),
       });
 
+      const data = await res.json().catch(() => ({}));
+      
       if (res.ok) {
+        // Use the prospect's portal token (not the demo's token)
+        setPortalToken(data.portal_token || projectToken);
         setClaimSuccess(true);
       } else {
-        const data = await res.json().catch(() => ({}));
         if (data.error === "Project already claimed") {
           setError("This design has already been claimed by another account.");
         } else {
@@ -178,7 +182,8 @@ export function ClaimDesignModal({ open, onOpenChange, businessName, projectToke
 
   const handleOpenPortal = () => {
     onOpenChange(false);
-    navigate(`/p/${projectToken}`);
+    // Navigate to the prospect's portal (not the demo's project)
+    navigate(`/p/${portalToken || projectToken}`);
   };
 
   const handleGoToHub = () => {
