@@ -205,21 +205,21 @@ const RestaurantDemo = () => {
             <AwardBadge
               title="Best of Portland"
               subtitle="Portland Magazine"
-              year="2024"
+              year="2008"
               variant="gold"
               icon="trophy"
             />
             <AwardBadge
               title="Top Restaurant"
               subtitle="Down East Magazine"
-              year="2023"
+              year="2018"
               variant="gold"
               icon="crown"
             />
             <AwardBadge
               title="Best New Chef"
               subtitle="Maine Restaurant Assoc."
-              year="2023"
+              year="2016"
               variant="silver"
               icon="medal"
             />
