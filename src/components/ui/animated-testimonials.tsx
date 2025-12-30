@@ -149,15 +149,15 @@ export const AnimatedTestimonials = ({
           <div className="flex gap-4 pt-8 md:pt-0">
             <button
               onClick={handlePrev}
-              className="h-11 w-11 rounded-lg bg-secondary border border-border flex items-center justify-center group/button hover:bg-primary hover:border-primary transition-colors"
+              className="h-11 w-11 rounded-lg bg-accent/10 border border-accent/30 flex items-center justify-center group/button hover:bg-accent hover:border-accent transition-colors"
             >
-              <ArrowLeft className="h-5 w-5 text-foreground group-hover/button:text-primary-foreground transition-colors" />
+              <ArrowLeft className="h-5 w-5 text-accent group-hover/button:text-accent-foreground transition-colors" />
             </button>
             <button
               onClick={handleNext}
-              className="h-11 w-11 rounded-lg bg-secondary border border-border flex items-center justify-center group/button hover:bg-primary hover:border-primary transition-colors"
+              className="h-11 w-11 rounded-lg bg-accent/10 border border-accent/30 flex items-center justify-center group/button hover:bg-accent hover:border-accent transition-colors"
             >
-              <ArrowRight className="h-5 w-5 text-foreground group-hover/button:text-primary-foreground transition-colors" />
+              <ArrowRight className="h-5 w-5 text-accent group-hover/button:text-accent-foreground transition-colors" />
             </button>
           </div>
         </div>

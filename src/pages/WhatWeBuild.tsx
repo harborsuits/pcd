@@ -754,10 +754,10 @@ const WhatWeBuild = () => {
       </section>
 
       {/* What Clients Say */}
-      <section className="py-16 border-t border-border bg-card/50">
+      <section className="py-16 border-t border-accent/20 bg-gradient-to-b from-accent/5 via-accent/10 to-accent/5">
         <div className="container mx-auto px-6">
           <div className="text-center mb-4">
-            <p className="text-sm uppercase tracking-wider text-muted-foreground mb-2">What Clients Say</p>
+            <p className="text-sm uppercase tracking-wider text-accent mb-2">What Clients Say</p>
             <h2 className="font-serif text-2xl md:text-3xl font-bold text-foreground">
               Real Results, Real Feedback
             </h2>
