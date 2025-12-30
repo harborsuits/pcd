@@ -98,11 +98,11 @@ const Index = () => {
       </header>
 
       {/* 1️⃣ Hero - Simplified, one CTA */}
-      <section className="py-16 md:py-20 relative overflow-hidden bg-gradient-to-b from-accent/10 via-background to-background">
+      <section className="pt-16 md:pt-20 pb-8 md:pb-12 relative overflow-hidden bg-gradient-to-b from-accent/10 via-background to-accent/5">
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute -top-32 -right-32 h-[520px] w-[520px] rounded-full bg-accent/20 blur-3xl" />
           <div className="absolute -bottom-40 -left-40 h-[620px] w-[620px] rounded-full bg-accent/15 blur-3xl" />
-          <div className="absolute inset-0 bg-gradient-to-b from-accent/5 via-background/40 to-background" />
+          <div className="absolute inset-0 bg-gradient-to-b from-accent/5 via-background/40 to-transparent" />
         </div>
         
         <div className="relative container mx-auto px-6">
@@ -121,7 +121,7 @@ const Index = () => {
             </p>
             
             {/* Single dominant CTA */}
-            <div className="mb-8">
+            <div>
               <Link to="/get-demo">
                 <LiquidButton size="lg">
                   Get a Demo
@@ -133,7 +133,7 @@ const Index = () => {
       </section>
 
       {/* 2️⃣ AI Receptionist - The Hook */}
-      <section className="py-20 md:py-28 border-t border-border bg-gradient-to-b from-accent/5 via-background to-accent/5 overflow-hidden">
+      <section className="pt-12 md:pt-16 pb-20 md:pb-28 bg-gradient-to-b from-accent/5 via-background to-accent/5 overflow-hidden">
         <div className="container mx-auto px-6">
           <div className="text-center mb-12 md:mb-16">
             <h2 className="font-serif text-4xl md:text-5xl lg:text-6xl font-bold mb-4">
