@@ -292,14 +292,19 @@ export default function PricingSection() {
 
         {/* Pilot section */}
         <TimelineContent animationNum={7} timelineRef={pricingRef}>
-          <div className="text-center mt-16 max-w-xl mx-auto p-6 rounded-xl bg-card/50 border border-border/50 backdrop-blur-sm">
-            <h3 className="font-serif text-xl font-bold mb-2">7-Day Pilot</h3>
-            <p className="text-sm text-muted-foreground mb-1">
-              Full functionality on real call traffic. Limited availability.
+          <div className="text-center mt-16 max-w-xl mx-auto p-8 rounded-xl bg-card/50 border border-border/50 backdrop-blur-sm">
+            <h3 className="font-serif text-2xl font-bold mb-3">7-Day Pilot</h3>
+            <p className="text-muted-foreground mb-2">
+              Full functionality on real call traffic. Clear conversion expectations discussed upfront.
             </p>
-            <p className="text-xs text-muted-foreground/70">
-              Select businesses only.
+            <p className="text-sm text-muted-foreground/70 italic mb-6">
+              Limited availability — select businesses only.
             </p>
+            <Link to="/get-demo">
+              <LiquidButton size="lg">
+                Request a Pilot
+              </LiquidButton>
+            </Link>
           </div>
         </TimelineContent>
 
