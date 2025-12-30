@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -6,13 +6,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
-  FolderOpen, Loader2, Clock, CheckCircle, FileText, 
-  MessageSquare, ExternalLink, ChevronRight, Sparkles, Eye, FileQuestion, UserCheck
+  FolderOpen, Loader2, Clock, FileText, 
+  MessageSquare, ExternalLink, ChevronRight, Sparkles, Eye
 } from "lucide-react";
 import { format } from "date-fns";
 import { ProjectWorkSurface } from "./ProjectWorkSurface";
 import { adminFetch } from "@/lib/adminFetch";
 import { useOperatorContext } from "./OperatorLayout";
+import { StageBadge, PIPELINE_FILTERS, PipelineFilter } from "@/components/operator/StageBadge";
 
 interface ProjectIntake {
   id: string;
@@ -29,6 +30,8 @@ interface Project {
   business_slug: string;
   project_token: string;
   status: string;
+  pipeline_stage: string | null;
+  source_demo_token: string | null;
   contact_name: string | null;
   contact_phone: string | null;
   contact_email: string | null;
@@ -47,18 +50,9 @@ interface Project {
   has_claim: boolean;
 }
 
-const STATUS_COLORS: Record<string, string> = {
-  lead: "bg-muted text-muted-foreground",
-  contacted: "bg-blue-500/10 text-blue-600",
-  interested: "bg-amber-500/10 text-amber-600",
-  client: "bg-green-500/10 text-green-600",
-  completed: "bg-purple-500/10 text-purple-600",
-  archived: "bg-gray-500/10 text-gray-600",
-};
-
 export function ProjectsTab() {
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
-  const [activeTab, setActiveTab] = useState<"requests" | "new" | "active" | "completed">("requests");
+  const [pipelineFilter, setPipelineFilter] = useState<PipelineFilter>("all");
   const { setCurrentProjectToken, setCurrentProjectName, registerCloseProject } = useOperatorContext();
 
   // Sync selected project to context for global shortcuts
@@ -92,11 +86,21 @@ export function ProjectsTab() {
 
   const projects = projectsData?.projects || [];
 
-  // Categorize projects
-  const demoRequests = projects.filter(p => p.source === "request_demo" && p.status === "lead");
-  const newProjects = projects.filter(p => ["lead", "contacted"].includes(p.status) && p.source !== "request_demo");
-  const activeProjects = projects.filter(p => ["interested", "client"].includes(p.status));
-  const completedProjects = projects.filter(p => ["completed", "archived"].includes(p.status));
+  // Filter projects by pipeline stage
+  const filteredProjects = useMemo(() => {
+    if (pipelineFilter === "all") return projects;
+    return projects.filter(p => p.pipeline_stage === pipelineFilter);
+  }, [projects, pipelineFilter]);
+
+  // Count by pipeline stage for tab badges
+  const stageCounts = useMemo(() => {
+    const counts: Record<string, number> = { all: projects.length };
+    projects.forEach(p => {
+      const stage = p.pipeline_stage || "new";
+      counts[stage] = (counts[stage] || 0) + 1;
+    });
+    return counts;
+  }, [projects]);
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
@@ -108,18 +112,6 @@ export function ProjectsTab() {
     if (diffDays < 7) return format(date, "EEEE");
     return format(date, "MMM d");
   };
-
-  const getDisplayProjects = () => {
-    switch (activeTab) {
-      case "requests": return demoRequests;
-      case "new": return newProjects;
-      case "active": return activeProjects;
-      case "completed": return completedProjects;
-      default: return projects;
-    }
-  };
-
-  const displayProjects = getDisplayProjects();
 
   // Show full-page work surface when a project is selected
   if (selectedProject) {
@@ -140,170 +132,140 @@ export function ProjectsTab() {
             <FolderOpen className="h-5 w-5" />
             Projects
           </CardTitle>
-          <div className="flex gap-2">
-            <Badge variant="outline">{projects.length} total</Badge>
-          </div>
+          <Badge variant="outline">{projects.length} total</Badge>
         </div>
       </CardHeader>
       <CardContent className="p-0">
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)}>
-          <div className="px-4 border-b">
-            <TabsList className="w-full justify-start h-auto p-0 bg-transparent">
-              <TabsTrigger 
-                value="requests" 
-                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 py-2 gap-1.5"
-              >
-                <Sparkles className="h-3.5 w-3.5" />
-                Demo Requests ({demoRequests.length})
-              </TabsTrigger>
-              <TabsTrigger 
-                value="new" 
-                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 py-2"
-              >
-                New ({newProjects.length})
-              </TabsTrigger>
-              <TabsTrigger 
-                value="active"
-                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 py-2"
-              >
-                Active ({activeProjects.length})
-              </TabsTrigger>
-              <TabsTrigger 
-                value="completed"
-                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 py-2"
-              >
-                Completed ({completedProjects.length})
-              </TabsTrigger>
+        {/* Pipeline filter tabs */}
+        <div className="px-4 border-b">
+          <Tabs value={pipelineFilter} onValueChange={(v) => setPipelineFilter(v as PipelineFilter)}>
+            <TabsList className="w-full justify-start h-auto p-0 bg-transparent flex-wrap">
+              {PIPELINE_FILTERS.map((filter) => (
+                <TabsTrigger
+                  key={filter.value}
+                  value={filter.value}
+                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-3 py-2 text-sm"
+                >
+                  {filter.label}
+                  {stageCounts[filter.value] > 0 && (
+                    <span className="ml-1.5 text-xs text-muted-foreground">
+                      ({stageCounts[filter.value]})
+                    </span>
+                  )}
+                </TabsTrigger>
+              ))}
             </TabsList>
-          </div>
+          </Tabs>
+        </div>
 
-          <TabsContent value={activeTab} className="mt-0">
-            <ScrollArea className="h-[calc(100vh-280px)]">
-              {isLoading ? (
-                <div className="flex items-center justify-center py-12">
-                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                </div>
-              ) : displayProjects.length === 0 ? (
-                <div className="text-center py-12 text-muted-foreground">
-                  <FolderOpen className="h-10 w-10 mx-auto mb-3 opacity-50" />
-                  <p>No {activeTab} projects</p>
-                </div>
-              ) : (
-                <div className="divide-y">
-                  {displayProjects.map((project) => (
-                    <div
-                      key={project.id}
-                      className="p-4 hover:bg-muted/50 cursor-pointer transition-colors group"
-                      onClick={() => setSelectedProject(project)}
-                    >
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="font-medium truncate">
-                              {project.business_name}
-                            </span>
-                            {project.city && (
-                              <span className="text-xs text-muted-foreground">
-                                {project.city}{project.state ? `, ${project.state}` : ""}
-                              </span>
-                            )}
-                            <Badge 
-                              variant="secondary" 
-                              className={`text-xs ${STATUS_COLORS[project.status] || ""}`}
-                            >
-                              {project.status}
-                            </Badge>
-                            {project.source === "request_demo" && (
-                              <Badge variant="outline" className="text-xs gap-1">
-                                <Sparkles className="h-3 w-3" />
-                                Demo Request
-                              </Badge>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                            <span className="flex items-center gap-1">
-                              <Clock className="h-3 w-3" />
-                              {formatDate(project.created_at)}
-                            </span>
-                            {project.unread_count > 0 && (
-                              <span className="flex items-center gap-1 text-primary font-medium">
-                                <MessageSquare className="h-3 w-3" />
-                                {project.unread_count} unread
-                              </span>
-                            )}
-                            {project.quote_count > 0 && (
-                              <span className="flex items-center gap-1 text-amber-600 font-medium">
-                                <FileQuestion className="h-3 w-3" />
-                                {project.quote_count} quote{project.quote_count > 1 ? "s" : ""}
-                              </span>
-                            )}
-                            {project.has_claim && (
-                              <span className="flex items-center gap-1 text-green-600">
-                                <UserCheck className="h-3 w-3" />
-                                Claimed
-                              </span>
-                            )}
-                            {project.intake && (
-                              <span className="flex items-center gap-1 text-blue-600">
-                                <FileText className="h-3 w-3" />
-                                Intake
-                              </span>
-                            )}
-                            {project.contact_phone && (
-                              <span className="truncate max-w-[150px]">
-                                {project.contact_phone}
-                              </span>
-                            )}
-                            {project.contact_email && (
-                              <span className="truncate max-w-[200px]">
-                                {project.contact_email}
-                              </span>
-                            )}
-                          </div>
-                          {/* Show notes (form responses) for demo requests */}
-                          {project.notes && activeTab === "requests" && (
-                            <div className="mt-2 text-xs text-muted-foreground bg-muted/50 rounded px-2 py-1 whitespace-pre-line max-w-md">
-                              {project.notes}
-                            </div>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {/* Preview demo button for demo requests */}
-                          {project.source === "request_demo" && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="gap-1.5"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                window.open(`/d/${project.project_token}/${project.business_slug}`, "_blank");
-                              }}
-                            >
-                              <Eye className="h-4 w-4" />
-                              Preview Demo
-                            </Button>
-                          )}
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="opacity-0 group-hover:opacity-100 transition-opacity"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              window.open(`/p/${project.project_token}`, "_blank");
-                            }}
-                          >
-                            <ExternalLink className="h-4 w-4" />
-                          </Button>
-                          <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                        </div>
+        <ScrollArea className="h-[calc(100vh-280px)]">
+          {isLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : filteredProjects.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">
+              <FolderOpen className="h-10 w-10 mx-auto mb-3 opacity-50" />
+              <p>No {pipelineFilter === "all" ? "" : pipelineFilter.replace("_", " ")} projects</p>
+            </div>
+          ) : (
+            <div className="divide-y">
+              {filteredProjects.map((project) => (
+                <div
+                  key={project.id}
+                  className="p-4 hover:bg-muted/50 cursor-pointer transition-colors group"
+                  onClick={() => setSelectedProject(project)}
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
+                        <span className="font-medium truncate">
+                          {project.business_name}
+                        </span>
+                        {project.city && (
+                          <span className="text-xs text-muted-foreground">
+                            {project.city}{project.state ? `, ${project.state}` : ""}
+                          </span>
+                        )}
+                        {/* Pipeline stage badge - the key CRM indicator */}
+                        <StageBadge stage={project.pipeline_stage} />
+                        {project.source === "request_demo" && (
+                          <Badge variant="outline" className="text-xs gap-1">
+                            <Sparkles className="h-3 w-3" />
+                            Demo Request
+                          </Badge>
+                        )}
                       </div>
+                      <div className="flex items-center gap-3 text-sm text-muted-foreground flex-wrap">
+                        <span className="flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          {formatDate(project.created_at)}
+                        </span>
+                        {project.unread_count > 0 && (
+                          <span className="flex items-center gap-1 text-primary font-medium">
+                            <MessageSquare className="h-3 w-3" />
+                            {project.unread_count} unread
+                          </span>
+                        )}
+                        {project.intake && (
+                          <span className="flex items-center gap-1 text-blue-600">
+                            <FileText className="h-3 w-3" />
+                            Intake
+                          </span>
+                        )}
+                        {project.contact_phone && (
+                          <span className="truncate max-w-[150px]">
+                            {project.contact_phone}
+                          </span>
+                        )}
+                        {project.contact_email && (
+                          <span className="truncate max-w-[200px]">
+                            {project.contact_email}
+                          </span>
+                        )}
+                      </div>
+                      {/* Show notes for context */}
+                      {project.notes && (
+                        <div className="mt-2 text-xs text-muted-foreground bg-muted/50 rounded px-2 py-1 whitespace-pre-line max-w-md line-clamp-2">
+                          {project.notes}
+                        </div>
+                      )}
                     </div>
-                  ))}
+                    <div className="flex items-center gap-2">
+                      {/* Preview demo button for demo sources */}
+                      {project.source === "request_demo" && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-1.5"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            window.open(`/d/${project.project_token}/${project.business_slug}`, "_blank");
+                          }}
+                        >
+                          <Eye className="h-4 w-4" />
+                          Preview Demo
+                        </Button>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          window.open(`/p/${project.project_token}`, "_blank");
+                        }}
+                      >
+                        <ExternalLink className="h-4 w-4" />
+                      </Button>
+                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                  </div>
                 </div>
-              )}
-            </ScrollArea>
-          </TabsContent>
-        </Tabs>
+              ))}
+            </div>
+          )}
+        </ScrollArea>
       </CardContent>
     </Card>
   );
