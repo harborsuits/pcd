@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useEffect, useState } from "react";
+import * as React from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
 import { cn } from "@/lib/utils";
 
@@ -25,89 +25,65 @@ export default function ScrollExpandMedia({
   children,
   className,
 }: ScrollExpandMediaProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [isMobile, setIsMobile] = useState(false);
-
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-    checkMobile();
-    window.addEventListener("resize", checkMobile);
-    return () => window.removeEventListener("resize", checkMobile);
-  }, []);
+  const containerRef = React.useRef<HTMLDivElement | null>(null);
 
   const { scrollYProgress } = useScroll({
     target: containerRef,
-    offset: ["start start", "end end"],
+    // Increases 0 → 1 as you scroll DOWN through the container
+    offset: ["start start", "end start"],
   });
 
-  // Invert progress once - all animations drive off this
-  const p = useTransform(scrollYProgress, (v) => 1 - v);
+  // =============================
+  // Phase timing
+  // A: 0 → 0.62 expand ONLY, content hidden
+  // B: 0.62 → 0.80 content fades in
+  // C: 0.80 → 1 settle
+  // =============================
 
-  // ============================================
-  // PHASE A (0% → 65%): Hero expands, content HIDDEN
-  // ============================================
-  const mediaScale = useTransform(p, [0, 0.65], [0.45, 1]);
-  const mediaBorderRadius = useTransform(p, [0, 0.65], [40, 0]);
-  const mediaOpacity = useTransform(p, [0, 0.4, 0.65], [0.5, 0.8, 1]);
-  const mediaY = useTransform(p, [0, 0.65], [140, 0]);
-  
-  // Title fades out during Phase A
-  const titleOpacity = useTransform(p, [0, 0.25, 0.45], [1, 0.5, 0]);
-  const titleY = useTransform(p, [0, 0.45], [0, -100]);
-  const titleScale = useTransform(p, [0, 0.45], [1, 0.9]);
-  
-  // ============================================
-  // PHASE B (65% → 80%): Content fades in
-  // ============================================
-  const contentOpacity = useTransform(p, [0.65, 0.80], [0, 1]);
-  const contentY = useTransform(p, [0.65, 0.80], [48, 0]);
+  // NO aggressive zoom - subtle settle (0.92 → 1) instead of 0.45 → 1
+  const mediaScale = useTransform(scrollYProgress, [0, 0.62], [0.92, 1]);
+  const mediaY = useTransform(scrollYProgress, [0, 0.62], [90, 0]);
+  const mediaRadius = useTransform(scrollYProgress, [0, 0.62], [32, 0]);
 
-  // ============================================
-  // Overlay: STRONG during Phase A (0.62), fades in B+C
-  // ============================================
-  const overlayOpacity = useTransform(p, [0, 0.65, 1], [0.62, 0.40, 0.18]);
+  // Stronger early overlay, then lighten later
+  const overlayOpacity = useTransform(scrollYProgress, [0, 0.62, 1], [0.72, 0.50, 0.18]);
 
-  // Background parallax
-  const bgY = useTransform(p, [0, 1], [0, -50]);
+  // Title fades out DURING expansion, but not too early
+  const titleOpacity = useTransform(scrollYProgress, [0, 0.25, 0.50], [1, 0.9, 0]);
+  const titleY = useTransform(scrollYProgress, [0, 0.50], [0, -60]);
+
+  // Content appears ONLY AFTER expansion is basically done
+  const contentOpacity = useTransform(scrollYProgress, [0.62, 0.80], [0, 1]);
+  const contentY = useTransform(scrollYProgress, [0.62, 0.80], [40, 0]);
 
   return (
-    <div
+    <section
       ref={containerRef}
-      className={cn(
-        // Taller container so Phase A has time to complete
-        "relative min-h-[260vh] md:min-h-[240vh] overflow-x-hidden",
-        className
-      )}
+      className={cn("relative min-h-[260vh] overflow-x-hidden", className)}
     >
-      {/* Background image - z-0 */}
+      {/* Fixed background */}
       {bgImageSrc && (
-        <motion.div
-          className="fixed inset-0 z-0"
-          style={{ y: bgY }}
-        >
-          <img
-            src={bgImageSrc}
-            alt="Background"
-            className="w-full h-full object-cover opacity-20"
+        <div className="pointer-events-none fixed inset-0 -z-10">
+          <div
+            className="absolute inset-0 bg-cover bg-center"
+            style={{ backgroundImage: `url(${bgImageSrc})` }}
           />
-          <div className="absolute inset-0 bg-gradient-to-b from-stone-950/30 via-stone-950/40 to-stone-950/50" />
-        </motion.div>
+          <div className="absolute inset-0 bg-black/40" />
+        </div>
       )}
 
-      {/* Fixed hero section - h-screen */}
-      <div className="sticky top-0 h-screen overflow-visible">
-        {/* Title overlay - z-30 */}
+      {/* Sticky hero viewport */}
+      <div className="sticky top-0 h-screen w-full">
+        {/* Title layer */}
         <motion.div
-          className="absolute inset-0 z-30 flex flex-col items-center justify-center pointer-events-none px-4 pt-16"
-          style={{ opacity: titleOpacity, y: titleY, scale: titleScale }}
+          style={{ opacity: titleOpacity, y: titleY }}
+          className="absolute left-0 right-0 top-24 z-30 mx-auto max-w-5xl px-6 flex flex-col items-center justify-center text-center pt-16"
         >
           <p className="text-amber-400 font-medium mb-4 tracking-widest uppercase text-sm drop-shadow-[0_2px_10px_rgba(0,0,0,0.9)]">
             {date}
           </p>
-          <h1 
-            className="font-serif text-5xl md:text-7xl lg:text-8xl text-center text-stone-100"
+          <h1
+            className="font-serif text-5xl md:text-7xl lg:text-8xl text-stone-100"
             style={{ textShadow: "0 4px 30px rgba(0,0,0,0.8), 0 2px 10px rgba(0,0,0,0.6)" }}
           >
             {title}
@@ -117,49 +93,39 @@ export default function ScrollExpandMedia({
           </p>
         </motion.div>
 
-        {/* Expanding media container - z-10, starts very low with large inset */}
+        {/* Media block (starts lower, expands smoothly) */}
         <motion.div
-          className="absolute inset-10 md:inset-20 lg:inset-24 z-10 overflow-hidden"
-          style={{
-            scale: mediaScale,
-            borderRadius: mediaBorderRadius,
-            opacity: mediaOpacity,
-            y: mediaY,
-          }}
+          style={{ scale: mediaScale, y: mediaY, borderRadius: mediaRadius }}
+          className="absolute inset-x-6 md:inset-x-12 lg:inset-x-16 bottom-10 top-32 z-10 overflow-hidden"
         >
           {mediaType === "video" ? (
             <video
+              className="h-full w-full object-cover"
               src={mediaSrc}
               autoPlay
               muted
               loop
               playsInline
-              className="w-full h-full object-cover"
             />
           ) : (
-            <img
-              src={mediaSrc}
-              alt="Hero media"
-              className="w-full h-full object-cover"
-            />
+            <img className="h-full w-full object-cover" src={mediaSrc} alt="Hero media" />
           )}
-          {/* Overlay - z-20, STRONG during expansion */}
-          <motion.div 
-            className="absolute inset-0 z-20 bg-gradient-to-t from-stone-950 via-stone-950/50 to-stone-950/30"
+
+          {/* Overlay that fades out later (prevents "washed transparent" look) */}
+          <motion.div
             style={{ opacity: overlayOpacity }}
+            className="absolute inset-0 bg-black"
           />
         </motion.div>
       </div>
 
-      {/* Content area - z-20, fades in during Phase B (65-80%) */}
+      {/* Content handoff (fade in later, no dead-zone) */}
       <motion.div
-        className="relative z-20 -mt-[20vh]"
         style={{ opacity: contentOpacity, y: contentY }}
+        className="relative z-20 mx-auto max-w-6xl px-6 pt-[110vh]"
       >
-        <div className="min-h-screen">
-          {children}
-        </div>
+        {children}
       </motion.div>
-    </div>
+    </section>
   );
 }
