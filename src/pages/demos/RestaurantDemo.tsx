@@ -248,7 +248,7 @@ const RestaurantDemo = () => {
             </div>
             <div className="flex items-center gap-2">
               <MapPin className="h-5 w-5 text-amber-400" />
-              <span className="text-stone-200">Downtown District</span>
+              <span className="text-stone-200">Old Port, Portland</span>
             </div>
           </div>
         </div>
@@ -302,8 +302,8 @@ const RestaurantDemo = () => {
             <div>
               <h4 className="font-medium mb-2 text-stone-100">Location</h4>
               <div className="space-y-1 text-sm text-stone-300">
-                <p>456 Main Street, Downtown</p>
-                <p>Anytown, USA 12345</p>
+                <p>123 Fore Street, Old Port</p>
+                <p>Portland, ME 04101</p>
                 <p className="mt-2">
                   <a href="tel:5559876543" className="text-amber-400 hover:underline">(555) 987-6543</a>
                 </p>
