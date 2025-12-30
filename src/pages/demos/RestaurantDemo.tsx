@@ -7,6 +7,7 @@ import InteractiveSelector from "@/components/ui/interactive-selector";
 import { GlowCard } from "@/components/ui/spotlight-card";
 import { AwardBadge } from "@/components/ui/award-badge";
 import lobsterHero from "@/assets/restaurant/lobster-thermidor-hero.webp";
+import privateEventsImg from "@/assets/restaurant/private-events.jpeg";
 
 const navItems = [
   { label: "Home", href: "#hero", icon: Home },
@@ -74,7 +75,7 @@ const experienceOptions = [
     label: "Private Events",
     icon: Star,
     description: "Host your next celebration in our exclusive private dining room. Accommodating up to 20 guests, this space features a dedicated kitchen, personalized menus, and white-glove service. Perfect for anniversaries, corporate dinners, and intimate gatherings.",
-    image: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800&auto=format&fit=crop",
+    image: privateEventsImg,
   },
   {
     id: "chef",
