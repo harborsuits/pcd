@@ -203,29 +203,29 @@ const RestaurantDemo = () => {
           
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 max-w-5xl mx-auto relative z-20">
             <AwardBadge
-              title="Best Fine Dining"
-              subtitle="City Dining Awards"
+              title="Best of Portland"
+              subtitle="Portland Phoenix"
               year="2024"
               variant="gold"
               icon="trophy"
             />
             <AwardBadge
-              title="Golden Kitty"
-              subtitle="Restaurant Excellence"
+              title="Top Restaurant"
+              subtitle="Down East Magazine"
               year="2023"
               variant="gold"
               icon="crown"
             />
             <AwardBadge
-              title="Chef of the Year"
-              subtitle="Culinary Institute"
+              title="Best New Chef"
+              subtitle="Maine Restaurant Assoc."
               year="2023"
               variant="silver"
               icon="medal"
             />
             <AwardBadge
-              title="Michelin Recognized"
-              subtitle="Bib Gourmand"
+              title="Readers Choice"
+              subtitle="Portland Press Herald"
               year="2022"
               variant="platinum"
               icon="star"
