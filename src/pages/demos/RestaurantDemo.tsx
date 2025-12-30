@@ -224,9 +224,9 @@ const RestaurantDemo = () => {
               icon="medal"
             />
             <AwardBadge
-              title="Readers Choice"
+              title="Eaters Choice"
               subtitle="Portland Press Herald"
-              year="2022"
+              year="2005"
               variant="platinum"
               icon="star"
             />
