@@ -1,7 +1,5 @@
 import { Link } from "react-router-dom";
-import { ArrowRight, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { LiquidButton } from "@/components/ui/liquid-glass-button";
 import PricingSection from "@/components/ui/pricing-section";
 
 const Pricing = () => {
@@ -45,30 +43,6 @@ const Pricing = () => {
 
       {/* Main Pricing Section */}
       <PricingSection />
-
-      {/* Pilot Option */}
-      <section className="py-16 bg-secondary/30 border-t border-border">
-        <div className="container mx-auto px-6">
-          <div className="max-w-2xl mx-auto text-center">
-            <div className="w-12 h-12 bg-accent/10 text-accent rounded-lg flex items-center justify-center mx-auto mb-6">
-              <Phone className="h-6 w-6" />
-            </div>
-            <h2 className="font-serif text-2xl md:text-3xl font-bold mb-4">Pilot Option</h2>
-            <p className="text-muted-foreground mb-4">
-              For select businesses, we offer a 7-day pilot with full functionality and real call traffic. 
-              Clear conversion expectations discussed upfront.
-            </p>
-            <p className="text-sm text-muted-foreground/80 mb-6 italic">
-              Pilot eligibility is limited and subject to capacity.
-            </p>
-            <Link to="/get-demo">
-              <LiquidButton size="lg">
-                Request a Pilot
-              </LiquidButton>
-            </Link>
-          </div>
-        </div>
-      </section>
 
 
       {/* Footer */}
