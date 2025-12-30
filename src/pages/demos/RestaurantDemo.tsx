@@ -185,28 +185,36 @@ const RestaurantDemo = () => {
         </ScrollExpandMedia>
       </section>
 
+      {/* Gradient bridge from dishes to experience */}
+      <div className="h-16 bg-gradient-to-b from-transparent via-stone-950/30 to-stone-950/50 relative z-10" />
+
       {/* Interactive Experience Selector */}
-      <section className="relative z-10 py-8 md:py-10 bg-stone-950/20 backdrop-blur-sm">
-        <InteractiveSelector
-          title="Explore the Experience"
-          options={experienceOptions}
-        />
+      <section className="relative z-20 py-8 md:py-10 bg-stone-950/50 backdrop-blur-md">
+        <div className="relative z-30">
+          <InteractiveSelector
+            title="Explore the Experience"
+            options={experienceOptions}
+          />
+        </div>
       </section>
 
+      {/* Gradient bridge from experience to awards */}
+      <div className="h-12 bg-gradient-to-b from-stone-950/50 via-stone-950/40 to-stone-950/30 relative z-10" />
+
       {/* Press & Awards */}
-      <section className="py-8 md:py-10 relative z-10">
-        <div className="container mx-auto px-6">
+      <section className="py-8 md:py-10 relative z-20 bg-stone-950/30 backdrop-blur-sm">
+        <div className="container mx-auto px-6 relative z-30">
           <h2 
             className="font-serif text-3xl md:text-4xl text-center mb-2 text-stone-100"
-            style={{ textShadow: "0 2px 12px rgba(0,0,0,0.5)" }}
+            style={{ textShadow: "0 2px 16px rgba(0,0,0,0.7)" }}
           >
             Press & Awards
           </h2>
-          <p className="text-stone-300 text-center mb-5 max-w-xl mx-auto">
+          <p className="text-stone-300 text-center mb-5 max-w-xl mx-auto" style={{ textShadow: "0 1px 8px rgba(0,0,0,0.5)" }}>
             Recognized for excellence in fine dining.
           </p>
           
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 max-w-5xl mx-auto relative z-20">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 max-w-5xl mx-auto relative z-40">
             <AwardBadge
               title="Best of Portland"
               subtitle="Portland Magazine"
@@ -239,29 +247,32 @@ const RestaurantDemo = () => {
         </div>
       </section>
 
+      {/* Gradient bridge from awards to info bar */}
+      <div className="h-10 bg-gradient-to-b from-stone-950/30 via-stone-950/40 to-stone-900/50 relative z-10" />
+
       {/* Quick Info Bar */}
-      <section className="py-4 relative z-10 bg-stone-900/30 backdrop-blur-sm">
-        <div className="container mx-auto px-6">
+      <section className="py-4 relative z-20 bg-stone-900/50 backdrop-blur-md">
+        <div className="container mx-auto px-6 relative z-30">
           <div className="flex flex-wrap justify-center gap-6 text-sm">
             <div className="flex items-center gap-2">
               <Clock className="h-5 w-5 text-amber-400" />
-              <span className="text-stone-200">Tue–Sun: 5PM–10PM</span>
+              <span className="text-stone-200" style={{ textShadow: "0 1px 4px rgba(0,0,0,0.5)" }}>Tue–Sun: 5PM–10PM</span>
             </div>
             <div className="flex items-center gap-2">
               <Star className="h-5 w-5 text-amber-400" />
-              <span className="text-stone-200">4.8★ (450+ Reviews)</span>
+              <span className="text-stone-200" style={{ textShadow: "0 1px 4px rgba(0,0,0,0.5)" }}>4.8★ (450+ Reviews)</span>
             </div>
             <div className="flex items-center gap-2">
               <MapPin className="h-5 w-5 text-amber-400" />
-              <span className="text-stone-200">Old Port, Portland</span>
+              <span className="text-stone-200" style={{ textShadow: "0 1px 4px rgba(0,0,0,0.5)" }}>Old Port, Portland</span>
             </div>
           </div>
         </div>
       </section>
 
       {/* Reservation CTA */}
-      <section className="py-12 bg-gradient-to-br from-amber-600/90 via-amber-500/90 to-yellow-500/90 backdrop-blur-sm relative z-10">
-        <div className="container mx-auto px-6 text-center">
+      <section className="py-12 bg-gradient-to-br from-amber-600/95 via-amber-500/95 to-yellow-500/95 backdrop-blur-md relative z-20">
+        <div className="container mx-auto px-6 text-center relative z-30">
           <h2 className="font-serif text-4xl mb-2 text-stone-950">Reserve Your Table</h2>
           <p className="text-amber-900 mb-4 max-w-xl mx-auto">
             Join us for an unforgettable evening.
@@ -279,8 +290,8 @@ const RestaurantDemo = () => {
       </section>
 
       {/* Footer */}
-      <footer id="contact" className="bg-stone-900/50 backdrop-blur-sm py-8 relative z-10">
-        <div className="container mx-auto px-6">
+      <footer id="contact" className="bg-stone-950/70 backdrop-blur-md py-8 relative z-20">
+        <div className="container mx-auto px-6 relative z-30">
           <div className="grid md:grid-cols-3 gap-6">
             <div>
               <h3 className="font-serif text-2xl mb-2 text-stone-100">The Golden Fork</h3>
