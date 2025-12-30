@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils';
 interface GlowCardProps {
   children: ReactNode;
   className?: string;
-  glowColor?: 'teal' | 'blue' | 'purple' | 'green' | 'red' | 'orange' | 'emerald';
+  glowColor?: 'teal' | 'blue' | 'purple' | 'green' | 'red' | 'orange' | 'emerald' | 'rose';
   size?: 'sm' | 'md' | 'lg';
   width?: string | number;
   height?: string | number;
@@ -18,7 +18,8 @@ const glowColorMap = {
   green: { base: 120, spread: 200 },
   red: { base: 0, spread: 200 },
   orange: { base: 30, spread: 200 },
-  emerald: { base: 175, spread: 30 }
+  emerald: { base: 175, spread: 30 },
+  rose: { base: 350, spread: 30 }
 };
 
 const sizeMap = {

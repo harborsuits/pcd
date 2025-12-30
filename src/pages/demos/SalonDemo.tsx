@@ -3,6 +3,7 @@ import { ArrowLeft, Phone, MapPin, Clock, Star, Instagram, Scissors, Sparkles } 
 import { Button } from "@/components/ui/button";
 import { ShaderAnimation } from "@/components/ui/shader-animation";
 import { ImageAutoSlider } from "@/components/ui/image-auto-slider";
+import { GlowCard } from "@/components/ui/spotlight-card";
 import salonHeroModel from "@/assets/salon/salon-hero-model.png";
 import salonMakeup from "@/assets/salon/makeup.jpg";
 import salonHair1 from "@/assets/salon/hair1.jpg";
@@ -126,16 +127,23 @@ const SalonDemo = () => {
                 from: "$55"
               },
             ].map((category) => (
-              <div key={category.title} className="bg-rose-50/80 backdrop-blur-sm rounded-2xl p-8 text-center hover:shadow-lg transition-shadow">
-                <category.icon className="h-10 w-10 text-rose-400 mx-auto mb-4" />
-                <h3 className="font-serif text-2xl text-rose-900 mb-2">{category.title}</h3>
-                <p className="text-rose-400 text-sm mb-4">Starting from {category.from}</p>
-                <ul className="space-y-2 text-stone-600 text-sm">
-                  {category.services.map((service) => (
-                    <li key={service}>{service}</li>
-                  ))}
-                </ul>
-              </div>
+              <GlowCard 
+                key={category.title} 
+                glowColor="rose" 
+                customSize 
+                className="bg-rose-50/80 p-8 text-center"
+              >
+                <div className="relative z-10">
+                  <category.icon className="h-10 w-10 text-rose-400 mx-auto mb-4" />
+                  <h3 className="font-serif text-2xl text-rose-900 mb-2">{category.title}</h3>
+                  <p className="text-rose-400 text-sm mb-4">Starting from {category.from}</p>
+                  <ul className="space-y-2 text-stone-600 text-sm">
+                    {category.services.map((service) => (
+                      <li key={service}>{service}</li>
+                    ))}
+                  </ul>
+                </div>
+              </GlowCard>
             ))}
           </div>
           
