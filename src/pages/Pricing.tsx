@@ -35,8 +35,12 @@ const Pricing = () => {
           <h1 className="font-serif text-4xl md:text-5xl lg:text-6xl font-bold leading-tight mb-4">
             Pricing & Services
           </h1>
-          <p className="text-lg md:text-xl text-muted-foreground leading-relaxed max-w-2xl mx-auto mb-3">
-            Digital infrastructure, websites & AI reception services for local businesses.
+          <p className="text-lg md:text-xl text-muted-foreground leading-relaxed max-w-2xl mx-auto mb-2">
+            Straightforward pricing for real businesses.
+          </p>
+          <p className="text-base text-muted-foreground/80 max-w-2xl mx-auto mb-3">
+            Digital infrastructure, websites, and AI reception services designed for local businesses.
+            Choose a bundle that matches your call volume, booking needs, and how much you want automated.
           </p>
           <p className="text-sm text-muted-foreground/70">
             Most clients start with a free demo — then choose a plan that fits.

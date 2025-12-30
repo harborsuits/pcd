@@ -181,30 +181,15 @@ export default function PricingSection() {
       <div className="pointer-events-none absolute -top-40 left-1/2 -translate-x-1/2 w-[800px] h-[400px] rounded-full bg-accent/20 blur-3xl opacity-60" />
 
       <div className="container mx-auto px-6 relative z-10">
-        {/* Header */}
+        {/* Pricing Controls */}
         <div className="text-center mb-12">
           <TimelineContent animationNum={0} timelineRef={pricingRef}>
-            <h2 className="font-serif text-3xl md:text-4xl lg:text-5xl font-bold mb-4">
-              <VerticalCutReveal splitBy="words" staggerDuration={0.06}>
-                Pricing built for real businesses
-              </VerticalCutReveal>
-            </h2>
-          </TimelineContent>
-
-          <TimelineContent animationNum={1} timelineRef={pricingRef}>
-            <p className="text-muted-foreground max-w-xl mx-auto text-lg">
-              Choose a bundle that matches your call volume, booking needs, and how
-              much you want automated.
-            </p>
-          </TimelineContent>
-
-          <TimelineContent animationNum={2} timelineRef={pricingRef}>
-            <p className="text-sm text-muted-foreground mb-6">
-              Bundles include a one-time website build plus ongoing monthly services.
-            </p>
             <PricingSwitch onSwitch={setPeriod} />
-            <p className="text-xs text-muted-foreground/70 -mt-6">
+            <p className="text-xs text-muted-foreground/70 -mt-6 mb-4">
               Yearly pricing is an optional prepaid discount (available on request).
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Bundles include a one-time website build plus ongoing monthly services.
             </p>
           </TimelineContent>
         </div>
