@@ -204,7 +204,7 @@ const RestaurantDemo = () => {
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 max-w-5xl mx-auto relative z-20">
             <AwardBadge
               title="Best of Portland"
-              subtitle="Portland Phoenix"
+              subtitle="Portland Magazine"
               year="2024"
               variant="gold"
               icon="trophy"
