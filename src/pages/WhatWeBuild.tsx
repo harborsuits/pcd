@@ -53,7 +53,7 @@ const FEATURES: FeatureItem[] = [
       "Responds to calls, texts, and messages when you're unavailable",
       "Collects structured lead information before handing off or booking",
       "Routes high-intent requests appropriately",
-      "Always clearly identified as AI — no pretending",
+      "CRM integrations on the roadmap — designed to reduce manual data entry",
     ],
     url: aiFrontDoorVideo,
     span: "md:col-span-2 md:row-span-1 col-span-1 row-span-1",
