@@ -27,10 +27,6 @@ const Pricing = () => {
 
       {/* Hero */}
       <section className="pt-12 pb-6 md:pt-16 md:pb-8 relative overflow-hidden">
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute -top-32 -right-32 h-[520px] w-[520px] rounded-full bg-accent/15 blur-3xl" />
-          <div className="absolute -bottom-40 -left-40 h-[620px] w-[620px] rounded-full bg-primary/10 blur-3xl" />
-        </div>
         <div className="relative container mx-auto px-6 text-center">
           <h1 className="font-serif text-4xl md:text-5xl lg:text-6xl font-bold leading-tight mb-4">
             Pricing & Services
