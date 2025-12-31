@@ -1,7 +1,6 @@
 import { GalleryHero } from "@/components/gallery/GalleryHero"
 import { motion } from "framer-motion"
-import { Palette, Brush, Droplets } from "lucide-react"
-import DisplayCards from "@/components/ui/display-cards"
+import { Gallery4 } from "@/components/ui/gallery4"
 import harborQuietImage from "@/assets/gallery/harbor-quiet.jpg"
 import saltMarshImage from "@/assets/gallery/salt-marsh-light.jpg"
 import graniteTideImage from "@/assets/gallery/granite-tide.jpg"
@@ -47,36 +46,41 @@ const galleryCards = [
   },
 ];
 
-const artistCards = [
+const photographerItems = [
   {
-    icon: <Palette className="size-4" />,
-    title: "Sarah Whitmore",
-    description: "Oil on Canvas • Coastal Moods",
-    date: "15 years experience",
-    iconClassName: "text-amber-600 border-amber-200 bg-amber-50",
-    titleClassName: "text-slate-900",
-    className:
-      "[grid-area:stack] hover:-translate-y-10 before:absolute before:w-[100%] before:outline-1 before:rounded-xl before:outline-slate-200 before:h-[100%] before:content-[''] before:bg-blend-overlay before:bg-white/50 grayscale-[100%] hover:before:opacity-0 before:transition-opacity before:duration-700 hover:grayscale-0 before:left-0 before:top-0",
+    id: "elena-vasquez",
+    title: "Elena Vasquez — Storm Chaser",
+    description: "After surviving a shipwreck off Nova Scotia in 2008, Elena became obsessed with capturing the raw fury of nor'easters. She's been struck by lightning twice and calls it 'research.' Her prints sell for $40K and hang in the Smithsonian.",
+    href: "#contact",
+    image: "https://images.unsplash.com/photo-1534430480872-3498386e7856?w=800&auto=format&fit=crop",
   },
   {
-    icon: <Brush className="size-4" />,
-    title: "Thomas Eldridge",
-    description: "Watercolor • Working Waterfront",
-    date: "3rd generation Mainer",
-    iconClassName: "text-blue-600 border-blue-200 bg-blue-50",
-    titleClassName: "text-slate-900",
-    className:
-      "[grid-area:stack] translate-x-12 translate-y-10 hover:-translate-y-1 before:absolute before:w-[100%] before:outline-1 before:rounded-xl before:outline-slate-200 before:h-[100%] before:content-[''] before:bg-blend-overlay before:bg-white/50 grayscale-[100%] hover:before:opacity-0 before:transition-opacity before:duration-700 hover:grayscale-0 before:left-0 before:top-0",
+    id: "jonas-berg",
+    title: "Jonas Berg — The Fog Whisperer",
+    description: "A former Finnish submarine captain, Jonas moved to Maine in 2015 seeking silence. He wakes at 3am to catch the first fog and hasn't missed a sunrise in 9 years. National Geographic calls him 'the man who photographs ghosts.'",
+    href: "#contact",
+    image: "https://images.unsplash.com/photo-1485470733090-0aae1788d5af?w=800&auto=format&fit=crop",
   },
   {
-    icon: <Droplets className="size-4" />,
-    title: "Rebecca Marston",
-    description: "Mixed Media • Fog & Light",
-    date: "Award-winning artist",
-    iconClassName: "text-teal-600 border-teal-200 bg-teal-50",
-    titleClassName: "text-slate-900",
-    className:
-      "[grid-area:stack] translate-x-24 translate-y-20 hover:translate-y-10",
+    id: "ruth-blackwood",
+    title: "Ruth Blackwood — Lighthouse Keeper's Daughter",
+    description: "Born in a lighthouse during a blizzard, Ruth grew up without electricity until age 12. Her long-exposure night shots of Maine's 65 lighthouses took 11 years to complete. The collection sold to a private buyer for $2.1 million.",
+    href: "#contact",
+    image: "https://images.unsplash.com/photo-1507400492013-162706c8c05e?w=800&auto=format&fit=crop",
+  },
+  {
+    id: "marcus-tide",
+    title: "Marcus Tide — The Lobsterman's Eye",
+    description: "Marcus hauled lobster traps for 30 years before picking up a camera at age 55. His weathered hands shake, but his compositions are surgically precise. His debut show sold out in 4 hours. He still smells faintly of brine.",
+    href: "#contact",
+    image: "https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=800&auto=format&fit=crop",
+  },
+  {
+    id: "ivy-chen",
+    title: "Ivy Chen — The Tide Pool Mystic",
+    description: "A marine biologist turned macro photographer, Ivy spent 3 years living in a tent on Monhegan Island documenting microscopic coastal life. Her image 'Universe in a Droplet' won the Wildlife Photographer of the Year.",
+    href: "#contact",
+    image: "https://images.unsplash.com/photo-1518837695005-2083093ee35b?w=800&auto=format&fit=crop",
   },
 ];
 
@@ -131,31 +135,12 @@ export default function GalleryDemo() {
       </section>
 
       {/* Artists Section */}
-      <section id="artists" className="bg-slate-50 px-6 py-24">
-        <div className="mx-auto max-w-7xl">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="text-center"
-          >
-            <h2 className="font-serif text-4xl font-light text-slate-900 sm:text-5xl">
-              Featured Artists
-            </h2>
-            <p className="mx-auto mt-4 max-w-2xl text-lg text-slate-600">
-              Meet the talented creators whose work graces our walls.
-            </p>
-          </motion.div>
-
-          <motion.div 
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="mt-16 flex justify-center"
-          >
-            <DisplayCards cards={artistCards} />
-          </motion.div>
-        </div>
+      <section id="artists" className="bg-slate-50">
+        <Gallery4
+          title="Featured Photographers"
+          description="Extraordinary artists with extraordinary stories. Each brings a lifetime of experience and a unique lens to the Maine coast."
+          items={photographerItems}
+        />
       </section>
 
       {/* Visit Section */}
