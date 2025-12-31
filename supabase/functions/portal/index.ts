@@ -1096,10 +1096,12 @@ async function handleGetComments(
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    // Build query - clients should never see internal comments
     let query = supabase
       .from("prototype_comments")
-      .select("id, prototype_id, author_type, body, pin_x, pin_y, resolved_at, source_message_id, created_at")
+      .select("id, prototype_id, author_type, body, pin_x, pin_y, resolved_at, source_message_id, created_at, parent_comment_id, is_internal")
       .eq("project_token", token)
+      .eq("is_internal", false) // Filter out internal operator notes for clients
       .order("created_at", { ascending: true });
 
     if (prototypeId) {
@@ -1194,6 +1196,7 @@ async function handleCommentAction(
         );
       }
 
+      // Client comments are never internal
       const { data: comment, error: insertError } = await supabase
         .from("prototype_comments")
         .insert({
@@ -1204,6 +1207,8 @@ async function handleCommentAction(
           pin_x: pin_x ?? null,
           pin_y: pin_y ?? null,
           source_message_id: source_message_id || null,
+          is_internal: false, // Client comments are always visible
+          parent_comment_id: body.parent_comment_id ?? null,
           // Anchor fields
           page_url: page_url ?? null,
           page_path: page_path ?? null,

@@ -2,9 +2,11 @@ import { useState, useRef } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { 
   CheckCircle, Circle, Loader2, ImageIcon, FileIcon, 
-  ExternalLink, Paperclip, X, Upload, Reply, RotateCcw, Send
+  ExternalLink, Paperclip, X, Upload, Reply, RotateCcw, Send, Lock
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -20,6 +22,8 @@ interface PrototypeComment {
   created_at: string;
   author_type: string;
   prototype_id?: string;
+  parent_comment_id?: string | null;
+  is_internal?: boolean;
 }
 
 interface Attachment {
@@ -105,8 +109,9 @@ export function CommentCard({
   });
 
   // Reply mutation - creates a new admin comment associated with the same prototype
+  // If the original comment is resolved, mark reply as internal (private note)
   const replyMutation = useMutation({
-    mutationFn: async (body: string) => {
+    mutationFn: async ({ body, isInternal }: { body: string; isInternal: boolean }) => {
       const res = await adminFetch(`/admin/comments/${projectToken}`, {
         method: "POST",
         body: JSON.stringify({ 
@@ -115,6 +120,8 @@ export function CommentCard({
           pin_x: comment.pin_x,
           pin_y: comment.pin_y,
           author_type: "admin",
+          parent_comment_id: comment.id,
+          is_internal: isInternal,
         }),
       });
       if (!res.ok) throw new Error("Failed to add reply");
@@ -133,23 +140,34 @@ export function CommentCard({
   const attachments = attachmentsData?.attachments || [];
   const isImageMime = (mimeType: string) => mimeType.startsWith("image/");
   const isResolved = !!comment.resolved_at;
+  const isInternal = !!comment.is_internal;
 
   const handleFileSelect = (files: FileList | null) => {
     if (!files) return;
     Array.from(files).forEach(file => uploadMutation.mutate(file));
   };
 
+  const [makeInternal, setMakeInternal] = useState(isResolved);
+  
   const handleSubmitReply = () => {
     if (!replyText.trim()) return;
-    replyMutation.mutate(replyText.trim());
+    replyMutation.mutate({ body: replyText.trim(), isInternal: makeInternal });
   };
 
   return (
     <div
       className={`p-3 rounded-lg border transition-colors ${
         isHighlighted ? "border-primary bg-primary/5" : "border-border hover:bg-muted/50"
-      } ${isResolved ? "opacity-70" : ""}`}
+      } ${isResolved ? "opacity-70" : ""} ${isInternal ? "border-dashed border-yellow-500/50 bg-yellow-50/30 dark:bg-yellow-900/10" : ""}`}
     >
+      {/* Internal badge */}
+      {isInternal && (
+        <div className="mb-2 flex items-center gap-1">
+          <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-400">
+            Internal Note
+          </span>
+        </div>
+      )}
       {/* Header row */}
       <div 
         className="flex items-start justify-between gap-2 cursor-pointer"
@@ -227,7 +245,22 @@ export function CommentCard({
             }}
           />
           <div className="flex items-center justify-between mt-2">
-            <span className="text-[10px] text-muted-foreground">⌘+Enter to send</span>
+            <div className="flex items-center gap-2">
+              <div className="flex items-center space-x-1.5">
+                <Checkbox
+                  id={`internal-${comment.id}`}
+                  checked={makeInternal}
+                  onCheckedChange={(checked) => setMakeInternal(!!checked)}
+                />
+                <Label 
+                  htmlFor={`internal-${comment.id}`}
+                  className="text-[10px] text-muted-foreground cursor-pointer flex items-center gap-1"
+                >
+                  <Lock className="h-2.5 w-2.5" />
+                  Internal only
+                </Label>
+              </div>
+            </div>
             <div className="flex gap-1">
               <Button
                 variant="ghost"
@@ -236,22 +269,25 @@ export function CommentCard({
                 onClick={() => {
                   setShowReply(false);
                   setReplyText("");
+                  setMakeInternal(isResolved);
                 }}
               >
                 Cancel
               </Button>
               <Button
                 size="sm"
-                className="h-7 text-xs"
+                className={`h-7 text-xs ${makeInternal ? "bg-yellow-600 hover:bg-yellow-700" : ""}`}
                 onClick={handleSubmitReply}
                 disabled={!replyText.trim() || replyMutation.isPending}
               >
                 {replyMutation.isPending ? (
                   <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                ) : makeInternal ? (
+                  <Lock className="h-3 w-3 mr-1" />
                 ) : (
                   <Send className="h-3 w-3 mr-1" />
                 )}
-                {isResolved ? "Add Note" : "Reply"}
+                {makeInternal ? "Add Note" : "Reply"}
               </Button>
             </div>
           </div>
