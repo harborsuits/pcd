@@ -2,6 +2,7 @@ import { GalleryHero } from "@/components/gallery/GalleryHero"
 import { motion } from "framer-motion"
 import harborQuietImage from "@/assets/gallery/harbor-quiet.jpg"
 import saltMarshImage from "@/assets/gallery/salt-marsh-light.jpg"
+import graniteTideImage from "@/assets/gallery/granite-tide.jpg"
 
 const galleryCards = [
   {
@@ -26,7 +27,7 @@ const galleryCards = [
     title: "Granite & Tide",
     pseudonym: "S. Calder",
     tags: "Rocky Coast • Atlantic • Texture",
-    image: "https://images.unsplash.com/photo-1505142468610-359e7d316be0?auto=format&fit=crop&w=1600&q=80",
+    image: graniteTideImage,
   },
   {
     title: "Lighthouse Study",
