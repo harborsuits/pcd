@@ -1618,7 +1618,7 @@ async function handleUpdatePipelineStage(req: Request, token: string): Promise<R
     if (notifyStages.includes(stage)) {
       const telegramBotToken = Deno.env.get("TELEGRAM_BOT_TOKEN");
       const telegramChatId = Deno.env.get("TELEGRAM_CHAT_ID");
-      const baseUrl = Deno.env.get("PUBLIC_BASE_URL") || "https://ararrbvhzaudfaxjwdrc.lovableproject.com";
+      const baseUrl = Deno.env.get("PUBLIC_BASE_URL") || "https://pleasantcovedesign.com";
 
       // Build contact info string
       const contactParts: string[] = [];

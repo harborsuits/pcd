@@ -311,7 +311,7 @@ async function handleClaim(req: Request): Promise<Response> {
     console.log(`Claim: prospect ${prospectResult.projectToken} from demo ${project_token}`);
 
     // Send Telegram notification
-    const baseUrl = Deno.env.get("PUBLIC_BASE_URL") || "https://ararrbvhzaudfaxjwdrc.lovableproject.com";
+    const baseUrl = Deno.env.get("PUBLIC_BASE_URL") || "https://pleasantcovedesign.com";
     const telegramMsg =
       `🟢 <b>Design Claim!</b>\n` +
       `• <b>Prospect:</b> ${name || "—"}\n` +
@@ -448,7 +448,7 @@ async function handleClaimWithAuth(req: Request): Promise<Response> {
     console.log(`Auth claim: prospect ${prospectResult.projectToken} from demo ${project_token}`);
 
     // Send Telegram notification
-    const baseUrl = Deno.env.get("PUBLIC_BASE_URL") || "https://ararrbvhzaudfaxjwdrc.lovableproject.com";
+    const baseUrl = Deno.env.get("PUBLIC_BASE_URL") || "https://pleasantcovedesign.com";
     const telegramMsg =
       `🟢 <b>Design Claim (Auth)</b>\n` +
       `• <b>Prospect:</b> ${name || user.user_metadata?.full_name || "—"}\n` +
@@ -719,7 +719,7 @@ async function handleQuoteRequest(req: Request): Promise<Response> {
     });
 
     // Send Telegram notification with actionable links
-    const baseUrl = Deno.env.get("PUBLIC_BASE_URL") || "https://ararrbvhzaudfaxjwdrc.lovableproject.com";
+    const baseUrl = Deno.env.get("PUBLIC_BASE_URL") || "https://pleasantcovedesign.com";
     const telegramText = `🔔 <b>Quote Request!</b>\n\n` +
       `<b>Prospect:</b> ${name}\n` +
       `<b>Phone:</b> ${phone}\n` +
