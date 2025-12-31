@@ -1,5 +1,8 @@
 project_id = "ararrbvhzaudfaxjwdrc"
 
+[functions.admin]
+verify_jwt = false
+
 [functions.demo]
 verify_jwt = false
 
