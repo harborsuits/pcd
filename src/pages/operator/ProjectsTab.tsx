@@ -6,6 +6,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -14,7 +20,8 @@ import {
 import { 
   FolderOpen, Loader2, Clock,
   MessageSquare, ExternalLink, ChevronRight, Sparkles, Eye, ArrowRight,
-  CheckCircle2, Circle, AlertCircle, Bell, LayoutGrid, List, Mail, ChevronDown
+  CheckCircle2, Circle, AlertCircle, Bell, LayoutGrid, List, Mail, ChevronDown,
+  FileText, Palette, Camera, Brush, ImagePlus, Link2, Award, Image
 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -107,8 +114,286 @@ interface Project {
 type ViewMode = "list" | "kanban";
 type NudgeChannel = "portal" | "email" | "both";
 
+// Phase B Details Modal Component
+function PhaseBModal({ 
+  project, 
+  open, 
+  onOpenChange 
+}: { 
+  project: Project | null; 
+  open: boolean; 
+  onOpenChange: (open: boolean) => void;
+}) {
+  if (!project) return null;
+  
+  const data = project.intake?.phase_b_json;
+  const phaseBStatus = project.intake?.phase_b_status;
+  
+  const renderValue = (value: string | number | boolean | null | undefined, fallback = "Not provided") => {
+    if (value === null || value === undefined || value === "") return <span className="text-muted-foreground italic">{fallback}</span>;
+    if (typeof value === "boolean") return value ? "Yes" : "No";
+    return value;
+  };
+
+  const getGoalLabel = (goal?: string) => {
+    const labels: Record<string, string> = {
+      book: "Get bookings/appointments",
+      quote: "Get quote requests",
+      call: "Get phone calls",
+      portfolio: "Showcase portfolio",
+      learn: "Educate visitors",
+      visit: "Drive store visits"
+    };
+    return goal ? labels[goal] || goal : null;
+  };
+
+  const getVibeLabel = (vibe?: string) => {
+    const labels: Record<string, string> = {
+      modern: "Modern & Clean",
+      classic: "Classic & Timeless",
+      luxury: "High-End & Luxury",
+      bold: "Bold & Striking",
+      minimal: "Minimal & Simple",
+      cozy: "Warm & Cozy"
+    };
+    return vibe ? labels[vibe] || vibe : null;
+  };
+
+  const getToneLabel = (tone?: string) => {
+    const labels: Record<string, string> = {
+      professional: "Professional & Polished",
+      friendly: "Warm & Approachable",
+      direct: "Straightforward & Clear",
+      playful: "Fun & Energetic"
+    };
+    return tone ? labels[tone] || tone : null;
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <FileText className="h-5 w-5" />
+            Phase B Details: {project.business_name}
+          </DialogTitle>
+        </DialogHeader>
+        
+        {!data ? (
+          <div className="py-8 text-center text-muted-foreground">
+            <AlertCircle className="h-10 w-10 mx-auto mb-3 opacity-50" />
+            <p>No Phase B data submitted yet</p>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {/* Status Badge */}
+            <div className="flex items-center gap-2">
+              {phaseBStatus === "complete" ? (
+                <Badge className="bg-green-500/10 text-green-600 border-green-200">
+                  <CheckCircle2 className="h-3 w-3 mr-1" /> Complete
+                </Badge>
+              ) : phaseBStatus === "in_progress" ? (
+                <Badge variant="outline" className="text-amber-600 border-amber-300">
+                  <Circle className="h-3 w-3 mr-1" /> In Progress
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="text-muted-foreground">
+                  <AlertCircle className="h-3 w-3 mr-1" /> Pending
+                </Badge>
+              )}
+            </div>
+
+            {/* Card 1: Brand & Identity */}
+            <div className="space-y-3">
+              <h3 className="font-semibold flex items-center gap-2 text-sm border-b pb-2">
+                <Palette className="h-4 w-4 text-primary" />
+                Brand & Identity
+              </h3>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <div className="text-muted-foreground text-xs mb-1">Logo Status</div>
+                  <div>{data.logoStatus === "uploaded" ? "✅ Uploaded" : data.logoStatus === "create" ? "🎨 Create for me" : renderValue(null)}</div>
+                </div>
+                <div>
+                  <div className="text-muted-foreground text-xs mb-1">Color Preference</div>
+                  <div>{data.colorPreference === "pick_for_me" ? "🎯 Pick for me" : data.colorPreference === "custom" ? "🖌️ Custom colors" : renderValue(null)}</div>
+                </div>
+                {data.colorPreference === "custom" && data.brandColors && (
+                  <div className="col-span-2">
+                    <div className="text-muted-foreground text-xs mb-1">Brand Colors</div>
+                    <div className="bg-muted/50 rounded p-2">{data.brandColors}</div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Card 2: Website Content */}
+            <div className="space-y-3">
+              <h3 className="font-semibold flex items-center gap-2 text-sm border-b pb-2">
+                <FileText className="h-4 w-4 text-primary" />
+                Website Content
+              </h3>
+              <div className="space-y-3 text-sm">
+                <div>
+                  <div className="text-muted-foreground text-xs mb-1">Primary Goal</div>
+                  <div>{getGoalLabel(data.primaryGoal) || renderValue(null)}</div>
+                </div>
+                <div>
+                  <div className="text-muted-foreground text-xs mb-1">Business Description</div>
+                  <div className="bg-muted/50 rounded p-2 whitespace-pre-wrap">{renderValue(data.businessDescription)}</div>
+                </div>
+                <div>
+                  <div className="text-muted-foreground text-xs mb-1">Services</div>
+                  <div className="bg-muted/50 rounded p-2 whitespace-pre-wrap">{renderValue(data.services)}</div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <div className="text-muted-foreground text-xs mb-1">Service Area</div>
+                    <div>{renderValue(data.serviceArea)}</div>
+                  </div>
+                  <div>
+                    <div className="text-muted-foreground text-xs mb-1">Has FAQ</div>
+                    <div>{data.faq?.trim() ? "Yes" : "No"}</div>
+                  </div>
+                </div>
+                {data.differentiators && (
+                  <div>
+                    <div className="text-muted-foreground text-xs mb-1">Differentiators</div>
+                    <div className="bg-muted/50 rounded p-2 whitespace-pre-wrap">{data.differentiators}</div>
+                  </div>
+                )}
+                {data.faq && (
+                  <div>
+                    <div className="text-muted-foreground text-xs mb-1">FAQ Content</div>
+                    <div className="bg-muted/50 rounded p-2 whitespace-pre-wrap max-h-32 overflow-y-auto">{data.faq}</div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Card 3: Photos & Proof */}
+            <div className="space-y-3">
+              <h3 className="font-semibold flex items-center gap-2 text-sm border-b pb-2">
+                <Camera className="h-4 w-4 text-primary" />
+                Photos & Proof
+              </h3>
+              <div className="space-y-3 text-sm">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <div className="text-muted-foreground text-xs mb-1">Photos Plan</div>
+                    <div className="flex items-center gap-1">
+                      {data.photosPlan === "upload" && <><Image className="h-3 w-3" /> Upload ({data.photosUploaded || 0} uploaded)</>}
+                      {data.photosPlan === "generate" && <><ImagePlus className="h-3 w-3 text-violet-600" /> Generate with AI</>}
+                      {data.photosPlan === "none" && <><Circle className="h-3 w-3" /> Use placeholders</>}
+                      {!data.photosPlan && renderValue(null)}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-muted-foreground text-xs mb-1">Before/After</div>
+                    <div>{data.hasBeforeAfter === "yes" ? "✅ Yes" : data.hasBeforeAfter === "coming_soon" ? "🔜 Coming soon" : data.hasBeforeAfter === "no" ? "No" : renderValue(null)}</div>
+                  </div>
+                </div>
+
+                {/* AI Generation Brief (if plan = generate) */}
+                {data.photosPlan === "generate" && (
+                  <div className="bg-violet-50 dark:bg-violet-950/30 border border-violet-200 dark:border-violet-800 rounded-lg p-3 space-y-2">
+                    <div className="font-medium text-violet-700 dark:text-violet-300 text-xs flex items-center gap-1">
+                      <ImagePlus className="h-3 w-3" /> AI Generation Brief
+                    </div>
+                    <div>
+                      <div className="text-muted-foreground text-xs mb-1">Photo Subjects</div>
+                      <div className="bg-white dark:bg-background rounded p-2">{renderValue(data.generatedPhotoSubjects)}</div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <div className="text-muted-foreground text-xs mb-1">Style</div>
+                        <div>{data.generatedPhotoStyle || renderValue(null)}</div>
+                      </div>
+                      <div>
+                        <div className="text-muted-foreground text-xs mb-1">Additional Notes</div>
+                        <div>{renderValue(data.generatedPhotoNotes)}</div>
+                      </div>
+                    </div>
+                    {/* Generate Images Button */}
+                    {data.generatedPhotoSubjects && data.generatedPhotoStyle && (
+                      <Button 
+                        size="sm" 
+                        className="mt-2 gap-1"
+                        onClick={() => toast.info("Image generation coming soon!")}
+                      >
+                        <Sparkles className="h-3 w-3" />
+                        Generate 6 Images
+                      </Button>
+                    )}
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <div className="text-muted-foreground text-xs mb-1 flex items-center gap-1">
+                      <Link2 className="h-3 w-3" /> Google Reviews Link
+                    </div>
+                    {data.googleReviewsLink ? (
+                      <a href={data.googleReviewsLink} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline truncate block">
+                        {data.googleReviewsLink}
+                      </a>
+                    ) : renderValue(null)}
+                  </div>
+                  <div>
+                    <div className="text-muted-foreground text-xs mb-1 flex items-center gap-1">
+                      <Award className="h-3 w-3" /> Certifications
+                    </div>
+                    <div>{renderValue(data.certifications)}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Card 4: Style & Preferences */}
+            <div className="space-y-3">
+              <h3 className="font-semibold flex items-center gap-2 text-sm border-b pb-2">
+                <Brush className="h-4 w-4 text-primary" />
+                Style & Preferences
+              </h3>
+              <div className="space-y-3 text-sm">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <div className="text-muted-foreground text-xs mb-1">Vibe</div>
+                    <div>{getVibeLabel(data.vibe) || renderValue(null)}</div>
+                  </div>
+                  <div>
+                    <div className="text-muted-foreground text-xs mb-1">Tone</div>
+                    <div>{getToneLabel(data.tone) || renderValue(null)}</div>
+                  </div>
+                </div>
+                {data.exampleSites && (
+                  <div>
+                    <div className="text-muted-foreground text-xs mb-1">Example Sites</div>
+                    <div className="bg-muted/50 rounded p-2 whitespace-pre-wrap">{data.exampleSites}</div>
+                  </div>
+                )}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <div className="text-muted-foreground text-xs mb-1 text-green-600">Must Include</div>
+                    <div className="bg-green-50 dark:bg-green-950/30 rounded p-2">{renderValue(data.mustInclude)}</div>
+                  </div>
+                  <div>
+                    <div className="text-muted-foreground text-xs mb-1 text-red-600">Must Avoid</div>
+                    <div className="bg-red-50 dark:bg-red-950/30 rounded p-2">{renderValue(data.mustAvoid)}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export function ProjectsTab() {
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const [phaseBProject, setPhaseBProject] = useState<Project | null>(null);
   const [pipelineFilter, setPipelineFilter] = useState<PipelineFilter>("all");
   const [viewMode, setViewMode] = useState<ViewMode>("list");
   const { setCurrentProjectToken, setCurrentProjectName, registerCloseProject } = useOperatorContext();
@@ -574,6 +859,21 @@ export function ProjectsTab() {
                           </DropdownMenuContent>
                         </DropdownMenu>
                       )}
+                      {/* Phase B Details button */}
+                      {project.intake?.phase_b_json && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-1 text-xs h-7 px-2"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setPhaseBProject(project);
+                          }}
+                        >
+                          <FileText className="h-3 w-3" />
+                          <span className="hidden sm:inline">Phase B</span>
+                        </Button>
+                      )}
                       {/* Advance stage button */}
                       {getNextStage(project.pipeline_stage) && (
                         <Button
@@ -625,6 +925,13 @@ export function ProjectsTab() {
           </ScrollArea>
         )}
       </CardContent>
+      
+      {/* Phase B Details Modal */}
+      <PhaseBModal 
+        project={phaseBProject} 
+        open={!!phaseBProject} 
+        onOpenChange={(open) => !open && setPhaseBProject(null)} 
+      />
     </Card>
   );
 }
