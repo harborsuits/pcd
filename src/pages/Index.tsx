@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { useMemo } from "react";
-import { ArrowRight, MessageSquare, FolderOpen, Sparkles, Shield, Smartphone, CreditCard, LogIn, Globe, CalendarCheck, Zap, Bot, Clock, CheckCircle, Phone, Brain, Clock3 } from "lucide-react";
+import { ArrowRight, MessageSquare, FolderOpen, Sparkles, Shield, Smartphone, CreditCard, LogIn, Globe, CalendarCheck, Zap, Bot, Clock, CheckCircle, Phone, Brain, Clock3, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LiquidButton } from "@/components/ui/liquid-glass-button";
 import { GlowCard } from "@/components/ui/spotlight-card";
@@ -196,9 +196,20 @@ const Index = () => {
               </GlowCard>
               
               {/* Roadmap teaser */}
-              <p className="text-sm text-muted-foreground/70 italic pt-2 pl-1">
-                Coming soon: appointment booking directly into your existing CRM — or one we build for you.
-              </p>
+              <GlowCard customSize glowColor="teal" className="p-5 bg-card/40 border-dashed">
+                <div className="flex items-start gap-4">
+                  <div className="p-2 rounded-lg bg-muted/50">
+                    <Calendar className="h-5 w-5 text-muted-foreground" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <h4 className="font-semibold text-muted-foreground">Appointment Booking</h4>
+                      <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded-full">Coming Soon</span>
+                    </div>
+                    <p className="text-sm text-muted-foreground/80">Book directly into your existing CRM — or one we build for you.</p>
+                  </div>
+                </div>
+              </GlowCard>
             </div>
           </div>
         </div>
