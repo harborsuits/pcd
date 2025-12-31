@@ -103,6 +103,7 @@ interface Prototype {
 
 interface PrototypeComment {
   id: string;
+  prototype_id: string;
   source_message_id: string | null;
   body: string;
   pin_x: number | null;

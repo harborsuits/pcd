@@ -1,9 +1,10 @@
 import { useState, useRef } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import { 
   CheckCircle, Circle, Loader2, ImageIcon, FileIcon, 
-  ExternalLink, Paperclip, X, Upload 
+  ExternalLink, Paperclip, X, Upload, Reply, RotateCcw, Send
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -18,6 +19,7 @@ interface PrototypeComment {
   resolved_at: string | null;
   created_at: string;
   author_type: string;
+  prototype_id?: string;
 }
 
 interface Attachment {
@@ -38,6 +40,7 @@ interface CommentCardProps {
   onJumpToPin: (comment: PrototypeComment) => void;
   onResolveToggle: (commentId: string, resolve: boolean) => void;
   isResolving: boolean;
+  onReplyAdded?: () => void;
 }
 
 export function CommentCard({
@@ -48,8 +51,11 @@ export function CommentCard({
   onJumpToPin,
   onResolveToggle,
   isResolving,
+  onReplyAdded,
 }: CommentCardProps) {
   const [showAttachments, setShowAttachments] = useState(false);
+  const [showReply, setShowReply] = useState(false);
+  const [replyText, setReplyText] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
 
@@ -98,19 +104,51 @@ export function CommentCard({
     onError: (error: Error) => toast.error(error.message),
   });
 
+  // Reply mutation - creates a new admin comment associated with the same prototype
+  const replyMutation = useMutation({
+    mutationFn: async (body: string) => {
+      const res = await adminFetch(`/admin/comments/${projectToken}`, {
+        method: "POST",
+        body: JSON.stringify({ 
+          prototype_id: comment.prototype_id,
+          body,
+          pin_x: comment.pin_x,
+          pin_y: comment.pin_y,
+          author_type: "admin",
+        }),
+      });
+      if (!res.ok) throw new Error("Failed to add reply");
+      return res.json();
+    },
+    onSuccess: () => {
+      toast.success("Reply added");
+      setReplyText("");
+      setShowReply(false);
+      queryClient.invalidateQueries({ queryKey: ["project-comments", projectToken] });
+      onReplyAdded?.();
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
   const attachments = attachmentsData?.attachments || [];
   const isImageMime = (mimeType: string) => mimeType.startsWith("image/");
+  const isResolved = !!comment.resolved_at;
 
   const handleFileSelect = (files: FileList | null) => {
     if (!files) return;
     Array.from(files).forEach(file => uploadMutation.mutate(file));
   };
 
+  const handleSubmitReply = () => {
+    if (!replyText.trim()) return;
+    replyMutation.mutate(replyText.trim());
+  };
+
   return (
     <div
       className={`p-3 rounded-lg border transition-colors ${
         isHighlighted ? "border-primary bg-primary/5" : "border-border hover:bg-muted/50"
-      }`}
+      } ${isResolved ? "opacity-70" : ""}`}
     >
       {/* Header row */}
       <div 
@@ -119,18 +157,33 @@ export function CommentCard({
       >
         <div className="flex items-start gap-2 min-w-0">
           <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0 ${
-            comment.resolved_at ? "bg-muted text-muted-foreground" : "bg-primary text-primary-foreground"
+            isResolved ? "bg-muted text-muted-foreground" : "bg-primary text-primary-foreground"
           }`}>
             {index + 1}
           </div>
           <div className="min-w-0">
-            <p className="text-sm line-clamp-2">{comment.body}</p>
+            <p className={`text-sm line-clamp-2 ${isResolved ? "line-through text-muted-foreground" : ""}`}>
+              {comment.body}
+            </p>
             <p className="text-[10px] text-muted-foreground mt-1">
               {comment.author_type === "client" ? "Client" : "Admin"} • {format(new Date(comment.created_at), "MMM d, h:mm a")}
             </p>
           </div>
         </div>
         <div className="flex items-center gap-1 flex-shrink-0">
+          {/* Reply button */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6"
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowReply(!showReply);
+            }}
+            title="Reply"
+          >
+            <Reply className="h-3 w-3" />
+          </Button>
           <Button
             variant="ghost"
             size="icon"
@@ -149,15 +202,61 @@ export function CommentCard({
             className="h-6 w-6"
             onClick={(e) => {
               e.stopPropagation();
-              onResolveToggle(comment.id, !comment.resolved_at);
+              onResolveToggle(comment.id, !isResolved);
             }}
             disabled={isResolving}
-            title={comment.resolved_at ? "Reopen" : "Resolve"}
+            title={isResolved ? "Reopen" : "Resolve"}
           >
-            {comment.resolved_at ? <Circle className="h-3 w-3" /> : <CheckCircle className="h-3 w-3" />}
+            {isResolved ? <RotateCcw className="h-3 w-3" /> : <CheckCircle className="h-3 w-3" />}
           </Button>
         </div>
       </div>
+
+      {/* Reply input */}
+      {showReply && (
+        <div className="mt-2 pt-2 border-t border-border" onClick={(e) => e.stopPropagation()}>
+          <Textarea
+            placeholder={isResolved ? "Add a note..." : "Reply to this comment..."}
+            value={replyText}
+            onChange={(e) => setReplyText(e.target.value)}
+            className="min-h-[60px] text-sm resize-none"
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+                handleSubmitReply();
+              }
+            }}
+          />
+          <div className="flex items-center justify-between mt-2">
+            <span className="text-[10px] text-muted-foreground">⌘+Enter to send</span>
+            <div className="flex gap-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 text-xs"
+                onClick={() => {
+                  setShowReply(false);
+                  setReplyText("");
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                className="h-7 text-xs"
+                onClick={handleSubmitReply}
+                disabled={!replyText.trim() || replyMutation.isPending}
+              >
+                {replyMutation.isPending ? (
+                  <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                ) : (
+                  <Send className="h-3 w-3 mr-1" />
+                )}
+                {isResolved ? "Add Note" : "Reply"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Attachments panel */}
       {showAttachments && (
