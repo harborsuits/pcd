@@ -97,113 +97,37 @@ const Index = () => {
         </div>
       </header>
 
-      {/* 1️⃣ Hero - Simplified, one CTA */}
-      <section className="pt-16 md:pt-20 pb-8 md:pb-12 relative overflow-hidden">
+      {/* 1️⃣ HERO - AI-forward, compact */}
+      <section className="pt-20 md:pt-28 pb-16 md:pb-20 relative overflow-hidden">
         <div className="relative container mx-auto px-6">
           <div className="text-center max-w-3xl mx-auto">
-            <h1 className="font-serif text-4xl md:text-5xl lg:text-6xl font-bold leading-tight mb-4">
-              Websites with a
-              <span className="block text-accent">built-in client portal.</span>
+            <h1 className="font-serif text-4xl md:text-5xl lg:text-6xl font-bold leading-tight mb-2">
+              Never miss a lead again.
             </h1>
-            
-            <p className="text-base md:text-lg text-accent/80 font-medium mb-4">
-              For modern service businesses that want fewer emails, fewer calls, and a cleaner way to work with clients.
-            </p>
-            
-            <p className="text-lg md:text-xl text-muted-foreground leading-relaxed mb-8">
-              We build your site. You manage everything in one place — messaging, files, payments.
-            </p>
-            
-            {/* Single dominant CTA */}
-            <div>
-              <Link to="/get-demo">
-                <LiquidButton size="lg">
-                  Get a Demo
-                </LiquidButton>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* 2️⃣ AI Receptionist - The Hook */}
-      <section className="pt-12 md:pt-16 pb-20 md:pb-28 overflow-hidden">
-        <div className="container mx-auto px-6">
-          <div className="text-center mb-8 md:mb-10">
-            <h2 className="font-serif text-4xl md:text-5xl lg:text-6xl font-bold mb-2">
-              Your AI Receptionist
+            <h2 className="font-serif text-2xl md:text-3xl lg:text-4xl font-semibold text-accent mb-6">
+              With an AI receptionist built into your website.
             </h2>
-            <p className="text-xl md:text-2xl text-foreground/80 font-medium max-w-2xl mx-auto mb-3">
-              Never miss a lead — even when you're on a job, with a client, or after hours.
-            </p>
-            <p className="text-base md:text-lg text-muted-foreground max-w-2xl mx-auto">
-              Our AI Receptionist answers calls, texts, and form submissions instantly, qualifies inquiries, and handles next steps automatically.
-            </p>
-          </div>
-
-          <div className="max-w-6xl mx-auto grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
-            <div className="order-2 lg:order-1">
-              <div className="relative aspect-video rounded-2xl overflow-hidden shadow-2xl border border-accent/20">
-                <iframe
-                  src="https://www.youtube.com/embed/9A8WrDvIyQA"
-                  title="AI Receptionist Demo"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                  className="absolute inset-0 w-full h-full"
-                />
-              </div>
-            </div>
             
-            <div className="order-1 lg:order-2 space-y-4 text-center lg:text-left">
-              
-              <div className="space-y-4 max-w-xl mx-auto lg:mx-0">
-                <GlowCard customSize glowColor="teal" className="p-5 bg-card/60">
-                  <div className="flex items-start gap-4">
-                    <div className="p-2 rounded-lg bg-accent/10">
-                      <Phone className="h-5 w-5 text-accent" />
-                    </div>
-                    <div>
-                      <h4 className="font-semibold text-foreground mb-1">Instant Response</h4>
-                      <p className="text-sm text-muted-foreground">Responds to missed calls, texts, and forms in seconds — not hours.</p>
-                    </div>
-                  </div>
-                </GlowCard>
-                
-                <GlowCard customSize glowColor="teal" className="p-5 bg-card/60">
-                  <div className="flex items-start gap-4">
-                    <div className="p-2 rounded-lg bg-accent/10">
-                      <Brain className="h-5 w-5 text-accent" />
-                    </div>
-                    <div>
-                      <h4 className="font-semibold text-foreground mb-1">Smart Qualification</h4>
-                      <p className="text-sm text-muted-foreground">Asks the right questions so you only deal with serious leads.</p>
-                    </div>
-                  </div>
-                </GlowCard>
-                
-                <GlowCard customSize glowColor="teal" className="p-5 bg-card/60">
-                  <div className="flex items-start gap-4">
-                    <div className="p-2 rounded-lg bg-accent/10">
-                      <Clock3 className="h-5 w-5 text-accent" />
-                    </div>
-                    <div>
-                      <h4 className="font-semibold text-foreground mb-1">24/7 Availability</h4>
-                      <p className="text-sm text-muted-foreground">Schedules appointments or escalates priority inquiries automatically.</p>
-                    </div>
-                  </div>
-                </GlowCard>
-              </div>
-            </div>
+            <p className="text-lg md:text-xl text-muted-foreground leading-relaxed mb-10 max-w-2xl mx-auto">
+              We design custom websites for service businesses and power them with an AI receptionist that answers calls, texts, and forms automatically.
+            </p>
+            
+            <a href="#demos">
+              <LiquidButton size="lg">
+                See It In Action
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </LiquidButton>
+            </a>
           </div>
         </div>
       </section>
 
-      {/* 3️⃣ Demos / Proof - Moved up */}
-      <section id="demos" className="py-16 border-t border-border">
+      {/* 2️⃣ SEE IT IN ACTION (DEMOS) - Proof */}
+      <section id="demos" className="py-16 md:py-20 border-t border-border">
         <div className="container mx-auto px-6">
           <div className="text-center mb-10">
             <h2 className="font-serif text-3xl md:text-4xl font-bold mb-3">
-              See It In Action
+              Real websites. Smarter lead handling.
             </h2>
             <p className="text-muted-foreground">
               Click any demo to explore — no commitment, just a preview.
@@ -216,32 +140,74 @@ const Index = () => {
         </div>
       </section>
 
-      {/* 4️⃣ Logos / Trust Row - Quiet Credibility */}
-      <section className="py-10 border-t border-border">
+      {/* 3️⃣ AI RECEPTIONIST - Explanation */}
+      <section className="py-16 md:py-24 border-t border-border overflow-hidden">
         <div className="container mx-auto px-6">
-          <div className="flex flex-wrap items-center justify-center gap-8 text-sm text-muted-foreground">
-            <div className="flex items-center gap-2">
-              <Shield className="h-5 w-5 text-accent" />
-              <span>Made for local businesses</span>
+          <div className="text-center mb-10">
+            <h2 className="font-serif text-3xl md:text-4xl lg:text-5xl font-bold mb-3">
+              Your AI Front Desk
+            </h2>
+            <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto">
+              Answers calls, texts, and forms instantly. Qualifies leads. Handles next steps automatically — 24/7.
+            </p>
+          </div>
+
+          <div className="max-w-6xl mx-auto grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+            <div>
+              <div className="relative aspect-video rounded-2xl overflow-hidden shadow-2xl border border-accent/20">
+                <iframe
+                  src="https://www.youtube.com/embed/9A8WrDvIyQA"
+                  title="AI Receptionist Demo"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                  className="absolute inset-0 w-full h-full"
+                />
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <MessageSquare className="h-5 w-5 text-accent" />
-              <span>Portal + messaging included</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Smartphone className="h-5 w-5 text-accent" />
-              <span>Mobile-friendly</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <CheckCircle className="h-5 w-5 text-accent" />
-              <span>No templates — custom built</span>
+            
+            <div className="space-y-4">
+              <GlowCard customSize glowColor="teal" className="p-5 bg-card/60">
+                <div className="flex items-start gap-4">
+                  <div className="p-2 rounded-lg bg-accent/10">
+                    <Phone className="h-5 w-5 text-accent" />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-foreground mb-1">Instant Response</h4>
+                    <p className="text-sm text-muted-foreground">Responds to missed calls, texts, and forms in seconds — not hours.</p>
+                  </div>
+                </div>
+              </GlowCard>
+              
+              <GlowCard customSize glowColor="teal" className="p-5 bg-card/60">
+                <div className="flex items-start gap-4">
+                  <div className="p-2 rounded-lg bg-accent/10">
+                    <Brain className="h-5 w-5 text-accent" />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-foreground mb-1">Smart Qualification</h4>
+                    <p className="text-sm text-muted-foreground">Asks the right questions so you only deal with serious leads.</p>
+                  </div>
+                </div>
+              </GlowCard>
+              
+              <GlowCard customSize glowColor="teal" className="p-5 bg-card/60">
+                <div className="flex items-start gap-4">
+                  <div className="p-2 rounded-lg bg-accent/10">
+                    <Clock3 className="h-5 w-5 text-accent" />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-foreground mb-1">24/7 Availability</h4>
+                    <p className="text-sm text-muted-foreground">Schedules appointments or escalates priority inquiries automatically.</p>
+                  </div>
+                </div>
+              </GlowCard>
             </div>
           </div>
         </div>
       </section>
 
-      {/* 5️⃣ What We Build - Preview */}
-      <section className="py-16 border-t border-border">
+      {/* 4️⃣ WHAT WE BUILD - Infrastructure */}
+      <section className="py-16 md:py-20 border-t border-border">
         <div className="container mx-auto px-6">
           <div className="text-center mb-12">
             <h2 className="font-serif text-3xl md:text-4xl font-bold mb-3">
@@ -278,7 +244,7 @@ const Index = () => {
         </div>
       </section>
 
-      {/* 6️⃣ How It Works */}
+      {/* How It Works */}
       <section className="py-16 border-t border-border">
         <div className="container mx-auto px-6">
           <div className="text-center mb-10">
@@ -314,16 +280,7 @@ const Index = () => {
         </div>
       </section>
 
-      {/* 7️⃣ Trust Strip - Compact */}
-      <section className="py-6 border-t border-border">
-        <div className="container mx-auto px-6">
-          <div className="max-w-md mx-auto">
-            <HeroVisual />
-          </div>
-        </div>
-      </section>
-
-      {/* 8️⃣ Final CTA - Single, calm */}
+      {/* Final CTA */}
       <section className="py-16 border-t border-border">
         <div className="container mx-auto px-6 text-center">
           <h2 className="font-serif text-3xl md:text-4xl font-bold mb-4">
