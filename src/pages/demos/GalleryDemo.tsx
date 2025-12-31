@@ -6,37 +6,37 @@ const galleryCards = [
     title: "Fog & Pines",
     pseudonym: "E. Maris",
     tags: "Maine • Mist • Evergreens",
-    image: "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=1600&q=80",
+    image: "https://images.unsplash.com/photo-1542273917363-3b1817f69a2d?auto=format&fit=crop&w=1600&q=80",
   },
   {
     title: "Harbor Quiet",
     pseudonym: "C. Thayer",
     tags: "Working Waterfront • Dawn • Still",
-    image: "https://images.unsplash.com/photo-1500375592092-40eb2168fd21?auto=format&fit=crop&w=1600&q=80",
+    image: "https://images.unsplash.com/photo-1544551763-46a013bb70d5?auto=format&fit=crop&w=1600&q=80",
   },
   {
     title: "Salt Marsh Light",
     pseudonym: "N. Winslow",
     tags: "New England • Marsh • Golden Hour",
-    image: "https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&w=1600&q=80",
+    image: "https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=1600&q=80",
   },
   {
     title: "Granite & Tide",
     pseudonym: "S. Calder",
     tags: "Rocky Coast • Atlantic • Texture",
-    image: "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1600&q=80",
+    image: "https://images.unsplash.com/photo-1505142468610-359e7d316be0?auto=format&fit=crop&w=1600&q=80",
   },
   {
     title: "Lighthouse Study",
     pseudonym: "R. Aster",
     tags: "Beacon • Overcast • Coastal",
-    image: "https://images.unsplash.com/photo-1507400492013-162706c8c05e?auto=format&fit=crop&w=1600&q=80",
+    image: "https://images.unsplash.com/photo-1501619951397-5ba40d0f75da?auto=format&fit=crop&w=1600&q=80",
   },
   {
     title: "Winter Wharf",
     pseudonym: "J. Alder",
     tags: "Cold Harbor • Quiet • Blue Hour",
-    image: "https://images.unsplash.com/photo-1482192596544-9eb780fc7f66?auto=format&fit=crop&w=1600&q=80",
+    image: "https://images.unsplash.com/photo-1551009175-15bdf9dcb580?auto=format&fit=crop&w=1600&q=80",
   },
 ];
 
