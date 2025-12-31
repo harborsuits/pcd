@@ -19,6 +19,9 @@ import {
   Layout,
   Sparkles,
   AlertCircle,
+  HelpCircle,
+  Phone,
+  MessageSquare,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -164,6 +167,8 @@ export function PhaseBIntake({
   const [expandedCard, setExpandedCard] = useState<number | null>(0);
   const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [requestingHelp, setRequestingHelp] = useState(false);
+  const [helpRequested, setHelpRequested] = useState<"call" | "chat" | null>(null);
 
   // Update photos count from files
   useEffect(() => {
@@ -260,6 +265,47 @@ export function PhaseBIntake({
       });
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleHelpRequest = async (type: "call" | "chat") => {
+    setRequestingHelp(true);
+    try {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/portal/${token}/help-request`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": SUPABASE_ANON_KEY,
+          "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({ type }),
+      });
+
+      const result = await res.json();
+      if (res.ok && result.ok) {
+        setHelpRequested(type);
+        toast({
+          title: type === "call" ? "Call requested!" : "We'll be in touch",
+          description: type === "call" 
+            ? "We'll reach out within 1 business day to schedule a quick call."
+            : "Check your messages — we'll respond shortly.",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: result.error || "Could not submit request. Please try again.",
+          variant: "destructive",
+        });
+      }
+    } catch (err) {
+      console.error("Help request error:", err);
+      toast({
+        title: "Error",
+        description: "Could not submit request. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setRequestingHelp(false);
     }
   };
 
@@ -591,6 +637,61 @@ export function PhaseBIntake({
           <span>Complete all 4 sections above to unlock your first draft.</span>
         </div>
       )}
+
+      {/* Need Help Section */}
+      <div className="border-t border-border pt-4 mt-2">
+        <div className="flex items-center gap-2 mb-3">
+          <HelpCircle className="h-4 w-4 text-muted-foreground" />
+          <span className="text-sm font-medium">Need help?</span>
+        </div>
+        
+        {helpRequested ? (
+          <div className="p-3 rounded-lg bg-green-500/10 border border-green-500/20 text-sm">
+            <div className="flex items-center gap-2 text-green-700 dark:text-green-400">
+              <CheckCircle2 className="h-4 w-4" />
+              <span>
+                {helpRequested === "call" 
+                  ? "Call request sent — we'll reach out soon!" 
+                  : "Question received — check your messages for a response."}
+              </span>
+            </div>
+          </div>
+        ) : (
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex-1"
+              disabled={requestingHelp}
+              onClick={() => handleHelpRequest("call")}
+            >
+              {requestingHelp ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Phone className="h-4 w-4 mr-2" />
+              )}
+              Request a quick call
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex-1"
+              disabled={requestingHelp}
+              onClick={() => handleHelpRequest("chat")}
+            >
+              {requestingHelp ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <MessageSquare className="h-4 w-4 mr-2" />
+              )}
+              Ask in chat
+            </Button>
+          </div>
+        )}
+        <p className="text-xs text-muted-foreground mt-2">
+          Most clients complete this in 10–15 minutes. We're here if you get stuck.
+        </p>
+      </div>
     </div>
   );
 }

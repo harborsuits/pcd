@@ -65,6 +65,7 @@ Deno.serve(async (req) => {
   const approveFinalIdx = pathParts.indexOf("approve-final");
   const milestonesIdx = pathParts.indexOf("milestones");
   const phaseBIdx = pathParts.indexOf("phase-b");
+  const helpRequestIdx = pathParts.indexOf("help-request");
   
   if (reviewIdx > portalIdx && req.method === "POST") {
     const token = pathParts[portalIdx + 1];
@@ -160,6 +161,12 @@ Deno.serve(async (req) => {
   if (phaseBIdx > portalIdx && req.method === "GET") {
     const token = pathParts[portalIdx + 1];
     return handleGetPhaseB(token, corsHeaders);
+  }
+
+  // POST /portal/:token/help-request - Client requests help (call or chat)
+  if (helpRequestIdx > portalIdx && req.method === "POST") {
+    const token = pathParts[portalIdx + 1];
+    return handleHelpRequest(req, token, corsHeaders);
   }
 
   if (req.method !== "GET") {
@@ -1863,6 +1870,122 @@ async function handleGetPhaseB(
 
   } catch (error) {
     console.error("Get Phase B error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+}
+
+// POST /portal/:token/help-request - Client requests help (call or chat)
+async function handleHelpRequest(
+  req: Request,
+  token: string,
+  corsHeaders: Record<string, string>
+): Promise<Response> {
+  try {
+    if (!token || !isValidToken(token)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid token" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const body = await req.json();
+    const { type } = body; // "call" or "chat"
+
+    if (!type || !["call", "chat"].includes(type)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid request type" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Fetch project
+    const { data: project, error: projectError } = await supabase
+      .from("projects")
+      .select("id, business_name, contact_name, contact_phone, contact_email")
+      .eq("project_token", token)
+      .is("deleted_at", null)
+      .maybeSingle();
+
+    if (projectError || !project) {
+      console.error("Project not found:", projectError);
+      return new Response(
+        JSON.stringify({ error: "Project not found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Post system message based on type
+    const messageContent = type === "call"
+      ? `📞 Client requested a quick call. Contact: ${project.contact_name || "—"} | ${project.contact_phone || project.contact_email || "—"}`
+      : `💬 Client needs help with project setup and wants to chat.`;
+
+    await supabase.from("messages").insert({
+      project_id: project.id,
+      project_token: token,
+      sender_type: "system",
+      content: messageContent,
+    });
+
+    // Create notification event
+    await supabase.from("notification_events").insert({
+      project_id: project.id,
+      project_token: token,
+      event_type: type === "call" ? "help_call_requested" : "help_chat_requested",
+      payload: { business_name: project.business_name, type },
+    });
+
+    // Send Telegram notification
+    const telegramBotToken = Deno.env.get("TELEGRAM_BOT_TOKEN");
+    const telegramChatId = Deno.env.get("TELEGRAM_CHAT_ID");
+    const baseUrl = Deno.env.get("PUBLIC_BASE_URL") || "https://pleasantcove.design";
+
+    if (telegramBotToken && telegramChatId) {
+      const t = encodeURIComponent(token);
+      const operatorUrl = `${baseUrl}/operator?project=${t}`;
+
+      const emoji = type === "call" ? "📞" : "💬";
+      const action = type === "call" ? "requested a quick call" : "needs help (chat)";
+
+      try {
+        const res = await fetch(`https://api.telegram.org/bot${telegramBotToken}/sendMessage`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            chat_id: telegramChatId,
+            text: `${emoji} Help Requested\n\n• Business: ${project.business_name}\n• Client ${action}\n• Contact: ${project.contact_name || "—"}`,
+            reply_markup: {
+              inline_keyboard: [[
+                { text: "View Project →", url: operatorUrl },
+              ]],
+            },
+          }),
+        });
+
+        if (!res.ok) {
+          const text = await res.text();
+          console.error("Telegram sendMessage failed:", res.status, text);
+        }
+      } catch (e) {
+        console.error("Telegram notification failed:", e);
+      }
+    }
+
+    console.log(`Help request (${type}) from ${project.business_name} (${token.slice(0, 8)}...)`);
+
+    return new Response(
+      JSON.stringify({ ok: true }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+
+  } catch (error) {
+    console.error("Help request error:", error);
     return new Response(
       JSON.stringify({ error: "Internal server error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
