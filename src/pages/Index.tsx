@@ -98,7 +98,7 @@ const Index = () => {
       </header>
 
       {/* 1️⃣ HERO - AI-forward, compact */}
-      <section className="pt-20 md:pt-28 pb-16 md:pb-20 relative overflow-hidden">
+      <section className="pt-12 md:pt-16 pb-10 md:pb-12 relative overflow-hidden">
         <div className="relative container mx-auto px-6">
           <div className="text-center max-w-3xl mx-auto">
             <h1 className="font-serif text-4xl md:text-5xl lg:text-6xl font-bold leading-tight mb-2">
@@ -108,16 +108,9 @@ const Index = () => {
               With an AI receptionist built into your website.
             </h2>
             
-            <p className="text-lg md:text-xl text-muted-foreground leading-relaxed mb-10 max-w-2xl mx-auto">
+            <p className="text-lg md:text-xl text-muted-foreground leading-relaxed max-w-2xl mx-auto">
               We design custom websites for service businesses and power them with an AI receptionist that answers calls, texts, and forms automatically.
             </p>
-            
-            <a href="#demos">
-              <LiquidButton size="lg">
-                See It In Action
-                <ArrowRight className="ml-2 h-5 w-5" />
-              </LiquidButton>
-            </a>
           </div>
         </div>
       </section>
