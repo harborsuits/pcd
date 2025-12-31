@@ -61,7 +61,7 @@ const photographerItems = [
     title: "Jonas Berg — The Fog Whisperer",
     description: "A former Finnish submarine captain, Jonas moved to Maine in 2015 seeking silence. He wakes at 3am to catch the first fog and hasn't missed a sunrise in 9 years. National Geographic calls him 'the man who photographs ghosts.'",
     href: "#contact",
-    image: lobstermanPortrait,
+    image: "https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=800&auto=format&fit=crop",
   },
   {
     id: "ruth-blackwood",
@@ -75,7 +75,7 @@ const photographerItems = [
     title: "Marcus Tide — The Lobsterman's Eye",
     description: "Marcus hauled lobster traps for 30 years before picking up a camera at age 55. His weathered hands shake, but his compositions are surgically precise. His debut show sold out in 4 hours. He still smells faintly of brine.",
     href: "#contact",
-    image: "https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=800&auto=format&fit=crop",
+    image: lobstermanPortrait,
   },
   {
     id: "ivy-chen",
