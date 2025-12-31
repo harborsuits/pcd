@@ -177,6 +177,13 @@ export function PortalAuthPage({ projectToken, businessName, onAuthSuccess }: Po
       });
 
       const data = await res.json();
+      
+      // If project is unclaimed, try to link the user to it
+      if (data.unclaimed === true) {
+        await linkUserToProject(accessToken);
+        return true;
+      }
+      
       return data.ok === true;
     } catch (err) {
       console.error("Verify owner error:", err);
