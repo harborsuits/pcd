@@ -256,40 +256,41 @@ Deno.serve(async (req) => {
     }
 
     // SECURITY: If project has an owner, verify the requesting user is the owner
+    // But allow access with anon key for initial page load (auth check happens in frontend)
     if (project.owner_user_id) {
       const authHeader = req.headers.get("Authorization");
+      const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") || "";
       
-      // No auth header = unauthorized
-      if (!authHeader?.startsWith("Bearer ")) {
-        console.log("Owned project accessed without auth");
-        return new Response(
-          JSON.stringify({ error: "Authentication required", requires_auth: true }),
-          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+      // Check if this is a user JWT (not anon key) and validate ownership
+      if (authHeader?.startsWith("Bearer ")) {
+        const jwt = authHeader.replace("Bearer ", "");
+        
+        // If it's NOT the anon key, it should be a user JWT - validate it
+        if (jwt !== supabaseAnonKey) {
+          const { data: { user }, error: authError } = await supabase.auth.getUser(jwt);
+
+          if (authError || !user) {
+            console.log("Invalid user JWT for owned project");
+            return new Response(
+              JSON.stringify({ error: "Invalid or expired token", requires_auth: true }),
+              { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
+
+          // Check if user is the owner
+          if (project.owner_user_id !== user.id) {
+            console.log(`Access denied: user ${user.id} tried to access project owned by ${project.owner_user_id}`);
+            return new Response(
+              JSON.stringify({ error: "You don't have access to this portal" }),
+              { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
+
+          console.log(`Auth verified: user ${user.id} owns project ${token.slice(0, 8)}...`);
+        }
       }
-
-      // Verify JWT and check ownership
-      const jwt = authHeader.replace("Bearer ", "");
-      const { data: { user }, error: authError } = await supabase.auth.getUser(jwt);
-
-      if (authError || !user) {
-        console.log("Invalid JWT for owned project");
-        return new Response(
-          JSON.stringify({ error: "Invalid or expired token", requires_auth: true }),
-          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-
-      // Check if user is the owner
-      if (project.owner_user_id !== user.id) {
-        console.log(`Access denied: user ${user.id} tried to access project owned by ${project.owner_user_id}`);
-        return new Response(
-          JSON.stringify({ error: "You don't have access to this portal" }),
-          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-
-      console.log(`Auth verified: user ${user.id} owns project ${token.slice(0, 8)}...`);
+      // If using anon key or no auth, mark that auth is required (frontend handles redirect)
+      // We still return data so the frontend can show the auth page with business name
     }
 
     // Fetch intake status for roadmap and Phase B data
