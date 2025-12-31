@@ -13,6 +13,7 @@ import maineStormImage from "@/assets/gallery/maine-storm.jpeg"
 import coastalStormImage from "@/assets/gallery/coastal-storm.jpeg"
 import lighthouseNightImage from "@/assets/gallery/lighthouse-night.jpeg"
 import montaukLighthouseImage from "@/assets/gallery/montauk-lighthouse.jpg"
+import tidePoolImage from "@/assets/gallery/tide-pool.jpg"
 
 const galleryCards = [
   {
@@ -87,7 +88,7 @@ const photographerItems = [
     title: "Ivy Chen — The Tide Pool Mystic",
     description: "A marine biologist turned macro photographer, Ivy spent 3 years living in a tent on Monhegan Island documenting microscopic coastal life. Her image 'Universe in a Droplet' won the Wildlife Photographer of the Year.",
     href: "#contact",
-    image: "https://images.unsplash.com/photo-1518837695005-2083093ee35b?w=800&auto=format&fit=crop",
+    image: tidePoolImage,
   },
 ];
 
