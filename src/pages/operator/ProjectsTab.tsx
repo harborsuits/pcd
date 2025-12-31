@@ -4,11 +4,17 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { 
-  FolderOpen, Loader2, Clock, FileText, 
+  FolderOpen, Loader2, Clock,
   MessageSquare, ExternalLink, ChevronRight, Sparkles, Eye, ArrowRight,
-  CheckCircle2, Circle, AlertCircle, Bell
+  CheckCircle2, Circle, AlertCircle, Bell, LayoutGrid, List, Mail, ChevronDown
 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -16,6 +22,7 @@ import { ProjectWorkSurface } from "./ProjectWorkSurface";
 import { adminFetch } from "@/lib/adminFetch";
 import { useOperatorContext } from "./OperatorLayout";
 import { StageBadge, PIPELINE_FILTERS, PipelineFilter, getNextStage, STAGE_CONFIG, PipelineStage } from "@/components/operator/StageBadge";
+import { KanbanBoard, KanbanProject } from "@/components/operator/KanbanBoard";
 
 interface PhaseBData {
   logoStatus: "uploaded" | "create" | "";
@@ -71,9 +78,13 @@ interface Project {
   has_claim: boolean;
 }
 
+type ViewMode = "list" | "kanban";
+type NudgeChannel = "portal" | "email" | "both";
+
 export function ProjectsTab() {
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [pipelineFilter, setPipelineFilter] = useState<PipelineFilter>("all");
+  const [viewMode, setViewMode] = useState<ViewMode>("list");
   const { setCurrentProjectToken, setCurrentProjectName, registerCloseProject } = useOperatorContext();
   const queryClient = useQueryClient();
 
@@ -128,15 +139,18 @@ export function ProjectsTab() {
 
   // Mutation to nudge client
   const nudgeMutation = useMutation({
-    mutationFn: async (token: string) => {
+    mutationFn: async ({ token, channels }: { token: string; channels: NudgeChannel[] }) => {
       const res = await adminFetch(`/admin/projects/${token}/nudge`, {
         method: "POST",
+        body: JSON.stringify({ channels }),
       });
       if (!res.ok) throw new Error("Failed to send nudge");
       return res.json();
     },
-    onSuccess: () => {
-      toast.success("Reminder sent to client");
+    onSuccess: (data) => {
+      const sent = data.channels_sent || ["portal"];
+      const channelLabels = sent.map((c: string) => c === "portal" ? "Portal" : "Email").join(" + ");
+      toast.success(`Reminder sent via ${channelLabels}`);
       queryClient.invalidateQueries({ queryKey: ["admin-projects"] });
     },
     onError: (error: Error) => toast.error(error.message),
@@ -151,11 +165,42 @@ export function ProjectsTab() {
     }
   };
 
-  // Handle nudge client
-  const handleNudge = (e: React.MouseEvent, project: Project) => {
+  // Handle nudge client with channel selection
+  const handleNudge = (e: React.MouseEvent, project: Project, channel: NudgeChannel = "portal") => {
     e.stopPropagation();
-    nudgeMutation.mutate(project.project_token);
+    const channels: NudgeChannel[] = channel === "both" ? ["portal", "email"] : [channel];
+    nudgeMutation.mutate({ token: project.project_token, channels });
   };
+
+  // Handle stage change from Kanban
+  const handleKanbanStageChange = async (token: string, newStage: PipelineStage) => {
+    advanceStageMutation.mutate({ token, stage: newStage });
+  };
+
+  // Open work surface by token (for Kanban)
+  const handleOpenWorkSurface = (token: string) => {
+    const project = projects.find(p => p.project_token === token);
+    if (project) setSelectedProject(project);
+  };
+
+  // Open portal in new tab
+  const handleOpenPortal = (token: string) => {
+    window.open(`/p/${token}`, "_blank");
+  };
+
+  // Map projects to Kanban format
+  const kanbanProjects: KanbanProject[] = useMemo(() => {
+    return projects.map(p => ({
+      id: p.id,
+      token: p.project_token,
+      business_name: p.business_name,
+      contact_name: p.contact_name,
+      contact_email: p.contact_email,
+      pipeline_stage: (p.pipeline_stage || "new") as PipelineStage,
+      phase_b_status: p.intake?.phase_b_status,
+      phase_b_progress: getPhaseBProgress(p.intake),
+    }));
+  }, [projects]);
 
   // Check if project needs a nudge (Phase B incomplete)
   const needsNudge = (project: Project): boolean => {
@@ -251,33 +296,74 @@ export function ProjectsTab() {
             <FolderOpen className="h-5 w-5" />
             Projects
           </CardTitle>
-          <Badge variant="outline">{projects.length} total</Badge>
+          <div className="flex items-center gap-2">
+            {/* View toggle */}
+            <div className="flex items-center border rounded-md">
+              <Button
+                variant={viewMode === "list" ? "secondary" : "ghost"}
+                size="sm"
+                className="h-8 px-2 rounded-r-none"
+                onClick={() => setViewMode("list")}
+              >
+                <List className="h-4 w-4" />
+              </Button>
+              <Button
+                variant={viewMode === "kanban" ? "secondary" : "ghost"}
+                size="sm"
+                className="h-8 px-2 rounded-l-none"
+                onClick={() => setViewMode("kanban")}
+              >
+                <LayoutGrid className="h-4 w-4" />
+              </Button>
+            </div>
+            <Badge variant="outline">{projects.length} total</Badge>
+          </div>
         </div>
       </CardHeader>
       <CardContent className="p-0">
-        {/* Pipeline filter tabs - horizontal scroll on mobile */}
-        <div className="border-b overflow-x-auto scrollbar-hide">
-          <Tabs value={pipelineFilter} onValueChange={(v) => setPipelineFilter(v as PipelineFilter)}>
-            <TabsList className="inline-flex justify-start h-auto p-0 bg-transparent min-w-max px-4">
-              {PIPELINE_FILTERS.map((filter) => (
-                <TabsTrigger
-                  key={filter.value}
-                  value={filter.value}
-                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-3 py-2 text-sm whitespace-nowrap"
-                >
-                  {filter.label}
-                  {stageCounts[filter.value] > 0 && (
-                    <span className="ml-1.5 text-xs text-muted-foreground">
-                      ({stageCounts[filter.value]})
-                    </span>
-                  )}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </Tabs>
-        </div>
+        {/* Pipeline filter tabs - only shown in list view */}
+        {viewMode === "list" && (
+          <div className="border-b overflow-x-auto scrollbar-hide">
+            <Tabs value={pipelineFilter} onValueChange={(v) => setPipelineFilter(v as PipelineFilter)}>
+              <TabsList className="inline-flex justify-start h-auto p-0 bg-transparent min-w-max px-4">
+                {PIPELINE_FILTERS.map((filter) => (
+                  <TabsTrigger
+                    key={filter.value}
+                    value={filter.value}
+                    className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-3 py-2 text-sm whitespace-nowrap"
+                  >
+                    {filter.label}
+                    {stageCounts[filter.value] > 0 && (
+                      <span className="ml-1.5 text-xs text-muted-foreground">
+                        ({stageCounts[filter.value]})
+                      </span>
+                    )}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </Tabs>
+          </div>
+        )}
 
-        <ScrollArea className="h-[calc(100vh-280px)]">
+        {/* Kanban View */}
+        {viewMode === "kanban" ? (
+          <div className="p-4">
+            {isLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : (
+              <KanbanBoard
+                projects={kanbanProjects}
+                onStageChange={handleKanbanStageChange}
+                onOpenWorkSurface={handleOpenWorkSurface}
+                onOpenPortal={handleOpenPortal}
+              />
+            )}
+          </div>
+        ) : (
+          /* List View */
+          <ScrollArea className="h-[calc(100vh-280px)]">
           {isLoading ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -403,19 +489,40 @@ export function ProjectsTab() {
                     
                     {/* Actions - simplified on mobile */}
                     <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
-                      {/* Nudge button - show when Phase B incomplete */}
+                      {/* Nudge dropdown - show when Phase B incomplete */}
                       {needsNudge(project) && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="gap-1 text-xs h-7 px-2 text-amber-600 border-amber-300 hover:bg-amber-50"
-                          disabled={nudgeMutation.isPending}
-                          onClick={(e) => handleNudge(e, project)}
-                          title="Send reminder to complete setup"
-                        >
-                          <Bell className="h-3 w-3" />
-                          <span className="hidden sm:inline">Nudge</span>
-                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="gap-1 text-xs h-7 px-2 text-amber-600 border-amber-300 hover:bg-amber-50"
+                              disabled={nudgeMutation.isPending}
+                            >
+                              <Bell className="h-3 w-3" />
+                              <span className="hidden sm:inline">Nudge</span>
+                              <ChevronDown className="h-3 w-3" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={(e) => handleNudge(e as any, project, "portal")}>
+                              <MessageSquare className="h-4 w-4 mr-2" />
+                              Portal Message
+                            </DropdownMenuItem>
+                            {project.contact_email && (
+                              <DropdownMenuItem onClick={(e) => handleNudge(e as any, project, "email")}>
+                                <Mail className="h-4 w-4 mr-2" />
+                                Send Email
+                              </DropdownMenuItem>
+                            )}
+                            {project.contact_email && (
+                              <DropdownMenuItem onClick={(e) => handleNudge(e as any, project, "both")}>
+                                <Bell className="h-4 w-4 mr-2" />
+                                Both (Portal + Email)
+                              </DropdownMenuItem>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       )}
                       {/* Advance stage button */}
                       {getNextStage(project.pipeline_stage) && (
@@ -465,7 +572,8 @@ export function ProjectsTab() {
               ))}
             </div>
           )}
-        </ScrollArea>
+          </ScrollArea>
+        )}
       </CardContent>
     </Card>
   );

@@ -1739,6 +1739,20 @@ async function handleNudge(req: Request, token: string): Promise<Response> {
   try {
     console.log(`Sending nudge to project: ${token}`);
 
+    // Parse channels from request body
+    let channels: string[] = ["portal"];
+    try {
+      const body = await req.json();
+      if (Array.isArray(body.channels)) {
+        channels = body.channels;
+      }
+    } catch {
+      // Default to portal only
+    }
+
+    const wantsPortal = channels.includes("portal");
+    const wantsEmail = channels.includes("email");
+
     const supabase = getSupabaseClient();
 
     // Get project info
@@ -1779,7 +1793,7 @@ async function handleNudge(req: Request, token: string): Promise<Response> {
       missing.push("logo", "photos", "pages", "inspiration sites");
     }
 
-    // Create friendly reminder message
+    // Create friendly reminder message for portal
     let messageContent = "👋 Quick reminder: ";
     if (missing.length === 0) {
       messageContent += "Your project setup is almost complete! Please review and submit when ready so we can start your first draft.";
@@ -1789,22 +1803,66 @@ async function handleNudge(req: Request, token: string): Promise<Response> {
       messageContent += "Please complete your project setup above so we can start your first draft. It only takes about 10 minutes!";
     }
 
-    // Post the reminder message
-    const { error: messageError } = await supabase
-      .from("messages")
-      .insert({
-        project_id: project.id,
-        project_token: token,
-        sender_type: "admin",
-        content: messageContent,
+    const channelsSent: string[] = [];
+    const baseUrl = Deno.env.get("PUBLIC_BASE_URL") || "https://pleasantcove.design";
+
+    // Send portal message
+    if (wantsPortal) {
+      const { error: messageError } = await supabase
+        .from("messages")
+        .insert({
+          project_id: project.id,
+          project_token: token,
+          sender_type: "admin",
+          content: messageContent,
+        });
+
+      if (messageError) {
+        console.error("Message insert error:", messageError);
+      } else {
+        channelsSent.push("portal");
+      }
+    }
+
+    // Send email if requested and email exists
+    if (wantsEmail && project.contact_email) {
+      const emailResult = await sendNudgeEmail({
+        to: project.contact_email,
+        contactName: project.contact_name,
+        businessName: project.business_name,
+        portalUrl: `${baseUrl}/p/${encodeURIComponent(token)}`,
+        missing,
       });
 
-    if (messageError) {
-      console.error("Message insert error:", messageError);
-      return new Response(
-        JSON.stringify({ error: "Failed to send message" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      if (emailResult.success) {
+        channelsSent.push("email");
+        // Log email notification event
+        await supabase.from("notification_events").insert({
+          project_id: project.id,
+          project_token: token,
+          event_type: "nudge_email_sent",
+          payload: {
+            to: project.contact_email,
+            business_name: project.business_name,
+            missing_items: missing,
+          },
+          sent_at: new Date().toISOString(),
+        });
+      } else {
+        console.error("Email send failed:", emailResult.error);
+        // Log failed attempt
+        await supabase.from("notification_events").insert({
+          project_id: project.id,
+          project_token: token,
+          event_type: "nudge_email_failed",
+          payload: {
+            to: project.contact_email,
+            error: emailResult.error,
+          },
+        });
+      }
+    } else if (wantsEmail && !project.contact_email) {
+      console.log("Email requested but no email on file for project");
     }
 
     // Create notification event for audit trail
@@ -1816,6 +1874,8 @@ async function handleNudge(req: Request, token: string): Promise<Response> {
         business_name: project.business_name,
         missing_items: missing,
         message: messageContent,
+        channels_requested: channels,
+        channels_sent: channelsSent,
       },
       sent_at: new Date().toISOString(),
     });
@@ -1823,7 +1883,6 @@ async function handleNudge(req: Request, token: string): Promise<Response> {
     // Send Telegram notification
     const telegramBotToken = Deno.env.get("TELEGRAM_BOT_TOKEN");
     const telegramChatId = Deno.env.get("TELEGRAM_CHAT_ID");
-    const baseUrl = Deno.env.get("PUBLIC_BASE_URL") || "https://pleasantcove.design";
 
     if (telegramBotToken && telegramChatId) {
       const t = encodeURIComponent(token);
@@ -1835,7 +1894,7 @@ async function handleNudge(req: Request, token: string): Promise<Response> {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             chat_id: telegramChatId,
-            text: `🔔 Nudge Sent\n\n• Business: ${project.business_name}\n• Missing: ${missing.length > 0 ? missing.join(", ") : "Almost complete!"}\n• Contact: ${project.contact_name || "—"}`,
+            text: `🔔 Nudge Sent\n\n• Business: ${project.business_name}\n• Channels: ${channelsSent.join(", ") || "none"}\n• Missing: ${missing.length > 0 ? missing.join(", ") : "Almost complete!"}\n• Contact: ${project.contact_name || "—"}`,
             reply_markup: {
               inline_keyboard: [[
                 { text: "View Portal →", url: portalUrl },
@@ -1853,10 +1912,10 @@ async function handleNudge(req: Request, token: string): Promise<Response> {
       }
     }
 
-    console.log(`Nudge sent for ${project.business_name} (${token.slice(0, 8)}...)`);
+    console.log(`Nudge sent for ${project.business_name} (${token.slice(0, 8)}...) via ${channelsSent.join(", ")}`);
 
     return new Response(
-      JSON.stringify({ success: true, message: "Nudge sent" }),
+      JSON.stringify({ success: true, message: "Nudge sent", channels_sent: channelsSent }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
 
@@ -1866,6 +1925,95 @@ async function handleNudge(req: Request, token: string): Promise<Response> {
       JSON.stringify({ error: "Internal server error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
+  }
+}
+
+// Helper to send nudge email via Resend
+async function sendNudgeEmail({
+  to,
+  contactName,
+  businessName,
+  portalUrl,
+  missing,
+}: {
+  to: string;
+  contactName: string | null;
+  businessName: string;
+  portalUrl: string;
+  missing: string[];
+}): Promise<{ success: boolean; error?: string }> {
+  const apiKey = Deno.env.get("RESEND_API_KEY");
+  const from = Deno.env.get("EMAIL_FROM");
+
+  if (!apiKey || !from) {
+    return { success: false, error: "Missing RESEND_API_KEY or EMAIL_FROM" };
+  }
+
+  const greeting = contactName ? `Hi ${contactName}` : "Hi there";
+  const missingList = missing.length > 0 && missing.length <= 3
+    ? `We just need your <strong>${missing.join(", ")}</strong> to get started.`
+    : missing.length > 3
+    ? "We just need a few more details to finalize your setup."
+    : "Your setup is almost complete!";
+
+  const html = `
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+      <h2 style="color: #1a1a1a; margin-bottom: 16px;">${greeting},</h2>
+      
+      <p style="color: #4a4a4a; font-size: 16px; line-height: 1.6;">
+        Quick heads up — we're ready to start your first draft for <strong>${businessName}</strong>!
+      </p>
+      
+      <p style="color: #4a4a4a; font-size: 16px; line-height: 1.6;">
+        ${missingList}
+      </p>
+      
+      <div style="margin: 24px 0;">
+        <a href="${portalUrl}" 
+           style="display: inline-block; background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 500;">
+          Open Your Setup Checklist →
+        </a>
+      </div>
+      
+      <p style="color: #6a6a6a; font-size: 14px; line-height: 1.6;">
+        If you'd rather, just reply to this email with your logo and a few photos of your work — we'll handle the rest.
+      </p>
+      
+      <hr style="border: none; border-top: 1px solid #e5e5e5; margin: 24px 0;" />
+      
+      <p style="color: #9a9a9a; font-size: 12px;">
+        — Pleasant Cove Design
+      </p>
+    </div>
+  `;
+
+  try {
+    const resp = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from,
+        to,
+        subject: `Quick step to start your first draft — ${businessName}`,
+        html,
+      }),
+    });
+
+    const data = await resp.json().catch(() => ({}));
+    
+    if (!resp.ok) {
+      console.error("Resend API error:", resp.status, data);
+      return { success: false, error: `Resend error ${resp.status}: ${JSON.stringify(data)}` };
+    }
+
+    console.log("Email sent successfully:", data);
+    return { success: true };
+  } catch (e) {
+    console.error("Email send exception:", e);
+    return { success: false, error: String(e) };
   }
 }
 
