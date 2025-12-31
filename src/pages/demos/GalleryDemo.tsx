@@ -7,6 +7,7 @@ import graniteTideImage from "@/assets/gallery/granite-tide.jpg"
 import lighthouseImage from "@/assets/gallery/lighthouse-study.jpg"
 import winterWharfImage from "@/assets/gallery/winter-wharf.jpg"
 import lobstermanPortrait from "@/assets/gallery/lobsterman-portrait.jpg"
+import maineRainImage from "@/assets/gallery/maine-rain.webp"
 
 const galleryCards = [
   {
@@ -53,7 +54,7 @@ const photographerItems = [
     title: "Elena Vasquez — Storm Chaser",
     description: "After surviving a shipwreck off Nova Scotia in 2008, Elena became obsessed with capturing the raw fury of nor'easters. She's been struck by lightning twice and calls it 'research.' Her prints sell for $40K and hang in the Smithsonian.",
     href: "#contact",
-    image: "https://images.unsplash.com/photo-1534430480872-3498386e7856?w=800&auto=format&fit=crop",
+    image: maineRainImage,
   },
   {
     id: "jonas-berg",
