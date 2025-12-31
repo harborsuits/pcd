@@ -10,6 +10,7 @@ import { ErrorBoundary } from "@/components/common/ErrorBoundary";
 import { canUseWebGL } from "@/lib/webgl";
 import HeroStatic from "@/components/HeroStatic";
 import { Footer } from "@/components/ui/footer";
+import pcdLogo from "@/assets/pcd-logo.jpeg";
 const exampleDemos = [
   {
     name: "Roofer",
@@ -318,7 +319,7 @@ const Index = () => {
 
       {/* Footer */}
       <Footer
-        logo={<span className="font-serif text-lg font-bold tracking-tight">PCD</span>}
+        logo={<img src={pcdLogo} alt="Pleasant Cove Design" className="h-8 w-8 rounded" />}
         brandName="Pleasant Cove Design"
         socialLinks={[]}
         mainLinks={[
