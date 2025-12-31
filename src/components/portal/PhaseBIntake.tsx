@@ -163,7 +163,14 @@ export function PhaseBIntake({
   onComplete,
   onDataChange,
 }: PhaseBIntakeProps) {
-  const [data, setData] = useState<PhaseBData>(initialData || DEFAULT_DATA);
+  // Merge initialData with defaults to ensure all fields exist
+  const [data, setData] = useState<PhaseBData>(() => ({
+    ...DEFAULT_DATA,
+    ...(initialData || {}),
+    // Ensure arrays are always arrays
+    pages: initialData?.pages ?? DEFAULT_DATA.pages,
+    features: initialData?.features ?? DEFAULT_DATA.features,
+  }));
   const [expandedCard, setExpandedCard] = useState<number | null>(0);
   const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
