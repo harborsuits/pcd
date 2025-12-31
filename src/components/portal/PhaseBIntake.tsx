@@ -43,7 +43,15 @@ export interface PhaseBData {
   primaryGoal: "book" | "quote" | "call" | "portfolio" | "learn" | "visit" | "";
 
   // Card 3: Photos & Proof
+  photosPlan: "upload" | "generate" | "none" | "";
   photosUploaded: number;
+  // For "generate" path
+  generatedPhotoSubjects: string;
+  generatedPhotoStyle: "realistic" | "studio" | "lifestyle" | "minimal" | "";
+  generatedPhotoNotes: string;
+  // For "none" path
+  placeholderOk: boolean;
+  // Other proof items
   googleReviewsLink: string;
   certifications: string;
   hasBeforeAfter: "yes" | "coming_soon" | "no" | "";
@@ -74,7 +82,12 @@ const DEFAULT_DATA: PhaseBData = {
   differentiators: "",
   faq: "",
   primaryGoal: "",
+  photosPlan: "",
   photosUploaded: 0,
+  generatedPhotoSubjects: "",
+  generatedPhotoStyle: "",
+  generatedPhotoNotes: "",
+  placeholderOk: false,
   googleReviewsLink: "",
   certifications: "",
   hasBeforeAfter: "",
@@ -122,6 +135,19 @@ const BEFORE_AFTER_OPTIONS = [
   { id: "yes", label: "Yes, I have some" },
   { id: "coming_soon", label: "I'll add them later" },
   { id: "no", label: "Not applicable" },
+];
+
+const PHOTOS_PLAN_OPTIONS = [
+  { id: "upload", label: "Yes, I'll upload them", icon: "✅" },
+  { id: "generate", label: "No — create images for me", icon: "🪄" },
+  { id: "none", label: "No photos for now", icon: "🚫" },
+];
+
+const GENERATED_PHOTO_STYLE_OPTIONS = [
+  { id: "realistic", label: "Realistic", description: "Natural, authentic look" },
+  { id: "studio", label: "Clean studio", description: "Professional product shots" },
+  { id: "lifestyle", label: "Lifestyle", description: "In-context, aspirational" },
+  { id: "minimal", label: "Minimal", description: "Simple, uncluttered" },
 ];
 
 interface CardProps {
@@ -208,7 +234,14 @@ export function PhaseBIntake({
   // Check card completion status
   const isCard1Complete = (data.logoStatus === "uploaded" || data.logoStatus === "create");
   const isCard2Complete = !!data.businessDescription.trim() && !!data.services.trim() && !!data.primaryGoal;
-  const isCard3Complete = data.photosUploaded >= 3;
+  
+  // Card 3 completion depends on the photos plan
+  const isCard3Complete = (() => {
+    if (data.photosPlan === "upload") return data.photosUploaded >= 3;
+    if (data.photosPlan === "generate") return !!data.generatedPhotoSubjects.trim() && !!data.generatedPhotoStyle;
+    if (data.photosPlan === "none") return data.placeholderOk === true;
+    return false;
+  })();
   const isCard4Complete = !!data.vibe && !!data.tone;
 
   const completedCards = [isCard1Complete, isCard2Complete, isCard3Complete, isCard4Complete].filter(Boolean).length;
@@ -527,70 +560,185 @@ export function PhaseBIntake({
           onToggle={() => setExpandedCard(expandedCard === 2 ? null : 2)}
         >
           <div className="space-y-4 pt-4">
-            {/* Photos status */}
+            {/* Photos plan selector */}
             <div className="space-y-2">
-              <Label>Photos of your work, team, or space</Label>
-              <div className={cn(
-                "p-3 rounded-lg border",
-                data.photosUploaded >= 3 ? "border-green-500/30 bg-green-500/5" : "border-border bg-muted/30"
-              )}>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm">
-                    {data.photosUploaded} photo{data.photosUploaded !== 1 ? "s" : ""} uploaded
-                  </span>
-                  {data.photosUploaded >= 3 ? (
-                    <CheckCircle2 className="h-4 w-4 text-green-500" />
-                  ) : (
-                    <span className="text-xs text-muted-foreground">Need at least 3</span>
-                  )}
+              <Label>Do you have photos we can use?</Label>
+              <div className="grid gap-2">
+                {PHOTOS_PLAN_OPTIONS.map((opt) => {
+                  const isSelected = data.photosPlan === opt.id;
+                  return (
+                    <button
+                      key={opt.id}
+                      onClick={() => updateData({ 
+                        photosPlan: opt.id as PhaseBData["photosPlan"],
+                        // Reset related fields when switching
+                        placeholderOk: false,
+                      })}
+                      className={cn(
+                        "p-3 rounded-lg border-2 text-left transition-all flex items-center gap-3",
+                        isSelected
+                          ? "border-primary bg-primary/5"
+                          : "border-border hover:border-muted-foreground/30"
+                      )}
+                    >
+                      <span className="text-lg">{opt.icon}</span>
+                      <span className="text-sm font-medium">{opt.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Path A: Upload photos */}
+            {data.photosPlan === "upload" && (
+              <div className="space-y-2 p-3 rounded-lg bg-muted/30 border border-border">
+                <div className={cn(
+                  "p-3 rounded-lg border",
+                  data.photosUploaded >= 3 ? "border-green-500/30 bg-green-500/5" : "border-amber-500/30 bg-amber-500/5"
+                )}>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm">
+                      {data.photosUploaded} photo{data.photosUploaded !== 1 ? "s" : ""} uploaded
+                    </span>
+                    {data.photosUploaded >= 3 ? (
+                      <CheckCircle2 className="h-4 w-4 text-green-500" />
+                    ) : (
+                      <span className="text-xs text-amber-600">Need at least 3</span>
+                    )}
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Upload photos using the Files section below — work examples, team, space, before/after.
+                </p>
+              </div>
+            )}
+
+            {/* Path B: Generate images */}
+            {data.photosPlan === "generate" && (
+              <div className="space-y-4 p-3 rounded-lg bg-muted/30 border border-border">
+                <p className="text-sm text-muted-foreground">
+                  We'll create custom images for your site. Tell us what you need:
+                </p>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="photo-subjects">What should the photos show?</Label>
+                  <Textarea
+                    id="photo-subjects"
+                    placeholder="e.g. Plumbing work in progress, finished bathroom, team at work, tools & equipment"
+                    value={data.generatedPhotoSubjects}
+                    onChange={(e) => updateData({ generatedPhotoSubjects: e.target.value })}
+                    rows={2}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Style preference</Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {GENERATED_PHOTO_STYLE_OPTIONS.map((opt) => {
+                      const isSelected = data.generatedPhotoStyle === opt.id;
+                      return (
+                        <button
+                          key={opt.id}
+                          onClick={() => updateData({ generatedPhotoStyle: opt.id as PhaseBData["generatedPhotoStyle"] })}
+                          className={cn(
+                            "p-2 rounded-lg border-2 text-left transition-all",
+                            isSelected
+                              ? "border-primary bg-primary/5"
+                              : "border-border hover:border-muted-foreground/30"
+                          )}
+                        >
+                          <div className="font-medium text-sm">{opt.label}</div>
+                          <div className="text-xs text-muted-foreground">{opt.description}</div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="photo-notes">Any must-include or avoid? (optional)</Label>
+                  <Input
+                    id="photo-notes"
+                    placeholder="e.g. Use blue tones, no faces, modern equipment"
+                    value={data.generatedPhotoNotes}
+                    onChange={(e) => updateData({ generatedPhotoNotes: e.target.value })}
+                  />
                 </div>
               </div>
-              <p className="text-xs text-muted-foreground">
-                Upload photos using the Files section below. We'll use them in your design.
-              </p>
-            </div>
+            )}
 
-            {/* Google Reviews */}
-            <div className="space-y-2">
-              <Label htmlFor="google-reviews">Google Reviews link (optional)</Label>
-              <Input
-                id="google-reviews"
-                placeholder="https://g.page/your-business/review or leave blank"
-                value={data.googleReviewsLink}
-                onChange={(e) => updateData({ googleReviewsLink: e.target.value })}
-              />
-              <p className="text-xs text-muted-foreground">We can display your reviews on your site.</p>
-            </div>
-
-            {/* Certifications */}
-            <div className="space-y-2">
-              <Label htmlFor="certifications">Licenses, insurance, certifications? (optional)</Label>
-              <Input
-                id="certifications"
-                placeholder="e.g. Licensed & Insured, EPA Certified, BBB A+"
-                value={data.certifications}
-                onChange={(e) => updateData({ certifications: e.target.value })}
-              />
-            </div>
-
-            {/* Before/After */}
-            <div className="space-y-2">
-              <Label>Before & after photos?</Label>
-              <RadioGroup
-                value={data.hasBeforeAfter}
-                onValueChange={(v) => updateData({ hasBeforeAfter: v as PhaseBData["hasBeforeAfter"] })}
-                className="flex flex-wrap gap-3"
-              >
-                {BEFORE_AFTER_OPTIONS.map((opt) => (
-                  <div key={opt.id} className="flex items-center space-x-2">
-                    <RadioGroupItem value={opt.id} id={`ba-${opt.id}`} />
-                    <Label htmlFor={`ba-${opt.id}`} className="cursor-pointer text-sm">
-                      {opt.label}
+            {/* Path C: No photos */}
+            {data.photosPlan === "none" && (
+              <div className="space-y-3 p-3 rounded-lg bg-muted/30 border border-border">
+                <p className="text-sm text-muted-foreground">
+                  No problem! We'll use clean placeholder imagery for your first draft.
+                </p>
+                <div className="flex items-start space-x-2">
+                  <Checkbox
+                    id="placeholder-ok"
+                    checked={data.placeholderOk}
+                    onCheckedChange={(checked) => updateData({ placeholderOk: checked === true })}
+                  />
+                  <div className="grid gap-1 leading-none">
+                    <Label htmlFor="placeholder-ok" className="cursor-pointer text-sm">
+                      Use placeholder imagery for now
                     </Label>
+                    <p className="text-xs text-muted-foreground">
+                      You can send real photos anytime and we'll swap them in.
+                    </p>
                   </div>
-                ))}
-              </RadioGroup>
-            </div>
+                </div>
+              </div>
+            )}
+
+            {/* Separator */}
+            {data.photosPlan && (
+              <div className="border-t border-border pt-4 space-y-4">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Trust signals (optional)</p>
+                
+                {/* Google Reviews */}
+                <div className="space-y-2">
+                  <Label htmlFor="google-reviews">Google Reviews link</Label>
+                  <Input
+                    id="google-reviews"
+                    placeholder="https://g.page/your-business/review or leave blank"
+                    value={data.googleReviewsLink}
+                    onChange={(e) => updateData({ googleReviewsLink: e.target.value })}
+                  />
+                  <p className="text-xs text-muted-foreground">We can display your reviews on your site.</p>
+                </div>
+
+                {/* Certifications */}
+                <div className="space-y-2">
+                  <Label htmlFor="certifications">Licenses, insurance, certifications?</Label>
+                  <Input
+                    id="certifications"
+                    placeholder="e.g. Licensed & Insured, EPA Certified, BBB A+"
+                    value={data.certifications}
+                    onChange={(e) => updateData({ certifications: e.target.value })}
+                  />
+                </div>
+
+                {/* Before/After */}
+                <div className="space-y-2">
+                  <Label>Before & after photos?</Label>
+                  <RadioGroup
+                    value={data.hasBeforeAfter}
+                    onValueChange={(v) => updateData({ hasBeforeAfter: v as PhaseBData["hasBeforeAfter"] })}
+                    className="flex flex-wrap gap-3"
+                  >
+                    {BEFORE_AFTER_OPTIONS.map((opt) => (
+                      <div key={opt.id} className="flex items-center space-x-2">
+                        <RadioGroupItem value={opt.id} id={`ba-${opt.id}`} />
+                        <Label htmlFor={`ba-${opt.id}`} className="cursor-pointer text-sm">
+                          {opt.label}
+                        </Label>
+                      </div>
+                    ))}
+                  </RadioGroup>
+                </div>
+              </div>
+            )}
           </div>
         </IntakeCard>
 
