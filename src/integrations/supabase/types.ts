@@ -935,40 +935,73 @@ export type Database = {
       }
       prototype_comments: {
         Row: {
+          anchor_id: string | null
+          anchor_selector: string | null
           author_type: string
           body: string
+          breakpoint: string | null
           created_at: string
           id: string
+          page_path: string | null
+          page_url: string | null
           pin_x: number | null
           pin_y: number | null
           project_token: string
           prototype_id: string
           resolved_at: string | null
+          scroll_y: number | null
           source_message_id: string | null
+          text_hint: string | null
+          viewport_h: number | null
+          viewport_w: number | null
+          x_pct: number | null
+          y_pct: number | null
         }
         Insert: {
+          anchor_id?: string | null
+          anchor_selector?: string | null
           author_type: string
           body: string
+          breakpoint?: string | null
           created_at?: string
           id?: string
+          page_path?: string | null
+          page_url?: string | null
           pin_x?: number | null
           pin_y?: number | null
           project_token: string
           prototype_id: string
           resolved_at?: string | null
+          scroll_y?: number | null
           source_message_id?: string | null
+          text_hint?: string | null
+          viewport_h?: number | null
+          viewport_w?: number | null
+          x_pct?: number | null
+          y_pct?: number | null
         }
         Update: {
+          anchor_id?: string | null
+          anchor_selector?: string | null
           author_type?: string
           body?: string
+          breakpoint?: string | null
           created_at?: string
           id?: string
+          page_path?: string | null
+          page_url?: string | null
           pin_x?: number | null
           pin_y?: number | null
           project_token?: string
           prototype_id?: string
           resolved_at?: string | null
+          scroll_y?: number | null
           source_message_id?: string | null
+          text_hint?: string | null
+          viewport_h?: number | null
+          viewport_w?: number | null
+          x_pct?: number | null
+          y_pct?: number | null
         }
         Relationships: [
           {

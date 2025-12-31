@@ -149,3 +149,16 @@ All colors MUST be HSL.
 .typing-anim {
   animation: typingPulse 900ms ease-in-out infinite;
 }
+
+/* Comment anchor highlight animation for prototype viewer */
+@keyframes anchorHighlight {
+  0%   { box-shadow: 0 0 0 0 hsl(var(--primary) / 0.7); }
+  50%  { box-shadow: 0 0 0 8px hsl(var(--primary) / 0.3); }
+  100% { box-shadow: 0 0 0 0 hsl(var(--primary) / 0); }
+}
+
+.comment-anchor-highlight {
+  animation: anchorHighlight 1.5s ease-out 2;
+  outline: 2px solid hsl(var(--primary) / 0.5);
+  outline-offset: 2px;
+}
