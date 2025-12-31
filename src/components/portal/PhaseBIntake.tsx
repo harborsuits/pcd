@@ -13,10 +13,9 @@ import {
   Circle,
   ChevronDown,
   ChevronUp,
-  Upload,
   Palette,
+  FileText,
   Image as ImageIcon,
-  Layout,
   Sparkles,
   AlertCircle,
   HelpCircle,
@@ -28,26 +27,40 @@ import { cn } from "@/lib/utils";
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
-// Phase B Data Structure
+// Phase B Data Structure - Updated for content-focused intake
 export interface PhaseBData {
   // Card 1: Brand & Identity
   logoStatus: "uploaded" | "create" | "";
   brandColors: string;
   colorPreference: "pick_for_me" | "custom" | "";
-  tone: "professional" | "friendly" | "bold" | "luxury" | "";
 
-  // Card 2: Content & Proof
+  // Card 2: Website Content (NEW)
+  businessDescription: string;
+  services: string;
+  serviceArea: string;
+  differentiators: string;
+  faq: string;
+  primaryGoal: "book" | "quote" | "call" | "portfolio" | "learn" | "visit" | "";
+
+  // Card 3: Photos & Proof
   photosUploaded: number;
+  googleReviewsLink: string;
+  certifications: string;
+  hasBeforeAfter: "yes" | "coming_soon" | "no" | "";
+
+  // Card 4: Style & Preferences
+  vibe: "modern" | "classic" | "luxury" | "bold" | "minimal" | "cozy" | "";
+  tone: "professional" | "friendly" | "direct" | "playful" | "";
+  exampleSites: string;
+  mustInclude: string;
+  mustAvoid: string;
+
+  // Legacy fields (kept for backward compat, not shown in UI)
   tagline: string;
   socialLinks: string;
-
-  // Card 3: Structure & Features
   pages: string[];
   primaryCta: "call" | "book" | "form" | "quote" | "";
   features: string[];
-
-  // Card 4: Inspiration
-  exampleSites: string;
   dislikes: string;
 }
 
@@ -55,50 +68,60 @@ const DEFAULT_DATA: PhaseBData = {
   logoStatus: "",
   brandColors: "",
   colorPreference: "",
-  tone: "",
+  businessDescription: "",
+  services: "",
+  serviceArea: "",
+  differentiators: "",
+  faq: "",
+  primaryGoal: "",
   photosUploaded: 0,
+  googleReviewsLink: "",
+  certifications: "",
+  hasBeforeAfter: "",
+  vibe: "",
+  tone: "",
+  exampleSites: "",
+  mustInclude: "",
+  mustAvoid: "",
+  // Legacy
   tagline: "",
   socialLinks: "",
   pages: [],
   primaryCta: "",
   features: [],
-  exampleSites: "",
   dislikes: "",
 };
 
 // Options
+const GOAL_OPTIONS = [
+  { id: "book", label: "Book an appointment", icon: "📅" },
+  { id: "quote", label: "Request a quote", icon: "💬" },
+  { id: "call", label: "Call or text us", icon: "📞" },
+  { id: "portfolio", label: "See our work", icon: "🖼️" },
+  { id: "learn", label: "Learn about services", icon: "📖" },
+  { id: "visit", label: "Visit our location", icon: "📍" },
+];
+
+const VIBE_OPTIONS = [
+  { id: "modern", label: "Modern", description: "Clean lines, contemporary" },
+  { id: "classic", label: "Classic", description: "Timeless, traditional" },
+  { id: "luxury", label: "Luxury", description: "Premium, elegant" },
+  { id: "bold", label: "Bold", description: "Striking, confident" },
+  { id: "minimal", label: "Minimal", description: "Simple, uncluttered" },
+  { id: "cozy", label: "Cozy", description: "Warm, inviting" },
+];
+
 const TONE_OPTIONS = [
-  { id: "professional", label: "Professional", description: "Clean, polished, corporate" },
-  { id: "friendly", label: "Friendly", description: "Warm, approachable, personal" },
-  { id: "bold", label: "Bold", description: "Striking, confident, modern" },
-  { id: "luxury", label: "Luxury", description: "Premium, elegant, refined" },
+  { id: "professional", label: "Professional", description: "Polished, corporate" },
+  { id: "friendly", label: "Friendly", description: "Warm, approachable" },
+  { id: "direct", label: "Direct", description: "Clear, no-nonsense" },
+  { id: "playful", label: "Playful", description: "Fun, energetic" },
 ];
 
-const PAGE_OPTIONS = [
-  { id: "home", label: "Home" },
-  { id: "about", label: "About" },
-  { id: "services", label: "Services" },
-  { id: "contact", label: "Contact" },
-  { id: "gallery", label: "Gallery / Portfolio" },
-  { id: "reviews", label: "Reviews / Testimonials" },
-  { id: "faq", label: "FAQ" },
-  { id: "pricing", label: "Pricing" },
-];
-
-const CTA_OPTIONS = [
-  { id: "call", label: "Call us" },
-  { id: "book", label: "Book online" },
-  { id: "form", label: "Contact form" },
-  { id: "quote", label: "Get a quote" },
-];
-
-const FEATURE_OPTIONS = [
-  { id: "booking", label: "Online booking / scheduling" },
-  { id: "afterhours", label: "After-hours AI handling" },
-  { id: "reviews", label: "Reviews display" },
-  { id: "payments", label: "Online payments" },
-  { id: "chat", label: "Live chat" },
-  { id: "forms", label: "Custom forms" },
+const BEFORE_AFTER_OPTIONS = [
+  { id: "yes", label: "Yes, I have some" },
+  { id: "coming_soon", label: "I'll add them later" },
+  { id: "no", label: "Not applicable" },
 ];
 
 interface CardProps {
@@ -183,10 +206,10 @@ export function PhaseBIntake({
   }, [filesCount]);
 
   // Check card completion status
-  const isCard1Complete = (data.logoStatus === "uploaded" || data.logoStatus === "create") && !!data.tone;
-  const isCard2Complete = data.photosUploaded >= 3;
-  const isCard3Complete = data.pages.length >= 1 && !!data.primaryCta;
-  const isCard4Complete = !!data.exampleSites.trim();
+  const isCard1Complete = (data.logoStatus === "uploaded" || data.logoStatus === "create");
+  const isCard2Complete = !!data.businessDescription.trim() && !!data.services.trim() && !!data.primaryGoal;
+  const isCard3Complete = data.photosUploaded >= 3;
+  const isCard4Complete = !!data.vibe && !!data.tone;
 
   const completedCards = [isCard1Complete, isCard2Complete, isCard3Complete, isCard4Complete].filter(Boolean).length;
   const allComplete = completedCards === 4;
@@ -218,21 +241,10 @@ export function PhaseBIntake({
       const newData = { ...prev, ...updates };
       onDataChange?.(newData);
       // Debounce save
-      const timeout = setTimeout(() => saveData(newData), 1000);
-      return newData;
-    });
-  }, [onDataChange, saveData]);
-
-  const toggleArrayItem = (field: "pages" | "features", id: string) => {
-    setData(prev => {
-      const arr = prev[field] as string[];
-      const newArr = arr.includes(id) ? arr.filter(item => item !== id) : [...arr, id];
-      const newData = { ...prev, [field]: newArr };
-      onDataChange?.(newData);
       setTimeout(() => saveData(newData), 1000);
       return newData;
     });
-  };
+  }, [onDataChange, saveData]);
 
   const handleSubmit = async () => {
     if (!allComplete) return;
@@ -405,41 +417,114 @@ export function PhaseBIntake({
                 />
               )}
             </div>
+          </div>
+        </IntakeCard>
 
-            {/* Tone */}
+        {/* Card 2: Website Content (NEW) */}
+        <IntakeCard
+          title="Website Content"
+          icon={<FileText className="h-4 w-4" />}
+          isComplete={isCard2Complete}
+          isExpanded={expandedCard === 1}
+          onToggle={() => setExpandedCard(expandedCard === 1 ? null : 1)}
+        >
+          <div className="space-y-4 pt-4">
+            {/* Primary goal */}
             <div className="space-y-2">
-              <Label>What tone fits your brand?</Label>
+              <Label>What should visitors do on your website?</Label>
               <div className="grid grid-cols-2 gap-2">
-                {TONE_OPTIONS.map((opt) => {
-                  const isSelected = data.tone === opt.id;
+                {GOAL_OPTIONS.map((opt) => {
+                  const isSelected = data.primaryGoal === opt.id;
                   return (
                     <button
                       key={opt.id}
-                      onClick={() => updateData({ tone: opt.id as PhaseBData["tone"] })}
+                      onClick={() => updateData({ primaryGoal: opt.id as PhaseBData["primaryGoal"] })}
                       className={cn(
-                        "p-3 rounded-lg border-2 text-left transition-all",
+                        "p-3 rounded-lg border-2 text-left transition-all flex items-center gap-2",
                         isSelected
                           ? "border-primary bg-primary/5"
                           : "border-border hover:border-muted-foreground/30"
                       )}
                     >
-                      <div className="font-medium text-sm">{opt.label}</div>
-                      <div className="text-xs text-muted-foreground">{opt.description}</div>
+                      <span className="text-lg">{opt.icon}</span>
+                      <span className="text-sm font-medium">{opt.label}</span>
                     </button>
                   );
                 })}
               </div>
             </div>
+
+            {/* Business description */}
+            <div className="space-y-2">
+              <Label htmlFor="business-desc">Describe your business in 1–2 sentences</Label>
+              <Textarea
+                id="business-desc"
+                placeholder="e.g. We're a family-owned plumbing company serving Cape Cod for 25 years. We handle everything from leaky faucets to full bathroom remodels."
+                value={data.businessDescription}
+                onChange={(e) => updateData({ businessDescription: e.target.value })}
+                rows={3}
+              />
+              <p className="text-xs text-muted-foreground">We'll use this for your homepage and About section.</p>
+            </div>
+
+            {/* Services */}
+            <div className="space-y-2">
+              <Label htmlFor="services">Top 3 services you offer</Label>
+              <Textarea
+                id="services"
+                placeholder="1. Emergency plumbing repairs&#10;2. Water heater installation&#10;3. Bathroom remodeling"
+                value={data.services}
+                onChange={(e) => updateData({ services: e.target.value })}
+                rows={3}
+              />
+              <p className="text-xs text-muted-foreground">A short sentence about each is even better.</p>
+            </div>
+
+            {/* Service area */}
+            <div className="space-y-2">
+              <Label htmlFor="service-area">Service area (optional)</Label>
+              <Input
+                id="service-area"
+                placeholder="e.g. Cape Cod, Plymouth County, South Shore"
+                value={data.serviceArea}
+                onChange={(e) => updateData({ serviceArea: e.target.value })}
+              />
+            </div>
+
+            {/* Differentiators */}
+            <div className="space-y-2">
+              <Label htmlFor="differentiators">What makes you different? (optional)</Label>
+              <Textarea
+                id="differentiators"
+                placeholder="e.g. Family-owned since 1998, same-day service, licensed & insured"
+                value={data.differentiators}
+                onChange={(e) => updateData({ differentiators: e.target.value })}
+                rows={2}
+              />
+            </div>
+
+            {/* FAQ */}
+            <div className="space-y-2">
+              <Label htmlFor="faq">Common customer questions? (optional)</Label>
+              <Textarea
+                id="faq"
+                placeholder="e.g. Do you offer financing? What areas do you serve? Are you licensed?"
+                value={data.faq}
+                onChange={(e) => updateData({ faq: e.target.value })}
+                rows={2}
+              />
+              <p className="text-xs text-muted-foreground">Great for an FAQ section.</p>
+            </div>
           </div>
         </IntakeCard>
 
-        {/* Card 2: Content & Proof */}
+        {/* Card 3: Photos & Proof */}
         <IntakeCard
-          title="Content & Proof"
+          title="Photos & Proof"
           icon={<ImageIcon className="h-4 w-4" />}
-          isComplete={isCard2Complete}
-          isExpanded={expandedCard === 1}
-          onToggle={() => setExpandedCard(expandedCard === 1 ? null : 1)}
+          isComplete={isCard3Complete}
+          isExpanded={expandedCard === 2}
+          onToggle={() => setExpandedCard(expandedCard === 2 ? null : 2)}
         >
           <div className="space-y-4 pt-4">
             {/* Photos status */}
@@ -465,153 +550,143 @@ export function PhaseBIntake({
               </p>
             </div>
 
-            {/* Tagline */}
+            {/* Google Reviews */}
             <div className="space-y-2">
-              <Label htmlFor="tagline">Tagline or short description (optional)</Label>
+              <Label htmlFor="google-reviews">Google Reviews link (optional)</Label>
               <Input
-                id="tagline"
-                placeholder="e.g. Your trusted local plumber since 1985"
-                value={data.tagline}
-                onChange={(e) => updateData({ tagline: e.target.value })}
+                id="google-reviews"
+                placeholder="https://g.page/your-business/review or leave blank"
+                value={data.googleReviewsLink}
+                onChange={(e) => updateData({ googleReviewsLink: e.target.value })}
+              />
+              <p className="text-xs text-muted-foreground">We can display your reviews on your site.</p>
+            </div>
+
+            {/* Certifications */}
+            <div className="space-y-2">
+              <Label htmlFor="certifications">Licenses, insurance, certifications? (optional)</Label>
+              <Input
+                id="certifications"
+                placeholder="e.g. Licensed & Insured, EPA Certified, BBB A+"
+                value={data.certifications}
+                onChange={(e) => updateData({ certifications: e.target.value })}
               />
             </div>
 
-            {/* Social links */}
+            {/* Before/After */}
             <div className="space-y-2">
-              <Label htmlFor="social">Social media links (optional)</Label>
-              <Textarea
-                id="social"
-                placeholder="Facebook, Instagram, LinkedIn URLs..."
-                value={data.socialLinks}
-                onChange={(e) => updateData({ socialLinks: e.target.value })}
-                rows={2}
-              />
-            </div>
-          </div>
-        </IntakeCard>
-
-        {/* Card 3: Structure & Features */}
-        <IntakeCard
-          title="Structure & Features"
-          icon={<Layout className="h-4 w-4" />}
-          isComplete={isCard3Complete}
-          isExpanded={expandedCard === 2}
-          onToggle={() => setExpandedCard(expandedCard === 2 ? null : 2)}
-        >
-          <div className="space-y-4 pt-4">
-            {/* Pages */}
-            <div className="space-y-2">
-              <Label>What pages do you need?</Label>
-              <div className="grid grid-cols-2 gap-2">
-                {PAGE_OPTIONS.map((opt) => {
-                  const isChecked = data.pages.includes(opt.id);
-                  return (
-                    <button
-                      key={opt.id}
-                      onClick={() => toggleArrayItem("pages", opt.id)}
-                      className={cn(
-                        "p-2 rounded-lg border-2 text-left transition-all flex items-center gap-2",
-                        isChecked
-                          ? "border-primary bg-primary/5"
-                          : "border-border hover:border-muted-foreground/30"
-                      )}
-                    >
-                      <Checkbox checked={isChecked} className="pointer-events-none" />
-                      <span className="text-sm">{opt.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Primary CTA */}
-            <div className="space-y-2">
-              <Label>What's the main action visitors should take?</Label>
+              <Label>Before & after photos?</Label>
               <RadioGroup
-                value={data.primaryCta}
-                onValueChange={(v) => updateData({ primaryCta: v as PhaseBData["primaryCta"] })}
-                className="grid grid-cols-2 gap-2"
+                value={data.hasBeforeAfter}
+                onValueChange={(v) => updateData({ hasBeforeAfter: v as PhaseBData["hasBeforeAfter"] })}
+                className="flex flex-wrap gap-3"
               >
-                {CTA_OPTIONS.map((opt) => (
-                  <div
-                    key={opt.id}
-                    className={cn(
-                      "flex items-center space-x-2 p-2 rounded-lg border-2 cursor-pointer transition-all",
-                      data.primaryCta === opt.id
-                        ? "border-primary bg-primary/5"
-                        : "border-border hover:border-muted-foreground/30"
-                    )}
-                    onClick={() => updateData({ primaryCta: opt.id as PhaseBData["primaryCta"] })}
-                  >
-                    <RadioGroupItem value={opt.id} id={`cta-${opt.id}`} />
-                    <Label htmlFor={`cta-${opt.id}`} className="cursor-pointer text-sm flex-1">
+                {BEFORE_AFTER_OPTIONS.map((opt) => (
+                  <div key={opt.id} className="flex items-center space-x-2">
+                    <RadioGroupItem value={opt.id} id={`ba-${opt.id}`} />
+                    <Label htmlFor={`ba-${opt.id}`} className="cursor-pointer text-sm">
                       {opt.label}
                     </Label>
                   </div>
                 ))}
               </RadioGroup>
             </div>
-
-            {/* Features */}
-            <div className="space-y-2">
-              <Label>Any special features? (optional)</Label>
-              <div className="grid grid-cols-2 gap-2">
-                {FEATURE_OPTIONS.map((opt) => {
-                  const isChecked = data.features.includes(opt.id);
-                  return (
-                    <button
-                      key={opt.id}
-                      onClick={() => toggleArrayItem("features", opt.id)}
-                      className={cn(
-                        "p-2 rounded-lg border-2 text-left transition-all flex items-center gap-2",
-                        isChecked
-                          ? "border-primary bg-primary/5"
-                          : "border-border hover:border-muted-foreground/30"
-                      )}
-                    >
-                      <Checkbox checked={isChecked} className="pointer-events-none" />
-                      <span className="text-sm">{opt.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
           </div>
         </IntakeCard>
 
-        {/* Card 4: Inspiration */}
+        {/* Card 4: Style & Preferences */}
         <IntakeCard
-          title="Inspiration & Direction"
+          title="Style & Preferences"
           icon={<Sparkles className="h-4 w-4" />}
           isComplete={isCard4Complete}
           isExpanded={expandedCard === 3}
           onToggle={() => setExpandedCard(expandedCard === 3 ? null : 3)}
         >
           <div className="space-y-4 pt-4">
+            {/* Vibe */}
+            <div className="space-y-2">
+              <Label>Pick a vibe</Label>
+              <div className="grid grid-cols-3 gap-2">
+                {VIBE_OPTIONS.map((opt) => {
+                  const isSelected = data.vibe === opt.id;
+                  return (
+                    <button
+                      key={opt.id}
+                      onClick={() => updateData({ vibe: opt.id as PhaseBData["vibe"] })}
+                      className={cn(
+                        "p-3 rounded-lg border-2 text-center transition-all",
+                        isSelected
+                          ? "border-primary bg-primary/5"
+                          : "border-border hover:border-muted-foreground/30"
+                      )}
+                    >
+                      <div className="font-medium text-sm">{opt.label}</div>
+                      <div className="text-xs text-muted-foreground">{opt.description}</div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Tone */}
+            <div className="space-y-2">
+              <Label>Pick a tone</Label>
+              <div className="grid grid-cols-2 gap-2">
+                {TONE_OPTIONS.map((opt) => {
+                  const isSelected = data.tone === opt.id;
+                  return (
+                    <button
+                      key={opt.id}
+                      onClick={() => updateData({ tone: opt.id as PhaseBData["tone"] })}
+                      className={cn(
+                        "p-3 rounded-lg border-2 text-left transition-all",
+                        isSelected
+                          ? "border-primary bg-primary/5"
+                          : "border-border hover:border-muted-foreground/30"
+                      )}
+                    >
+                      <div className="font-medium text-sm">{opt.label}</div>
+                      <div className="text-xs text-muted-foreground">{opt.description}</div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
             {/* Example sites */}
             <div className="space-y-2">
-              <Label htmlFor="examples">Share 1–3 websites you like</Label>
+              <Label htmlFor="examples">Sites you like (optional)</Label>
               <Textarea
                 id="examples"
                 placeholder="Paste URLs of sites you like the look/feel of..."
                 value={data.exampleSites}
                 onChange={(e) => updateData({ exampleSites: e.target.value })}
-                rows={3}
+                rows={2}
               />
               <p className="text-xs text-muted-foreground">
                 These don't need to be in your industry — we're looking for style inspiration.
               </p>
             </div>
 
-            {/* Dislikes */}
+            {/* Must include */}
             <div className="space-y-2">
-              <Label htmlFor="dislikes">Anything you DON'T want? (optional)</Label>
-              <Textarea
-                id="dislikes"
-                placeholder="e.g. No stock photos, no dark mode, no autoplay videos..."
-                value={data.dislikes}
-                onChange={(e) => updateData({ dislikes: e.target.value })}
-                rows={2}
+              <Label htmlFor="must-include">We must include... (optional)</Label>
+              <Input
+                id="must-include"
+                placeholder="e.g. Phone number in header, emergency service callout"
+                value={data.mustInclude}
+                onChange={(e) => updateData({ mustInclude: e.target.value })}
+              />
+            </div>
+
+            {/* Must avoid */}
+            <div className="space-y-2">
+              <Label htmlFor="must-avoid">Please avoid... (optional)</Label>
+              <Input
+                id="must-avoid"
+                placeholder="e.g. Stock photos, dark backgrounds, autoplay video"
+                value={data.mustAvoid}
+                onChange={(e) => updateData({ mustAvoid: e.target.value })}
               />
             </div>
           </div>
