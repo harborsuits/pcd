@@ -39,7 +39,7 @@ export function ClientLayout({
       {/* Hero band - like homepage/pricing */}
       {(title || subtitle) && (
         <div className="bg-gradient-to-b from-accent/15 to-accent/5 border-b border-border py-12">
-          <div className={`container mx-auto px-6 ${maxWidthClass}`}>
+          <div className={`container mx-auto px-6 ${maxWidthClass} text-center`}>
             {title && (
               <h1 className="font-serif text-3xl md:text-4xl font-bold tracking-tight text-foreground">
                 {title}
