@@ -3,6 +3,7 @@
 import * as React from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { cn } from "@/lib/utils"
+import { Link } from "react-router-dom"
 
 type NavItem = { label: string; href: string }
 
@@ -95,12 +96,12 @@ export function GalleryHero({
       {/* Sticky nav */}
       <header className="fixed inset-x-0 top-0 z-50">
         <nav className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
-          <a
-            href="#"
-            className="text-xl font-semibold tracking-tight text-white mix-blend-difference"
+          <Link
+            to="/"
+            className="text-xl font-semibold tracking-tight text-white mix-blend-difference opacity-60 hover:opacity-100 transition-opacity"
           >
             {brand}
-          </a>
+          </Link>
 
           <button
             onClick={() => setOpen((v) => !v)}
@@ -225,11 +226,17 @@ export function GalleryHero({
                   <div>Boothbay Harbor, Maine</div>
                 </motion.div>
 
+                <Link
+                  to="/"
+                  className="inline-block text-xs text-white/50 hover:text-white/80 transition-colors"
+                >
+                  ← Back to demos
+                </Link>
                 <motion.p
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ delay: 0.6 }}
-                  className="mt-8 text-xs text-white/40"
+                  className="mt-4 text-xs text-white/40"
                 >
                   (Demo site) Real-world navigation + lead capture — wired to your smart intake.
                 </motion.p>
