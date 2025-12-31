@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   FolderOpen, Loader2, Clock, FileText, 
   MessageSquare, ExternalLink, ChevronRight, Sparkles, Eye, ArrowRight,
-  CheckCircle2, Circle, AlertCircle
+  CheckCircle2, Circle, AlertCircle, Bell
 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -126,6 +126,22 @@ export function ProjectsTab() {
     onError: (error: Error) => toast.error(error.message),
   });
 
+  // Mutation to nudge client
+  const nudgeMutation = useMutation({
+    mutationFn: async (token: string) => {
+      const res = await adminFetch(`/admin/projects/${token}/nudge`, {
+        method: "POST",
+      });
+      if (!res.ok) throw new Error("Failed to send nudge");
+      return res.json();
+    },
+    onSuccess: () => {
+      toast.success("Reminder sent to client");
+      queryClient.invalidateQueries({ queryKey: ["admin-projects"] });
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
   // Handle advance to next stage
   const handleAdvanceStage = (e: React.MouseEvent, project: Project) => {
     e.stopPropagation();
@@ -133,6 +149,19 @@ export function ProjectsTab() {
     if (nextStage) {
       advanceStageMutation.mutate({ token: project.project_token, stage: nextStage });
     }
+  };
+
+  // Handle nudge client
+  const handleNudge = (e: React.MouseEvent, project: Project) => {
+    e.stopPropagation();
+    nudgeMutation.mutate(project.project_token);
+  };
+
+  // Check if project needs a nudge (Phase B incomplete)
+  const needsNudge = (project: Project): boolean => {
+    const status = project.intake?.phase_b_status;
+    return status !== "complete" && 
+      ["new", "quote_requested", "claimed", "contacted"].includes(project.pipeline_stage || "new");
   };
 
   // Filter projects by pipeline stage
@@ -374,6 +403,20 @@ export function ProjectsTab() {
                     
                     {/* Actions - simplified on mobile */}
                     <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+                      {/* Nudge button - show when Phase B incomplete */}
+                      {needsNudge(project) && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-1 text-xs h-7 px-2 text-amber-600 border-amber-300 hover:bg-amber-50"
+                          disabled={nudgeMutation.isPending}
+                          onClick={(e) => handleNudge(e, project)}
+                          title="Send reminder to complete setup"
+                        >
+                          <Bell className="h-3 w-3" />
+                          <span className="hidden sm:inline">Nudge</span>
+                        </Button>
+                      )}
                       {/* Advance stage button */}
                       {getNextStage(project.pipeline_stage) && (
                         <Button

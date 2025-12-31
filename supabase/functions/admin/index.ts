@@ -135,6 +135,13 @@ Deno.serve(async (req) => {
     return handleLaunchComplete(req, token);
   }
 
+  // Route: POST /admin/projects/:token/nudge - Send reminder to client
+  if (subPath.match(/^projects\/[^\/]+\/nudge$/) && req.method === "POST") {
+    const parts = subPath.split("/");
+    const token = parts[1];
+    return handleNudge(req, token);
+  }
+
   // Route: POST /admin/notifications/test
   if (subPath === "notifications/test" && req.method === "POST") {
     return handleTestEmail(req);
@@ -1710,6 +1717,151 @@ async function handleUpdatePipelineStage(req: Request, token: string): Promise<R
 
   } catch (error) {
     console.error("Stage update error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+}
+
+// POST /admin/projects/:token/nudge - Send reminder to client
+async function handleNudge(req: Request, token: string): Promise<Response> {
+  const authError = validateAdminKey(req);
+  if (authError) return authError;
+
+  if (!isValidToken(token)) {
+    return new Response(
+      JSON.stringify({ error: "Invalid token format" }),
+      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  try {
+    console.log(`Sending nudge to project: ${token}`);
+
+    const supabase = getSupabaseClient();
+
+    // Get project info
+    const { data: project, error: projectError } = await supabase
+      .from("projects")
+      .select("id, project_token, business_name, contact_name, contact_email")
+      .eq("project_token", token)
+      .is("deleted_at", null)
+      .maybeSingle();
+
+    if (projectError || !project) {
+      console.error("Project fetch error:", projectError);
+      return new Response(
+        JSON.stringify({ error: "Project not found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Get Phase B progress to customize message
+    const { data: intake } = await supabase
+      .from("project_intakes")
+      .select("phase_b_json, phase_b_status")
+      .eq("project_id", project.id)
+      .maybeSingle();
+
+    // Calculate what's missing
+    const phaseBData = intake?.phase_b_json as Record<string, unknown> | null;
+    const missing: string[] = [];
+    
+    if (phaseBData) {
+      if (phaseBData.logoStatus !== "uploaded" && phaseBData.logoStatus !== "create") missing.push("logo");
+      if (!phaseBData.tone) missing.push("brand tone");
+      if ((phaseBData.photosUploaded as number || 0) < 3) missing.push("3+ photos");
+      if (!(phaseBData.pages as string[])?.length) missing.push("pages");
+      if (!phaseBData.primaryCta) missing.push("primary CTA");
+      if (!(phaseBData.exampleSites as string)?.trim()) missing.push("inspiration sites");
+    } else {
+      missing.push("logo", "photos", "pages", "inspiration sites");
+    }
+
+    // Create friendly reminder message
+    let messageContent = "👋 Quick reminder: ";
+    if (missing.length === 0) {
+      messageContent += "Your project setup is almost complete! Please review and submit when ready so we can start your first draft.";
+    } else if (missing.length <= 3) {
+      messageContent += `We just need ${missing.join(", ")} to start building your first draft. You can complete this anytime in your project setup above.`;
+    } else {
+      messageContent += "Please complete your project setup above so we can start your first draft. It only takes about 10 minutes!";
+    }
+
+    // Post the reminder message
+    const { error: messageError } = await supabase
+      .from("messages")
+      .insert({
+        project_id: project.id,
+        project_token: token,
+        sender_type: "admin",
+        content: messageContent,
+      });
+
+    if (messageError) {
+      console.error("Message insert error:", messageError);
+      return new Response(
+        JSON.stringify({ error: "Failed to send message" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Create notification event for audit trail
+    await supabase.from("notification_events").insert({
+      project_id: project.id,
+      project_token: token,
+      event_type: "nudge_sent",
+      payload: {
+        business_name: project.business_name,
+        missing_items: missing,
+        message: messageContent,
+      },
+      sent_at: new Date().toISOString(),
+    });
+
+    // Send Telegram notification
+    const telegramBotToken = Deno.env.get("TELEGRAM_BOT_TOKEN");
+    const telegramChatId = Deno.env.get("TELEGRAM_CHAT_ID");
+    const baseUrl = Deno.env.get("PUBLIC_BASE_URL") || "https://pleasantcove.design";
+
+    if (telegramBotToken && telegramChatId) {
+      const t = encodeURIComponent(token);
+      const portalUrl = `${baseUrl}/p/${t}`;
+
+      try {
+        const res = await fetch(`https://api.telegram.org/bot${telegramBotToken}/sendMessage`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            chat_id: telegramChatId,
+            text: `🔔 Nudge Sent\n\n• Business: ${project.business_name}\n• Missing: ${missing.length > 0 ? missing.join(", ") : "Almost complete!"}\n• Contact: ${project.contact_name || "—"}`,
+            reply_markup: {
+              inline_keyboard: [[
+                { text: "View Portal →", url: portalUrl },
+              ]],
+            },
+          }),
+        });
+
+        if (!res.ok) {
+          const text = await res.text();
+          console.error("Telegram sendMessage failed:", res.status, text);
+        }
+      } catch (e) {
+        console.error("Telegram notification failed:", e);
+      }
+    }
+
+    console.log(`Nudge sent for ${project.business_name} (${token.slice(0, 8)}...)`);
+
+    return new Response(
+      JSON.stringify({ success: true, message: "Nudge sent" }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+
+  } catch (error) {
+    console.error("Nudge error:", error);
     return new Response(
       JSON.stringify({ error: "Internal server error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
