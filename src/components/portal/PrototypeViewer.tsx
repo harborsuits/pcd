@@ -509,11 +509,9 @@ export function PrototypeViewer({
                   title={`${comment.body}${comment.page_path ? ` (${comment.page_path})` : ""}`}
                   onClick={(e) => {
                     e.stopPropagation();
-                    if (isResolved) {
-                      onUnresolveComment(comment.id);
-                    } else {
-                      onResolveComment(comment.id);
-                    }
+                    // Open comments sidebar and focus this comment
+                    setShowCommentsSidebar(true);
+                    setFocusedCommentId(comment.id);
                   }}
                 >
                   {hasMismatch ? <AlertTriangle className="h-3 w-3" /> : isResolved ? <Check className="h-3 w-3" /> : idx + 1}
