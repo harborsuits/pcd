@@ -4,6 +4,7 @@ import harborQuietImage from "@/assets/gallery/harbor-quiet.jpg"
 import saltMarshImage from "@/assets/gallery/salt-marsh-light.jpg"
 import graniteTideImage from "@/assets/gallery/granite-tide.jpg"
 import lighthouseImage from "@/assets/gallery/lighthouse-study.jpg"
+import winterWharfImage from "@/assets/gallery/winter-wharf.jpg"
 
 const galleryCards = [
   {
@@ -40,7 +41,7 @@ const galleryCards = [
     title: "Winter Wharf",
     pseudonym: "J. Alder",
     tags: "Cold Harbor • Quiet • Blue Hour",
-    image: "https://images.unsplash.com/photo-1551009175-15bdf9dcb580?auto=format&fit=crop&w=1600&q=80",
+    image: winterWharfImage,
   },
 ];
 
