@@ -1,14 +1,44 @@
 import { GalleryHero } from "@/components/gallery/GalleryHero"
 import { motion } from "framer-motion"
 
-const collections = [
-  { title: "Seascapes", subtitle: "Ocean • Light • Horizon", image: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600&h=400&fit=crop" },
-  { title: "Working Waterfront", subtitle: "Boats • Docks • Fishermen", image: "https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=600&h=400&fit=crop" },
-  { title: "Fog & Pines", subtitle: "Forest • Mist • Solitude", image: "https://images.unsplash.com/photo-1542273917363-3b1817f69a2d?w=600&h=400&fit=crop" },
-  { title: "Summer Light", subtitle: "Golden Hour • Warmth", image: "https://images.unsplash.com/photo-1499346030926-9a72daac6c63?w=600&h=400&fit=crop" },
-  { title: "Harbor Views", subtitle: "Towns • Reflections", image: "https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=600&h=400&fit=crop" },
-  { title: "Island Life", subtitle: "Remote • Rugged • Real", image: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600&h=400&fit=crop" },
-]
+const galleryCards = [
+  {
+    title: "Fog & Pines",
+    pseudonym: "E. Maris",
+    tags: "Maine • Mist • Evergreens",
+    image: "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=1600&q=80",
+  },
+  {
+    title: "Harbor Quiet",
+    pseudonym: "C. Thayer",
+    tags: "Working Waterfront • Dawn • Still",
+    image: "https://images.unsplash.com/photo-1500375592092-40eb2168fd21?auto=format&fit=crop&w=1600&q=80",
+  },
+  {
+    title: "Salt Marsh Light",
+    pseudonym: "N. Winslow",
+    tags: "New England • Marsh • Golden Hour",
+    image: "https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&w=1600&q=80",
+  },
+  {
+    title: "Granite & Tide",
+    pseudonym: "S. Calder",
+    tags: "Rocky Coast • Atlantic • Texture",
+    image: "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1600&q=80",
+  },
+  {
+    title: "Lighthouse Study",
+    pseudonym: "R. Aster",
+    tags: "Beacon • Overcast • Coastal",
+    image: "https://images.unsplash.com/photo-1507400492013-162706c8c05e?auto=format&fit=crop&w=1600&q=80",
+  },
+  {
+    title: "Winter Wharf",
+    pseudonym: "J. Alder",
+    tags: "Cold Harbor • Quiet • Blue Hour",
+    image: "https://images.unsplash.com/photo-1482192596544-9eb780fc7f66?auto=format&fit=crop&w=1600&q=80",
+  },
+];
 
 const artists = [
   {
@@ -48,25 +78,26 @@ export default function GalleryDemo() {
           </motion.div>
 
           <div className="mt-16 grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
-            {collections.map((collection, i) => (
+            {galleryCards.map((card, i) => (
               <motion.div
-                key={collection.title}
+                key={`${card.title}-${card.pseudonym}`}
                 initial={{ opacity: 0, y: 30 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.1 }}
-                className="group cursor-pointer"
+                className="group cursor-pointer overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
               >
-                <div className="aspect-[4/3] overflow-hidden rounded-xl bg-slate-100">
+                <div className="aspect-[16/10] overflow-hidden bg-slate-100">
                   <img
-                    src={collection.image}
-                    alt={collection.title}
+                    src={card.image}
+                    alt={card.title}
                     className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
                   />
                 </div>
-                <div className="mt-4">
-                  <h3 className="text-xl font-medium text-slate-900">{collection.title}</h3>
-                  <p className="mt-1 text-sm text-slate-500">{collection.subtitle}</p>
+                <div className="p-5">
+                  <h3 className="text-xl font-semibold text-slate-900">{card.title}</h3>
+                  <p className="mt-1 text-sm text-slate-500">by {card.pseudonym}</p>
+                  <p className="mt-2 text-sm text-slate-400">{card.tags}</p>
                 </div>
               </motion.div>
             ))}
