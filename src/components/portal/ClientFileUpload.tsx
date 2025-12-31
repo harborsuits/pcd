@@ -275,13 +275,17 @@ export function ClientFileUpload({
                       }}
                       className="cursor-pointer text-sm"
                     />
-                    <Input
+                    <Textarea
                       value={descriptions[category.id] || ""}
                       onChange={(e) => setDescriptions(prev => ({ ...prev, [category.id]: e.target.value }))}
-                      placeholder="Optional note..."
+                      placeholder="Paste anything you want on the site — we'll format it."
                       disabled={isUploading}
-                      className="text-sm"
+                      className="text-sm min-h-[120px]"
+                      rows={6}
                     />
+                    <p className="text-xs text-muted-foreground">
+                      You can paste everything here if you don't have files.
+                    </p>
                     <p className="text-[10px] text-muted-foreground">
                       Accepted: {category.examples} • Max 10MB
                     </p>
