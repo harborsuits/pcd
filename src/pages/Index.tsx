@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { useMemo } from "react";
-import { ArrowRight, MessageSquare, FolderOpen, Sparkles, Shield, Smartphone, CreditCard, LogIn, Globe, CalendarCheck, Zap, Bot, Clock, CheckCircle, Phone, Brain, Clock3, Calendar } from "lucide-react";
+import { ArrowRight, MessageSquare, FolderOpen, Sparkles, Shield, Smartphone, CreditCard, LogIn, Globe, CalendarCheck, Zap, Bot, Clock, CheckCircle, Phone, Brain, Clock3, Calendar, Hexagon, Twitter, Github } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LiquidButton } from "@/components/ui/liquid-glass-button";
 import { GlowCard } from "@/components/ui/spotlight-card";
@@ -9,6 +9,7 @@ import { Hero3DModel } from "@/components/Hero3DModel";
 import { ErrorBoundary } from "@/components/common/ErrorBoundary";
 import { canUseWebGL } from "@/lib/webgl";
 import HeroStatic from "@/components/HeroStatic";
+import { Footer } from "@/components/ui/footer";
 const exampleDemos = [
   {
     name: "Roofer",
@@ -316,21 +317,36 @@ const Index = () => {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-border py-8">
-        <div className="container mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4">
-          <p className="font-serif text-sm text-muted-foreground">
-            © {new Date().getFullYear()} Pleasant Cove Design
-          </p>
-          <div className="flex items-center gap-6 text-sm text-muted-foreground">
-            <a href="mailto:hello@pleasantcove.design" className="hover:text-foreground transition-colors">
-              Contact
-            </a>
-            <Link to="/operator" className="hover:text-foreground transition-colors opacity-50 hover:opacity-100">
-              Operator
-            </Link>
-          </div>
-        </div>
-      </footer>
+      <Footer
+        logo={<Hexagon className="h-6 w-6 text-accent" />}
+        brandName="Pleasant Cove Design"
+        socialLinks={[
+          {
+            icon: <Twitter className="h-4 w-4" />,
+            href: "https://twitter.com",
+            label: "Twitter",
+          },
+          {
+            icon: <Github className="h-4 w-4" />,
+            href: "https://github.com",
+            label: "GitHub",
+          },
+        ]}
+        mainLinks={[
+          { href: "/what-we-build", label: "What We Build" },
+          { href: "/pricing", label: "Pricing" },
+          { href: "/portal", label: "Client Portal" },
+          { href: "mailto:hello@pleasantcove.design", label: "Contact" },
+        ]}
+        legalLinks={[
+          { href: "/privacy", label: "Privacy" },
+          { href: "/terms", label: "Terms" },
+        ]}
+        copyright={{
+          text: `© ${new Date().getFullYear()} Pleasant Cove Design`,
+          license: "All rights reserved",
+        }}
+      />
     </div>
   );
 };
