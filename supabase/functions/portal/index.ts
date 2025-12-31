@@ -231,10 +231,10 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Fetch project by token (exclude soft-deleted)
+    // Fetch project by token (exclude soft-deleted) - include owner_user_id for auth check
     const { data: project, error: projectError } = await supabase
       .from("projects")
-      .select("id, business_name, business_slug, status, project_token, final_approved_at, pipeline_stage")
+      .select("id, business_name, business_slug, status, project_token, final_approved_at, pipeline_stage, owner_user_id")
       .eq("project_token", token)
       .is("deleted_at", null)
       .maybeSingle();
@@ -253,6 +253,43 @@ Deno.serve(async (req) => {
         JSON.stringify({ error: "Portal not found" }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
+    }
+
+    // SECURITY: If project has an owner, verify the requesting user is the owner
+    if (project.owner_user_id) {
+      const authHeader = req.headers.get("Authorization");
+      
+      // No auth header = unauthorized
+      if (!authHeader?.startsWith("Bearer ")) {
+        console.log("Owned project accessed without auth");
+        return new Response(
+          JSON.stringify({ error: "Authentication required", requires_auth: true }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Verify JWT and check ownership
+      const jwt = authHeader.replace("Bearer ", "");
+      const { data: { user }, error: authError } = await supabase.auth.getUser(jwt);
+
+      if (authError || !user) {
+        console.log("Invalid JWT for owned project");
+        return new Response(
+          JSON.stringify({ error: "Invalid or expired token", requires_auth: true }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Check if user is the owner
+      if (project.owner_user_id !== user.id) {
+        console.log(`Access denied: user ${user.id} tried to access project owned by ${project.owner_user_id}`);
+        return new Response(
+          JSON.stringify({ error: "You don't have access to this portal" }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      console.log(`Auth verified: user ${user.id} owns project ${token.slice(0, 8)}...`);
     }
 
     // Fetch intake status for roadmap and Phase B data

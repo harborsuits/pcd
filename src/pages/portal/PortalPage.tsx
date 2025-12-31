@@ -646,6 +646,9 @@ export default function PortalPage() {
         params.set("messages_before", messagesBefore);
       }
 
+      // Use user's JWT if available, otherwise use anon key
+      const authToken = session?.access_token || SUPABASE_ANON_KEY;
+      
       const res = await fetch(
         `${SUPABASE_URL}/functions/v1/portal/${portalToken}?${params.toString()}`,
         {
@@ -653,7 +656,7 @@ export default function PortalPage() {
           headers: {
             "Content-Type": "application/json",
             "apikey": SUPABASE_ANON_KEY,
-            "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+            "Authorization": `Bearer ${authToken}`,
           },
         }
       );
@@ -661,8 +664,20 @@ export default function PortalPage() {
       const response = await res.json();
 
       if (!res.ok) {
-        console.error("Portal fetch error:", response.error);
-        setError("Portal not found");
+        console.error("Portal fetch error:", response.error, "Status:", res.status);
+        
+        // Handle auth-specific errors
+        if (res.status === 401) {
+          setError("Authentication required");
+          setRequiresAuth(true);
+          return;
+        }
+        if (res.status === 403) {
+          setError("You don't have access to this portal");
+          return;
+        }
+        
+        setError(response.error || "Portal not found");
         return;
       }
 
