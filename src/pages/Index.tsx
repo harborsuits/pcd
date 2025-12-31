@@ -194,6 +194,11 @@ const Index = () => {
                   </div>
                 </div>
               </GlowCard>
+              
+              {/* Roadmap teaser */}
+              <p className="text-sm text-muted-foreground/70 italic pt-2 pl-1">
+                Coming soon: appointment booking directly into your existing CRM — or one we build for you.
+              </p>
             </div>
           </div>
         </div>
