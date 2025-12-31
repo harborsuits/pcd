@@ -1,5 +1,6 @@
 import { GalleryHero } from "@/components/gallery/GalleryHero"
 import { motion } from "framer-motion"
+import harborQuietImage from "@/assets/gallery/harbor-quiet.jpg"
 
 const galleryCards = [
   {
@@ -12,7 +13,7 @@ const galleryCards = [
     title: "Harbor Quiet",
     pseudonym: "C. Thayer",
     tags: "Working Waterfront • Dawn • Still",
-    image: "https://images.unsplash.com/photo-1544551763-46a013bb70d5?auto=format&fit=crop&w=1600&q=80",
+    image: harborQuietImage,
   },
   {
     title: "Salt Marsh Light",
