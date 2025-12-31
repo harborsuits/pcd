@@ -25,17 +25,43 @@ import { StageBadge, PIPELINE_FILTERS, PipelineFilter, getNextStage, STAGE_CONFI
 import { KanbanBoard, KanbanProject } from "@/components/operator/KanbanBoard";
 
 interface PhaseBData {
+  // Card 1: Brand & Identity
   logoStatus: "uploaded" | "create" | "";
   brandColors: string;
   colorPreference: "pick_for_me" | "custom" | "";
-  tone: "professional" | "friendly" | "bold" | "luxury" | "";
+
+  // Card 2: Website Content
+  businessDescription: string;
+  services: string;
+  serviceArea: string;
+  differentiators: string;
+  faq: string;
+  primaryGoal: "book" | "quote" | "call" | "portfolio" | "learn" | "visit" | "";
+
+  // Card 3: Photos & Proof
+  photosPlan: "upload" | "generate" | "none" | "";
   photosUploaded: number;
+  generatedPhotoSubjects: string;
+  generatedPhotoStyle: "realistic" | "studio" | "lifestyle" | "minimal" | "";
+  generatedPhotoNotes: string;
+  placeholderOk: boolean;
+  googleReviewsLink: string;
+  certifications: string;
+  hasBeforeAfter: "yes" | "coming_soon" | "no" | "";
+
+  // Card 4: Style & Preferences
+  vibe: "modern" | "classic" | "luxury" | "bold" | "minimal" | "cozy" | "";
+  tone: "professional" | "friendly" | "direct" | "playful" | "";
+  exampleSites: string;
+  mustInclude: string;
+  mustAvoid: string;
+
+  // Legacy fields
   tagline: string;
   socialLinks: string;
   pages: string[];
   primaryCta: "call" | "book" | "form" | "quote" | "";
   features: string[];
-  exampleSites: string;
   dislikes: string;
 }
 
@@ -189,44 +215,55 @@ export function ProjectsTab() {
   };
 
   // Calculate Phase B progress from intake data
-  const getPhaseBProgress = (intake: ProjectIntake | null): { completed: number; total: number; missing: string[] } => {
+  const getPhaseBProgress = (intake: ProjectIntake | null): { completed: number; total: number; missing: string[]; photosPlan?: string } => {
     if (!intake || !intake.phase_b_json) {
-      return { completed: 0, total: 4, missing: ["Brand", "Photos", "Structure", "Inspiration"] };
+      return { completed: 0, total: 4, missing: ["Brand", "Content", "Photos", "Style"] };
     }
     
     const data = intake.phase_b_json;
     const missing: string[] = [];
     let completed = 0;
 
-    // Card 1: Brand & Identity
-    if ((data.logoStatus === "uploaded" || data.logoStatus === "create") && data.tone) {
+    // Card 1: Brand & Identity (logo + colors)
+    const hasLogo = data.logoStatus === "uploaded" || data.logoStatus === "create";
+    const hasColors = data.colorPreference === "pick_for_me" || (data.colorPreference === "custom" && data.brandColors?.trim());
+    if (hasLogo && hasColors) {
       completed++;
     } else {
       missing.push("Brand");
     }
 
-    // Card 2: Content & Proof (need 3+ photos)
-    if ((data.photosUploaded || 0) >= 3) {
+    // Card 2: Website Content (description + services + goal)
+    const hasContent = data.businessDescription?.trim() && data.services?.trim() && data.primaryGoal;
+    if (hasContent) {
+      completed++;
+    } else {
+      missing.push("Content");
+    }
+
+    // Card 3: Photos & Proof (based on photosPlan)
+    let photosComplete = false;
+    if (data.photosPlan === "upload") {
+      photosComplete = (data.photosUploaded || 0) >= 3;
+    } else if (data.photosPlan === "generate") {
+      photosComplete = !!(data.generatedPhotoSubjects?.trim() && data.generatedPhotoStyle);
+    } else if (data.photosPlan === "none") {
+      photosComplete = data.placeholderOk === true;
+    }
+    if (photosComplete) {
       completed++;
     } else {
       missing.push("Photos");
     }
 
-    // Card 3: Structure & Features
-    if ((data.pages?.length || 0) >= 1 && data.primaryCta) {
+    // Card 4: Style & Preferences (vibe + tone)
+    if (data.vibe && data.tone) {
       completed++;
     } else {
-      missing.push("Structure");
+      missing.push("Style");
     }
 
-    // Card 4: Inspiration
-    if (data.exampleSites?.trim()) {
-      completed++;
-    } else {
-      missing.push("Inspiration");
-    }
-
-    return { completed, total: 4, missing };
+    return { completed, total: 4, missing, photosPlan: data.photosPlan };
   };
 
   // Map projects to Kanban format
@@ -442,12 +479,25 @@ export function ProjectsTab() {
                         }
                         
                         if (phaseBStatus === "in_progress" || (project.intake && progress.completed > 0)) {
+                          const photoPlanLabel = progress.photosPlan === "upload" 
+                            ? `Upload (${project.intake?.phase_b_json?.photosUploaded || 0}/3)`
+                            : progress.photosPlan === "generate" 
+                              ? "Generate"
+                              : progress.photosPlan === "none"
+                                ? "Placeholders"
+                                : null;
+                          
                           return (
-                            <div className="mt-1.5 flex items-center gap-2 text-xs">
+                            <div className="mt-1.5 flex items-center gap-2 text-xs flex-wrap">
                               <span className="flex items-center gap-1 text-amber-600 bg-amber-500/10 px-2 py-0.5 rounded-full">
                                 <Circle className="h-3 w-3" />
                                 Setup: {progress.completed}/4
                               </span>
+                              {photoPlanLabel && (
+                                <span className="text-muted-foreground">
+                                  Photos: {photoPlanLabel}
+                                </span>
+                              )}
                               {progress.missing.length > 0 && progress.missing.length < 4 && (
                                 <span className="text-muted-foreground hidden sm:inline">
                                   Missing: {progress.missing.join(", ")}
