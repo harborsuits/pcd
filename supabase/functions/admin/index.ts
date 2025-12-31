@@ -2429,6 +2429,8 @@ async function handleCreateComment(req: Request, token: string): Promise<Respons
       pin_x?: number; 
       pin_y?: number; 
       source_message_id?: string;
+      parent_comment_id?: string;
+      is_internal?: boolean;
     };
     try {
       body = await req.json();
@@ -2460,6 +2462,8 @@ async function handleCreateComment(req: Request, token: string): Promise<Respons
         pin_x: body.pin_x ?? null,
         pin_y: body.pin_y ?? null,
         source_message_id: body.source_message_id || null,
+        parent_comment_id: body.parent_comment_id || null,
+        is_internal: body.is_internal ?? false,
       })
       .select()
       .single();

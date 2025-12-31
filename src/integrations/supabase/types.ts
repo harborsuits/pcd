@@ -942,8 +942,10 @@ export type Database = {
           breakpoint: string | null
           created_at: string
           id: string
+          is_internal: boolean
           page_path: string | null
           page_url: string | null
+          parent_comment_id: string | null
           pin_x: number | null
           pin_y: number | null
           project_token: string
@@ -965,8 +967,10 @@ export type Database = {
           breakpoint?: string | null
           created_at?: string
           id?: string
+          is_internal?: boolean
           page_path?: string | null
           page_url?: string | null
+          parent_comment_id?: string | null
           pin_x?: number | null
           pin_y?: number | null
           project_token: string
@@ -988,8 +992,10 @@ export type Database = {
           breakpoint?: string | null
           created_at?: string
           id?: string
+          is_internal?: boolean
           page_path?: string | null
           page_url?: string | null
+          parent_comment_id?: string | null
           pin_x?: number | null
           pin_y?: number | null
           project_token?: string
@@ -1004,6 +1010,13 @@ export type Database = {
           y_pct?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "prototype_comments_parent_comment_id_fkey"
+            columns: ["parent_comment_id"]
+            isOneToOne: false
+            referencedRelation: "prototype_comments"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "prototype_comments_prototype_id_fkey"
             columns: ["prototype_id"]
