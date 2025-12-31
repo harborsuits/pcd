@@ -6,6 +6,7 @@ import saltMarshImage from "@/assets/gallery/salt-marsh-light.jpg"
 import graniteTideImage from "@/assets/gallery/granite-tide.jpg"
 import lighthouseImage from "@/assets/gallery/lighthouse-study.jpg"
 import winterWharfImage from "@/assets/gallery/winter-wharf.jpg"
+import lobstermanPortrait from "@/assets/gallery/lobsterman-portrait.jpg"
 
 const galleryCards = [
   {
@@ -59,7 +60,7 @@ const photographerItems = [
     title: "Jonas Berg — The Fog Whisperer",
     description: "A former Finnish submarine captain, Jonas moved to Maine in 2015 seeking silence. He wakes at 3am to catch the first fog and hasn't missed a sunrise in 9 years. National Geographic calls him 'the man who photographs ghosts.'",
     href: "#contact",
-    image: "https://images.unsplash.com/photo-1485470733090-0aae1788d5af?w=800&auto=format&fit=crop",
+    image: lobstermanPortrait,
   },
   {
     id: "ruth-blackwood",
