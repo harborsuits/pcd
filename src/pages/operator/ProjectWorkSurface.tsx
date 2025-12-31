@@ -110,6 +110,18 @@ interface PrototypeComment {
   resolved_at: string | null;
   created_at: string;
   author_type: string;
+  // Anchor fields
+  page_url?: string | null;
+  page_path?: string | null;
+  scroll_y?: number | null;
+  viewport_w?: number | null;
+  viewport_h?: number | null;
+  breakpoint?: string | null;
+  anchor_id?: string | null;
+  anchor_selector?: string | null;
+  x_pct?: number | null;
+  y_pct?: number | null;
+  text_hint?: string | null;
 }
 
 interface MediaItem {

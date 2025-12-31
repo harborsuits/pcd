@@ -12,7 +12,7 @@ import { WelcomeScreen } from "@/components/portal/WelcomeScreen";
 import { ReviewQueue } from "@/components/portal/ReviewQueue";
 import { ProjectStatusBanner } from "@/components/portal/ProjectStatusBanner";
 import { FloatingChatOrb } from "@/components/portal/FloatingChatOrb";
-import { PrototypeViewer, type Prototype, type PrototypeComment } from "@/components/portal/PrototypeViewer";
+import { PrototypeViewer, type Prototype, type PrototypeComment, type CommentAnchorData } from "@/components/portal/PrototypeViewer";
 import { ProjectRoadmap, computeRoadmapSteps } from "@/components/portal/ProjectRoadmap";
 import { ClientFileUpload } from "@/components/portal/ClientFileUpload";
 import { ClientProgressPanel } from "@/components/portal/ClientProgressPanel";
@@ -326,7 +326,7 @@ export default function PortalPage() {
     }
   }
 
-  async function handleAddComment(body: string, pinX: number, pinY: number) {
+  async function handleAddComment(body: string, pinX: number, pinY: number, anchorData?: CommentAnchorData) {
     if (!token || prototypes.length === 0) return;
 
     const res = await fetch(
@@ -345,6 +345,20 @@ export default function PortalPage() {
           pin_x: pinX,
           pin_y: pinY,
           author_type: "client",
+          // Include anchor data if available
+          ...(anchorData && {
+            page_url: anchorData.page_url,
+            page_path: anchorData.page_path,
+            scroll_y: anchorData.scroll_y,
+            viewport_w: anchorData.viewport_w,
+            viewport_h: anchorData.viewport_h,
+            breakpoint: anchorData.breakpoint,
+            anchor_id: anchorData.anchor_id,
+            anchor_selector: anchorData.anchor_selector,
+            x_pct: anchorData.x_pct,
+            y_pct: anchorData.y_pct,
+            text_hint: anchorData.text_hint,
+          }),
         }),
       }
     );

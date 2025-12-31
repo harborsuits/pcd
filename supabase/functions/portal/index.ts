@@ -1144,7 +1144,28 @@ async function handleCommentAction(
     }
 
     const body = await req.json();
-    const { action, comment_id, prototype_id, body: commentBody, pin_x, pin_y, author_type, source_message_id } = body;
+    const { 
+      action, 
+      comment_id, 
+      prototype_id, 
+      body: commentBody, 
+      pin_x, 
+      pin_y, 
+      author_type, 
+      source_message_id,
+      // New anchor fields
+      page_url,
+      page_path,
+      scroll_y,
+      viewport_w,
+      viewport_h,
+      breakpoint,
+      anchor_id,
+      anchor_selector,
+      x_pct,
+      y_pct,
+      text_hint,
+    } = body;
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -1183,6 +1204,18 @@ async function handleCommentAction(
           pin_x: pin_x ?? null,
           pin_y: pin_y ?? null,
           source_message_id: source_message_id || null,
+          // Anchor fields
+          page_url: page_url ?? null,
+          page_path: page_path ?? null,
+          scroll_y: scroll_y ?? null,
+          viewport_w: viewport_w ?? null,
+          viewport_h: viewport_h ?? null,
+          breakpoint: breakpoint ?? null,
+          anchor_id: anchor_id ?? null,
+          anchor_selector: anchor_selector ?? null,
+          x_pct: x_pct ?? null,
+          y_pct: y_pct ?? null,
+          text_hint: text_hint ?? null,
         })
         .select()
         .single();
