@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { useMemo } from "react";
-import { ArrowRight, MessageSquare, FolderOpen, Sparkles, Shield, Smartphone, CreditCard, LogIn, Globe, CalendarCheck, Zap, Bot, Clock, CheckCircle, Phone, Brain, Clock3, Calendar, Hexagon, Twitter, Github } from "lucide-react";
+import { ArrowRight, MessageSquare, FolderOpen, Sparkles, Shield, Smartphone, CreditCard, LogIn, Globe, CalendarCheck, Zap, Bot, Clock, CheckCircle, Phone, Brain, Clock3, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LiquidButton } from "@/components/ui/liquid-glass-button";
 import { GlowCard } from "@/components/ui/spotlight-card";
@@ -318,20 +318,9 @@ const Index = () => {
 
       {/* Footer */}
       <Footer
-        logo={<Hexagon className="h-6 w-6 text-accent" />}
+        logo={<span className="font-serif text-lg font-bold tracking-tight">PCD</span>}
         brandName="Pleasant Cove Design"
-        socialLinks={[
-          {
-            icon: <Twitter className="h-4 w-4" />,
-            href: "https://twitter.com",
-            label: "Twitter",
-          },
-          {
-            icon: <Github className="h-4 w-4" />,
-            href: "https://github.com",
-            label: "GitHub",
-          },
-        ]}
+        socialLinks={[]}
         mainLinks={[
           { href: "/what-we-build", label: "What We Build" },
           { href: "/pricing", label: "Pricing" },
