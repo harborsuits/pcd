@@ -160,7 +160,7 @@ const Index = () => {
             
             <div className="space-y-4">
               <GlowCard customSize glowColor="teal" className="p-5 bg-card/60">
-                <div className="flex items-start gap-4">
+                <div className="flex items-center gap-4">
                   <div className="p-2 rounded-lg bg-accent/10">
                     <Phone className="h-5 w-5 text-accent" />
                   </div>
@@ -172,7 +172,7 @@ const Index = () => {
               </GlowCard>
               
               <GlowCard customSize glowColor="teal" className="p-5 bg-card/60">
-                <div className="flex items-start gap-4">
+                <div className="flex items-center gap-4">
                   <div className="p-2 rounded-lg bg-accent/10">
                     <Brain className="h-5 w-5 text-accent" />
                   </div>
@@ -184,7 +184,7 @@ const Index = () => {
               </GlowCard>
               
               <GlowCard customSize glowColor="teal" className="p-5 bg-card/60">
-                <div className="flex items-start gap-4">
+                <div className="flex items-center gap-4">
                   <div className="p-2 rounded-lg bg-accent/10">
                     <Clock3 className="h-5 w-5 text-accent" />
                   </div>
@@ -197,7 +197,7 @@ const Index = () => {
               
               {/* Roadmap teaser */}
               <GlowCard customSize glowColor="teal" className="p-5 bg-card/40 border-dashed">
-                <div className="flex items-start gap-4">
+                <div className="flex items-center gap-4">
                   <div className="p-2 rounded-lg bg-muted/50">
                     <Calendar className="h-5 w-5 text-muted-foreground" />
                   </div>
