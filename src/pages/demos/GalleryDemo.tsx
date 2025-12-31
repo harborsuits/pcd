@@ -12,6 +12,7 @@ import maineFogImage from "@/assets/gallery/maine-fog.jpg"
 import maineStormImage from "@/assets/gallery/maine-storm.jpeg"
 import coastalStormImage from "@/assets/gallery/coastal-storm.jpeg"
 import lighthouseNightImage from "@/assets/gallery/lighthouse-night.jpeg"
+import montaukLighthouseImage from "@/assets/gallery/montauk-lighthouse.jpg"
 
 const galleryCards = [
   {
@@ -72,7 +73,7 @@ const photographerItems = [
     title: "Ruth Blackwood — Lighthouse Keeper's Daughter",
     description: "Born in a lighthouse during a blizzard, Ruth grew up without electricity until age 12. Her long-exposure night shots of Maine's 65 lighthouses took 11 years to complete. The collection sold to a private buyer for $2.1 million.",
     href: "#contact",
-    image: lighthouseNightImage,
+    image: montaukLighthouseImage,
   },
   {
     id: "marcus-tide",
