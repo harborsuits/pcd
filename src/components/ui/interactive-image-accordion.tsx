@@ -50,9 +50,6 @@ const AccordionItem: React.FC<AccordionItemProps> = ({ item, isActive, onMouseEn
         transition-all duration-500
         ${isActive ? 'opacity-100 translate-y-0' : 'opacity-70 translate-y-2'}
       `}>
-        <span className="text-xs font-semibold uppercase tracking-wider text-white/70 mb-1 block">
-          {item.category}
-        </span>
         <h3 className={`
           font-serif text-white mb-3
           transition-all duration-500
