@@ -30,6 +30,12 @@ const exampleDemos = [
     token: "test-acme-plumbing-2024",
     slug: "acme-plumbing",
   },
+  {
+    name: "Gallery",
+    category: "Art & Culture",
+    token: "test-acme-plumbing-2024",
+    slug: "acme-plumbing",
+  },
 ];
 
 const capabilities = [
