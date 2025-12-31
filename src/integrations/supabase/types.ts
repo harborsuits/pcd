@@ -659,6 +659,9 @@ export type Database = {
           intake_status: string
           intake_version: number
           owner_user_id: string | null
+          phase_b_completed_at: string | null
+          phase_b_json: Json | null
+          phase_b_status: string | null
           project_id: string
           updated_at: string
         }
@@ -669,6 +672,9 @@ export type Database = {
           intake_status?: string
           intake_version?: number
           owner_user_id?: string | null
+          phase_b_completed_at?: string | null
+          phase_b_json?: Json | null
+          phase_b_status?: string | null
           project_id: string
           updated_at?: string
         }
@@ -679,6 +685,9 @@ export type Database = {
           intake_status?: string
           intake_version?: number
           owner_user_id?: string | null
+          phase_b_completed_at?: string | null
+          phase_b_json?: Json | null
+          phase_b_status?: string | null
           project_id?: string
           updated_at?: string
         }

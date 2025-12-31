@@ -64,6 +64,7 @@ Deno.serve(async (req) => {
   const attachmentsIdx = pathParts.indexOf("attachments");
   const approveFinalIdx = pathParts.indexOf("approve-final");
   const milestonesIdx = pathParts.indexOf("milestones");
+  const phaseBIdx = pathParts.indexOf("phase-b");
   
   if (reviewIdx > portalIdx && req.method === "POST") {
     const token = pathParts[portalIdx + 1];
@@ -149,6 +150,18 @@ Deno.serve(async (req) => {
     return handleGetClientMilestones(token, corsHeaders);
   }
 
+  // POST /portal/:token/phase-b - Save/complete Phase B intake
+  if (phaseBIdx > portalIdx && req.method === "POST") {
+    const token = pathParts[portalIdx + 1];
+    return handlePhaseB(req, token, corsHeaders);
+  }
+
+  // GET /portal/:token/phase-b - Get Phase B intake data
+  if (phaseBIdx > portalIdx && req.method === "GET") {
+    const token = pathParts[portalIdx + 1];
+    return handleGetPhaseB(token, corsHeaders);
+  }
+
   if (req.method !== "GET") {
     return new Response(
       JSON.stringify({ error: "Method not allowed" }),
@@ -213,7 +226,7 @@ Deno.serve(async (req) => {
     // Fetch project by token (exclude soft-deleted)
     const { data: project, error: projectError } = await supabase
       .from("projects")
-      .select("id, business_name, business_slug, status, project_token, final_approved_at")
+      .select("id, business_name, business_slug, status, project_token, final_approved_at, pipeline_stage")
       .eq("project_token", token)
       .is("deleted_at", null)
       .maybeSingle();
@@ -234,10 +247,10 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Fetch intake status for roadmap
+    // Fetch intake status for roadmap and Phase B data
     const { data: intake, error: intakeError } = await supabase
       .from("project_intakes")
-      .select("intake_status")
+      .select("intake_status, phase_b_json, phase_b_status")
       .eq("project_id", project.id)
       .maybeSingle();
 
@@ -312,8 +325,11 @@ Deno.serve(async (req) => {
         slug: project.business_slug,
         status: project.status,
         final_approved_at: project.final_approved_at || null,
+        pipeline_stage: project.pipeline_stage || "new",
       },
       intake_status: intake?.intake_status || null,
+      phase_b_status: intake?.phase_b_status || "pending",
+      phase_b_data: intake?.phase_b_json || null,
       messages: (messages || []).map((m) => ({
         id: m.id,
         content: m.content,
@@ -1614,6 +1630,239 @@ async function handleGetClientMilestones(
 
   } catch (error) {
     console.error("Get client milestones error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+}
+
+// POST /portal/:token/phase-b - Save or complete Phase B intake
+async function handlePhaseB(
+  req: Request,
+  token: string,
+  corsHeaders: Record<string, string>
+): Promise<Response> {
+  try {
+    if (!token || !isValidToken(token)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid token" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const body = await req.json();
+    const { data: phaseBData, action } = body;
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Fetch project
+    const { data: project, error: projectError } = await supabase
+      .from("projects")
+      .select("id, business_name, pipeline_stage")
+      .eq("project_token", token)
+      .is("deleted_at", null)
+      .maybeSingle();
+
+    if (projectError || !project) {
+      console.error("Project not found:", projectError);
+      return new Response(
+        JSON.stringify({ error: "Project not found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Get or create intake record
+    const { data: existingIntake } = await supabase
+      .from("project_intakes")
+      .select("id")
+      .eq("project_id", project.id)
+      .maybeSingle();
+
+    const isComplete = action === "complete";
+    const phaseBStatus = isComplete ? "complete" : "in_progress";
+    const completedAt = isComplete ? new Date().toISOString() : null;
+
+    if (existingIntake) {
+      // Update existing intake
+      const updateData: Record<string, unknown> = {
+        phase_b_json: phaseBData,
+        phase_b_status: phaseBStatus,
+        updated_at: new Date().toISOString(),
+      };
+      if (isComplete) {
+        updateData.phase_b_completed_at = completedAt;
+      }
+
+      const { error: updateError } = await supabase
+        .from("project_intakes")
+        .update(updateData)
+        .eq("id", existingIntake.id);
+
+      if (updateError) {
+        console.error("Update intake error:", updateError);
+        return new Response(
+          JSON.stringify({ error: "Failed to save intake" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    } else {
+      // Create new intake
+      const { error: insertError } = await supabase
+        .from("project_intakes")
+        .insert({
+          project_id: project.id,
+          phase_b_json: phaseBData,
+          phase_b_status: phaseBStatus,
+          phase_b_completed_at: completedAt,
+          intake_status: "submitted",
+        });
+
+      if (insertError) {
+        console.error("Insert intake error:", insertError);
+        return new Response(
+          JSON.stringify({ error: "Failed to create intake" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
+    // If complete, advance pipeline stage and notify
+    if (isComplete) {
+      // Update pipeline stage to qualified (ready for design)
+      await supabase
+        .from("projects")
+        .update({ pipeline_stage: "qualified" })
+        .eq("id", project.id);
+
+      // Post system message
+      await supabase.from("messages").insert({
+        project_id: project.id,
+        project_token: token,
+        sender_type: "system",
+        content: `✅ Project setup complete! We now have everything needed to start your first draft.`,
+      });
+
+      // Create notification event
+      await supabase.from("notification_events").insert({
+        project_id: project.id,
+        project_token: token,
+        event_type: "phase_b_complete",
+        payload: { business_name: project.business_name },
+      });
+
+      // Send Telegram notification
+      const telegramBotToken = Deno.env.get("TELEGRAM_BOT_TOKEN");
+      const telegramChatId = Deno.env.get("TELEGRAM_CHAT_ID");
+      const baseUrl = Deno.env.get("PUBLIC_BASE_URL") || "https://pleasantcove.design";
+
+      if (telegramBotToken && telegramChatId) {
+        const t = encodeURIComponent(token);
+        const operatorUrl = `${baseUrl}/operator?project=${t}`;
+
+        try {
+          const res = await fetch(`https://api.telegram.org/bot${telegramBotToken}/sendMessage`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              chat_id: telegramChatId,
+              text: `📋 Phase B Complete\n\n• Business: ${project.business_name}\n• Client finished project setup\n• Ready to start Draft v1`,
+              reply_markup: {
+                inline_keyboard: [[
+                  { text: "View Project →", url: operatorUrl },
+                ]],
+              },
+            }),
+          });
+
+          if (!res.ok) {
+            const text = await res.text();
+            console.error("Telegram sendMessage failed:", res.status, text);
+          }
+        } catch (e) {
+          console.error("Telegram notification failed:", e);
+        }
+      }
+
+      console.log(`Phase B complete for ${project.business_name} (${token.slice(0, 8)}...)`);
+    } else {
+      console.log(`Phase B saved for ${project.business_name} (${token.slice(0, 8)}...)`);
+    }
+
+    return new Response(
+      JSON.stringify({ ok: true, status: phaseBStatus }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+
+  } catch (error) {
+    console.error("Phase B error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+}
+
+// GET /portal/:token/phase-b - Get Phase B intake data
+async function handleGetPhaseB(
+  token: string,
+  corsHeaders: Record<string, string>
+): Promise<Response> {
+  try {
+    if (!token || !isValidToken(token)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid token" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Fetch project
+    const { data: project, error: projectError } = await supabase
+      .from("projects")
+      .select("id")
+      .eq("project_token", token)
+      .is("deleted_at", null)
+      .maybeSingle();
+
+    if (projectError || !project) {
+      return new Response(
+        JSON.stringify({ error: "Project not found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Get intake
+    const { data: intake, error: intakeError } = await supabase
+      .from("project_intakes")
+      .select("phase_b_json, phase_b_status, phase_b_completed_at")
+      .eq("project_id", project.id)
+      .maybeSingle();
+
+    if (intakeError) {
+      console.error("Fetch intake error:", intakeError);
+      return new Response(
+        JSON.stringify({ error: "Failed to fetch intake" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    return new Response(
+      JSON.stringify({
+        data: intake?.phase_b_json || null,
+        status: intake?.phase_b_status || "pending",
+        completed_at: intake?.phase_b_completed_at || null,
+      }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+
+  } catch (error) {
+    console.error("Get Phase B error:", error);
     return new Response(
       JSON.stringify({ error: "Internal server error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
