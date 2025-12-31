@@ -7,7 +7,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   FolderOpen, Loader2, Clock, FileText, 
-  MessageSquare, ExternalLink, ChevronRight, Sparkles, Eye, ArrowRight
+  MessageSquare, ExternalLink, ChevronRight, Sparkles, Eye, ArrowRight,
+  CheckCircle2, Circle, AlertCircle
 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -16,13 +17,32 @@ import { adminFetch } from "@/lib/adminFetch";
 import { useOperatorContext } from "./OperatorLayout";
 import { StageBadge, PIPELINE_FILTERS, PipelineFilter, getNextStage, STAGE_CONFIG, PipelineStage } from "@/components/operator/StageBadge";
 
+interface PhaseBData {
+  logoStatus: "uploaded" | "create" | "";
+  brandColors: string;
+  colorPreference: "pick_for_me" | "custom" | "";
+  tone: "professional" | "friendly" | "bold" | "luxury" | "";
+  photosUploaded: number;
+  tagline: string;
+  socialLinks: string;
+  pages: string[];
+  primaryCta: "call" | "book" | "form" | "quote" | "";
+  features: string[];
+  exampleSites: string;
+  dislikes: string;
+}
+
 interface ProjectIntake {
   id: string;
   project_id: string;
   intake_json: Record<string, unknown>;
   intake_version: number;
   intake_status: 'draft' | 'submitted' | 'approved';
+  phase_b_json: PhaseBData | null;
+  phase_b_status: 'pending' | 'in_progress' | 'complete' | null;
+  phase_b_completed_at: string | null;
   created_at: string;
+  updated_at: string;
 }
 
 interface Project {
@@ -142,6 +162,47 @@ export function ProjectsTab() {
     return format(date, "MMM d");
   };
 
+  // Calculate Phase B progress from intake data
+  const getPhaseBProgress = (intake: ProjectIntake | null): { completed: number; total: number; missing: string[] } => {
+    if (!intake || !intake.phase_b_json) {
+      return { completed: 0, total: 4, missing: ["Brand", "Photos", "Structure", "Inspiration"] };
+    }
+    
+    const data = intake.phase_b_json;
+    const missing: string[] = [];
+    let completed = 0;
+
+    // Card 1: Brand & Identity
+    if ((data.logoStatus === "uploaded" || data.logoStatus === "create") && data.tone) {
+      completed++;
+    } else {
+      missing.push("Brand");
+    }
+
+    // Card 2: Content & Proof (need 3+ photos)
+    if ((data.photosUploaded || 0) >= 3) {
+      completed++;
+    } else {
+      missing.push("Photos");
+    }
+
+    // Card 3: Structure & Features
+    if ((data.pages?.length || 0) >= 1 && data.primaryCta) {
+      completed++;
+    } else {
+      missing.push("Structure");
+    }
+
+    // Card 4: Inspiration
+    if (data.exampleSites?.trim()) {
+      completed++;
+    } else {
+      missing.push("Inspiration");
+    }
+
+    return { completed, total: 4, missing };
+  };
+
   // Show full-page work surface when a project is selected
   if (selectedProject) {
     return (
@@ -242,12 +303,6 @@ export function ProjectsTab() {
                             {project.unread_count}
                           </span>
                         )}
-                        {project.intake && (
-                          <span className="flex items-center gap-1 text-blue-600">
-                            <FileText className="h-3 w-3" />
-                            Intake
-                          </span>
-                        )}
                         {project.contact_phone && (
                           <span className="truncate max-w-[120px] sm:max-w-[150px]">
                             {project.contact_phone}
@@ -255,7 +310,54 @@ export function ProjectsTab() {
                         )}
                       </div>
                       
-                      {/* Row 4: Email - own row on mobile for readability */}
+                      {/* Row 4: Phase B Progress */}
+                      {(() => {
+                        const progress = getPhaseBProgress(project.intake);
+                        const phaseBStatus = project.intake?.phase_b_status;
+                        
+                        if (phaseBStatus === "complete") {
+                          return (
+                            <div className="mt-1.5 flex items-center gap-1.5 text-xs">
+                              <span className="flex items-center gap-1 text-green-600 bg-green-500/10 px-2 py-0.5 rounded-full">
+                                <CheckCircle2 className="h-3 w-3" />
+                                Setup Complete
+                              </span>
+                            </div>
+                          );
+                        }
+                        
+                        if (phaseBStatus === "in_progress" || (project.intake && progress.completed > 0)) {
+                          return (
+                            <div className="mt-1.5 flex items-center gap-2 text-xs">
+                              <span className="flex items-center gap-1 text-amber-600 bg-amber-500/10 px-2 py-0.5 rounded-full">
+                                <Circle className="h-3 w-3" />
+                                Setup: {progress.completed}/4
+                              </span>
+                              {progress.missing.length > 0 && progress.missing.length < 4 && (
+                                <span className="text-muted-foreground hidden sm:inline">
+                                  Missing: {progress.missing.join(", ")}
+                                </span>
+                              )}
+                            </div>
+                          );
+                        }
+                        
+                        // Show pending state for projects in early stages
+                        if (["new", "quote_requested", "claimed"].includes(project.pipeline_stage || "new")) {
+                          return (
+                            <div className="mt-1.5 flex items-center gap-1.5 text-xs">
+                              <span className="flex items-center gap-1 text-muted-foreground bg-muted/50 px-2 py-0.5 rounded-full">
+                                <AlertCircle className="h-3 w-3" />
+                                Awaiting Setup
+                              </span>
+                            </div>
+                          );
+                        }
+                        
+                        return null;
+                      })()}
+                      
+                      {/* Row 5: Email - own row on mobile for readability */}
                       {project.contact_email && (
                         <div className="mt-1 text-xs sm:text-sm text-muted-foreground truncate">
                           {project.contact_email}

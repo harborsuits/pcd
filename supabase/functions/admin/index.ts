@@ -1358,10 +1358,10 @@ async function handleProjects(req: Request): Promise<Response> {
     let hasClaimMap: Record<string, boolean> = {};
     
     if (projectIds.length > 0) {
-      // Fetch intakes (including id and intake_status)
+      // Fetch intakes (including Phase B data)
       const { data: intakes, error: intakesError } = await supabase
         .from("project_intakes")
-        .select("id, project_id, intake_json, intake_version, intake_status, created_at")
+        .select("id, project_id, intake_json, intake_version, intake_status, phase_b_json, phase_b_status, phase_b_completed_at, created_at, updated_at")
         .in("project_id", projectIds);
 
       if (intakesError) {
