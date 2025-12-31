@@ -800,6 +800,7 @@ export function ProjectWorkSurface({ project, onBack, onStatusChange }: ProjectW
                     phaseB={project.intake?.phase_b_json}
                     phaseBStatus={project.intake?.phase_b_status}
                     phaseBCompletedAt={project.intake?.phase_b_completed_at}
+                    onOpenMedia={() => setActivePanel("media")}
                   />
                 </div>
               </TabsContent>

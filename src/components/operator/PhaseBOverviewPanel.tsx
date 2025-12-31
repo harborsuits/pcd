@@ -1,5 +1,11 @@
+import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { 
   Palette, 
   FileText, 
@@ -7,31 +13,32 @@ import {
   Brush,
   CheckCircle2,
   Circle,
+  ChevronDown,
+  ChevronRight,
   Link2,
   Award,
   ImagePlus,
   Loader2,
   Sparkles,
-  Image
+  Image,
+  Upload,
+  FolderOpen,
+  AlertCircle,
+  Clock
 } from "lucide-react";
 
 type PhotosPlan = "upload" | "generate" | "none" | "";
 
 interface PhaseBData {
-  // Card 1: Brand & Identity
   logoStatus?: "uploaded" | "create" | "" | null;
   brandColors?: string | null;
   colorPreference?: "pick_for_me" | "custom" | "" | null;
-
-  // Card 2: Website Content
   businessDescription?: string | null;
   services?: string | null;
   serviceArea?: string | null;
   differentiators?: string | null;
   faq?: string | null;
   primaryGoal?: "book" | "quote" | "call" | "portfolio" | "learn" | "visit" | "" | null;
-
-  // Card 3: Photos & Proof
   photosPlan?: PhotosPlan | null;
   photosUploaded?: number | null;
   generatedPhotoSubjects?: string | null;
@@ -41,8 +48,6 @@ interface PhaseBData {
   googleReviewsLink?: string | null;
   certifications?: string | null;
   hasBeforeAfter?: "yes" | "coming_soon" | "no" | "" | null;
-
-  // Card 4: Style & Preferences
   vibe?: "modern" | "classic" | "luxury" | "bold" | "minimal" | "cozy" | "" | null;
   tone?: "professional" | "friendly" | "direct" | "playful" | "" | null;
   exampleSites?: string | null;
@@ -54,99 +59,128 @@ interface PhaseBOverviewPanelProps {
   phaseB: PhaseBData | null | undefined;
   phaseBStatus?: 'pending' | 'in_progress' | 'complete' | null;
   phaseBCompletedAt?: string | null;
+  phaseBUpdatedAt?: string | null;
   onGenerateImages?: () => void;
   isGenerating?: boolean;
+  onOpenMedia?: () => void;
 }
 
-function Section({ 
-  icon: Icon, 
-  title, 
-  completed,
-  children 
-}: { 
-  icon: React.ComponentType<{ className?: string }>; 
-  title: string; 
-  completed?: boolean;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="space-y-2 p-3 rounded-lg bg-muted/30 border border-border/50">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 text-sm font-medium">
-          <Icon className="h-4 w-4 text-primary" />
-          {title}
-        </div>
-        {completed !== undefined && (
-          completed ? (
-            <CheckCircle2 className="h-4 w-4 text-green-500" />
-          ) : (
-            <Circle className="h-4 w-4 text-muted-foreground/50" />
-          )
-        )}
-      </div>
-      <div className="pl-6 text-sm">{children}</div>
-    </div>
-  );
-}
-
-function Field({ label, value, className }: { label: string; value: React.ReactNode; className?: string }) {
-  const isEmpty = value === null || value === undefined || value === "";
-  return (
-    <div className={className}>
-      <span className="text-muted-foreground text-xs">{label}</span>
-      <div className={isEmpty ? "text-muted-foreground/50 italic" : ""}>
-        {isEmpty ? "Not provided" : value}
-      </div>
-    </div>
-  );
-}
-
+// Labels
 const GOAL_LABELS: Record<string, string> = {
-  book: "Get bookings/appointments",
-  quote: "Get quote requests",
-  call: "Get phone calls",
-  portfolio: "Showcase portfolio",
+  book: "Book appointments",
+  quote: "Quote requests",
+  call: "Phone calls",
+  portfolio: "Showcase work",
   learn: "Educate visitors",
-  visit: "Drive store visits"
+  visit: "Drive visits"
 };
 
 const VIBE_LABELS: Record<string, string> = {
-  modern: "Modern & Clean",
-  classic: "Classic & Traditional",
-  luxury: "Luxury & Premium",
-  bold: "Bold & Energetic",
-  minimal: "Minimal & Simple",
-  cozy: "Warm & Cozy"
+  modern: "Modern",
+  classic: "Classic",
+  luxury: "Luxury",
+  bold: "Bold",
+  minimal: "Minimal",
+  cozy: "Cozy"
 };
 
 const TONE_LABELS: Record<string, string> = {
   professional: "Professional",
-  friendly: "Friendly & Approachable",
-  direct: "Direct & No-nonsense",
-  playful: "Playful & Fun"
+  friendly: "Friendly",
+  direct: "Direct",
+  playful: "Playful"
 };
 
 const PHOTO_STYLE_LABELS: Record<string, string> = {
-  realistic: "Realistic / Documentary",
-  studio: "Studio / Polished",
-  lifestyle: "Lifestyle / Action",
-  minimal: "Minimal / Clean backgrounds"
+  realistic: "Realistic",
+  studio: "Studio",
+  lifestyle: "Lifestyle",
+  minimal: "Minimal"
 };
+
+// Truncated text with expand
+function PreviewText({ text, maxLength = 120 }: { text: string | null | undefined; maxLength?: number }) {
+  const [expanded, setExpanded] = useState(false);
+  
+  if (!text) return <span className="text-muted-foreground/50 italic text-xs">Not provided</span>;
+  
+  if (text.length <= maxLength) {
+    return <span className="text-sm">{text}</span>;
+  }
+  
+  return (
+    <div>
+      <span className="text-sm">
+        {expanded ? text : `${text.slice(0, maxLength)}...`}
+      </span>
+      <button 
+        onClick={() => setExpanded(!expanded)}
+        className="ml-1 text-xs text-primary hover:underline"
+      >
+        {expanded ? "Show less" : "Show more"}
+      </button>
+    </div>
+  );
+}
+
+// Accordion section
+function AccordionSection({ 
+  icon: Icon, 
+  title, 
+  complete,
+  defaultOpen = false,
+  children 
+}: { 
+  icon: React.ComponentType<{ className?: string }>; 
+  title: string; 
+  complete: boolean;
+  defaultOpen?: boolean;
+  children: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  
+  return (
+    <Collapsible open={open} onOpenChange={setOpen}>
+      <CollapsibleTrigger className="flex items-center justify-between w-full p-2 rounded-lg hover:bg-muted/50 transition-colors">
+        <div className="flex items-center gap-2">
+          {open ? (
+            <ChevronDown className="h-4 w-4 text-muted-foreground" />
+          ) : (
+            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+          )}
+          <Icon className="h-4 w-4 text-primary" />
+          <span className="text-sm font-medium">{title}</span>
+        </div>
+        {complete ? (
+          <CheckCircle2 className="h-4 w-4 text-green-500" />
+        ) : (
+          <AlertCircle className="h-4 w-4 text-amber-500" />
+        )}
+      </CollapsibleTrigger>
+      <CollapsibleContent className="pl-8 pr-2 pb-2">
+        {children}
+      </CollapsibleContent>
+    </Collapsible>
+  );
+}
 
 export function PhaseBOverviewPanel({ 
   phaseB, 
   phaseBStatus, 
   phaseBCompletedAt,
+  phaseBUpdatedAt,
   onGenerateImages,
-  isGenerating
+  isGenerating,
+  onOpenMedia
 }: PhaseBOverviewPanelProps) {
+  // Empty state
   if (!phaseB && phaseBStatus !== 'in_progress' && phaseBStatus !== 'complete') {
     return (
-      <div className="flex-1 flex items-center justify-center text-muted-foreground p-4">
+      <div className="flex items-center justify-center text-muted-foreground p-6">
         <div className="text-center">
-          <FileText className="h-10 w-10 mx-auto mb-3 opacity-50" />
-          <p className="text-sm font-medium">No Phase B data</p>
-          <p className="text-xs mt-1">Client hasn't started Phase 2 yet.</p>
+          <FileText className="h-8 w-8 mx-auto mb-2 opacity-50" />
+          <p className="text-sm font-medium">Phase 2 not started</p>
+          <p className="text-xs mt-1">Client hasn't begun detailed setup</p>
         </div>
       </div>
     );
@@ -154,185 +188,293 @@ export function PhaseBOverviewPanel({
 
   const data = phaseB || {};
 
-  // Calculate section completion
+  // Section completion checks
   const brandComplete = !!(data.logoStatus || data.brandColors || data.colorPreference);
   const contentComplete = !!(data.businessDescription || data.services || data.primaryGoal);
   const photosComplete = !!(data.photosPlan);
-  const styleComplete = !!(data.vibe || data.tone || data.exampleSites);
+  const styleComplete = !!(data.vibe || data.tone);
+  
+  const completedCount = [brandComplete, contentComplete, photosComplete, styleComplete].filter(Boolean).length;
+  const missingItems: string[] = [];
+  if (!brandComplete) missingItems.push("Brand");
+  if (!contentComplete) missingItems.push("Content");
+  if (!photosComplete) missingItems.push("Photos");
+  if (!styleComplete) missingItems.push("Style");
 
-  const statusConfig = {
-    pending: { label: "Phase 2: Not Started", variant: "outline" as const, color: "text-muted-foreground" },
-    in_progress: { label: "Phase 2: In Progress", variant: "secondary" as const, color: "text-amber-600" },
-    complete: { label: "Phase 2: Complete", variant: "default" as const, color: "text-green-600" },
-  };
-
-  const status = phaseBStatus || 'pending';
-  const { label, variant, color } = statusConfig[status] || statusConfig.pending;
-
-  // Can generate images if photosPlan is "generate" and we have subject info
-  const canGenerateImages = data.photosPlan === "generate" && data.generatedPhotoSubjects;
+  // Photos status
+  const photosBrief = data.photosPlan === "generate" && data.generatedPhotoSubjects;
+  const photosUploaded = data.photosUploaded || 0;
 
   return (
-    <div className="p-4 space-y-4">
-      {/* Status Header */}
-      <div className="flex items-center justify-between border-b border-border pb-3">
-        <div className="flex items-center gap-2">
-          <Badge variant={variant} className={color}>
-            {status === 'complete' && <CheckCircle2 className="h-3 w-3 mr-1" />}
-            {label}
-          </Badge>
-          {phaseBCompletedAt && (
-            <span className="text-xs text-muted-foreground">
-              Completed {new Date(phaseBCompletedAt).toLocaleDateString()}
+    <div className="p-4 space-y-3">
+      {/* ===== SUMMARY HEADER ===== */}
+      <div className="p-3 rounded-lg bg-muted/40 border border-border/50 space-y-2">
+        {/* Status row */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium">Phase 2</span>
+            <Badge 
+              variant={phaseBStatus === 'complete' ? 'default' : 'secondary'}
+              className={phaseBStatus === 'complete' ? 'bg-green-500/20 text-green-700 border-green-300' : ''}
+            >
+              {phaseBStatus === 'complete' ? 'Complete' : 'In Progress'} ({completedCount}/4)
+            </Badge>
+          </div>
+          {(phaseBUpdatedAt || phaseBCompletedAt) && (
+            <span className="text-xs text-muted-foreground flex items-center gap-1">
+              <Clock className="h-3 w-3" />
+              {phaseBCompletedAt 
+                ? `Completed ${new Date(phaseBCompletedAt).toLocaleDateString()}`
+                : phaseBUpdatedAt 
+                  ? `Updated ${new Date(phaseBUpdatedAt).toLocaleDateString()}`
+                  : ''
+              }
             </span>
+          )}
+        </div>
+
+        {/* Missing items */}
+        {missingItems.length > 0 && (
+          <div className="text-xs text-amber-600 flex items-center gap-1">
+            <AlertCircle className="h-3 w-3" />
+            Missing: {missingItems.join(", ")}
+          </div>
+        )}
+
+        {/* Key chips row */}
+        <div className="flex flex-wrap gap-1.5">
+          {data.primaryGoal && (
+            <Badge variant="secondary" className="text-xs">
+              Goal: {GOAL_LABELS[data.primaryGoal] || data.primaryGoal}
+            </Badge>
+          )}
+          {data.vibe && (
+            <Badge variant="outline" className="text-xs">
+              {VIBE_LABELS[data.vibe]}
+            </Badge>
+          )}
+          {data.tone && (
+            <Badge variant="outline" className="text-xs">
+              {TONE_LABELS[data.tone]}
+            </Badge>
+          )}
+          {data.photosPlan === "upload" && (
+            <Badge className="text-xs bg-blue-500/20 text-blue-700 border-blue-300">
+              <Upload className="h-3 w-3 mr-1" />
+              {photosUploaded > 0 ? `${photosUploaded} uploaded` : "Upload photos"}
+            </Badge>
+          )}
+          {data.photosPlan === "generate" && (
+            <Badge className="text-xs bg-purple-500/20 text-purple-700 border-purple-300">
+              <Sparkles className="h-3 w-3 mr-1" />
+              AI photos {photosBrief ? "✓" : ""}
+            </Badge>
+          )}
+          {data.photosPlan === "none" && (
+            <Badge variant="outline" className="text-xs">
+              Placeholders {data.placeholderOk ? "OK" : ""}
+            </Badge>
+          )}
+          {data.colorPreference === "custom" && data.brandColors && (
+            <Badge variant="outline" className="text-xs font-mono">
+              {data.brandColors}
+            </Badge>
           )}
         </div>
       </div>
 
-      {/* Brand & Identity */}
-      <Section icon={Palette} title="Brand & Identity" completed={brandComplete}>
-        <div className="space-y-2">
-          <Field 
-            label="Logo" 
-            value={
-              data.logoStatus === "uploaded" ? (
+      {/* ===== ACCORDION SECTIONS ===== */}
+      <div className="space-y-1 border rounded-lg divide-y">
+        {/* Brand & Identity */}
+        <AccordionSection icon={Palette} title="Brand & Identity" complete={brandComplete}>
+          <div className="space-y-2 text-sm">
+            <div className="flex items-center gap-2">
+              <span className="text-muted-foreground text-xs w-16">Logo:</span>
+              {data.logoStatus === "uploaded" ? (
                 <Badge variant="secondary" className="text-xs"><Image className="h-3 w-3 mr-1" />Uploaded</Badge>
               ) : data.logoStatus === "create" ? (
                 <Badge variant="outline" className="text-xs"><Sparkles className="h-3 w-3 mr-1" />Needs creation</Badge>
-              ) : null
-            } 
-          />
-          <Field 
-            label="Colors" 
-            value={
-              data.colorPreference === "custom" && data.brandColors ? (
-                <div className="flex items-center gap-2">
-                  <span className="text-xs bg-muted px-2 py-1 rounded font-mono">{data.brandColors}</span>
-                </div>
-              ) : data.colorPreference === "pick_for_me" ? (
-                "Pick for me"
-              ) : null
-            } 
-          />
-        </div>
-      </Section>
-
-      {/* Website Content */}
-      <Section icon={FileText} title="Website Content" completed={contentComplete}>
-        <div className="space-y-3">
-          <Field 
-            label="Primary Goal" 
-            value={data.primaryGoal ? (
-              <Badge variant="secondary" className="text-xs">{GOAL_LABELS[data.primaryGoal] || data.primaryGoal}</Badge>
-            ) : null} 
-          />
-          <Field label="Business Description" value={data.businessDescription} />
-          <Field label="Services Offered" value={data.services} />
-          <Field label="Service Area" value={data.serviceArea} />
-          <Field label="What Sets You Apart" value={data.differentiators} />
-          <Field label="FAQ / Common Questions" value={data.faq} />
-        </div>
-      </Section>
-
-      {/* Photos & Proof */}
-      <Section icon={Camera} title="Photos & Proof" completed={photosComplete}>
-        <div className="space-y-3">
-          {/* Photo Plan Badge */}
-          <Field 
-            label="Photo Plan" 
-            value={
-              data.photosPlan === "upload" ? (
-                <Badge className="bg-blue-500/20 text-blue-700 border-blue-300">
-                  <Image className="h-3 w-3 mr-1" />
-                  Upload own photos {data.photosUploaded ? `(${data.photosUploaded} uploaded)` : ""}
-                </Badge>
-              ) : data.photosPlan === "generate" ? (
-                <Badge className="bg-purple-500/20 text-purple-700 border-purple-300">
-                  <ImagePlus className="h-3 w-3 mr-1" />
-                  AI-generated photos
-                </Badge>
-              ) : data.photosPlan === "none" ? (
-                <Badge variant="outline">
-                  Using placeholders {data.placeholderOk ? "(OK'd)" : ""}
-                </Badge>
-              ) : null
-            } 
-          />
-
-          {/* AI Generation Brief */}
-          {data.photosPlan === "generate" && (
-            <div className="mt-3 p-3 rounded-lg bg-purple-500/10 border border-purple-300/30 space-y-2">
-              <p className="text-xs font-medium text-purple-700 flex items-center gap-1">
-                <Sparkles className="h-3 w-3" /> AI Photo Brief
-              </p>
-              <Field label="What to show" value={data.generatedPhotoSubjects} />
-              <Field 
-                label="Style" 
-                value={data.generatedPhotoStyle ? PHOTO_STYLE_LABELS[data.generatedPhotoStyle] || data.generatedPhotoStyle : null} 
-              />
-              <Field label="Notes" value={data.generatedPhotoNotes} />
-              
-              {canGenerateImages && onGenerateImages && (
-                <Button 
-                  size="sm" 
-                  className="mt-2 w-full"
-                  onClick={onGenerateImages}
-                  disabled={isGenerating}
-                >
-                  {isGenerating ? (
-                    <><Loader2 className="h-3 w-3 mr-1 animate-spin" />Generating...</>
-                  ) : (
-                    <><Sparkles className="h-3 w-3 mr-1" />Generate 6 Images</>
-                  )}
-                </Button>
+              ) : (
+                <span className="text-muted-foreground/50 italic text-xs">Not set</span>
               )}
             </div>
-          )}
-
-          {/* Social Proof */}
-          <div className="pt-2 border-t border-border/50 space-y-2">
-            <Field 
-              label="Google Reviews" 
-              value={data.googleReviewsLink ? (
-                <a href={data.googleReviewsLink} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1 text-xs">
-                  <Link2 className="h-3 w-3" />View Reviews
-                </a>
-              ) : null} 
-            />
-            <Field 
-              label="Certifications / Badges" 
-              value={data.certifications ? (
-                <span className="flex items-center gap-1"><Award className="h-3 w-3 text-amber-500" />{data.certifications}</span>
-              ) : null} 
-            />
-            <Field 
-              label="Before/After Photos" 
-              value={
-                data.hasBeforeAfter === "yes" ? "Has before/after photos" : 
-                data.hasBeforeAfter === "coming_soon" ? "Coming soon" :
-                data.hasBeforeAfter === "no" ? "N/A" : null
-              } 
-            />
+            <div className="flex items-center gap-2">
+              <span className="text-muted-foreground text-xs w-16">Colors:</span>
+              {data.colorPreference === "custom" && data.brandColors ? (
+                <code className="text-xs bg-muted px-1.5 py-0.5 rounded">{data.brandColors}</code>
+              ) : data.colorPreference === "pick_for_me" ? (
+                <span className="text-xs">Pick for me</span>
+              ) : (
+                <span className="text-muted-foreground/50 italic text-xs">Not set</span>
+              )}
+            </div>
           </div>
-        </div>
-      </Section>
+        </AccordionSection>
 
-      {/* Style & Preferences */}
-      <Section icon={Brush} title="Style & Preferences" completed={styleComplete}>
-        <div className="space-y-2">
-          <div className="flex flex-wrap gap-1.5 mb-2">
-            {data.vibe && (
-              <Badge variant="secondary" className="text-xs">{VIBE_LABELS[data.vibe] || data.vibe}</Badge>
+        {/* Website Content */}
+        <AccordionSection icon={FileText} title="Website Content" complete={contentComplete}>
+          <div className="space-y-3 text-sm">
+            {data.primaryGoal && (
+              <div>
+                <span className="text-muted-foreground text-xs">Primary Goal:</span>
+                <div><Badge variant="secondary" className="text-xs mt-1">{GOAL_LABELS[data.primaryGoal]}</Badge></div>
+              </div>
             )}
-            {data.tone && (
-              <Badge variant="outline" className="text-xs">{TONE_LABELS[data.tone] || data.tone}</Badge>
-            )}
+            <div>
+              <span className="text-muted-foreground text-xs">Business Description:</span>
+              <div className="mt-1"><PreviewText text={data.businessDescription} /></div>
+            </div>
+            <div>
+              <span className="text-muted-foreground text-xs">Services:</span>
+              <div className="mt-1"><PreviewText text={data.services} /></div>
+            </div>
+            <div>
+              <span className="text-muted-foreground text-xs">Service Area:</span>
+              <div className="mt-1"><PreviewText text={data.serviceArea} maxLength={80} /></div>
+            </div>
+            <div>
+              <span className="text-muted-foreground text-xs">What Sets You Apart:</span>
+              <div className="mt-1"><PreviewText text={data.differentiators} /></div>
+            </div>
+            <div>
+              <span className="text-muted-foreground text-xs">FAQ:</span>
+              <div className="mt-1"><PreviewText text={data.faq} /></div>
+            </div>
           </div>
-          <Field label="Example Sites They Like" value={data.exampleSites} />
-          <Field label="Must Include" value={data.mustInclude} />
-          <Field label="Must Avoid" value={data.mustAvoid} />
-        </div>
-      </Section>
+        </AccordionSection>
+
+        {/* Photos & Proof */}
+        <AccordionSection icon={Camera} title="Photos & Proof" complete={photosComplete}>
+          <div className="space-y-3">
+            {/* Photo Plan Actions */}
+            {data.photosPlan === "upload" && (
+              <div className="p-2 rounded bg-blue-500/10 border border-blue-300/30 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium text-blue-700 flex items-center gap-1">
+                    <Upload className="h-3 w-3" /> Client uploading photos
+                  </span>
+                  <Badge variant="secondary" className="text-xs">
+                    {photosUploaded > 0 ? `${photosUploaded} files` : "0 files"}
+                  </Badge>
+                </div>
+                {onOpenMedia && (
+                  <Button size="sm" variant="outline" className="w-full text-xs h-7" onClick={onOpenMedia}>
+                    <FolderOpen className="h-3 w-3 mr-1" />Open Media
+                  </Button>
+                )}
+              </div>
+            )}
+
+            {data.photosPlan === "generate" && (
+              <div className="p-2 rounded bg-purple-500/10 border border-purple-300/30 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium text-purple-700 flex items-center gap-1">
+                    <Sparkles className="h-3 w-3" /> AI-generated photos
+                  </span>
+                  <Badge variant={photosBrief ? "secondary" : "outline"} className="text-xs">
+                    Brief {photosBrief ? "✓" : "missing"}
+                  </Badge>
+                </div>
+                {photosBrief && (
+                  <div className="text-xs space-y-1">
+                    <div><span className="text-muted-foreground">Subjects:</span> {data.generatedPhotoSubjects}</div>
+                    {data.generatedPhotoStyle && (
+                      <div><span className="text-muted-foreground">Style:</span> {PHOTO_STYLE_LABELS[data.generatedPhotoStyle]}</div>
+                    )}
+                    {data.generatedPhotoNotes && (
+                      <div><span className="text-muted-foreground">Notes:</span> {data.generatedPhotoNotes}</div>
+                    )}
+                  </div>
+                )}
+                {photosBrief && onGenerateImages && (
+                  <Button 
+                    size="sm" 
+                    className="w-full text-xs h-7"
+                    onClick={onGenerateImages}
+                    disabled={isGenerating}
+                  >
+                    {isGenerating ? (
+                      <><Loader2 className="h-3 w-3 mr-1 animate-spin" />Generating...</>
+                    ) : (
+                      <><ImagePlus className="h-3 w-3 mr-1" />Generate 6 Images</>
+                    )}
+                  </Button>
+                )}
+                <div className="text-xs text-muted-foreground">Generated images: 0</div>
+              </div>
+            )}
+
+            {data.photosPlan === "none" && (
+              <div className="p-2 rounded bg-muted/50 border border-border/50 space-y-1">
+                <div className="flex items-center gap-2">
+                  <Circle className="h-3 w-3 text-muted-foreground" />
+                  <span className="text-xs">Using placeholders</span>
+                  {data.placeholderOk && <Badge variant="outline" className="text-xs">OK'd</Badge>}
+                </div>
+                <p className="text-xs text-muted-foreground">Consider asking for photos later</p>
+              </div>
+            )}
+
+            {/* Social Proof */}
+            <div className="pt-2 border-t space-y-1.5 text-xs">
+              <div className="flex items-center gap-2">
+                <Link2 className="h-3 w-3 text-muted-foreground" />
+                <span className="text-muted-foreground">Reviews:</span>
+                {data.googleReviewsLink ? (
+                  <a href={data.googleReviewsLink} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                    View link
+                  </a>
+                ) : (
+                  <span className="text-muted-foreground/50 italic">None</span>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <Award className="h-3 w-3 text-muted-foreground" />
+                <span className="text-muted-foreground">Certs:</span>
+                {data.certifications ? (
+                  <span>{data.certifications}</span>
+                ) : (
+                  <span className="text-muted-foreground/50 italic">None</span>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <Image className="h-3 w-3 text-muted-foreground" />
+                <span className="text-muted-foreground">Before/After:</span>
+                <span>
+                  {data.hasBeforeAfter === "yes" ? "Yes" : 
+                   data.hasBeforeAfter === "coming_soon" ? "Coming soon" :
+                   data.hasBeforeAfter === "no" ? "No" : 
+                   <span className="text-muted-foreground/50 italic">Not set</span>}
+                </span>
+              </div>
+            </div>
+          </div>
+        </AccordionSection>
+
+        {/* Style & Preferences */}
+        <AccordionSection icon={Brush} title="Style & Preferences" complete={styleComplete}>
+          <div className="space-y-3 text-sm">
+            {(data.vibe || data.tone) && (
+              <div className="flex flex-wrap gap-1.5">
+                {data.vibe && <Badge variant="secondary" className="text-xs">{VIBE_LABELS[data.vibe]}</Badge>}
+                {data.tone && <Badge variant="outline" className="text-xs">{TONE_LABELS[data.tone]}</Badge>}
+              </div>
+            )}
+            <div>
+              <span className="text-muted-foreground text-xs">Example Sites:</span>
+              <div className="mt-1"><PreviewText text={data.exampleSites} maxLength={100} /></div>
+            </div>
+            <div>
+              <span className="text-muted-foreground text-xs">Must Include:</span>
+              <div className="mt-1"><PreviewText text={data.mustInclude} maxLength={100} /></div>
+            </div>
+            <div>
+              <span className="text-muted-foreground text-xs">Must Avoid:</span>
+              <div className="mt-1"><PreviewText text={data.mustAvoid} maxLength={100} /></div>
+            </div>
+          </div>
+        </AccordionSection>
+      </div>
     </div>
   );
 }
