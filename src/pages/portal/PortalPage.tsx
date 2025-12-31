@@ -16,6 +16,7 @@ import { PrototypeViewer, type Prototype, type PrototypeComment } from "@/compon
 import { ProjectRoadmap, computeRoadmapSteps } from "@/components/portal/ProjectRoadmap";
 import { ClientFileUpload } from "@/components/portal/ClientFileUpload";
 import { ClientProgressPanel } from "@/components/portal/ClientProgressPanel";
+import { PhaseBIntake, type PhaseBData } from "@/components/portal/PhaseBIntake";
 import { ClientLayout } from "@/components/portal/ClientLayout";
 import { BrandCard } from "@/components/portal/BrandCard";
 
@@ -69,8 +70,11 @@ interface PortalData {
     slug: string;
     status: string;
     final_approved_at: string | null;
+    pipeline_stage: string;
   };
   intake_status: 'draft' | 'submitted' | 'approved' | null;
+  phase_b_status: 'pending' | 'in_progress' | 'complete' | null;
+  phase_b_data: PhaseBData | null;
   messages: PortalMessage[];
   files: PortalFile[];
   payments: PortalPayment[];
@@ -1115,10 +1119,32 @@ export default function PortalPage() {
           />
         </BrandCard>
 
-        {/* Client Progress Panel */}
-        <BrandCard>
-          <ClientProgressPanel token={token!} />
-        </BrandCard>
+        {/* Phase B Intake - Show prominently when not complete */}
+        {data.phase_b_status !== 'complete' && (
+          <BrandCard>
+            <PhaseBIntake
+              token={token!}
+              initialData={data.phase_b_data}
+              filesCount={data.files.filter(f => 
+                f.file_type?.startsWith('image/') || 
+                f.description?.toLowerCase().includes('photo')
+              ).length}
+              onComplete={() => {
+                setData(prev => prev ? { 
+                  ...prev, 
+                  phase_b_status: 'complete' 
+                } : prev);
+              }}
+            />
+          </BrandCard>
+        )}
+
+        {/* Client Progress Panel - Show after Phase B complete */}
+        {data.phase_b_status === 'complete' && (
+          <BrandCard>
+            <ClientProgressPanel token={token!} />
+          </BrandCard>
+        )}
 
         {/* Prototype Viewer */}
         {prototypes.length > 0 && (
