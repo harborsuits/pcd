@@ -97,6 +97,13 @@ const defaultItems: AccordionItemData[] = [
     imageUrl: 'https://images.unsplash.com/photo-1560066984-138dadb4c035?w=800&auto=format&fit=crop',
     demoUrl: '/demos/salon',
   },
+  {
+    id: 4,
+    category: 'Art & Culture',
+    title: 'Gallery',
+    imageUrl: 'https://images.unsplash.com/photo-1544967082-d9d25d867d66?w=800&auto=format&fit=crop',
+    demoUrl: '/demos/gallery',
+  },
 ];
 
 export const FeaturedDemosAccordion: React.FC<FeaturedDemosAccordionProps> = ({ 
