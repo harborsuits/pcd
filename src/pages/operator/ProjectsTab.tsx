@@ -188,6 +188,47 @@ export function ProjectsTab() {
     window.open(`/p/${token}`, "_blank");
   };
 
+  // Calculate Phase B progress from intake data
+  const getPhaseBProgress = (intake: ProjectIntake | null): { completed: number; total: number; missing: string[] } => {
+    if (!intake || !intake.phase_b_json) {
+      return { completed: 0, total: 4, missing: ["Brand", "Photos", "Structure", "Inspiration"] };
+    }
+    
+    const data = intake.phase_b_json;
+    const missing: string[] = [];
+    let completed = 0;
+
+    // Card 1: Brand & Identity
+    if ((data.logoStatus === "uploaded" || data.logoStatus === "create") && data.tone) {
+      completed++;
+    } else {
+      missing.push("Brand");
+    }
+
+    // Card 2: Content & Proof (need 3+ photos)
+    if ((data.photosUploaded || 0) >= 3) {
+      completed++;
+    } else {
+      missing.push("Photos");
+    }
+
+    // Card 3: Structure & Features
+    if ((data.pages?.length || 0) >= 1 && data.primaryCta) {
+      completed++;
+    } else {
+      missing.push("Structure");
+    }
+
+    // Card 4: Inspiration
+    if (data.exampleSites?.trim()) {
+      completed++;
+    } else {
+      missing.push("Inspiration");
+    }
+
+    return { completed, total: 4, missing };
+  };
+
   // Map projects to Kanban format
   const kanbanProjects: KanbanProject[] = useMemo(() => {
     return projects.map(p => ({
@@ -234,47 +275,6 @@ export function ProjectsTab() {
     if (diffDays === 1) return "Yesterday";
     if (diffDays < 7) return format(date, "EEEE");
     return format(date, "MMM d");
-  };
-
-  // Calculate Phase B progress from intake data
-  const getPhaseBProgress = (intake: ProjectIntake | null): { completed: number; total: number; missing: string[] } => {
-    if (!intake || !intake.phase_b_json) {
-      return { completed: 0, total: 4, missing: ["Brand", "Photos", "Structure", "Inspiration"] };
-    }
-    
-    const data = intake.phase_b_json;
-    const missing: string[] = [];
-    let completed = 0;
-
-    // Card 1: Brand & Identity
-    if ((data.logoStatus === "uploaded" || data.logoStatus === "create") && data.tone) {
-      completed++;
-    } else {
-      missing.push("Brand");
-    }
-
-    // Card 2: Content & Proof (need 3+ photos)
-    if ((data.photosUploaded || 0) >= 3) {
-      completed++;
-    } else {
-      missing.push("Photos");
-    }
-
-    // Card 3: Structure & Features
-    if ((data.pages?.length || 0) >= 1 && data.primaryCta) {
-      completed++;
-    } else {
-      missing.push("Structure");
-    }
-
-    // Card 4: Inspiration
-    if (data.exampleSites?.trim()) {
-      completed++;
-    } else {
-      missing.push("Inspiration");
-    }
-
-    return { completed, total: 4, missing };
   };
 
   // Show full-page work surface when a project is selected
