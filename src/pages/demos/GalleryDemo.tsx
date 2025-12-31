@@ -1,5 +1,7 @@
 import { GalleryHero } from "@/components/gallery/GalleryHero"
 import { motion } from "framer-motion"
+import { Palette, Brush, Droplets } from "lucide-react"
+import DisplayCards from "@/components/ui/display-cards"
 import harborQuietImage from "@/assets/gallery/harbor-quiet.jpg"
 import saltMarshImage from "@/assets/gallery/salt-marsh-light.jpg"
 import graniteTideImage from "@/assets/gallery/granite-tide.jpg"
@@ -45,20 +47,38 @@ const galleryCards = [
   },
 ];
 
-const artists = [
+const artistCards = [
   {
-    name: "Sarah Whitmore",
-    specialty: "Oil on Canvas",
-    bio: "Sarah captures the ever-changing moods of the Maine coast, from stormy seas to golden summer afternoons.",
-    image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=300&h=300&fit=crop",
+    icon: <Palette className="size-4" />,
+    title: "Sarah Whitmore",
+    description: "Oil on Canvas • Coastal Moods",
+    date: "15 years experience",
+    iconClassName: "text-amber-600 border-amber-200 bg-amber-50",
+    titleClassName: "text-slate-900",
+    className:
+      "[grid-area:stack] hover:-translate-y-10 before:absolute before:w-[100%] before:outline-1 before:rounded-xl before:outline-slate-200 before:h-[100%] before:content-[''] before:bg-blend-overlay before:bg-white/50 grayscale-[100%] hover:before:opacity-0 before:transition-opacity before:duration-700 hover:grayscale-0 before:left-0 before:top-0",
   },
   {
-    name: "Thomas Eldridge",
-    specialty: "Watercolor",
-    bio: "A third-generation Mainer, Thomas paints the working waterfront with an intimate understanding of coastal life.",
-    image: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=300&h=300&fit=crop",
+    icon: <Brush className="size-4" />,
+    title: "Thomas Eldridge",
+    description: "Watercolor • Working Waterfront",
+    date: "3rd generation Mainer",
+    iconClassName: "text-blue-600 border-blue-200 bg-blue-50",
+    titleClassName: "text-slate-900",
+    className:
+      "[grid-area:stack] translate-x-12 translate-y-10 hover:-translate-y-1 before:absolute before:w-[100%] before:outline-1 before:rounded-xl before:outline-slate-200 before:h-[100%] before:content-[''] before:bg-blend-overlay before:bg-white/50 grayscale-[100%] hover:before:opacity-0 before:transition-opacity before:duration-700 hover:grayscale-0 before:left-0 before:top-0",
   },
-]
+  {
+    icon: <Droplets className="size-4" />,
+    title: "Rebecca Marston",
+    description: "Mixed Media • Fog & Light",
+    date: "Award-winning artist",
+    iconClassName: "text-teal-600 border-teal-200 bg-teal-50",
+    titleClassName: "text-slate-900",
+    className:
+      "[grid-area:stack] translate-x-24 translate-y-20 hover:translate-y-10",
+  },
+];
 
 export default function GalleryDemo() {
   return (
@@ -127,28 +147,14 @@ export default function GalleryDemo() {
             </p>
           </motion.div>
 
-          <div className="mt-16 grid gap-12 lg:grid-cols-2">
-            {artists.map((artist, i) => (
-              <motion.div
-                key={artist.name}
-                initial={{ opacity: 0, x: i === 0 ? -30 : 30 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true }}
-                className="flex flex-col items-center gap-6 rounded-2xl bg-white p-8 shadow-sm sm:flex-row sm:items-start"
-              >
-                <img
-                  src={artist.image}
-                  alt={artist.name}
-                  className="h-24 w-24 rounded-full object-cover"
-                />
-                <div className="text-center sm:text-left">
-                  <h3 className="text-xl font-medium text-slate-900">{artist.name}</h3>
-                  <p className="mt-1 text-sm font-medium text-amber-600">{artist.specialty}</p>
-                  <p className="mt-3 text-slate-600">{artist.bio}</p>
-                </div>
-              </motion.div>
-            ))}
-          </div>
+          <motion.div 
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="mt-16 flex justify-center"
+          >
+            <DisplayCards cards={artistCards} />
+          </motion.div>
         </div>
       </section>
 
