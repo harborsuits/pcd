@@ -20,10 +20,37 @@ import { format } from "date-fns";
 import { CommentCard } from "@/components/operator/CommentCard";
 import { DataFreshnessPill } from "@/components/operator/DataFreshnessPill";
 import { IntakeOverviewPanel } from "@/components/operator/IntakeOverviewPanel";
+import { PhaseBOverviewPanel } from "@/components/operator/PhaseBOverviewPanel";
 import { LaunchChecklist } from "@/components/operator/LaunchChecklist";
 import { DeliverablesMilestones } from "@/components/operator/DeliverablesMilestones";
 import { adminFetch, AdminAuthError } from "@/lib/adminFetch";
 import { StageBadge, STAGE_CONFIG, getNextStage, getValidTargetStages, PipelineStage, isSystemMessage, parseSystemMessage } from "@/components/operator/StageBadge";
+
+interface PhaseBData {
+  logoStatus?: "uploaded" | "create" | "" | null;
+  brandColors?: string | null;
+  colorPreference?: "pick_for_me" | "custom" | "" | null;
+  businessDescription?: string | null;
+  services?: string | null;
+  serviceArea?: string | null;
+  differentiators?: string | null;
+  faq?: string | null;
+  primaryGoal?: "book" | "quote" | "call" | "portfolio" | "learn" | "visit" | "" | null;
+  photosPlan?: "upload" | "generate" | "none" | "" | null;
+  photosUploaded?: number | null;
+  generatedPhotoSubjects?: string | null;
+  generatedPhotoStyle?: "realistic" | "studio" | "lifestyle" | "minimal" | "" | null;
+  generatedPhotoNotes?: string | null;
+  placeholderOk?: boolean | null;
+  googleReviewsLink?: string | null;
+  certifications?: string | null;
+  hasBeforeAfter?: "yes" | "coming_soon" | "no" | "" | null;
+  vibe?: "modern" | "classic" | "luxury" | "bold" | "minimal" | "cozy" | "" | null;
+  tone?: "professional" | "friendly" | "direct" | "playful" | "" | null;
+  exampleSites?: string | null;
+  mustInclude?: string | null;
+  mustAvoid?: string | null;
+}
 
 interface Project {
   id: string;
@@ -49,6 +76,9 @@ interface Project {
     intake_json: Record<string, unknown>;
     intake_version: number;
     intake_status: 'draft' | 'submitted' | 'approved';
+    phase_b_json?: PhaseBData | null;
+    phase_b_status?: 'pending' | 'in_progress' | 'complete' | null;
+    phase_b_completed_at?: string | null;
     created_at: string;
   } | null;
 }
@@ -753,15 +783,25 @@ export function ProjectWorkSurface({ project, onBack, onStatusChange }: ProjectW
 
             {/* Content wrapper - must fill remaining height */}
             <div className="flex-1 min-h-0 overflow-hidden">
-              {/* Overview / Intake */}
+              {/* Overview / Intake + Phase B */}
               <TabsContent value="overview" className="h-full overflow-auto data-[state=inactive]:hidden m-0">
-                <IntakeOverviewPanel 
-                  intake={project.intake?.intake_json as Record<string, unknown> | null} 
-                  intakeCreatedAt={project.intake?.created_at}
-                  intakeStatus={project.intake?.intake_status}
-                  onApproveIntake={project.intake?.id ? () => approveIntakeMut.mutate(project.intake!.id) : undefined}
-                  isApproving={approveIntakeMut.isPending}
-                />
+                <div className="divide-y divide-border">
+                  {/* Phase 1A - Initial Intake */}
+                  <IntakeOverviewPanel 
+                    intake={project.intake?.intake_json as Record<string, unknown> | null} 
+                    intakeCreatedAt={project.intake?.created_at}
+                    intakeStatus={project.intake?.intake_status}
+                    onApproveIntake={project.intake?.id ? () => approveIntakeMut.mutate(project.intake!.id) : undefined}
+                    isApproving={approveIntakeMut.isPending}
+                  />
+                  
+                  {/* Phase B - Detailed Setup */}
+                  <PhaseBOverviewPanel 
+                    phaseB={project.intake?.phase_b_json}
+                    phaseBStatus={project.intake?.phase_b_status}
+                    phaseBCompletedAt={project.intake?.phase_b_completed_at}
+                  />
+                </div>
               </TabsContent>
 
               {/* Milestones */}
