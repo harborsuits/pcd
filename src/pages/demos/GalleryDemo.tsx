@@ -3,6 +3,7 @@ import { motion } from "framer-motion"
 import harborQuietImage from "@/assets/gallery/harbor-quiet.jpg"
 import saltMarshImage from "@/assets/gallery/salt-marsh-light.jpg"
 import graniteTideImage from "@/assets/gallery/granite-tide.jpg"
+import lighthouseImage from "@/assets/gallery/lighthouse-study.jpg"
 
 const galleryCards = [
   {
@@ -33,7 +34,7 @@ const galleryCards = [
     title: "Lighthouse Study",
     pseudonym: "R. Aster",
     tags: "Beacon • Overcast • Coastal",
-    image: "https://images.unsplash.com/photo-1501619951397-5ba40d0f75da?auto=format&fit=crop&w=1600&q=80",
+    image: lighthouseImage,
   },
   {
     title: "Winter Wharf",
