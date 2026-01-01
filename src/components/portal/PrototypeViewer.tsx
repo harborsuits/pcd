@@ -139,6 +139,9 @@ export interface PinDebug {
   contextPreview?: string | null;
   selector?: string | null;
   rangeRect?: { w: number; h: number; x: number; y: number } | null;
+  // Scale & rect info for debugging coordinate transforms
+  scale?: { x: number; y: number } | null;
+  delta?: { dx: number; dy: number } | null;
 }
 
 // Enhanced pin position result with direction for offscreen pins
@@ -610,13 +613,15 @@ export function PrototypeViewer({
             
             baseData.text_offset = globalOffset;
             
-            console.log("[Pin Capture] Text anchoring:", {
-              selector: baseData.anchor_selector,
-              textOffset: globalOffset,
-              textNode: textNode.textContent?.slice(0, 30),
-              localOffset: offset,
-              context: fullText.slice(Math.max(0, globalOffset - 10), globalOffset + 10),
-            });
+            if (debugPins) {
+              console.log("[Pin Capture] Text anchoring:", {
+                selector: baseData.anchor_selector,
+                textOffset: globalOffset,
+                textNode: textNode.textContent?.slice(0, 30),
+                localOffset: offset,
+                context: fullText.slice(Math.max(0, globalOffset - 10), globalOffset + 10),
+              });
+            }
             
             // Get context around the click (20 chars before and after)
             const contextStart = Math.max(0, globalOffset - 20);
@@ -991,19 +996,12 @@ export function PrototypeViewer({
                 pinRect = range.getBoundingClientRect();
                 // If the range rect is empty (collapsed at end of text), use anchor element
                 if (pinRect.width === 0 && pinRect.height === 0) {
-                  console.log("[Pin Render] Range rect empty, falling back to element:", comment.id.slice(0,6));
                   pinRect = anchorEl.getBoundingClientRect();
                 } else {
                   usedRange = true;
                   baseDebug.rangeRect = { w: pinRect.width, h: pinRect.height, x: pinRect.left, y: pinRect.top };
-                  console.log("[Pin Render] Using range:", {
-                    id: comment.id.slice(0,6),
-                    offset: comment.text_offset,
-                    rect: { x: pinRect.left, y: pinRect.top, w: pinRect.width, h: pinRect.height },
-                  });
                 }
               } else {
-                console.log("[Pin Render] createRangeAtOffset returned null:", comment.id.slice(0,6));
                 pinRect = anchorEl.getBoundingClientRect();
               }
             } else {
@@ -1027,6 +1025,13 @@ export function PrototypeViewer({
             // Use offsetWidth/offsetHeight (includes border) for accurate scaling
             const scaleX = iframeRect.width / iframe.offsetWidth;
             const scaleY = iframeRect.height / iframe.offsetHeight;
+            
+            // Add scale/delta to debug info
+            baseDebug.scale = { x: Math.round(scaleX * 1000) / 1000, y: Math.round(scaleY * 1000) / 1000 };
+            baseDebug.delta = { 
+              dx: Math.round(overlayRect.left - iframeRect.left), 
+              dy: Math.round(overlayRect.top - iframeRect.top) 
+            };
             
             // pinRect center in iframe CSS pixels
             const pinCenterX = pinRect.left + (pinRect.width / 2);
@@ -1493,10 +1498,20 @@ export function PrototypeViewer({
                     {/* Debug overlay for visible pin */}
                     {debugPins && position.debug && (
                       <div className="absolute left-4 top-0 z-50 pointer-events-none">
-                        <div className="rounded-md bg-black/80 text-white text-[10px] leading-tight px-2 py-1 max-w-[220px]">
+                        <div className="rounded-md bg-black/80 text-white text-[10px] leading-tight px-2 py-1 max-w-[240px]">
                           <div><b>{comment.id.slice(0,6)}</b> · {position.kind}</div>
                           <div>mode: <span className={position.debug.mode === "range" ? "text-green-400" : position.debug.mode === "element" ? "text-amber-400" : "text-red-400"}>{position.debug.mode}</span></div>
                           <div>sel: {position.debug.hasSelector ? "✓" : "✗"} · offset: {position.debug.hasTextOffset ? <span className="text-green-400">{position.debug.textOffset}</span> : <span className="text-red-400">N</span>}</div>
+                          {position.debug.scale && (
+                            <div className={position.debug.scale.x === 1 && position.debug.scale.y === 1 ? "text-green-400" : "text-amber-400"}>
+                              scale: {position.debug.scale.x}×{position.debug.scale.y}
+                            </div>
+                          )}
+                          {position.debug.delta && (
+                            <div className={position.debug.delta.dx === 0 && position.debug.delta.dy === 0 ? "text-green-400" : "text-amber-400"}>
+                              delta: {position.debug.delta.dx},{position.debug.delta.dy}
+                            </div>
+                          )}
                           {position.debug.contextPreview && <div className="truncate">ctx: "{position.debug.contextPreview}…"</div>}
                           {position.debug.rangeRect && (
                             <div className="text-green-400">rect: {Math.round(position.debug.rangeRect.w)}×{Math.round(position.debug.rangeRect.h)}</div>
