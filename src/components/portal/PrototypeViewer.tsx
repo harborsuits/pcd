@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { RefreshCw, MessageCircle, X, Check, ExternalLink, Maximize2, Minimize2, ChevronRight, ChevronLeft, AlertTriangle } from "lucide-react";
+import { RefreshCw, MessageCircle, X, Check, ExternalLink, Maximize2, Minimize2, ChevronRight, ChevronLeft, AlertTriangle, MapPin, EyeOff } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { PortalCommentCard } from "./PortalCommentCard";
@@ -515,9 +515,12 @@ export function PrototypeViewer({
   }, [prototype.url, triggerPinUpdate, focusComment]);
 
   // Calculate pin position for a comment - always try DOM anchor first
-  const getPinPosition = useCallback((comment: PrototypeComment): { left: string; top: string } | null => {
+  // Returns: position object, 'offscreen', 'needs-repin', or null
+  const getPinPosition = useCallback((comment: PrototypeComment): { left: string; top: string } | 'offscreen' | 'needs-repin' | null => {
+    const sameOrigin = isSameOrigin(prototype.url);
+    
     // For same-origin iframes with anchor data, try to position precisely
-    if (comment.anchor_selector && isSameOrigin(prototype.url)) {
+    if (comment.anchor_selector && sameOrigin) {
       try {
         const iframe = iframeRef.current;
         const overlay = overlayRef.current;
@@ -549,12 +552,15 @@ export function PrototypeViewer({
             const leftPct = (localX / overlayRect.width) * 100;
             const topPct = (localY / overlayRect.height) * 100;
             
-            // If pin is offscreen, hide it instead of clamping
+            // If pin is offscreen, return sentinel
             if (localX < 0 || localY < 0 || localX > overlayRect.width || localY > overlayRect.height) {
-              return null;
+              return 'offscreen';
             }
             
             return { left: `${leftPct}%`, top: `${topPct}%` };
+          } else {
+            // Anchor selector exists but element not found - needs re-pin
+            return 'needs-repin';
           }
         }
       } catch {
@@ -562,7 +568,13 @@ export function PrototypeViewer({
       }
     }
     
-    // Fallback to stored pin_x/pin_y
+    // For same-origin: require anchors - don't show floaty pins
+    if (sameOrigin) {
+      // No valid anchor for same-origin = needs re-pin
+      return 'needs-repin';
+    }
+    
+    // Fallback to stored pin_x/pin_y only for cross-origin
     if (comment.pin_x != null && comment.pin_y != null) {
       return { left: `${comment.pin_x}%`, top: `${comment.pin_y}%` };
     }
@@ -793,45 +805,45 @@ export function PrototypeViewer({
             className={`absolute inset-0 ${isAddingComment ? "cursor-crosshair" : "pointer-events-none"}`}
             onClick={handleOverlayClick}
           >
-            {/* Existing comment pins - only show visible ones */}
-            {visibleComments.map((comment, idx) => {
-              const position = getPinPosition(comment);
-              if (!position) return null;
+          {/* Existing comment pins - only show unresolved, visible ones with valid positions */}
+            {visibleComments
+              .filter(c => !c.resolved_at && (c.status !== 'resolved' && c.status !== 'wont_do'))
+              .map((comment, idx) => {
+                const position = getPinPosition(comment);
+                // Only render pins with actual coordinate positions (not sentinels)
+                if (!position || typeof position === 'string') return null;
               
-              const isResolved = !!comment.resolved_at;
-              const isFocused = focusedCommentId === comment.id;
-              const isHovered = hoveredCommentId === comment.id;
-              const hasMismatch = anchorMismatch === comment.id;
+                const isFocused = focusedCommentId === comment.id;
+                const isHovered = hoveredCommentId === comment.id;
+                const hasMismatch = anchorMismatch === comment.id;
 
-              return (
-                <div
-                  key={comment.id}
-                  className={`absolute w-6 h-6 -ml-3 -mt-3 rounded-full flex items-center justify-center text-xs font-bold cursor-pointer transition-all hover:scale-110 pointer-events-auto ${
-                    isFocused || isHovered
-                      ? "ring-2 ring-primary ring-offset-2 scale-125"
-                      : ""
-                  } ${
-                    hasMismatch
-                      ? "bg-amber-500 text-white"
-                      : isResolved
-                      ? "bg-muted text-muted-foreground border border-border"
-                      : "bg-primary text-primary-foreground shadow-lg"
-                  }`}
-                  style={position}
-                  title={`${comment.body}${comment.page_path ? ` (${comment.page_path})` : ""}\n\nJ/K: navigate • R: resolve • Esc: clear`}
-                  onMouseEnter={() => setHoveredCommentId(comment.id)}
-                  onMouseLeave={() => setHoveredCommentId(null)}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    // Open comments sidebar and focus this comment
-                    setShowCommentsSidebar(true);
-                    setFocusedCommentId(comment.id);
-                  }}
-                >
-                  {hasMismatch ? <AlertTriangle className="h-3 w-3" /> : isResolved ? <Check className="h-3 w-3" /> : idx + 1}
-                </div>
-              );
-            })}
+                return (
+                  <div
+                    key={comment.id}
+                    className={`absolute w-6 h-6 -ml-3 -mt-3 rounded-full flex items-center justify-center text-xs font-bold cursor-pointer transition-all hover:scale-110 pointer-events-auto ${
+                      isFocused || isHovered
+                        ? "ring-2 ring-primary ring-offset-2 scale-125"
+                        : ""
+                    } ${
+                      hasMismatch
+                        ? "bg-amber-500 text-white"
+                        : "bg-primary text-primary-foreground shadow-lg"
+                    }`}
+                    style={position}
+                    title={`${comment.body}${comment.page_path ? ` (${comment.page_path})` : ""}\n\nJ/K: navigate • R: resolve • Esc: clear`}
+                    onMouseEnter={() => setHoveredCommentId(comment.id)}
+                    onMouseLeave={() => setHoveredCommentId(null)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      // Open comments sidebar and focus this comment
+                      setShowCommentsSidebar(true);
+                      setFocusedCommentId(comment.id);
+                    }}
+                  >
+                    {hasMismatch ? <AlertTriangle className="h-3 w-3" /> : idx + 1}
+                  </div>
+                );
+              })}
 
             {/* Pending pin */}
             {pendingPin && (
@@ -903,6 +915,7 @@ export function PrototypeViewer({
             hoveredCommentId={hoveredCommentId}
             currentIframePath={currentIframePath}
             isSameOrigin={isSameOrigin(prototype.url)}
+            getPinStatus={getPinPosition}
             onFocusComment={focusComment}
             onHoverComment={setHoveredCommentId}
             onJumpToPage={jumpToCommentPage}
@@ -987,6 +1000,7 @@ function CommentsSidebar({
   hoveredCommentId,
   currentIframePath,
   isSameOrigin,
+  getPinStatus,
   onFocusComment,
   onHoverComment,
   onJumpToPage,
@@ -1000,6 +1014,7 @@ function CommentsSidebar({
   hoveredCommentId: string | null;
   currentIframePath: string | null;
   isSameOrigin: boolean;
+  getPinStatus: (comment: PrototypeComment) => { left: string; top: string } | 'offscreen' | 'needs-repin' | null;
   onFocusComment: (comment: PrototypeComment) => void;
   onHoverComment: (id: string | null) => void;
   onJumpToPage: (comment: PrototypeComment) => void;
@@ -1040,25 +1055,30 @@ function CommentsSidebar({
   
   return (
     <div className="w-80 border-l border-border bg-muted/30 flex flex-col">
-      {/* Filter chips */}
-      <div className="p-2 border-b border-border flex flex-wrap gap-1">
-        <FilterChip label="All" count={counts.all} active={filter === 'all'} onClick={() => setFilter('all')} />
-        <FilterChip label="Open" count={counts.open} active={filter === 'open'} onClick={() => setFilter('open')} />
-        <FilterChip label="In progress" count={counts.in_progress} active={filter === 'in_progress'} onClick={() => setFilter('in_progress')} />
-        <FilterChip label="Resolved" count={counts.resolved} active={filter === 'resolved'} onClick={() => setFilter('resolved')} />
-        <FilterChip label="Won't do" count={counts.wont_do} active={filter === 'wont_do'} onClick={() => setFilter('wont_do')} />
-        {isSameOrigin && currentIframePath && (
-          <button
-            onClick={() => setOnlyCurrentPage(v => !v)}
-            className={`px-2 py-1 text-xs rounded-full transition-colors ${
-              onlyCurrentPage 
-                ? 'bg-primary text-primary-foreground' 
-                : 'bg-muted text-muted-foreground hover:bg-muted/80'
-            }`}
-          >
-            This page
-          </button>
-        )}
+      {/* Header with shortcuts hint */}
+      <div className="p-2 border-b border-border space-y-2">
+        <div className="flex flex-wrap gap-1">
+          <FilterChip label="All" count={counts.all} active={filter === 'all'} onClick={() => setFilter('all')} />
+          <FilterChip label="Open" count={counts.open} active={filter === 'open'} onClick={() => setFilter('open')} />
+          <FilterChip label="In progress" count={counts.in_progress} active={filter === 'in_progress'} onClick={() => setFilter('in_progress')} />
+          <FilterChip label="Resolved" count={counts.resolved} active={filter === 'resolved'} onClick={() => setFilter('resolved')} />
+          <FilterChip label="Won't do" count={counts.wont_do} active={filter === 'wont_do'} onClick={() => setFilter('wont_do')} />
+          {isSameOrigin && currentIframePath && (
+            <button
+              onClick={() => setOnlyCurrentPage(v => !v)}
+              className={`px-2 py-1 text-xs rounded-full transition-colors ${
+                onlyCurrentPage 
+                  ? 'bg-primary text-primary-foreground' 
+                  : 'bg-muted text-muted-foreground hover:bg-muted/80'
+              }`}
+            >
+              This page
+            </button>
+          )}
+        </div>
+        <div className="text-[10px] text-muted-foreground">
+          <kbd className="px-1 py-0.5 rounded border border-border bg-muted">J</kbd>/<kbd className="px-1 py-0.5 rounded border border-border bg-muted">K</kbd> navigate · <kbd className="px-1 py-0.5 rounded border border-border bg-muted">R</kbd> resolve · <kbd className="px-1 py-0.5 rounded border border-border bg-muted">G</kbd> jump · <kbd className="px-1 py-0.5 rounded border border-border bg-muted">?</kbd> help
+        </div>
       </div>
       
       {/* Off-page hint */}
@@ -1083,6 +1103,10 @@ function CommentsSidebar({
           ) : (
             filteredComments.map((comment, idx) => {
               const isOnDifferentPage = comment.page_path && currentIframePath && comment.page_path !== currentIframePath;
+              const pinStatus = getPinStatus(comment);
+              const isOffscreen = pinStatus === 'offscreen';
+              const needsRepin = pinStatus === 'needs-repin';
+              const isResolved = comment.status === 'resolved' || !!comment.resolved_at || comment.status === 'wont_do';
               
               return (
                 <div
@@ -1097,6 +1121,23 @@ function CommentsSidebar({
                   onMouseLeave={() => onHoverComment(null)}
                   onClick={() => onFocusComment(comment)}
                 >
+                  {/* Status badges (needs-repin, offscreen) */}
+                  {!isResolved && (needsRepin || isOffscreen) && (
+                    <div className="mb-1 flex items-center gap-1">
+                      {needsRepin && (
+                        <Badge variant="outline" className="text-xs bg-amber-500/10 text-amber-600 border-amber-500/30">
+                          <MapPin className="h-3 w-3 mr-1" />
+                          Needs re-pin
+                        </Badge>
+                      )}
+                      {isOffscreen && !needsRepin && (
+                        <Badge variant="outline" className="text-xs bg-muted text-muted-foreground">
+                          <EyeOff className="h-3 w-3 mr-1" />
+                          Offscreen
+                        </Badge>
+                      )}
+                    </div>
+                  )}
                   {/* Page badge + Jump to page button */}
                   {comment.page_path && (
                     <div className="mb-1 flex items-center gap-1 flex-wrap">
