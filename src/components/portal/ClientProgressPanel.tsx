@@ -72,11 +72,7 @@ export function ClientProgressPanel({ token }: ClientProgressPanelProps) {
   const lastCompleted = [...milestones].reverse().find(m => m.is_done);
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-8">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-      </div>
-    );
+    return null; // Don't show empty container while loading
   }
 
   if (error || milestones.length === 0) {
