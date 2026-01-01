@@ -5,6 +5,7 @@ import { GlowCard } from "@/components/ui/spotlight-card";
 import boutiqueHero from "@/assets/boutique/boutique-hero.png";
 import foundationEdit from "@/assets/boutique/foundation-edit.png";
 import accentCollection from "@/assets/boutique/accent-collection.png";
+import coastalChapter from "@/assets/boutique/coastal-chapter.png";
 
 // Blob header component with animated text
 const BlobHeader = () => (
@@ -148,7 +149,7 @@ const BoutiqueDemo = () => {
               { 
                 title: "The Coastal Chapter", 
                 description: "Seasonal silhouettes inspired by Maine's understated elegance. Refined, never contrived.",
-                image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&auto=format&fit=crop",
+                image: coastalChapter,
                 items: "Limited"
               },
             ].map((collection) => (
