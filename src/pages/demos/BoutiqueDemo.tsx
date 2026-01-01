@@ -269,6 +269,89 @@ const BoutiqueDemo = () => {
         </div>
       </section>
 
+      {/* Capsule Philosophy Explainer */}
+      <section className="py-20 bg-stone-50">
+        <div className="container mx-auto px-6">
+          <div className="max-w-3xl mx-auto text-center mb-16">
+            <h2 className="font-serif text-4xl mb-4 text-amber-900">The Capsule Philosophy</h2>
+            <p className="text-stone-500">How we think about building a wardrobe.</p>
+          </div>
+          
+          <div className="max-w-2xl mx-auto space-y-12">
+            <div className="border-l-2 border-amber-300 pl-8">
+              <h3 className="font-serif text-xl text-amber-900 mb-3">Everything converses.</h3>
+              <p className="text-stone-600 leading-relaxed">
+                Each piece is designed to complement every other. No orphans. No single-occasion 
+                purchases gathering dust. Every garment earns its place through versatility.
+              </p>
+            </div>
+            
+            <div className="border-l-2 border-amber-300 pl-8">
+              <h3 className="font-serif text-xl text-amber-900 mb-3">Released as complete looks.</h3>
+              <p className="text-stone-600 leading-relaxed">
+                We don't sell singles hoping you'll figure it out. Collections arrive as 
+                considered ensembles—the decisions have been made for you, thoughtfully.
+              </p>
+            </div>
+            
+            <div className="border-l-2 border-amber-300 pl-8">
+              <h3 className="font-serif text-xl text-amber-900 mb-3">Intentional, not impulsive.</h3>
+              <p className="text-stone-600 leading-relaxed">
+                Buying here is a deliberate act. You're not chasing trends—you're investing 
+                in pieces that will serve you season after season.
+              </p>
+            </div>
+            
+            <div className="border-l-2 border-amber-300 pl-8">
+              <h3 className="font-serif text-xl text-amber-900 mb-3">Finite and curated.</h3>
+              <p className="text-stone-600 leading-relaxed">
+                Each collection is limited by design. When it's gone, it's gone. 
+                This isn't scarcity marketing—it's editorial restraint.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Client Notes */}
+      <section className="py-20 bg-white">
+        <div className="container mx-auto px-6">
+          <div className="max-w-3xl mx-auto text-center mb-16">
+            <h2 className="font-serif text-4xl mb-4 text-amber-900">Client Notes</h2>
+          </div>
+          
+          <div className="max-w-3xl mx-auto grid md:grid-cols-2 gap-8">
+            <div className="bg-amber-50/50 p-8 rounded-xl">
+              <p className="text-stone-700 italic leading-relaxed mb-4">
+                "I packed three pieces for a week in Paris. Never once felt underdressed."
+              </p>
+              <p className="text-stone-500 text-sm">A.M. — Kennebunkport</p>
+            </div>
+            
+            <div className="bg-amber-50/50 p-8 rounded-xl">
+              <p className="text-stone-700 italic leading-relaxed mb-4">
+                "Finally, a shop that doesn't make me think. Everything just works together."
+              </p>
+              <p className="text-stone-500 text-sm">C.L. — Portland</p>
+            </div>
+            
+            <div className="bg-amber-50/50 p-8 rounded-xl">
+              <p className="text-stone-700 italic leading-relaxed mb-4">
+                "My closet is half the size and I get twice the compliments."
+              </p>
+              <p className="text-stone-500 text-sm">R.H. — Boston</p>
+            </div>
+            
+            <div className="bg-amber-50/50 p-8 rounded-xl">
+              <p className="text-stone-700 italic leading-relaxed mb-4">
+                "Sarah understood exactly what I needed before I could articulate it."
+              </p>
+              <p className="text-stone-500 text-sm">M.W. — Cape Elizabeth</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Visit Section */}
       <section id="visit" className="py-20 bg-amber-900 text-white relative overflow-hidden">
         <div 
