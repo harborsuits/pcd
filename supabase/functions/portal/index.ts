@@ -234,7 +234,7 @@ Deno.serve(async (req) => {
     // Fetch project by token (exclude soft-deleted) - include owner_user_id for auth check
     const { data: project, error: projectError } = await supabase
       .from("projects")
-      .select("id, business_name, business_slug, status, project_token, final_approved_at, pipeline_stage, owner_user_id")
+      .select("id, business_name, business_slug, status, project_token, final_approved_at, pipeline_stage, portal_stage, owner_user_id")
       .eq("project_token", token)
       .is("deleted_at", null)
       .maybeSingle();
@@ -372,6 +372,7 @@ Deno.serve(async (req) => {
         status: project.status,
         final_approved_at: project.final_approved_at || null,
         pipeline_stage: project.pipeline_stage || "new",
+        portal_stage: project.portal_stage || "intake",
       },
       intake_status: intake?.intake_status || null,
       phase_b_status: intake?.phase_b_status || "pending",

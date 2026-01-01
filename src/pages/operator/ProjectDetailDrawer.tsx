@@ -19,7 +19,8 @@ import {
   User, Mail, Phone, MapPin, FileText, 
   MessageSquare, Send, Loader2, ExternalLink, Building2,
   Palette, Settings, CheckCircle, StickyNote, ListTodo, Trash2,
-  Link, Plus, Eye, MessageCirclePlus, X, MessageSquareDot
+  Link, Plus, Eye, MessageCirclePlus, X, MessageSquareDot,
+  ChevronRight, ChevronLeft, Hammer
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -39,6 +40,7 @@ interface Project {
   business_slug: string;
   project_token: string;
   status: string;
+  portal_stage?: string;
   contact_name: string | null;
   contact_phone: string | null;
   contact_email: string | null;
@@ -52,6 +54,15 @@ interface Project {
   updated_at: string;
   intake: ProjectIntake | null;
 }
+
+const PORTAL_STAGE_OPTIONS = [
+  { value: "intake", label: "Intake" },
+  { value: "build", label: "Build" },
+  { value: "preview", label: "First Preview" },
+  { value: "revisions", label: "Revisions" },
+  { value: "final", label: "Final Approval" },
+  { value: "launched", label: "Launched" },
+];
 
 interface Message {
   id: string;
@@ -318,6 +329,32 @@ export function ProjectDetailDrawer({ project, open, onClose, onStatusChange }: 
     },
     onSuccess: () => {
       toast.success("Status updated");
+      queryClient.invalidateQueries({ queryKey: ["admin-projects"] });
+      onStatusChange();
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
+    },
+  });
+
+  // Update portal stage mutation
+  const updatePortalStageMutation = useMutation({
+    mutationFn: async ({ stage, reason }: { stage: string; reason?: string }) => {
+      if (!project) throw new Error("No project");
+      const adminKey = localStorage.getItem("admin_key") || "";
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/admin/projects/${project.project_token}/portal-stage`, {
+        method: "PATCH",
+        headers: { 
+          "Content-Type": "application/json",
+          "x-admin-key": adminKey 
+        },
+        body: JSON.stringify({ stage, reason }),
+      });
+      if (!res.ok) throw new Error("Failed to update portal stage");
+      return res.json();
+    },
+    onSuccess: () => {
+      toast.success("Portal stage updated");
       queryClient.invalidateQueries({ queryKey: ["admin-projects"] });
       onStatusChange();
     },
@@ -662,6 +699,73 @@ export function ProjectDetailDrawer({ project, open, onClose, onStatusChange }: 
             </Select>
           </div>
         </SheetHeader>
+
+        {/* Portal Stage Control */}
+        <div className="flex-shrink-0 py-3 border-b">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 text-sm">
+              <Hammer className="h-4 w-4 text-muted-foreground" />
+              <span className="text-muted-foreground">Portal Stage:</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <Select 
+                value={project.portal_stage || "intake"} 
+                onValueChange={(v) => updatePortalStageMutation.mutate({ stage: v })}
+                disabled={updatePortalStageMutation.isPending}
+              >
+                <SelectTrigger className="w-[140px] h-8 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {PORTAL_STAGE_OPTIONS.map(opt => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {/* Quick advance/back buttons */}
+              {project.portal_stage && project.portal_stage !== "launched" && (
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  title="Advance stage"
+                  disabled={updatePortalStageMutation.isPending}
+                  onClick={() => {
+                    const currentIdx = PORTAL_STAGE_OPTIONS.findIndex(o => o.value === project.portal_stage);
+                    if (currentIdx < PORTAL_STAGE_OPTIONS.length - 1) {
+                      updatePortalStageMutation.mutate({ stage: PORTAL_STAGE_OPTIONS[currentIdx + 1].value });
+                    }
+                  }}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              )}
+              {project.portal_stage && project.portal_stage !== "intake" && (
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  title="Move back"
+                  disabled={updatePortalStageMutation.isPending}
+                  onClick={() => {
+                    const currentIdx = PORTAL_STAGE_OPTIONS.findIndex(o => o.value === project.portal_stage);
+                    if (currentIdx > 0) {
+                      const reason = prompt("Reason for moving back (optional):");
+                      updatePortalStageMutation.mutate({ 
+                        stage: PORTAL_STAGE_OPTIONS[currentIdx - 1].value,
+                        reason: reason || undefined
+                      });
+                    }
+                  }}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
 
         {/* Contact Info */}
         <div className="flex-shrink-0 py-4 border-b space-y-2">

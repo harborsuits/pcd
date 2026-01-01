@@ -191,6 +191,7 @@ export function computeRoadmapSteps({
   projectStatus,
   prototypeUrl,
   finalApprovedAt,
+  portalStage,
   onViewPrototype,
   onApproveFinal,
 }: {
@@ -201,15 +202,31 @@ export function computeRoadmapSteps({
   projectStatus: string;
   prototypeUrl?: string;
   finalApprovedAt?: string | null;
+  portalStage?: string; // Operator-controlled stage: intake | build | preview | revisions | final | launched
   onViewPrototype?: () => void;
   onApproveFinal?: () => void;
 }): RoadmapStep[] {
-  const isCompleted = projectStatus === 'completed';
-  const isFinalApproved = !!finalApprovedAt;
+  const isCompleted = projectStatus === 'completed' || portalStage === 'launched';
+  const isFinalApproved = !!finalApprovedAt || portalStage === 'launched';
   const intakeComplete = intakeStatus === 'approved' || intakeStatus === 'submitted';
   const intakeReviewed = intakeStatus === 'approved';
   
-  // Step 1: Intake
+  // If portalStage is set, use it as the authoritative current step
+  const stageOrder = ['intake', 'build', 'preview', 'revisions', 'final', 'launched'];
+  const currentStageIdx = portalStage ? stageOrder.indexOf(portalStage) : -1;
+  
+  // Helper to determine step status based on portalStage
+  const getStepStatus = (stepId: string, fallbackStatus: RoadmapStep['status']): RoadmapStep['status'] => {
+    if (!portalStage || currentStageIdx === -1) return fallbackStatus;
+    const stepIdx = stageOrder.indexOf(stepId);
+    if (stepIdx < currentStageIdx) return 'completed';
+    if (stepIdx === currentStageIdx) return 'current';
+    return 'upcoming';
+  };
+  
+  // Inferred status (used when portalStage not set)
+  const inferredIntakeStatus: RoadmapStep['status'] = intakeComplete ? 'completed' : 'current';
+  
   const intakeStep: RoadmapStep = {
     id: 'intake',
     label: 'Intake',
@@ -218,28 +235,33 @@ export function computeRoadmapSteps({
       : intakeStatus === 'submitted'
         ? 'We\'re reviewing your project details.'
         : 'Tell us what you need.',
-    status: intakeComplete ? 'completed' : 'current',
+    status: getStepStatus('intake', inferredIntakeStatus),
     meta: intakeStatus === 'submitted' && !intakeReviewed ? 'Under review' : undefined,
   };
 
-  // Step 2: Build (NEW - the missing clarity phase)
-  // Build is "in progress" after intake is complete but before prototype exists
+  // Step 2: Build
   const buildInProgress = intakeComplete && !hasPrototype;
   const buildComplete = hasPrototype;
+  const inferredBuildStatus: RoadmapStep['status'] = buildComplete ? 'completed' : (buildInProgress ? 'current' : 'upcoming');
+  
   const buildStep: RoadmapStep = {
     id: 'build',
     label: 'Build',
-    description: buildComplete
+    description: getStepStatus('build', inferredBuildStatus) === 'completed'
       ? 'Your first version has been assembled.'
-      : buildInProgress
+      : getStepStatus('build', inferredBuildStatus) === 'current'
         ? 'We\'re designing and assembling your first version.'
         : 'We\'ll design, structure, and prepare your site.',
-    status: buildComplete ? 'completed' : (buildInProgress ? 'current' : 'upcoming'),
-    meta: buildInProgress ? 'In production' : undefined,
+    status: getStepStatus('build', inferredBuildStatus),
+    meta: getStepStatus('build', inferredBuildStatus) === 'current' ? 'In production' : undefined,
   };
 
   // Step 3: First Preview
   const hasStartedReview = openCommentsCount > 0 || resolvedCommentsCount > 0;
+  const inferredPreviewStatus: RoadmapStep['status'] = hasPrototype 
+    ? (hasStartedReview || isFinalApproved ? 'completed' : 'current') 
+    : 'upcoming';
+  
   const previewStep: RoadmapStep = {
     id: 'preview',
     label: 'First Preview',
@@ -248,10 +270,8 @@ export function computeRoadmapSteps({
       : hasPrototype 
         ? 'Your preview is ready for review.'
         : 'Review the draft and leave feedback.',
-    status: hasPrototype 
-      ? (hasStartedReview || isFinalApproved ? 'completed' : 'current') 
-      : 'upcoming',
-    action: hasPrototype && prototypeUrl && !hasStartedReview && !isFinalApproved ? {
+    status: getStepStatus('preview', inferredPreviewStatus),
+    action: hasPrototype && prototypeUrl && getStepStatus('preview', inferredPreviewStatus) === 'current' ? {
       label: 'View Preview',
       onClick: onViewPrototype,
     } : undefined,
@@ -260,21 +280,28 @@ export function computeRoadmapSteps({
   // Step 4: Revisions
   const revisionsComplete = hasPrototype && openCommentsCount === 0 && resolvedCommentsCount > 0;
   const revisionsInProgress = hasPrototype && openCommentsCount > 0;
+  const inferredRevisionsStatus: RoadmapStep['status'] = revisionsComplete || isFinalApproved
+    ? 'completed' 
+    : (hasStartedReview ? 'current' : 'upcoming');
+  
   const revisionsStep: RoadmapStep = {
     id: 'revisions',
     label: 'Revisions',
-    description: revisionsComplete || isFinalApproved
+    description: getStepStatus('revisions', inferredRevisionsStatus) === 'completed'
       ? 'All feedback has been addressed.'
       : revisionsInProgress
         ? `We'll resolve your notes — ${openCommentsCount} open · ${resolvedCommentsCount} resolved`
         : 'We\'ll refine based on your feedback.',
-    status: revisionsComplete || isFinalApproved
-      ? 'completed' 
-      : (hasStartedReview ? 'current' : 'upcoming'),
+    status: getStepStatus('revisions', inferredRevisionsStatus),
   };
 
-  // Step 5: Final Approval (Launch is the action, not a step)
-  const canApproveFinal = revisionsComplete && !isFinalApproved && !isCompleted;
+  // Step 5: Final Approval
+  const inferredFinalStatus: RoadmapStep['status'] = isCompleted 
+    ? 'completed' 
+    : (isFinalApproved ? 'completed' : (revisionsComplete ? 'current' : 'upcoming'));
+  const finalStatus = getStepStatus('final', inferredFinalStatus);
+  const canApproveFinal = finalStatus === 'current' && !isFinalApproved && !isCompleted;
+  
   const finalStep: RoadmapStep = {
     id: 'final',
     label: 'Final Approval',
@@ -283,7 +310,7 @@ export function computeRoadmapSteps({
       : isFinalApproved 
         ? 'Approved — preparing for launch.' 
         : 'Approve the final version for launch.',
-    status: isCompleted ? 'completed' : (isFinalApproved ? 'completed' : (revisionsComplete ? 'current' : 'upcoming')),
+    status: finalStatus,
     action: canApproveFinal && onApproveFinal ? {
       label: 'Approve for Launch',
       onClick: onApproveFinal,

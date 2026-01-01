@@ -71,6 +71,7 @@ interface PortalData {
     status: string;
     final_approved_at: string | null;
     pipeline_stage: string;
+    portal_stage?: string;
   };
   intake_status: 'draft' | 'submitted' | 'approved' | null;
   phase_b_status: 'pending' | 'in_progress' | 'complete' | null;
@@ -1172,6 +1173,7 @@ export default function PortalPage() {
               projectStatus: data.business.status,
               prototypeUrl: prototypes[0]?.url,
               finalApprovedAt: data.business.final_approved_at,
+              portalStage: data.business.portal_stage,
               onApproveFinal: handleApproveFinal,
             })}
           />
