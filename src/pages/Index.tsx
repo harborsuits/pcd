@@ -119,6 +119,9 @@ const Index = () => {
                   "With an AI receptionist built into your website.",
                   "With 24/7 lead capture that never sleeps.",
                   "With instant follow-ups that close more jobs.",
+                  "With automated quotes sent in seconds.",
+                  "With smart scheduling that fills your calendar.",
+                  "With texts and calls answered instantly.",
                 ]}
                 speed={60}
                 deleteSpeed={30}
