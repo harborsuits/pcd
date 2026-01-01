@@ -104,13 +104,17 @@ const BoutiqueDemo = () => {
           </p>
           
           <div className="flex flex-wrap justify-center gap-4">
-            <Button size="lg" className="text-white shadow-lg" style={{ background: 'linear-gradient(135deg, #B87333 0%, #DA8A4E 50%, #B87333 100%)', boxShadow: '0 10px 25px -5px rgba(184, 115, 51, 0.4)' }}>
-              <ShoppingBag className="mr-2 h-5 w-5" />
-              Explore Collections
-            </Button>
-            <Button size="lg" variant="outline" className="border-orange-300 hover:bg-orange-50 bg-white/50 backdrop-blur-sm" style={{ color: '#B87333' }}>
-              Our Story
-            </Button>
+            <a href="#collections">
+              <Button size="lg" className="text-white shadow-lg" style={{ background: 'linear-gradient(135deg, #B87333 0%, #DA8A4E 50%, #B87333 100%)', boxShadow: '0 10px 25px -5px rgba(184, 115, 51, 0.4)' }}>
+                <ShoppingBag className="mr-2 h-5 w-5" />
+                Explore Collections
+              </Button>
+            </a>
+            <a href="#about">
+              <Button size="lg" variant="outline" className="border-orange-300 hover:bg-orange-50 bg-white/50 backdrop-blur-sm" style={{ color: '#B87333' }}>
+                Our Story
+              </Button>
+            </a>
           </div>
           
           <div className="flex flex-wrap justify-center gap-6 mt-12 text-sm text-stone-600">
