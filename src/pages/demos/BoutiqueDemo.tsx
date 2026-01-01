@@ -11,7 +11,7 @@ import woolCardigan from "@/assets/boutique/wool-cardigan.jpg";
 import leatherTote from "@/assets/boutique/leather-tote.jpg";
 import balletFlats from "@/assets/boutique/ballet-flats.jpg";
 import silkScarf from "@/assets/boutique/silk-scarf.jpg";
-import storeInterior from "@/assets/boutique/store-interior.jpg";
+import storeInterior from "@/assets/boutique/artisan-interior.jpg";
 
 // Blob header component with animated text
 const BlobHeader = () => (
