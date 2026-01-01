@@ -1206,6 +1206,9 @@ async function handleCommentAction(
       x_pct,
       y_pct,
       text_hint,
+      // Text-range anchoring
+      text_offset,
+      text_context,
     } = body;
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -1260,6 +1263,8 @@ async function handleCommentAction(
           x_pct: x_pct ?? null,
           y_pct: y_pct ?? null,
           text_hint: text_hint ?? null,
+          text_offset: text_offset ?? null,
+          text_context: text_context ?? null,
         })
         .select()
         .single();
@@ -1492,6 +1497,8 @@ if (action === "resolve" || action === "unresolve") {
         viewport_w: viewport_w ?? null,
         viewport_h: viewport_h ?? null,
         text_hint: text_hint ?? null,
+        text_offset: text_offset ?? null,
+        text_context: text_context ?? null,
       };
 
       const { data: updatedComment, error: updateError } = await supabase

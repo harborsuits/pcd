@@ -62,6 +62,9 @@ export interface PrototypeComment {
   x_pct?: number | null;
   y_pct?: number | null;
   text_hint?: string | null;
+  // Text-range anchoring
+  text_offset?: number | null;
+  text_context?: string | null;
 }
 
 export interface Prototype {
@@ -85,6 +88,9 @@ export interface CommentAnchorData {
   x_pct: number;
   y_pct: number;
   text_hint: string | null;
+  // Text-range anchoring for precise word-level pins
+  text_offset?: number | null;      // Character offset in anchor element's text
+  text_context?: string | null;     // ~40 chars around the click for re-finding
   // Fallback overlay coords
   pin_x: number;
   pin_y: number;
@@ -150,9 +156,22 @@ export function PrototypeViewer({
     if (!isSameOrigin(prototype.url)) return;
     const doc = iframeRef.current?.contentDocument;
     if (!doc) return;
+    
+    // Clear element-level highlight
     doc.querySelectorAll("[data-pcd-hover]").forEach((el) => {
       el.removeAttribute("data-pcd-hover");
     });
+    
+    // Clear text-range highlight
+    const existingMark = doc.getElementById("pcd-text-highlight");
+    if (existingMark) {
+      // Unwrap the mark element
+      const parent = existingMark.parentNode;
+      while (existingMark.firstChild) {
+        parent?.insertBefore(existingMark.firstChild, existingMark);
+      }
+      existingMark.remove();
+    }
   }, [prototype.url]);
 
   const applyHoverHighlight = useCallback((comment: PrototypeComment | null) => {
@@ -169,12 +188,69 @@ export function PrototypeViewer({
         (comment.anchor_id ? doc.getElementById(comment.anchor_id) : null);
 
       if (el) {
+        // If we have text_offset, try to highlight the exact text position
+        if (comment.text_offset != null && comment.text_offset >= 0) {
+          const range = createTextRangeForHighlight(el, comment.text_offset, doc);
+          if (range) {
+            // Wrap the text in a highlight span
+            const mark = doc.createElement("span");
+            mark.id = "pcd-text-highlight";
+            mark.style.cssText = `
+              background: rgba(99, 102, 241, 0.3);
+              border-radius: 2px;
+              box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.5);
+              padding: 1px 0;
+            `;
+            try {
+              range.surroundContents(mark);
+            } catch {
+              // surroundContents can fail if range crosses element boundaries
+              // Fall back to element-level highlight
+              (el as HTMLElement).setAttribute("data-pcd-hover", "true");
+            }
+            return;
+          }
+        }
+        
+        // Fallback to element-level highlight
         (el as HTMLElement).setAttribute("data-pcd-hover", "true");
       }
     } catch {
       // ignore
     }
   }, [prototype.url, clearHoverHighlight]);
+
+  // Create a range that highlights ~3 characters around the offset for visibility
+  function createTextRangeForHighlight(element: Element, offset: number, doc: Document): Range | null {
+    try {
+      const range = doc.createRange();
+      const walker = doc.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+      
+      let currentOffset = 0;
+      let node = walker.nextNode();
+      
+      while (node) {
+        const nodeLength = node.textContent?.length || 0;
+        
+        if (currentOffset + nodeLength > offset) {
+          const localOffset = offset - currentOffset;
+          // Highlight a few characters around the click point
+          const start = Math.max(0, localOffset - 1);
+          const end = Math.min(nodeLength, localOffset + 2);
+          range.setStart(node, start);
+          range.setEnd(node, end);
+          return range;
+        }
+        
+        currentOffset += nodeLength;
+        node = walker.nextNode();
+      }
+      
+      return null;
+    } catch {
+      return null;
+    }
+  }
 
   const ensureHoverStyle = useCallback(() => {
     if (!isSameOrigin(prototype.url)) return;
@@ -307,6 +383,8 @@ export function PrototypeViewer({
       x_pct: pin_x,
       y_pct: pin_y,
       text_hint: null,
+      text_offset: null,
+      text_context: null,
       pin_x,
       pin_y,
     };
@@ -326,16 +404,42 @@ export function PrototypeViewer({
         // Get iframe rect to calculate position inside iframe
         const iframeRect = iframe.getBoundingClientRect();
         const xInIframe = clientX - iframeRect.left;
-        const yInIframe = clientY - iframeRect.top + iframeWin.scrollY;
+        const yInIframe = clientY - iframeRect.top;
 
-        // Find element at click position (accounting for scroll)
-        const element = iframeDoc.elementFromPoint(
-          clientX - iframeRect.left,
-          clientY - iframeRect.top
-        );
+        // Try to get caret position for text-precise anchoring
+        let caretInfo: { node: Node; offset: number; element: Element } | null = null;
+        
+        // Use caretPositionFromPoint (standard) or caretRangeFromPoint (webkit fallback)
+        const docAny = iframeDoc as any;
+        if (typeof docAny.caretPositionFromPoint === 'function') {
+          const pos = docAny.caretPositionFromPoint(xInIframe, yInIframe);
+          if (pos && pos.offsetNode) {
+            caretInfo = {
+              node: pos.offsetNode,
+              offset: pos.offset,
+              element: pos.offsetNode.parentElement || pos.offsetNode as Element
+            };
+          }
+        } else if (typeof docAny.caretRangeFromPoint === 'function') {
+          const range = docAny.caretRangeFromPoint(xInIframe, yInIframe);
+          if (range && range.startContainer) {
+            caretInfo = {
+              node: range.startContainer,
+              offset: range.startOffset,
+              element: range.startContainer.parentElement || range.startContainer as Element
+            };
+          }
+        }
+
+        // Find element at click position
+        const element = iframeDoc.elementFromPoint(xInIframe, yInIframe);
 
         if (element) {
-          // Walk up to find closest anchor
+          // Build a stable selector for the element
+          let targetEl: Element = element;
+          let selector: string | null = null;
+          
+          // Walk up to find closest identifiable anchor
           let anchorEl: Element | null = element;
           while (anchorEl && anchorEl !== iframeDoc.body) {
             const anchorAttr = anchorEl.getAttribute("data-comment-anchor");
@@ -344,26 +448,71 @@ export function PrototypeViewer({
             if (anchorAttr) {
               baseData.anchor_id = anchorAttr;
               baseData.anchor_selector = `[data-comment-anchor="${anchorAttr}"]`;
+              targetEl = anchorEl;
+              selector = baseData.anchor_selector;
               break;
             } else if (id) {
               baseData.anchor_id = id;
-              baseData.anchor_selector = `#${id}`;
+              baseData.anchor_selector = `#${CSS.escape(id)}`;
+              targetEl = anchorEl;
+              selector = baseData.anchor_selector;
               break;
             }
             anchorEl = anchorEl.parentElement;
           }
 
-          // If we found an anchor, calculate position relative to it
-          if (baseData.anchor_selector && anchorEl) {
-            const anchorRect = anchorEl.getBoundingClientRect();
-            baseData.x_pct = ((xInIframe - anchorRect.left) / anchorRect.width) * 100;
-            baseData.y_pct = ((yInIframe - anchorRect.top - iframeWin.scrollY) / anchorRect.height) * 100;
+          // If no ID-based anchor found, build a path-based selector from the clicked element
+          if (!selector) {
+            selector = buildStableSelector(element, iframeDoc);
+            baseData.anchor_selector = selector;
+            targetEl = element;
           }
 
-          // Get text hint from nearby content
-          const textContent = element.textContent?.trim().slice(0, 50);
-          if (textContent) {
-            baseData.text_hint = textContent;
+          // Calculate position relative to anchor element
+          if (selector && targetEl) {
+            const anchorRect = targetEl.getBoundingClientRect();
+            baseData.x_pct = ((xInIframe - anchorRect.left) / anchorRect.width) * 100;
+            baseData.y_pct = ((yInIframe - anchorRect.top) / anchorRect.height) * 100;
+          }
+
+          // If we have caret info and it's a text node, capture text-range data
+          if (caretInfo && caretInfo.node.nodeType === Node.TEXT_NODE) {
+            const textNode = caretInfo.node as Text;
+            const textContent = textNode.textContent || "";
+            const offset = caretInfo.offset;
+            
+            // Calculate offset relative to the anchor element's full text content
+            // This is important for elements with multiple text nodes
+            const fullText = targetEl.textContent || "";
+            
+            // Find where this text node starts in the full element text
+            let globalOffset = 0;
+            const walker = iframeDoc.createTreeWalker(targetEl, NodeFilter.SHOW_TEXT);
+            let currentNode = walker.nextNode();
+            while (currentNode && currentNode !== textNode) {
+              globalOffset += (currentNode.textContent?.length || 0);
+              currentNode = walker.nextNode();
+            }
+            globalOffset += offset;
+            
+            baseData.text_offset = globalOffset;
+            
+            // Get context around the click (20 chars before and after)
+            const contextStart = Math.max(0, globalOffset - 20);
+            const contextEnd = Math.min(fullText.length, globalOffset + 20);
+            baseData.text_context = fullText.slice(contextStart, contextEnd);
+            
+            // Set text_hint to the immediate word/phrase
+            baseData.text_hint = textContent.slice(
+              Math.max(0, offset - 15),
+              Math.min(textContent.length, offset + 15)
+            ).trim();
+          } else {
+            // Get text hint from element content as fallback
+            const textContent = element.textContent?.trim().slice(0, 50);
+            if (textContent) {
+              baseData.text_hint = textContent;
+            }
           }
         }
       } catch (err) {
@@ -373,6 +522,46 @@ export function PrototypeViewer({
 
     return baseData;
   }, [prototype.url]);
+
+  // Build a stable CSS selector for an element
+  function buildStableSelector(el: Element, doc: Document): string {
+    const parts: string[] = [];
+    let current: Element | null = el;
+    
+    while (current && current !== doc.body && current !== doc.documentElement) {
+      // Prefer ID
+      if (current.id) {
+        parts.unshift(`#${CSS.escape(current.id)}`);
+        break;
+      }
+      
+      // Prefer data attributes
+      const dataAnchor = current.getAttribute("data-comment-anchor");
+      if (dataAnchor) {
+        parts.unshift(`[data-comment-anchor="${dataAnchor}"]`);
+        break;
+      }
+      
+      // Build tag + nth-child
+      const tag = current.tagName.toLowerCase();
+      const parent = current.parentElement;
+      if (parent) {
+        const siblings = Array.from(parent.children).filter(c => c.tagName === current!.tagName);
+        if (siblings.length > 1) {
+          const idx = siblings.indexOf(current) + 1;
+          parts.unshift(`${tag}:nth-of-type(${idx})`);
+        } else {
+          parts.unshift(tag);
+        }
+      } else {
+        parts.unshift(tag);
+      }
+      
+      current = current.parentElement;
+    }
+    
+    return parts.join(" > ");
+  }
 
   const handleOverlayClick = useCallback(
     async (e: React.MouseEvent<HTMLDivElement>) => {
@@ -553,52 +742,62 @@ export function PrototypeViewer({
         if (iframe && overlay && iframeDoc && iframeWin) {
           const anchorEl = iframeDoc.querySelector(comment.anchor_selector);
           if (anchorEl) {
-            // All rects are in parent window viewport coordinates
-            const anchorRect = anchorEl.getBoundingClientRect(); // viewport coords inside iframe
-            const overlayRect = overlay.getBoundingClientRect(); // parent viewport coords
-            const iframeRect = iframe.getBoundingClientRect();   // parent viewport coords
+            const overlayRect = overlay.getBoundingClientRect();
+            const iframeRect = iframe.getBoundingClientRect();
             
-            // Calculate position relative to anchor, fallback to center if no percentages
-            const xPct = comment.x_pct ?? 50;
-            const yPct = comment.y_pct ?? 50;
+            let pinRect: DOMRect;
             
-            // anchorRect is viewport-relative inside iframe
-            // iframeRect gives us the iframe's position in parent viewport
-            // absX/absY = position in parent window viewport coords
-            const absX = iframeRect.left + anchorRect.left + (anchorRect.width * xPct / 100);
-            const absY = iframeRect.top + anchorRect.top + (anchorRect.height * yPct / 100);
+            // If we have text_offset, try to position at exact text position
+            if (comment.text_offset != null && comment.text_offset >= 0) {
+              const range = createRangeAtOffset(anchorEl, comment.text_offset, iframeDoc);
+              if (range) {
+                pinRect = range.getBoundingClientRect();
+                // If the range rect is empty (collapsed at end of text), use anchor element
+                if (pinRect.width === 0 && pinRect.height === 0) {
+                  pinRect = anchorEl.getBoundingClientRect();
+                }
+              } else {
+                pinRect = anchorEl.getBoundingClientRect();
+              }
+            } else {
+              // Fallback to element-percentage positioning
+              const anchorRect = anchorEl.getBoundingClientRect();
+              const xPct = comment.x_pct ?? 50;
+              const yPct = comment.y_pct ?? 50;
+              
+              // Create a synthetic rect at the percentage position
+              const x = anchorRect.left + (anchorRect.width * xPct / 100);
+              const y = anchorRect.top + (anchorRect.height * yPct / 100);
+              pinRect = new DOMRect(x, y, 0, 0);
+            }
             
-            // Convert to overlay-local pixels
+            // Convert pinRect (iframe viewport coords) to overlay coords
+            const absX = iframeRect.left + pinRect.left + (pinRect.width / 2);
+            const absY = iframeRect.top + pinRect.top + (pinRect.height / 2);
+            
             const localX = absX - overlayRect.left;
             const localY = absY - overlayRect.top;
             
-            // Convert to overlay percentages
             const leftPct = (localX / overlayRect.width) * 100;
             const topPct = (localY / overlayRect.height) * 100;
             
             // If pin is offscreen, compute direction
             if (localX < 0 || localY < 0 || localX > overlayRect.width || localY > overlayRect.height) {
-              // Determine primary direction (where the anchor is relative to viewport)
               let direction: 'up' | 'down' | 'left' | 'right';
               
-              // Use anchor center to determine direction
-              const anchorCenterY = anchorRect.top + anchorRect.height / 2;
-              const anchorCenterX = anchorRect.left + anchorRect.width / 2;
               const viewportH = iframeWin.innerHeight;
               const viewportW = iframeWin.innerWidth;
               
-              if (anchorCenterY < 0) {
+              if (pinRect.top + pinRect.height / 2 < 0) {
                 direction = 'up';
-              } else if (anchorCenterY > viewportH) {
+              } else if (pinRect.top + pinRect.height / 2 > viewportH) {
                 direction = 'down';
-              } else if (anchorCenterX < 0) {
+              } else if (pinRect.left + pinRect.width / 2 < 0) {
                 direction = 'left';
               } else {
                 direction = 'right';
               }
               
-              // Calculate edge position for the indicator
-              // Clamp the position to be within the overlay
               const clampedLeftPct = Math.max(5, Math.min(95, leftPct));
               const clampedTopPct = Math.max(5, Math.min(95, topPct));
               
@@ -647,6 +846,37 @@ export function PrototypeViewer({
     return null;
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [prototype.url, pinUpdateKey]);
+
+  // Helper: Create a Range at a specific character offset within an element's text
+  function createRangeAtOffset(element: Element, offset: number, doc: Document): Range | null {
+    try {
+      const range = doc.createRange();
+      const walker = doc.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+      
+      let currentOffset = 0;
+      let node = walker.nextNode();
+      
+      while (node) {
+        const nodeLength = node.textContent?.length || 0;
+        
+        if (currentOffset + nodeLength >= offset) {
+          // Found the right text node
+          const localOffset = Math.min(offset - currentOffset, nodeLength);
+          range.setStart(node, localOffset);
+          range.setEnd(node, Math.min(localOffset + 1, nodeLength));
+          return range;
+        }
+        
+        currentOffset += nodeLength;
+        node = walker.nextNode();
+      }
+      
+      // Offset beyond text content - return null
+      return null;
+    } catch {
+      return null;
+    }
+  }
 
   // Filter comments to show only those matching current iframe path
   const visibleComments = comments.filter((c) => {
