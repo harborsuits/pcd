@@ -346,43 +346,48 @@ export function PrototypeViewer({
     if (!iframe || !isSameOrigin(prototype.url)) return;
 
     let iframeWin: Window | null = null;
+    let iframeDoc: Document | null = null;
     let resizeObserver: ResizeObserver | null = null;
     let navTimer: number | null = null;
     let lastPath: string | null = null;
     let rafId = 0;
 
     // RAF-throttled pin update for smooth scrolling
-    const rafThrottledPinUpdate = () => {
+    const schedulePinUpdate = () => {
+      if (!iframeWin) return;
       if (rafId) return;
-      rafId = iframeWin?.requestAnimationFrame(() => {
+      rafId = iframeWin.requestAnimationFrame(() => {
         rafId = 0;
         setPinUpdateKey(k => k + 1);
-      }) ?? 0;
+      });
     };
 
     const handleLoad = () => {
       try {
-        const path = iframe.contentWindow?.location.pathname ?? null;
-        setCurrentIframePath(path);
         iframeWin = iframe.contentWindow;
+        iframeDoc = iframe.contentDocument;
+        
+        const path = iframeWin?.location.pathname ?? null;
+        setCurrentIframePath(path);
         lastPath = path;
 
         // Inject hover highlight style into iframe
         ensureHoverStyle();
 
         // Recompute pins on load
-        triggerPinUpdate();
+        schedulePinUpdate();
 
-        // Listen for scroll inside iframe with RAF throttling
-        if (iframeWin) {
-          iframeWin.addEventListener("scroll", rafThrottledPinUpdate, { passive: true });
-          iframeWin.addEventListener("resize", rafThrottledPinUpdate);
-          
-          // Listen for resize of iframe content
-          if (iframe.contentDocument?.body) {
-            resizeObserver = new ResizeObserver(rafThrottledPinUpdate);
-            resizeObserver.observe(iframe.contentDocument.body);
-          }
+        // ✅ 1) window scroll (kept)
+        iframeWin?.addEventListener("scroll", schedulePinUpdate, { passive: true });
+        iframeWin?.addEventListener("resize", schedulePinUpdate);
+
+        // ✅ 2) document capture scroll (CRITICAL: catches scrolls on ANY nested scrolling element)
+        iframeDoc?.addEventListener("scroll", schedulePinUpdate, true);
+
+        // ✅ 3) observe content resize/layout shifts
+        if (iframeDoc?.body) {
+          resizeObserver = new ResizeObserver(schedulePinUpdate);
+          resizeObserver.observe(iframeDoc.body);
         }
 
         // Start SPA navigation polling (catches pushState/replaceState)
@@ -393,7 +398,7 @@ export function PrototypeViewer({
             if (p !== lastPath) {
               lastPath = p;
               setCurrentIframePath(p);
-              triggerPinUpdate();
+              schedulePinUpdate();
             }
           } catch {
             // cross-origin, ignore
@@ -412,17 +417,18 @@ export function PrototypeViewer({
       iframe.removeEventListener("load", handleLoad);
       if (iframeWin) {
         if (rafId) iframeWin.cancelAnimationFrame(rafId);
-        iframeWin.removeEventListener("scroll", rafThrottledPinUpdate);
-        iframeWin.removeEventListener("resize", rafThrottledPinUpdate);
+        iframeWin.removeEventListener("scroll", schedulePinUpdate);
+        iframeWin.removeEventListener("resize", schedulePinUpdate);
       }
-      if (resizeObserver) {
-        resizeObserver.disconnect();
+      if (iframeDoc) {
+        iframeDoc.removeEventListener("scroll", schedulePinUpdate, true);
       }
+      resizeObserver?.disconnect();
       if (navTimer) {
         window.clearInterval(navTimer);
       }
     };
-  }, [prototype.url, iframeKey, triggerPinUpdate, ensureHoverStyle]);
+  }, [prototype.url, iframeKey, ensureHoverStyle]);
 
   // Capture rich anchor data from click position
   const captureAnchorData = useCallback((clientX: number, clientY: number): CommentAnchorData | null => {
