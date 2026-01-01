@@ -130,11 +130,22 @@ export interface CommentAnchorData {
   pin_y: number;
 }
 
+// Debug info for pin positioning
+export interface PinDebug {
+  mode: "range" | "element" | "pin_xy" | "none";
+  hasSelector: boolean;
+  hasTextOffset: boolean;
+  textOffset?: number | null;
+  contextPreview?: string | null;
+  selector?: string | null;
+  rangeRect?: { w: number; h: number; x: number; y: number } | null;
+}
+
 // Enhanced pin position result with direction for offscreen pins
 export type PinPositionResult = 
-  | { kind: 'visible'; left: string; top: string }
-  | { kind: 'offscreen'; direction: 'up' | 'down' | 'left' | 'right'; edgeLeft: string; edgeTop: string }
-  | { kind: 'needs-repin' }
+  | { kind: 'visible'; left: string; top: string; debug?: PinDebug }
+  | { kind: 'offscreen'; direction: 'up' | 'down' | 'left' | 'right'; edgeLeft: string; edgeTop: string; debug?: PinDebug }
+  | { kind: 'needs-repin'; debug?: PinDebug }
   | null;
 
 interface PrototypeViewerProps {
@@ -178,6 +189,7 @@ export function PrototypeViewer({
   const overlayRef = useRef<HTMLDivElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [pinUpdateKey, setPinUpdateKey] = useState(0);
+  const [debugPins, setDebugPins] = useState(false);
 
   const unresolvedComments = comments.filter((c) => !c.resolved_at);
   const resolvedComments = comments.filter((c) => c.resolved_at);
@@ -882,9 +894,20 @@ export function PrototypeViewer({
   }, [prototype.url, triggerPinUpdate, focusComment]);
 
   // Calculate pin position for a comment - always try DOM anchor first
-  // Returns enhanced position result with direction for offscreen pins
+  // Returns enhanced position result with direction for offscreen pins and debug info
   const getPinPosition = useCallback((comment: PrototypeComment): PinPositionResult => {
     const sameOrigin = isSameOrigin(prototype.url);
+    
+    // Base debug info
+    const baseDebug: PinDebug = {
+      mode: "none",
+      hasSelector: !!comment.anchor_selector,
+      hasTextOffset: comment.text_offset != null,
+      textOffset: comment.text_offset,
+      contextPreview: comment.text_context?.slice(0, 30) ?? null,
+      selector: comment.anchor_selector ?? null,
+      rangeRect: null,
+    };
     
     // For same-origin iframes with anchor data, try to position precisely
     if (comment.anchor_selector && sameOrigin) {
@@ -901,6 +924,7 @@ export function PrototypeViewer({
             const iframeRect = iframe.getBoundingClientRect();
             
             let pinRect: DOMRect;
+            let usedRange = false;
             
             // If we have text_offset, try to position at exact text position
             if (comment.text_offset != null && comment.text_offset >= 0) {
@@ -910,6 +934,9 @@ export function PrototypeViewer({
                 // If the range rect is empty (collapsed at end of text), use anchor element
                 if (pinRect.width === 0 && pinRect.height === 0) {
                   pinRect = anchorEl.getBoundingClientRect();
+                } else {
+                  usedRange = true;
+                  baseDebug.rangeRect = { w: pinRect.width, h: pinRect.height, x: pinRect.left, y: pinRect.top };
                 }
               } else {
                 pinRect = anchorEl.getBoundingClientRect();
@@ -925,6 +952,8 @@ export function PrototypeViewer({
               const y = anchorRect.top + (anchorRect.height * yPct / 100);
               pinRect = new DOMRect(x, y, 0, 0);
             }
+            
+            baseDebug.mode = usedRange ? "range" : "element";
             
             // Convert pinRect (iframe viewport coords) to overlay coords
             const absX = iframeRect.left + pinRect.left + (pinRect.width / 2);
@@ -973,13 +1002,13 @@ export function PrototypeViewer({
                 edgeTop = `${clampedTopPct}%`;
               }
               
-              return { kind: 'offscreen', direction, edgeLeft, edgeTop };
+              return { kind: 'offscreen', direction, edgeLeft, edgeTop, debug: baseDebug };
             }
             
-            return { kind: 'visible', left: `${leftPct}%`, top: `${topPct}%` };
+            return { kind: 'visible', left: `${leftPct}%`, top: `${topPct}%`, debug: baseDebug };
           } else {
             // Anchor selector exists but element not found - needs re-pin
-            return { kind: 'needs-repin' };
+            return { kind: 'needs-repin', debug: baseDebug };
           }
         }
       } catch {
@@ -990,12 +1019,17 @@ export function PrototypeViewer({
     // For same-origin: require anchors - don't show floaty pins
     if (sameOrigin) {
       // No valid anchor for same-origin = needs re-pin
-      return { kind: 'needs-repin' };
+      return { kind: 'needs-repin', debug: baseDebug };
     }
     
     // Fallback to stored pin_x/pin_y only for cross-origin
     if (comment.pin_x != null && comment.pin_y != null) {
-      return { kind: 'visible', left: `${comment.pin_x}%`, top: `${comment.pin_y}%` };
+      return { 
+        kind: 'visible', 
+        left: `${comment.pin_x}%`, 
+        top: `${comment.pin_y}%`,
+        debug: { ...baseDebug, mode: "pin_xy" }
+      };
     }
     
     return null;
@@ -1230,6 +1264,15 @@ export function PrototypeViewer({
           >
             ?
           </Button>
+          <Button
+            variant={debugPins ? "default" : "outline"}
+            size="sm"
+            onClick={() => setDebugPins(v => !v)}
+            title="Toggle debug overlay for pin positioning"
+            className={debugPins ? "bg-amber-500 hover:bg-amber-600 text-black" : ""}
+          >
+            🐛
+          </Button>
         </div>
       </div>
 
@@ -1307,15 +1350,29 @@ export function PrototypeViewer({
                   return (
                     <div
                       key={`offscreen-${comment.id}`}
-                      className={`absolute w-6 h-6 rounded-full border-2 flex items-center justify-center cursor-pointer pointer-events-auto transition-all hover:scale-110 ${pinStyle.bubble} ${pinStyle.ring}`}
+                      className="absolute"
                       style={{ left: position.edgeLeft, top: position.edgeTop }}
-                      title={`Comment offscreen: ${comment.body.slice(0, 30)}... (click to scroll)`}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        focusComment(comment);
-                      }}
                     >
-                      <ArrowIcon className="h-3 w-3" />
+                      <div
+                        className={`w-6 h-6 rounded-full border-2 flex items-center justify-center cursor-pointer pointer-events-auto transition-all hover:scale-110 ${pinStyle.bubble} ${pinStyle.ring}`}
+                        title={`Comment offscreen: ${comment.body.slice(0, 30)}... (click to scroll)`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          focusComment(comment);
+                        }}
+                      >
+                        <ArrowIcon className="h-3 w-3" />
+                      </div>
+                      {/* Debug overlay for offscreen */}
+                      {debugPins && position.debug && (
+                        <div className="absolute left-7 top-0 z-50 pointer-events-none">
+                          <div className="rounded-md bg-black/80 text-white text-[10px] leading-tight px-2 py-1 max-w-[200px] whitespace-nowrap">
+                            <div><b>{comment.id.slice(0,6)}</b> · offscreen</div>
+                            <div>mode: {position.debug.mode}</div>
+                            <div>sel: {position.debug.hasSelector ? "Y" : "N"} · off: {position.debug.hasTextOffset ? String(position.debug.textOffset) : "N"}</div>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   );
                 }
@@ -1331,27 +1388,44 @@ export function PrototypeViewer({
                 return (
                   <div
                     key={comment.id}
-                    className={`absolute w-6 h-6 -ml-3 -mt-3 rounded-full flex items-center justify-center text-xs font-bold cursor-pointer transition-all hover:scale-110 pointer-events-auto shadow-lg ${
-                      hasMismatch 
-                        ? "bg-rose-500 text-white ring-rose-300" 
-                        : `${pinStyle.bubble} ${pinStyle.glow}`
-                    } ${
-                      isFocused || isHovered
-                        ? `ring-2 ${pinStyle.ring} ring-offset-2 scale-125`
-                        : ""
-                    }`}
+                    className="absolute"
                     style={{ left: position.left, top: position.top }}
-                    title={`${comment.body}${comment.page_path ? ` (${comment.page_path})` : ""}\n\nJ/K: navigate • R: resolve • Esc: clear`}
-                    onMouseEnter={() => setHoveredCommentId(comment.id)}
-                    onMouseLeave={() => setHoveredCommentId(null)}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      // Open comments sidebar and focus this comment
-                      setShowCommentsSidebar(true);
-                      setFocusedCommentId(comment.id);
-                    }}
                   >
-                    {hasMismatch ? <AlertTriangle className="h-3 w-3" /> : idx + 1}
+                    <div
+                      className={`w-6 h-6 -ml-3 -mt-3 rounded-full flex items-center justify-center text-xs font-bold cursor-pointer transition-all hover:scale-110 pointer-events-auto shadow-lg ${
+                        hasMismatch 
+                          ? "bg-rose-500 text-white ring-rose-300" 
+                          : `${pinStyle.bubble} ${pinStyle.glow}`
+                      } ${
+                        isFocused || isHovered
+                          ? `ring-2 ${pinStyle.ring} ring-offset-2 scale-125`
+                          : ""
+                      }`}
+                      title={`${comment.body}${comment.page_path ? ` (${comment.page_path})` : ""}\n\nJ/K: navigate • R: resolve • Esc: clear`}
+                      onMouseEnter={() => setHoveredCommentId(comment.id)}
+                      onMouseLeave={() => setHoveredCommentId(null)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowCommentsSidebar(true);
+                        setFocusedCommentId(comment.id);
+                      }}
+                    >
+                      {hasMismatch ? <AlertTriangle className="h-3 w-3" /> : idx + 1}
+                    </div>
+                    {/* Debug overlay for visible pin */}
+                    {debugPins && position.debug && (
+                      <div className="absolute left-4 top-0 z-50 pointer-events-none">
+                        <div className="rounded-md bg-black/80 text-white text-[10px] leading-tight px-2 py-1 max-w-[220px]">
+                          <div><b>{comment.id.slice(0,6)}</b> · {position.kind}</div>
+                          <div>mode: <span className={position.debug.mode === "range" ? "text-green-400" : position.debug.mode === "element" ? "text-amber-400" : "text-red-400"}>{position.debug.mode}</span></div>
+                          <div>sel: {position.debug.hasSelector ? "✓" : "✗"} · offset: {position.debug.hasTextOffset ? <span className="text-green-400">{position.debug.textOffset}</span> : <span className="text-red-400">N</span>}</div>
+                          {position.debug.contextPreview && <div className="truncate">ctx: "{position.debug.contextPreview}…"</div>}
+                          {position.debug.rangeRect && (
+                            <div className="text-green-400">rect: {Math.round(position.debug.rangeRect.w)}×{Math.round(position.debug.rangeRect.h)}</div>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 );
               })}
