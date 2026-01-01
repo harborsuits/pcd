@@ -90,8 +90,8 @@ const BoutiqueDemo = () => {
             The Copper Fox
           </h1>
           <p className="text-lg md:text-xl text-stone-600 mb-8 max-w-2xl mx-auto font-light">
-            A curated collection of vintage finds, artisan goods, and coastal treasures 
-            in the heart of Kennebunkport, Maine.
+            Effortlessly curated ensembles designed to converse with one another. 
+            Every piece, purposefully selected to complement the collection entire.
           </p>
           
           <div className="flex flex-wrap justify-center gap-4">
@@ -124,30 +124,30 @@ const BoutiqueDemo = () => {
       {/* Collections */}
       <section id="collections" className="py-20 bg-white relative overflow-hidden">
         <div className="container mx-auto px-6 relative z-10">
-          <h2 className="font-serif text-4xl text-center mb-4 text-amber-900">Our Collections</h2>
+          <h2 className="font-serif text-4xl text-center mb-4 text-amber-900">The Capsule Philosophy</h2>
           <p className="text-stone-500 text-center mb-12 max-w-xl mx-auto">
-            Thoughtfully sourced pieces that tell a story. Each item hand-picked with care.
+            Each garment exists in dialogue with its companions. Mix, layer, reimagine—every combination, intentional.
           </p>
           
           <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
             {[
               { 
-                title: "Vintage Finds", 
-                description: "One-of-a-kind antiques and restored treasures from New England estates.",
+                title: "The Foundation Edit", 
+                description: "Quietly luxurious essentials in whispered neutrals. The canvas upon which your wardrobe is built.",
                 image: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&auto=format&fit=crop",
-                items: "150+ pieces"
+                items: "12 pieces"
               },
               { 
-                title: "Artisan Goods", 
-                description: "Handcrafted ceramics, textiles, and jewelry from local makers.",
+                title: "The Accent Collection", 
+                description: "Statement pieces that elevate and transform. One addition, infinite possibilities.",
                 image: "https://images.unsplash.com/photo-1493106641515-6b5631de4bb9?w=400&auto=format&fit=crop",
-                items: "40+ artisans"
+                items: "8 pieces"
               },
               { 
-                title: "Coastal Living", 
-                description: "Maine-inspired home decor, candles, and lifestyle essentials.",
+                title: "The Coastal Chapter", 
+                description: "Seasonal silhouettes inspired by Maine's understated elegance. Refined, never contrived.",
                 image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&auto=format&fit=crop",
-                items: "Seasonal"
+                items: "Limited"
               },
             ].map((collection) => (
               <GlowCard 
@@ -222,13 +222,13 @@ const BoutiqueDemo = () => {
             <div>
               <h2 className="font-serif text-4xl mb-6 text-amber-900">Our Story</h2>
               <p className="text-stone-600 mb-4 leading-relaxed">
-                What started as a passion for estate sales and flea markets became The Copper Fox 
-                in 2018. We opened our doors on Dock Square with a simple mission: to curate a 
-                collection of beautiful, meaningful objects that bring joy to everyday life.
+                The Copper Fox was born from a singular conviction: that a thoughtfully edited 
+                wardrobe liberates rather than limits. We believe in fewer pieces, chosen with 
+                intention, each one earning its place through versatility and quiet beauty.
               </p>
               <p className="text-stone-600 mb-6 leading-relaxed">
-                Every piece in our shop has been hand-selected—whether it's a vintage brass 
-                telescope from a sea captain's estate or hand-thrown pottery from a local artisan.
+                Every garment in our collection has been selected to harmonize with the others. 
+                Purchase one piece or the entire capsule—the result is always a wardrobe that works.
               </p>
               <div className="flex items-center gap-4">
                 <img 
@@ -318,8 +318,8 @@ const BoutiqueDemo = () => {
             <div className="md:col-span-2">
               <h3 className="font-serif text-2xl text-white mb-4">The Copper Fox</h3>
               <p className="text-stone-400 text-sm max-w-md">
-                A carefully curated boutique in Kennebunkport, Maine. Vintage finds, 
-                artisan goods, and coastal treasures since 2018.
+                A capsule wardrobe atelier in Kennebunkport, Maine. Interchangeable elegance, 
+                purposefully curated since 2018.
               </p>
               <div className="flex gap-4 mt-4">
                 <a href="#" className="text-stone-400 hover:text-white transition-colors">
