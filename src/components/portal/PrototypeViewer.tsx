@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { RefreshCw, MessageCircle, X, Check, ExternalLink, Maximize2, Minimize2, ChevronRight, ChevronLeft, AlertTriangle } from "lucide-react";
@@ -120,6 +120,7 @@ export function PrototypeViewer({
   const [showCommentsSidebar, setShowCommentsSidebar] = useState(true);
   const [currentIframePath, setCurrentIframePath] = useState<string | null>(null);
   const [focusedCommentId, setFocusedCommentId] = useState<string | null>(null);
+  const [hoveredCommentId, setHoveredCommentId] = useState<string | null>(null);
   const [anchorMismatch, setAnchorMismatch] = useState<string | null>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -131,6 +132,77 @@ export function PrototypeViewer({
   // Force pin recomputation
   const triggerPinUpdate = useCallback(() => {
     setPinUpdateKey(k => k + 1);
+  }, []);
+
+  // --- Hover highlight helpers (same-origin only) ---
+  const clearHoverHighlight = useCallback(() => {
+    if (!isSameOrigin(prototype.url)) return;
+    const doc = iframeRef.current?.contentDocument;
+    if (!doc) return;
+    doc.querySelectorAll("[data-pcd-hover]").forEach((el) => {
+      el.removeAttribute("data-pcd-hover");
+    });
+  }, [prototype.url]);
+
+  const applyHoverHighlight = useCallback((comment: PrototypeComment | null) => {
+    clearHoverHighlight();
+    if (!comment) return;
+    if (!isSameOrigin(prototype.url)) return;
+
+    try {
+      const doc = iframeRef.current?.contentDocument;
+      if (!doc) return;
+
+      const el =
+        (comment.anchor_selector ? doc.querySelector(comment.anchor_selector) : null) ||
+        (comment.anchor_id ? doc.getElementById(comment.anchor_id) : null);
+
+      if (el) {
+        (el as HTMLElement).setAttribute("data-pcd-hover", "true");
+      }
+    } catch {
+      // ignore
+    }
+  }, [prototype.url, clearHoverHighlight]);
+
+  const ensureHoverStyle = useCallback(() => {
+    if (!isSameOrigin(prototype.url)) return;
+    const doc = iframeRef.current?.contentDocument;
+    if (!doc) return;
+    if (doc.getElementById("pcd-hover-style")) return;
+
+    const style = doc.createElement("style");
+    style.id = "pcd-hover-style";
+    style.textContent = `
+      [data-pcd-hover="true"]{
+        outline: 3px solid rgba(99,102,241,0.9) !important;
+        outline-offset: 2px !important;
+        border-radius: 8px !important;
+        box-shadow: 0 0 0 6px rgba(99,102,241,0.15) !important;
+        transition: outline-color .08s ease;
+      }
+    `;
+    doc.head.appendChild(style);
+  }, [prototype.url]);
+
+  // Apply hover highlight when hoveredCommentId changes
+  useEffect(() => {
+    const c = comments.find(x => x.id === hoveredCommentId) ?? null;
+    applyHoverHighlight(c);
+    return () => clearHoverHighlight();
+  }, [hoveredCommentId, comments, applyHoverHighlight, clearHoverHighlight]);
+
+  // Check if target is a typing input (don't steal keystrokes)
+  const isTypingTarget = useCallback((t: EventTarget | null) => {
+    const el = t as HTMLElement | null;
+    if (!el) return false;
+    const tag = el.tagName?.toLowerCase();
+    return (
+      tag === "input" ||
+      tag === "textarea" ||
+      el.isContentEditable ||
+      el.getAttribute("contenteditable") === "true"
+    );
   }, []);
 
   // Track current iframe path for same-origin prototypes + set up scroll/resize listeners + SPA nav poll
@@ -149,6 +221,9 @@ export function PrototypeViewer({
         setCurrentIframePath(path);
         iframeWin = iframe.contentWindow;
         lastPath = path;
+
+        // Inject hover highlight style into iframe
+        ensureHoverStyle();
 
         // Recompute pins on load
         triggerPinUpdate();
@@ -493,6 +568,101 @@ export function PrototypeViewer({
 
   const hiddenCommentsCount = comments.length - visibleComments.length;
 
+  // Ordered visible comments for keyboard navigation (sorted by created_at)
+  const orderedVisible = useMemo(() => {
+    return [...visibleComments].sort((a, b) =>
+      new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+    );
+  }, [visibleComments]);
+
+  const focusedIndex = useMemo(() => {
+    if (!focusedCommentId) return -1;
+    return orderedVisible.findIndex(c => c.id === focusedCommentId);
+  }, [orderedVisible, focusedCommentId]);
+
+  const focusByIndex = useCallback((idx: number) => {
+    const c = orderedVisible[idx];
+    if (c) focusComment(c);
+  }, [orderedVisible, focusComment]);
+
+  // Keyboard shortcuts: J/K (nav), R (resolve), G (jump), Esc (cancel)
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      if (isTypingTarget(e.target)) return;
+      if (!orderedVisible.length) return;
+
+      const next = () => {
+        const i = focusedIndex < 0 ? 0 : Math.min(orderedVisible.length - 1, focusedIndex + 1);
+        focusByIndex(i);
+      };
+      const prev = () => {
+        const i = focusedIndex < 0 ? 0 : Math.max(0, focusedIndex - 1);
+        focusByIndex(i);
+      };
+
+      switch (e.key) {
+        case "j":
+        case "J":
+          e.preventDefault();
+          next();
+          break;
+        case "k":
+        case "K":
+          e.preventDefault();
+          prev();
+          break;
+        case "r":
+        case "R":
+          e.preventDefault();
+          if (focusedIndex < 0) return;
+          {
+            const c = orderedVisible[focusedIndex];
+            if (!c) return;
+            const isResolved = c.status === "resolved" || !!c.resolved_at;
+            if (isResolved) onUnresolveComment(c.id);
+            else onResolveComment(c.id);
+          }
+          break;
+        case "g":
+        case "G":
+          e.preventDefault();
+          if (focusedIndex < 0) return;
+          {
+            const c = orderedVisible[focusedIndex];
+            const offPage = c.page_path && currentIframePath && c.page_path !== currentIframePath;
+            if (offPage && isSameOrigin(prototype.url)) jumpToCommentPage(c);
+          }
+          break;
+        case "Escape":
+          e.preventDefault();
+          setHoveredCommentId(null);
+          setFocusedCommentId(null);
+          setIsAddingComment(false);
+          setPendingPin(null);
+          clearHoverHighlight();
+          break;
+        default:
+          break;
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [
+    orderedVisible,
+    focusedIndex,
+    focusByIndex,
+    focusComment,
+    onResolveComment,
+    onUnresolveComment,
+    currentIframePath,
+    prototype.url,
+    jumpToCommentPage,
+    clearHoverHighlight,
+    isTypingTarget,
+  ]);
+
   return (
     <div className={`flex flex-col ${isFullscreen ? "fixed inset-0 z-50 bg-background" : ""}`}>
       {/* Header */}
@@ -598,13 +768,14 @@ export function PrototypeViewer({
               
               const isResolved = !!comment.resolved_at;
               const isFocused = focusedCommentId === comment.id;
+              const isHovered = hoveredCommentId === comment.id;
               const hasMismatch = anchorMismatch === comment.id;
 
               return (
                 <div
                   key={comment.id}
-                  className={`absolute w-6 h-6 -ml-3 -mt-3 rounded-full flex items-center justify-center text-xs font-bold cursor-pointer transition-all hover:scale-110 ${
-                    isFocused
+                  className={`absolute w-6 h-6 -ml-3 -mt-3 rounded-full flex items-center justify-center text-xs font-bold cursor-pointer transition-all hover:scale-110 pointer-events-auto ${
+                    isFocused || isHovered
                       ? "ring-2 ring-primary ring-offset-2 scale-125"
                       : ""
                   } ${
@@ -615,7 +786,9 @@ export function PrototypeViewer({
                       : "bg-primary text-primary-foreground shadow-lg"
                   }`}
                   style={position}
-                  title={`${comment.body}${comment.page_path ? ` (${comment.page_path})` : ""}`}
+                  title={`${comment.body}${comment.page_path ? ` (${comment.page_path})` : ""}\n\nJ/K: navigate • R: resolve • Esc: clear`}
+                  onMouseEnter={() => setHoveredCommentId(comment.id)}
+                  onMouseLeave={() => setHoveredCommentId(null)}
                   onClick={(e) => {
                     e.stopPropagation();
                     // Open comments sidebar and focus this comment
@@ -695,9 +868,11 @@ export function PrototypeViewer({
             comments={comments}
             token={token}
             focusedCommentId={focusedCommentId}
+            hoveredCommentId={hoveredCommentId}
             currentIframePath={currentIframePath}
             isSameOrigin={isSameOrigin(prototype.url)}
             onFocusComment={focusComment}
+            onHoverComment={setHoveredCommentId}
             onJumpToPage={jumpToCommentPage}
             onResolveComment={onResolveComment}
             onUnresolveComment={onUnresolveComment}
@@ -740,9 +915,11 @@ function CommentsSidebar({
   comments,
   token,
   focusedCommentId,
+  hoveredCommentId,
   currentIframePath,
   isSameOrigin,
   onFocusComment,
+  onHoverComment,
   onJumpToPage,
   onResolveComment,
   onUnresolveComment,
@@ -751,9 +928,11 @@ function CommentsSidebar({
   comments: PrototypeComment[];
   token: string;
   focusedCommentId: string | null;
+  hoveredCommentId: string | null;
   currentIframePath: string | null;
   isSameOrigin: boolean;
   onFocusComment: (comment: PrototypeComment) => void;
+  onHoverComment: (id: string | null) => void;
   onJumpToPage: (comment: PrototypeComment) => void;
   onResolveComment: (commentId: string) => Promise<void>;
   onUnresolveComment: (commentId: string) => Promise<void>;
@@ -840,8 +1019,12 @@ function CommentsSidebar({
                 <div
                   key={comment.id}
                   className={`cursor-pointer transition-all ${
-                    focusedCommentId === comment.id ? "ring-2 ring-primary rounded-lg" : ""
+                    focusedCommentId === comment.id || hoveredCommentId === comment.id
+                      ? "ring-2 ring-primary rounded-lg"
+                      : ""
                   }`}
+                  onMouseEnter={() => onHoverComment(comment.id)}
+                  onMouseLeave={() => onHoverComment(null)}
                   onClick={() => onFocusComment(comment)}
                 >
                   {/* Page badge + Jump to page button */}
