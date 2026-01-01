@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { ArrowLeft, Phone, MapPin, Clock, Star, Instagram, ShoppingBag, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { GlowCard } from "@/components/ui/spotlight-card";
+import boutiqueHero from "@/assets/boutique/boutique-hero.png";
 
 // Blob header component with animated text
 const BlobHeader = () => (
@@ -17,7 +18,7 @@ const BlobHeader = () => (
       </defs>
       
       <image 
-        href="https://images.unsplash.com/photo-1441986300917-64674bd600d8?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
+        href={boutiqueHero}
         width="200" 
         height="200"
         preserveAspectRatio="xMidYMid slice"
