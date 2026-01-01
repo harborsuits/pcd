@@ -67,6 +67,40 @@ export interface PrototypeComment {
   text_context?: string | null;
 }
 
+// Get effective status from a comment (normalizes resolved_at + status field)
+function getEffectiveStatus(c: PrototypeComment): CommentStatus {
+  if (c.status === "wont_do") return "wont_do";
+  if (c.status === "resolved" || !!c.resolved_at) return "resolved";
+  if (c.status === "in_progress") return "in_progress";
+  return "open";
+}
+
+// Get pin color classes based on status
+function getPinClasses(status: CommentStatus) {
+  switch (status) {
+    case "in_progress":
+      return {
+        bubble: "bg-amber-500 text-black",
+        ring: "ring-amber-300",
+        glow: "shadow-[0_0_0_4px_rgba(245,158,11,0.20)]",
+      };
+    case "resolved":
+    case "wont_do":
+      return {
+        bubble: "bg-muted text-muted-foreground",
+        ring: "ring-border",
+        glow: "",
+      };
+    case "open":
+    default:
+      return {
+        bubble: "bg-primary text-primary-foreground",
+        ring: "ring-primary/30",
+        glow: "shadow-[0_0_0_4px_rgba(59,130,246,0.18)]",
+      };
+  }
+}
+
 export interface Prototype {
   id: string;
   url: string;
@@ -1248,6 +1282,9 @@ export function PrototypeViewer({
                 const position = getPinPosition(comment);
                 if (!position) return null;
                 
+                const status = getEffectiveStatus(comment);
+                const pinStyle = getPinClasses(status);
+                
                 // Handle offscreen arrows
                 if (position.kind === 'offscreen') {
                   const ArrowIcon = position.direction === 'up' ? ChevronUp : 
@@ -1256,7 +1293,7 @@ export function PrototypeViewer({
                   return (
                     <div
                       key={`offscreen-${comment.id}`}
-                      className="absolute w-6 h-6 rounded-full bg-muted border-2 border-primary flex items-center justify-center cursor-pointer pointer-events-auto hover:bg-primary hover:text-primary-foreground transition-colors"
+                      className={`absolute w-6 h-6 rounded-full border-2 flex items-center justify-center cursor-pointer pointer-events-auto transition-all hover:scale-110 ${pinStyle.bubble} ${pinStyle.ring}`}
                       style={{ left: position.edgeLeft, top: position.edgeTop }}
                       title={`Comment offscreen: ${comment.body.slice(0, 30)}... (click to scroll)`}
                       onClick={(e) => {
@@ -1280,14 +1317,14 @@ export function PrototypeViewer({
                 return (
                   <div
                     key={comment.id}
-                    className={`absolute w-6 h-6 -ml-3 -mt-3 rounded-full flex items-center justify-center text-xs font-bold cursor-pointer transition-all hover:scale-110 pointer-events-auto ${
-                      isFocused || isHovered
-                        ? "ring-2 ring-primary ring-offset-2 scale-125"
-                        : ""
+                    className={`absolute w-6 h-6 -ml-3 -mt-3 rounded-full flex items-center justify-center text-xs font-bold cursor-pointer transition-all hover:scale-110 pointer-events-auto shadow-lg ${
+                      hasMismatch 
+                        ? "bg-rose-500 text-white ring-rose-300" 
+                        : `${pinStyle.bubble} ${pinStyle.glow}`
                     } ${
-                      hasMismatch
-                        ? "bg-amber-500 text-white"
-                        : "bg-primary text-primary-foreground shadow-lg"
+                      isFocused || isHovered
+                        ? `ring-2 ${pinStyle.ring} ring-offset-2 scale-125`
+                        : ""
                     }`}
                     style={{ left: position.left, top: position.top }}
                     title={`${comment.body}${comment.page_path ? ` (${comment.page_path})` : ""}\n\nJ/K: navigate • R: resolve • Esc: clear`}
