@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { GlowCard } from "@/components/ui/spotlight-card";
 import boutiqueHero from "@/assets/boutique/boutique-hero.png";
 import foundationEdit from "@/assets/boutique/foundation-edit.png";
+import accentCollection from "@/assets/boutique/accent-collection.png";
 
 // Blob header component with animated text
 const BlobHeader = () => (
@@ -141,7 +142,7 @@ const BoutiqueDemo = () => {
               { 
                 title: "The Accent Collection", 
                 description: "Statement pieces that elevate and transform. One addition, infinite possibilities.",
-                image: "https://images.unsplash.com/photo-1493106641515-6b5631de4bb9?w=400&auto=format&fit=crop",
+                image: accentCollection,
                 items: "8 pieces"
               },
               { 
