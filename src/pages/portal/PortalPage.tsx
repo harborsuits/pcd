@@ -359,6 +359,9 @@ export default function PortalPage() {
             x_pct: anchorData.x_pct,
             y_pct: anchorData.y_pct,
             text_hint: anchorData.text_hint,
+            // Text-range anchoring for precise positioning
+            text_offset: anchorData.text_offset,
+            text_context: anchorData.text_context,
           }),
         }),
       }
