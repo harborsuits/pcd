@@ -160,11 +160,20 @@ export function PortalCommentCard({
             {isClient ? "You" : "Team"} · {formatTime(comment.created_at)}
           </span>
         </div>
-        {!isResolved && (
+        {isResolved ? (
           <Button
             variant="ghost"
             size="sm"
-            className="h-6 px-2 text-xs"
+            className="h-6 px-2 text-xs text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+            onClick={() => onUnresolve(comment.id)}
+          >
+            Reopen
+          </Button>
+        ) : (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-6 px-2 text-xs text-green-600 hover:text-green-700 hover:bg-green-50"
             onClick={() => onResolve(comment.id)}
           >
             Resolve
