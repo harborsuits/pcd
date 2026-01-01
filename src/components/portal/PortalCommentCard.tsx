@@ -282,6 +282,15 @@ export function PortalCommentCard({
         </div>
       )}
 
+      {/* Resolved by info */}
+      {(status === "resolved" || status === "wont_do") && comment.resolved_by && (
+        <div className="mb-2 text-xs text-muted-foreground">
+          {status === "wont_do" ? "Closed by" : "Resolved by"}{" "}
+          <span className="font-medium">{comment.resolved_by}</span>
+          {comment.resolved_at && ` · ${formatTime(comment.resolved_at)}`}
+        </div>
+      )}
+
       {/* Attachments toggle */}
       <div className="flex items-center gap-2">
         <Button

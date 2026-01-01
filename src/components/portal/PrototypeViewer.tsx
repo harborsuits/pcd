@@ -399,6 +399,38 @@ export function PrototypeViewer({
     }
   }, [prototype.url]);
 
+  // Jump to comment's page (for sidebar "Jump to page" button)
+  const jumpToCommentPage = useCallback((comment: PrototypeComment) => {
+    if (!comment.page_path) return;
+    if (!isSameOrigin(prototype.url)) return;
+
+    const iframe = iframeRef.current;
+    const win = iframe?.contentWindow;
+    if (!iframe || !win) return;
+
+    try {
+      const currentPath = win.location.pathname;
+      if (currentPath === comment.page_path) {
+        // Already on that page: just recompute + focus
+        setCurrentIframePath(currentPath);
+        triggerPinUpdate();
+        focusComment(comment);
+        return;
+      }
+
+      // Navigate within same origin
+      win.location.assign(comment.page_path);
+
+      // After navigation, the iframe "load" handler + SPA poll will:
+      // - setCurrentIframePath(...)
+      // - triggerPinUpdate()
+      // So we just remember what to focus when the page is ready.
+      setFocusedCommentId(comment.id);
+    } catch {
+      // ignore cross-origin errors
+    }
+  }, [prototype.url, triggerPinUpdate, focusComment]);
+
   // Calculate pin position for a comment - always try DOM anchor first
   const getPinPosition = useCallback((comment: PrototypeComment): { left: string; top: string } | null => {
     // For same-origin iframes with anchor data, try to position precisely
@@ -663,7 +695,10 @@ export function PrototypeViewer({
             comments={comments}
             token={token}
             focusedCommentId={focusedCommentId}
+            currentIframePath={currentIframePath}
+            isSameOrigin={isSameOrigin(prototype.url)}
             onFocusComment={focusComment}
+            onJumpToPage={jumpToCommentPage}
             onResolveComment={onResolveComment}
             onUnresolveComment={onUnresolveComment}
             onEditComment={onEditComment}
@@ -705,7 +740,10 @@ function CommentsSidebar({
   comments,
   token,
   focusedCommentId,
+  currentIframePath,
+  isSameOrigin,
   onFocusComment,
+  onJumpToPage,
   onResolveComment,
   onUnresolveComment,
   onEditComment,
@@ -713,7 +751,10 @@ function CommentsSidebar({
   comments: PrototypeComment[];
   token: string;
   focusedCommentId: string | null;
+  currentIframePath: string | null;
+  isSameOrigin: boolean;
   onFocusComment: (comment: PrototypeComment) => void;
+  onJumpToPage: (comment: PrototypeComment) => void;
   onResolveComment: (commentId: string) => Promise<void>;
   onUnresolveComment: (commentId: string) => Promise<void>;
   onEditComment?: (commentId: string, newBody: string) => Promise<void>;
@@ -756,37 +797,54 @@ function CommentsSidebar({
                     No comments yet. Click "Add Comment" to leave feedback.
                   </p>
           ) : (
-            filteredComments.map((comment, idx) => (
-              <div
-                key={comment.id}
-                className={`cursor-pointer transition-all ${
-                  focusedCommentId === comment.id ? "ring-2 ring-primary rounded-lg" : ""
-                }`}
-                onClick={() => onFocusComment(comment)}
-              >
-                {/* Page badge */}
-                {comment.page_path && (
-                  <div className="mb-1">
-                    <Badge variant="outline" className="text-xs font-mono">
-                      {comment.page_path}
-                    </Badge>
-                    {comment.breakpoint && (
-                      <Badge variant="secondary" className="text-xs ml-1">
-                        {comment.breakpoint}
+            filteredComments.map((comment, idx) => {
+              const isOnDifferentPage = comment.page_path && currentIframePath && comment.page_path !== currentIframePath;
+              
+              return (
+                <div
+                  key={comment.id}
+                  className={`cursor-pointer transition-all ${
+                    focusedCommentId === comment.id ? "ring-2 ring-primary rounded-lg" : ""
+                  }`}
+                  onClick={() => onFocusComment(comment)}
+                >
+                  {/* Page badge + Jump to page button */}
+                  {comment.page_path && (
+                    <div className="mb-1 flex items-center gap-1 flex-wrap">
+                      <Badge variant="outline" className="text-xs font-mono">
+                        {comment.page_path}
                       </Badge>
-                    )}
-                  </div>
-                )}
-                <PortalCommentCard
-                  token={token}
-                  comment={comment}
-                  index={idx}
-                  onResolve={onResolveComment}
-                  onUnresolve={onUnresolveComment}
-                  onEdit={onEditComment}
-                />
-              </div>
-            ))
+                      {comment.breakpoint && (
+                        <Badge variant="secondary" className="text-xs">
+                          {comment.breakpoint}
+                        </Badge>
+                      )}
+                      {isOnDifferentPage && isSameOrigin && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-5 px-1.5 text-[10px] text-primary hover:text-primary"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onJumpToPage(comment);
+                          }}
+                        >
+                          Jump to page
+                        </Button>
+                      )}
+                    </div>
+                  )}
+                  <PortalCommentCard
+                    token={token}
+                    comment={comment}
+                    index={idx}
+                    onResolve={onResolveComment}
+                    onUnresolve={onUnresolveComment}
+                    onEdit={onEditComment}
+                  />
+                </div>
+              );
+            })
           )}
         </div>
       </ScrollArea>
