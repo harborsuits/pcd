@@ -190,6 +190,10 @@ export function PrototypeViewer({
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [pinUpdateKey, setPinUpdateKey] = useState(0);
   const [debugPins, setDebugPins] = useState(false);
+  
+  // Refs for RAF throttling and cleanup
+  const rafIdRef = useRef<number | null>(null);
+  const detachRef = useRef<(() => void) | null>(null);
 
   const unresolvedComments = comments.filter((c) => !c.resolved_at);
   const resolvedComments = comments.filter((c) => c.resolved_at);
@@ -197,6 +201,15 @@ export function PrototypeViewer({
   // Force pin recomputation
   const triggerPinUpdate = useCallback(() => {
     setPinUpdateKey(k => k + 1);
+  }, []);
+  
+  // RAF-throttled pin update using PARENT window's RAF (more reliable)
+  const schedulePinUpdate = useCallback(() => {
+    if (rafIdRef.current != null) return;
+    rafIdRef.current = window.requestAnimationFrame(() => {
+      rafIdRef.current = null;
+      setPinUpdateKey(k => k + 1);
+    });
   }, []);
 
   // --- Hover highlight helpers (same-origin only) ---
@@ -340,54 +353,56 @@ export function PrototypeViewer({
     );
   }, []);
 
-  // Track current iframe path for same-origin prototypes + set up scroll/resize listeners + SPA nav poll
+  // Comprehensive layout listener: catches ALL scroll/resize/layout changes
   useEffect(() => {
     const iframe = iframeRef.current;
-    if (!iframe || !isSameOrigin(prototype.url)) return;
+    const overlay = overlayRef.current;
+    if (!iframe || !overlay || !isSameOrigin(prototype.url)) return;
 
-    let iframeWin: Window | null = null;
-    let iframeDoc: Document | null = null;
-    let resizeObserver: ResizeObserver | null = null;
+    // Clean up any previous attachments (SPA reloads / iframe src changes)
+    detachRef.current?.();
+    detachRef.current = null;
+
+    let resizeObs: ResizeObserver | null = null;
+    let bodyResizeObs: ResizeObserver | null = null;
     let navTimer: number | null = null;
     let lastPath: string | null = null;
-    let rafId = 0;
 
-    // RAF-throttled pin update for smooth scrolling
-    const schedulePinUpdate = () => {
-      if (!iframeWin) return;
-      if (rafId) return;
-      rafId = iframeWin.requestAnimationFrame(() => {
-        rafId = 0;
-        setPinUpdateKey(k => k + 1);
-      });
-    };
-
-    const handleLoad = () => {
+    const attach = () => {
       try {
-        iframeWin = iframe.contentWindow;
-        iframeDoc = iframe.contentDocument;
-        
-        const path = iframeWin?.location.pathname ?? null;
+        const iframeWin = iframe.contentWindow;
+        const iframeDoc = iframe.contentDocument;
+        if (!iframeWin || !iframeDoc) return;
+
+        const path = iframeWin.location.pathname ?? null;
         setCurrentIframePath(path);
         lastPath = path;
 
         // Inject hover highlight style into iframe
         ensureHoverStyle();
 
-        // Recompute pins on load
+        // IMPORTANT: force one recompute immediately
         schedulePinUpdate();
 
-        // ✅ 1) window scroll (kept)
-        iframeWin?.addEventListener("scroll", schedulePinUpdate, { passive: true });
-        iframeWin?.addEventListener("resize", schedulePinUpdate);
+        // 1) Scroll/resize inside iframe window
+        iframeWin.addEventListener("scroll", schedulePinUpdate, { passive: true });
+        iframeWin.addEventListener("resize", schedulePinUpdate);
 
-        // ✅ 2) document capture scroll (CRITICAL: catches scrolls on ANY nested scrolling element)
-        iframeDoc?.addEventListener("scroll", schedulePinUpdate, true);
+        // 2) Capture scroll for nested scroll containers inside iframe
+        iframeDoc.addEventListener("scroll", schedulePinUpdate, true);
 
-        // ✅ 3) observe content resize/layout shifts
-        if (iframeDoc?.body) {
-          resizeObserver = new ResizeObserver(schedulePinUpdate);
-          resizeObserver.observe(iframeDoc.body);
+        // 3) Parent window scroll/resize (overlay moves relative to viewport)
+        window.addEventListener("scroll", schedulePinUpdate, true);
+        window.addEventListener("resize", schedulePinUpdate);
+
+        // 4) Resize observers: iframe + overlay + iframe body
+        resizeObs = new ResizeObserver(() => schedulePinUpdate());
+        resizeObs.observe(iframe);
+        resizeObs.observe(overlay);
+
+        if (iframeDoc.body) {
+          bodyResizeObs = new ResizeObserver(() => schedulePinUpdate());
+          bodyResizeObs.observe(iframeDoc.body);
         }
 
         // Start SPA navigation polling (catches pushState/replaceState)
@@ -404,31 +419,47 @@ export function PrototypeViewer({
             // cross-origin, ignore
           }
         }, 250);
+
+        // Detach function (handles iframe navigations too)
+        detachRef.current = () => {
+          try {
+            iframeWin.removeEventListener("scroll", schedulePinUpdate);
+            iframeWin.removeEventListener("resize", schedulePinUpdate);
+            iframeDoc.removeEventListener("scroll", schedulePinUpdate, true);
+          } catch {}
+          window.removeEventListener("scroll", schedulePinUpdate, true);
+          window.removeEventListener("resize", schedulePinUpdate);
+
+          resizeObs?.disconnect();
+          bodyResizeObs?.disconnect();
+          resizeObs = null;
+          bodyResizeObs = null;
+          
+          if (navTimer) {
+            window.clearInterval(navTimer);
+            navTimer = null;
+          }
+        };
       } catch {
         setCurrentIframePath(null);
       }
     };
 
-    iframe.addEventListener("load", handleLoad);
-    // Try to attach immediately in case iframe is already loaded
-    handleLoad();
-    
+    // Attach on load + also immediately (in case already loaded)
+    iframe.addEventListener("load", attach);
+    attach();
+
     return () => {
-      iframe.removeEventListener("load", handleLoad);
-      if (iframeWin) {
-        if (rafId) iframeWin.cancelAnimationFrame(rafId);
-        iframeWin.removeEventListener("scroll", schedulePinUpdate);
-        iframeWin.removeEventListener("resize", schedulePinUpdate);
-      }
-      if (iframeDoc) {
-        iframeDoc.removeEventListener("scroll", schedulePinUpdate, true);
-      }
-      resizeObserver?.disconnect();
-      if (navTimer) {
-        window.clearInterval(navTimer);
+      iframe.removeEventListener("load", attach);
+      detachRef.current?.();
+      detachRef.current = null;
+
+      if (rafIdRef.current != null) {
+        window.cancelAnimationFrame(rafIdRef.current);
+        rafIdRef.current = null;
       }
     };
-  }, [prototype.url, iframeKey, ensureHoverStyle]);
+  }, [prototype.url, iframeKey, ensureHoverStyle, schedulePinUpdate]);
 
   // Capture rich anchor data from click position
   const captureAnchorData = useCallback((clientX: number, clientY: number): CommentAnchorData | null => {
