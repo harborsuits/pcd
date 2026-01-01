@@ -97,6 +97,7 @@ interface PrototypeViewerProps {
   onAddComment: (body: string, pinX: number, pinY: number, anchorData?: CommentAnchorData) => Promise<void>;
   onResolveComment: (commentId: string) => Promise<void>;
   onUnresolveComment: (commentId: string) => Promise<void>;
+  onEditComment?: (commentId: string, newBody: string) => Promise<void>;
   onRefresh: () => void;
 }
 
@@ -107,6 +108,7 @@ export function PrototypeViewer({
   onAddComment,
   onResolveComment,
   onUnresolveComment,
+  onEditComment,
   onRefresh,
 }: PrototypeViewerProps) {
   const [isAddingComment, setIsAddingComment] = useState(false);
@@ -629,6 +631,7 @@ export function PrototypeViewer({
                         index={idx}
                         onResolve={onResolveComment}
                         onUnresolve={onUnresolveComment}
+                        onEdit={onEditComment}
                       />
                     </div>
                   ))

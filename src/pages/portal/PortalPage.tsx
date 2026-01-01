@@ -424,6 +424,35 @@ export default function PortalPage() {
     }
   }
 
+  async function handleEditComment(commentId: string, newBody: string) {
+    if (!token) return;
+
+    const res = await fetch(
+      `${SUPABASE_URL}/functions/v1/portal/${token}/comments`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": SUPABASE_ANON_KEY,
+          "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({
+          action: "edit",
+          comment_id: commentId,
+          body: newBody,
+        }),
+      }
+    );
+
+    if (res.ok) {
+      setPrototypeComments((prev) =>
+        prev.map((c) => (c.id === commentId ? { ...c, body: newBody } : c))
+      );
+    } else {
+      throw new Error("Failed to edit comment");
+    }
+  }
+
   function handleRefreshPrototype() {
     if (token) {
       fetchPrototypes(token);
@@ -1185,6 +1214,7 @@ export default function PortalPage() {
               onAddComment={handleAddComment}
               onResolveComment={handleResolveComment}
               onUnresolveComment={handleUnresolveComment}
+              onEditComment={handleEditComment}
               onRefresh={handleRefreshPrototype}
             />
           </BrandCard>
