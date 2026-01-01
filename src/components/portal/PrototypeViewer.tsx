@@ -122,6 +122,7 @@ export function PrototypeViewer({
   const [focusedCommentId, setFocusedCommentId] = useState<string | null>(null);
   const [hoveredCommentId, setHoveredCommentId] = useState<string | null>(null);
   const [anchorMismatch, setAnchorMismatch] = useState<string | null>(null);
+  const [showShortcutsHelp, setShowShortcutsHelp] = useState(false);
   const overlayRef = useRef<HTMLDivElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [pinUpdateKey, setPinUpdateKey] = useState(0);
@@ -419,7 +420,14 @@ export function PrototypeViewer({
     if (!iframe) return;
 
     setFocusedCommentId(comment.id);
+    setHoveredCommentId(comment.id); // Also set hover for DOM highlight
     setAnchorMismatch(null);
+
+    // Scroll sidebar card into view
+    requestAnimationFrame(() => {
+      const el = document.getElementById(`comment-card-${comment.id}`);
+      el?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    });
 
     // If comment has a page path and iframe is same-origin
     if (comment.page_path && isSameOrigin(prototype.url)) {
@@ -634,8 +642,16 @@ export function PrototypeViewer({
             if (offPage && isSameOrigin(prototype.url)) jumpToCommentPage(c);
           }
           break;
+        case "?":
+          e.preventDefault();
+          setShowShortcutsHelp(v => !v);
+          break;
         case "Escape":
           e.preventDefault();
+          if (showShortcutsHelp) {
+            setShowShortcutsHelp(false);
+            return;
+          }
           setHoveredCommentId(null);
           setFocusedCommentId(null);
           setIsAddingComment(false);
@@ -661,6 +677,7 @@ export function PrototypeViewer({
     jumpToCommentPage,
     clearHoverHighlight,
     isTypingTarget,
+    showShortcutsHelp,
   ]);
 
   return (
@@ -715,6 +732,14 @@ export function PrototypeViewer({
             onClick={() => setIsFullscreen(!isFullscreen)}
           >
             {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowShortcutsHelp(v => !v)}
+            title="Keyboard shortcuts (?)"
+          >
+            ?
           </Button>
         </div>
       </div>
@@ -880,6 +905,43 @@ export function PrototypeViewer({
           />
         )}
       </div>
+
+      {/* Keyboard shortcuts help modal */}
+      {showShortcutsHelp && (
+        <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center">
+          <div
+            className="absolute inset-0 bg-black/40"
+            onClick={() => setShowShortcutsHelp(false)}
+          />
+          <div className="relative w-full sm:w-[420px] m-4 rounded-xl border border-border bg-background shadow-lg p-4">
+            <div className="flex items-center justify-between">
+              <div className="font-semibold">Keyboard shortcuts</div>
+              <Button variant="ghost" size="sm" onClick={() => setShowShortcutsHelp(false)}>
+                Close
+              </Button>
+            </div>
+
+            <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
+              <div className="text-muted-foreground">Next comment</div>
+              <div><kbd className="px-2 py-0.5 rounded border border-border bg-muted text-xs">J</kbd></div>
+              <div className="text-muted-foreground">Prev comment</div>
+              <div><kbd className="px-2 py-0.5 rounded border border-border bg-muted text-xs">K</kbd></div>
+              <div className="text-muted-foreground">Resolve / Reopen</div>
+              <div><kbd className="px-2 py-0.5 rounded border border-border bg-muted text-xs">R</kbd></div>
+              <div className="text-muted-foreground">Jump to page</div>
+              <div><kbd className="px-2 py-0.5 rounded border border-border bg-muted text-xs">G</kbd></div>
+              <div className="text-muted-foreground">Help</div>
+              <div><kbd className="px-2 py-0.5 rounded border border-border bg-muted text-xs">?</kbd></div>
+              <div className="text-muted-foreground">Cancel / Close</div>
+              <div><kbd className="px-2 py-0.5 rounded border border-border bg-muted text-xs">Esc</kbd></div>
+            </div>
+
+            <div className="mt-3 text-xs text-muted-foreground">
+              Shortcuts won't trigger while typing in inputs.
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1017,6 +1079,7 @@ function CommentsSidebar({
               
               return (
                 <div
+                  id={`comment-card-${comment.id}`}
                   key={comment.id}
                   className={`cursor-pointer transition-all ${
                     focusedCommentId === comment.id || hoveredCommentId === comment.id
