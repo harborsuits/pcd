@@ -359,101 +359,58 @@ const BoutiqueDemo = () => {
         </div>
       </section>
 
-      {/* Visit Section */}
-      <section id="visit" className="py-20 bg-amber-900 text-white relative overflow-hidden">
-        <div 
-          className="absolute inset-0 opacity-10"
-          style={{
-            backgroundImage: "url('https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1200&auto=format&fit=crop')",
-            backgroundSize: "cover",
-            backgroundPosition: "center"
-          }}
-        />
-        
-        <div className="container mx-auto px-6 relative z-10">
-          <div className="text-center mb-12">
-            <h2 className="font-serif text-4xl mb-4">Visit Us in Kennebunkport</h2>
-            <p className="text-amber-200 max-w-xl mx-auto">
-              Stop by our shop in the heart of Dock Square. We'd love to help you find 
-              something special.
+      {/* Visit Section - Editorial Close */}
+      <section id="visit" className="py-24 md:py-32 bg-amber-900 text-white">
+        <div className="container mx-auto px-6">
+          <div className="max-w-2xl mx-auto text-center">
+            <h2 className="font-serif text-3xl md:text-4xl mb-6 tracking-tight">
+              Visit Us in Kennebunkport
+            </h2>
+            <p className="text-amber-100/80 text-lg md:text-xl leading-relaxed mb-12 font-light">
+              Dock Square, Kennebunkport<br />
+              <span className="text-amber-200/60">A considered space. A slower pace.</span>
             </p>
-          </div>
-          
-          <div className="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto text-center">
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6">
-              <MapPin className="h-8 w-8 text-amber-300 mx-auto mb-4" />
-              <h3 className="font-medium mb-2">Location</h3>
-              <p className="text-amber-200 text-sm">
-                28 Dock Square<br />
-                Kennebunkport, ME 04046
-              </p>
+            
+            {/* Hairline divider */}
+            <div className="w-12 h-px bg-amber-200/30 mx-auto mb-10" />
+            
+            {/* Quiet metadata */}
+            <div className="space-y-2 text-amber-200/70 text-sm tracking-wide">
+              <p className="font-light">28 Dock Square · Kennebunkport, ME 04046</p>
+              <p className="font-light">Mon–Sat 10–6 · Sun 11–5</p>
+              <p className="font-light">(207) 967-8520</p>
             </div>
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6">
-              <Clock className="h-8 w-8 text-amber-300 mx-auto mb-4" />
-              <h3 className="font-medium mb-2">Hours</h3>
-              <p className="text-amber-200 text-sm">
-                Mon–Sat: 10AM–6PM<br />
-                Sunday: 11AM–5PM
-              </p>
-            </div>
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6">
-              <Phone className="h-8 w-8 text-amber-300 mx-auto mb-4" />
-              <h3 className="font-medium mb-2">Contact</h3>
-              <p className="text-amber-200 text-sm">
-                (207) 967-8520<br />
-                hello@copperfoxkport.com
-              </p>
-            </div>
-          </div>
-          
-          <div className="text-center mt-12">
-            <Button size="lg" className="bg-white text-amber-900 hover:bg-amber-50">
-              Get Directions
-            </Button>
           </div>
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="bg-stone-900 text-stone-300 py-12">
+      {/* Footer - Minimal */}
+      <footer className="bg-stone-900 text-stone-400 py-16">
         <div className="container mx-auto px-6">
-          <div className="grid md:grid-cols-4 gap-8">
-            <div className="md:col-span-2">
-              <h3 className="font-serif text-2xl text-white mb-4">The Copper Fox</h3>
-              <p className="text-stone-400 text-sm max-w-md">
-                A capsule wardrobe atelier in Kennebunkport, Maine. Interchangeable elegance, 
-                purposefully curated since 2018.
+          <div className="max-w-4xl mx-auto">
+            {/* Centered brand + social */}
+            <div className="text-center mb-12">
+              <h3 className="font-serif text-xl text-white tracking-wide mb-4">The Copper Fox</h3>
+              <a href="#" className="inline-block text-stone-500 hover:text-white transition-colors">
+                <Instagram className="h-5 w-5" />
+              </a>
+            </div>
+            
+            {/* Minimal links row */}
+            <div className="flex flex-wrap justify-center gap-x-8 gap-y-2 text-xs tracking-widest uppercase mb-12">
+              <a href="#" className="hover:text-white transition-colors">New Arrivals</a>
+              <a href="#" className="hover:text-white transition-colors">About</a>
+              <a href="#" className="hover:text-white transition-colors">Visit</a>
+              <a href="#" className="hover:text-white transition-colors">Contact</a>
+            </div>
+            
+            {/* Copyright */}
+            <div className="text-center text-xs text-stone-600 space-y-2">
+              <p>© 2024 The Copper Fox</p>
+              <p>
+                Demo site by <Link to="/" className="text-amber-600 hover:text-amber-500 transition-colors">Pleasant Cove Design</Link>
               </p>
-              <div className="flex gap-4 mt-4">
-                <a href="#" className="text-stone-400 hover:text-white transition-colors">
-                  <Instagram className="h-5 w-5" />
-                </a>
-              </div>
             </div>
-            <div>
-              <h4 className="font-medium text-white mb-4">Shop</h4>
-              <ul className="space-y-2 text-sm">
-                <li><a href="#" className="hover:text-white transition-colors">New Arrivals</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Vintage</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Artisan Goods</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Gift Cards</a></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-medium text-white mb-4">Info</h4>
-              <ul className="space-y-2 text-sm">
-                <li><a href="#" className="hover:text-white transition-colors">About Us</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Visit</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Shipping</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Contact</a></li>
-              </ul>
-            </div>
-          </div>
-          <div className="border-t border-stone-800 mt-8 pt-8 text-center text-sm text-stone-500">
-            <p>© 2024 The Copper Fox. All rights reserved.</p>
-            <p className="mt-2 text-xs">
-              Demo site by <Link to="/" className="text-amber-500 hover:underline">Pleasant Cove Design</Link>
-            </p>
           </div>
         </div>
       </footer>
