@@ -3,6 +3,7 @@ import { ArrowLeft, Phone, MapPin, Clock, Star, Instagram, ShoppingBag, Heart } 
 import { Button } from "@/components/ui/button";
 import { GlowCard } from "@/components/ui/spotlight-card";
 import boutiqueHero from "@/assets/boutique/boutique-hero.png";
+import foundationEdit from "@/assets/boutique/foundation-edit.png";
 
 // Blob header component with animated text
 const BlobHeader = () => (
@@ -134,7 +135,7 @@ const BoutiqueDemo = () => {
               { 
                 title: "The Foundation Edit", 
                 description: "Quietly luxurious essentials in whispered neutrals. The canvas upon which your wardrobe is built.",
-                image: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&auto=format&fit=crop",
+                image: foundationEdit,
                 items: "12 pieces"
               },
               { 
