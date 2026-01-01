@@ -218,9 +218,11 @@ const BoutiqueDemo = () => {
           </div>
           
           <div className="text-center mt-12">
-            <Button variant="outline" className="border-orange-300 hover:bg-orange-50" style={{ color: '#B87333' }}>
-              View All Products
-            </Button>
+            <Link to="/demos/boutique/product/wool-cardigan">
+              <Button variant="outline" className="border-orange-300 hover:bg-orange-50" style={{ color: '#B87333' }}>
+                View All Products
+              </Button>
+            </Link>
           </div>
         </div>
       </section>
