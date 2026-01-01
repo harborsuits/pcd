@@ -569,6 +569,10 @@ export function PrototypeViewer({
           }
 
           // Calculate position relative to anchor element
+          // Note: Both xInIframe and anchorRect are in iframe viewport coords
+          // xInIframe = click position relative to iframe viewport (0,0 = top-left of visible area)
+          // anchorRect = element position relative to iframe viewport
+          // These are in the same coordinate space, so subtraction works correctly
           if (selector && targetEl) {
             const anchorRect = targetEl.getBoundingClientRect();
             baseData.x_pct = ((xInIframe - anchorRect.left) / anchorRect.width) * 100;
@@ -596,6 +600,14 @@ export function PrototypeViewer({
             globalOffset += offset;
             
             baseData.text_offset = globalOffset;
+            
+            console.log("[Pin Capture] Text anchoring:", {
+              selector: baseData.anchor_selector,
+              textOffset: globalOffset,
+              textNode: textNode.textContent?.slice(0, 30),
+              localOffset: offset,
+              context: fullText.slice(Math.max(0, globalOffset - 10), globalOffset + 10),
+            });
             
             // Get context around the click (20 chars before and after)
             const contextStart = Math.max(0, globalOffset - 20);
@@ -970,12 +982,19 @@ export function PrototypeViewer({
                 pinRect = range.getBoundingClientRect();
                 // If the range rect is empty (collapsed at end of text), use anchor element
                 if (pinRect.width === 0 && pinRect.height === 0) {
+                  console.log("[Pin Render] Range rect empty, falling back to element:", comment.id.slice(0,6));
                   pinRect = anchorEl.getBoundingClientRect();
                 } else {
                   usedRange = true;
                   baseDebug.rangeRect = { w: pinRect.width, h: pinRect.height, x: pinRect.left, y: pinRect.top };
+                  console.log("[Pin Render] Using range:", {
+                    id: comment.id.slice(0,6),
+                    offset: comment.text_offset,
+                    rect: { x: pinRect.left, y: pinRect.top, w: pinRect.width, h: pinRect.height },
+                  });
                 }
               } else {
+                console.log("[Pin Render] createRangeAtOffset returned null:", comment.id.slice(0,6));
                 pinRect = anchorEl.getBoundingClientRect();
               }
             } else {
@@ -992,12 +1011,23 @@ export function PrototypeViewer({
             
             baseDebug.mode = usedRange ? "range" : "element";
             
-            // Convert pinRect (iframe viewport coords) to overlay coords
-            const absX = iframeRect.left + pinRect.left + (pinRect.width / 2);
-            const absY = iframeRect.top + pinRect.top + (pinRect.height / 2);
+            // pinRect is in iframe viewport coords (getBoundingClientRect relative to iframe viewport)
+            // We need to convert to overlay coords
+            // Step 1: pinRect coords are relative to iframe viewport (0,0 = top-left of iframe content area)
+            // Step 2: Add iframe's position in parent viewport to get parent viewport coords
+            // Step 3: Subtract overlay position to get overlay-local coords
             
-            const localX = absX - overlayRect.left;
-            const localY = absY - overlayRect.top;
+            // pinRect.left/top are already in iframe viewport space
+            const pinCenterX = pinRect.left + (pinRect.width / 2);
+            const pinCenterY = pinRect.top + (pinRect.height / 2);
+            
+            // Convert iframe viewport coords to parent page coords
+            const parentX = iframeRect.left + pinCenterX;
+            const parentY = iframeRect.top + pinCenterY;
+            
+            // Convert to overlay-local coords
+            const localX = parentX - overlayRect.left;
+            const localY = parentY - overlayRect.top;
             
             const leftPct = (localX / overlayRect.width) * 100;
             const topPct = (localY / overlayRect.height) * 100;
