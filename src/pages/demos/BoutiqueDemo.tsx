@@ -193,10 +193,10 @@ const BoutiqueDemo = () => {
           
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-5xl mx-auto">
             {[
-              { name: "Linen Blazer", price: "$285", image: linenBlazer },
-              { name: "Coastal Sandals", price: "$165", image: leatherSandals },
-              { name: "Raffia Sun Hat", price: "$78", image: strawHat },
-              { name: "Cashmere Wrap", price: "$195", image: cashmereWrap },
+              { name: "Hand-Loomed Linen Blazer", price: "$485", subtitle: "Maine flax • hand-finished", image: linenBlazer },
+              { name: "Artisan Leather Sandals", price: "$345", subtitle: "Vegetable-tanned • hand-stitched", image: leatherSandals },
+              { name: "Hand-Woven Raffia Hat", price: "$195", subtitle: "Local seagrass • hand-braided", image: strawHat },
+              { name: "Cashmere Travel Wrap", price: "$425", subtitle: "Scottish cashmere • hand-brushed", image: cashmereWrap },
             ].map((product) => (
               <div key={product.name} className="group cursor-pointer">
                 <div className="relative aspect-square rounded-xl overflow-hidden bg-white shadow-sm mb-3">
@@ -210,7 +210,8 @@ const BoutiqueDemo = () => {
                   </button>
                 </div>
                 <h3 className="font-medium text-stone-800 text-sm">{product.name}</h3>
-                <p className="text-amber-700 font-medium">{product.price}</p>
+                <p className="text-stone-500 text-xs mt-0.5">{product.subtitle}</p>
+                <p className="text-amber-700 font-medium mt-1">{product.price}</p>
               </div>
             ))}
           </div>
