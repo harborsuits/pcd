@@ -7,8 +7,8 @@ import {
   FileText, 
   MessageSquare, 
   Eye, 
-  Rocket,
-  ExternalLink
+  ExternalLink,
+  Hammer
 } from "lucide-react";
 
 export type RoadmapStep = {
@@ -31,10 +31,10 @@ interface ProjectRoadmapProps {
 
 const STEP_ICONS: Record<string, React.ElementType> = {
   intake: FileText,
+  build: Hammer,
   preview: Eye,
   revisions: MessageSquare,
   final: CheckCircle2,
-  launch: Rocket,
 };
 
 function StepIcon({ stepId, status }: { stepId: string; status: RoadmapStep['status'] }) {
@@ -159,6 +159,7 @@ export function ProjectRoadmap({ steps, className }: ProjectRoadmapProps) {
 }
 
 // Helper to compute roadmap steps from project state
+// Luxury 5-step flow: Intake → Build → First Preview → Revisions → Final Approval
 export function computeRoadmapSteps({
   intakeStatus,
   hasPrototype,
@@ -182,78 +183,94 @@ export function computeRoadmapSteps({
 }): RoadmapStep[] {
   const isCompleted = projectStatus === 'completed';
   const isFinalApproved = !!finalApprovedAt;
+  const intakeComplete = intakeStatus === 'approved' || intakeStatus === 'submitted';
+  const intakeReviewed = intakeStatus === 'approved';
   
   // Step 1: Intake
-  const intakeComplete = intakeStatus === 'approved';
   const intakeStep: RoadmapStep = {
     id: 'intake',
-    label: 'Intake Submitted',
-    description: intakeComplete 
-      ? 'Your project details have been reviewed' 
-      : 'We\'re reviewing your project details',
+    label: 'Intake',
+    description: intakeReviewed 
+      ? 'Your project brief has been received and reviewed.' 
+      : intakeStatus === 'submitted'
+        ? 'We\'re reviewing your project details.'
+        : 'Tell us what you need.',
     status: intakeComplete ? 'completed' : 'current',
-    meta: intakeStatus === 'submitted' ? 'Under review' : undefined,
+    meta: intakeStatus === 'submitted' && !intakeReviewed ? 'Under review' : undefined,
   };
 
-  // Step 2: First Preview
+  // Step 2: Build (NEW - the missing clarity phase)
+  // Build is "in progress" after intake is complete but before prototype exists
+  const buildInProgress = intakeComplete && !hasPrototype;
+  const buildComplete = hasPrototype;
+  const buildStep: RoadmapStep = {
+    id: 'build',
+    label: 'Build',
+    description: buildComplete
+      ? 'Your first version has been assembled.'
+      : buildInProgress
+        ? 'We\'re designing and assembling your first version.'
+        : 'We\'ll design, structure, and prepare your site.',
+    status: buildComplete ? 'completed' : (buildInProgress ? 'current' : 'upcoming'),
+    meta: buildInProgress ? 'In production' : undefined,
+  };
+
+  // Step 3: First Preview
+  const hasStartedReview = openCommentsCount > 0 || resolvedCommentsCount > 0;
   const previewStep: RoadmapStep = {
     id: 'preview',
     label: 'First Preview',
-    description: hasPrototype 
-      ? 'Your preview is ready for review' 
-      : 'We\'re preparing your first preview',
+    description: hasStartedReview
+      ? 'Review in progress — leave pinned comments directly on the page.'
+      : hasPrototype 
+        ? 'Your preview is ready for review.'
+        : 'Review the draft and leave feedback.',
     status: hasPrototype 
-      ? (intakeComplete ? 'current' : 'completed') 
-      : (intakeComplete ? 'current' : 'upcoming'),
-    action: hasPrototype && prototypeUrl ? {
+      ? (hasStartedReview || isFinalApproved ? 'completed' : 'current') 
+      : 'upcoming',
+    action: hasPrototype && prototypeUrl && !hasStartedReview && !isFinalApproved ? {
       label: 'View Preview',
       onClick: onViewPrototype,
     } : undefined,
   };
 
-  // Step 3: Revisions
-  const hasAnyComments = openCommentsCount > 0 || resolvedCommentsCount > 0;
+  // Step 4: Revisions
   const revisionsComplete = hasPrototype && openCommentsCount === 0 && resolvedCommentsCount > 0;
+  const revisionsInProgress = hasPrototype && openCommentsCount > 0;
   const revisionsStep: RoadmapStep = {
     id: 'revisions',
     label: 'Revisions',
-    description: hasAnyComments
-      ? `${openCommentsCount} open · ${resolvedCommentsCount} resolved`
-      : 'Leave feedback on your preview',
+    description: revisionsComplete || isFinalApproved
+      ? 'All feedback has been addressed.'
+      : revisionsInProgress
+        ? `We'll resolve your notes — ${openCommentsCount} open · ${resolvedCommentsCount} resolved`
+        : 'We\'ll refine based on your feedback.',
     status: revisionsComplete || isFinalApproved
       ? 'completed' 
-      : (hasPrototype && intakeComplete ? 'current' : 'upcoming'),
+      : (hasStartedReview ? 'current' : 'upcoming'),
   };
 
-  // Step 4: Final Review
+  // Step 5: Final Approval (Launch is the action, not a step)
   const canApproveFinal = revisionsComplete && !isFinalApproved && !isCompleted;
   const finalStep: RoadmapStep = {
     id: 'final',
-    label: 'Final Review',
-    description: isFinalApproved 
-      ? 'You approved the final version' 
-      : isCompleted 
-        ? 'All feedback addressed' 
-        : 'Approve the final version',
-    status: isFinalApproved || isCompleted ? 'completed' : (revisionsComplete ? 'current' : 'upcoming'),
+    label: 'Final Approval',
+    description: isCompleted
+      ? 'Your site is live!'
+      : isFinalApproved 
+        ? 'Approved — preparing for launch.' 
+        : 'Approve the final version for launch.',
+    status: isCompleted ? 'completed' : (isFinalApproved ? 'completed' : (revisionsComplete ? 'current' : 'upcoming')),
     action: canApproveFinal && onApproveFinal ? {
-      label: 'Approve Final',
+      label: 'Approve for Launch',
       onClick: onApproveFinal,
     } : undefined,
     meta: isFinalApproved && finalApprovedAt 
       ? `Approved ${new Date(finalApprovedAt).toLocaleDateString()}` 
-      : undefined,
+      : isCompleted
+        ? 'Launched'
+        : undefined,
   };
 
-  // Step 5: Launch
-  const launchStep: RoadmapStep = {
-    id: 'launch',
-    label: 'Launch',
-    description: isCompleted 
-      ? 'Your site is live!' 
-      : 'Go live with your new site',
-    status: isCompleted ? 'completed' : 'upcoming',
-  };
-
-  return [intakeStep, previewStep, revisionsStep, finalStep, launchStep];
+  return [intakeStep, buildStep, previewStep, revisionsStep, finalStep];
 }
