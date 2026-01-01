@@ -116,12 +116,10 @@ const Index = () => {
             <h2 className="font-serif text-2xl md:text-3xl lg:text-4xl font-semibold italic text-accent mb-6">
               <Typewriter
                 text={[
-                  "With an AI receptionist built into your website.",
-                  "With 24/7 lead capture that never sleeps.",
-                  "With instant follow-ups that close more jobs.",
-                  "With automated quotes sent in seconds.",
-                  "With smart scheduling that fills your calendar.",
-                  "With texts and calls answered instantly.",
+                  "With leads captured, qualified, and followed up automatically.",
+                  "With missed calls turned into booked jobs.",
+                  "With websites that actually answer the phone.",
+                  "With systems that convert visitors into customers.",
                 ]}
                 speed={60}
                 deleteSpeed={30}
