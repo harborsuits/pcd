@@ -32,10 +32,10 @@ const GetDemo = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.businessName.trim() || !formData.city.trim() || !formData.demoType) {
+    if (!formData.businessName.trim() || !formData.city.trim() || !formData.phone.trim() || !formData.demoType) {
       toast({
         title: "Missing information",
-        description: "Please enter your business name, city, and what you'd like to see.",
+        description: "Please enter your business name, city, phone number, and what you'd like to see.",
         variant: "destructive",
       });
       return;
@@ -159,7 +159,7 @@ const GetDemo = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="phone">Phone Number</Label>
+              <Label htmlFor="phone">Phone Number *</Label>
               <Input
                 id="phone"
                 type="tel"
@@ -167,9 +167,10 @@ const GetDemo = () => {
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                 disabled={isLoading}
+                required
               />
               <p className="text-xs text-muted-foreground">
-                Optional — we'll text you the demo link
+                We'll only text you unless you ask for a call
               </p>
             </div>
 
