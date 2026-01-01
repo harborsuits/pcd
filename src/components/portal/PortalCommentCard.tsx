@@ -2,7 +2,8 @@ import { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Paperclip, FileText, ExternalLink, Upload, Loader2, Check, Clock, CircleDot, XCircle } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Paperclip, FileText, ExternalLink, Upload, Loader2, Check, Clock, CircleDot, XCircle, Pencil, X } from "lucide-react";
 import { toast } from "sonner";
 
 interface Attachment {
@@ -35,6 +36,7 @@ interface PortalCommentCardProps {
   index: number;
   onResolve: (id: string) => void;
   onUnresolve: (id: string) => void;
+  onEdit?: (id: string, newBody: string) => Promise<void>;
 }
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
@@ -44,15 +46,20 @@ export function PortalCommentCard({
   comment, 
   index,
   onResolve,
-  onUnresolve 
+  onUnresolve,
+  onEdit,
 }: PortalCommentCardProps) {
   const [showAttachments, setShowAttachments] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editText, setEditText] = useState(comment.body);
+  const [saving, setSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
 
   const isResolved = comment.status === "resolved" || comment.status === "wont_do" || !!comment.resolved_at;
   const isClient = comment.author_type === "client";
+  const canEdit = isClient && !isResolved;
   const status = comment.status || (comment.resolved_at ? "resolved" : "open");
 
   const getStatusBadge = () => {
@@ -160,31 +167,92 @@ export function PortalCommentCard({
             {isClient ? "You" : "Team"} · {formatTime(comment.created_at)}
           </span>
         </div>
-        {isResolved ? (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-6 px-2 text-xs text-orange-600 hover:text-orange-700 hover:bg-orange-50"
-            onClick={() => onUnresolve(comment.id)}
-          >
-            Reopen
-          </Button>
-        ) : (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-6 px-2 text-xs text-green-600 hover:text-green-700 hover:bg-green-50"
-            onClick={() => onResolve(comment.id)}
-          >
-            Resolve
-          </Button>
-        )}
+        <div className="flex items-center gap-1">
+          {canEdit && !isEditing && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+              onClick={() => {
+                setEditText(comment.body);
+                setIsEditing(true);
+              }}
+            >
+              <Pencil className="h-3 w-3" />
+            </Button>
+          )}
+          {isResolved ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 px-2 text-xs text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+              onClick={() => onUnresolve(comment.id)}
+            >
+              Reopen
+            </Button>
+          ) : (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 px-2 text-xs text-green-600 hover:text-green-700 hover:bg-green-50"
+              onClick={() => onResolve(comment.id)}
+            >
+              Resolve
+            </Button>
+          )}
+        </div>
       </div>
 
-      {/* Comment body */}
-      <p className={`text-sm mb-2 ${isResolved ? "text-muted-foreground" : ""}`}>
-        {comment.body}
-      </p>
+      {/* Comment body - editable or static */}
+      {isEditing ? (
+        <div className="mb-2 space-y-2">
+          <Textarea
+            value={editText}
+            onChange={(e) => setEditText(e.target.value)}
+            className="min-h-[60px] text-sm"
+            placeholder="Update your comment..."
+            autoFocus
+          />
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              className="h-7 text-xs"
+              onClick={async () => {
+                if (!onEdit || !editText.trim()) return;
+                setSaving(true);
+                try {
+                  await onEdit(comment.id, editText.trim());
+                  setIsEditing(false);
+                  toast.success("Comment updated");
+                } catch {
+                  toast.error("Failed to update");
+                } finally {
+                  setSaving(false);
+                }
+              }}
+              disabled={saving || !editText.trim()}
+            >
+              {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : "Save"}
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 text-xs"
+              onClick={() => {
+                setIsEditing(false);
+                setEditText(comment.body);
+              }}
+            >
+              <X className="h-3 w-3 mr-1" />
+              Cancel
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <p className={`text-sm mb-2 ${isResolved ? "text-muted-foreground" : ""}`}>
+          {comment.body}
+        </p>
+      )}
       
       {/* Resolution note if present */}
       {comment.resolution_note && (

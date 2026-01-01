@@ -1332,6 +1332,60 @@ if (action === "resolve" || action === "unresolve") {
       );
     }
 
+    // Edit comment body (clients can only edit their own comments)
+    if (action === "edit") {
+      if (!comment_id || !commentBody) {
+        return new Response(
+          JSON.stringify({ error: "comment_id and body are required" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Verify the comment belongs to this project and is a client comment
+      const { data: existingComment, error: fetchError } = await supabase
+        .from("prototype_comments")
+        .select("id, author_type")
+        .eq("id", comment_id)
+        .eq("project_token", token)
+        .maybeSingle();
+
+      if (fetchError || !existingComment) {
+        return new Response(
+          JSON.stringify({ error: "Comment not found" }),
+          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Only allow clients to edit their own comments
+      if (existingComment.author_type !== "client") {
+        return new Response(
+          JSON.stringify({ error: "Can only edit your own comments" }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const { data: updatedComment, error: updateError } = await supabase
+        .from("prototype_comments")
+        .update({ body: commentBody })
+        .eq("id", comment_id)
+        .eq("project_token", token)
+        .select()
+        .single();
+
+      if (updateError) {
+        console.error("Edit comment error:", updateError);
+        return new Response(
+          JSON.stringify({ error: "Failed to edit comment" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      return new Response(
+        JSON.stringify({ ok: true, comment: updatedComment }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // Update status workflow (open → in_progress → resolved / wont_do)
     if (action === "update_status") {
       if (!comment_id) {
