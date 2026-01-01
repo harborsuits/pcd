@@ -815,6 +815,9 @@ export type Database = {
           notes: string | null
           owner_user_id: string | null
           pipeline_stage: string
+          portal_stage: string
+          portal_stage_changed_at: string | null
+          portal_stage_changed_by: string | null
           project_token: string
           source: string
           source_demo_token: string | null
@@ -840,6 +843,9 @@ export type Database = {
           notes?: string | null
           owner_user_id?: string | null
           pipeline_stage?: string
+          portal_stage?: string
+          portal_stage_changed_at?: string | null
+          portal_stage_changed_by?: string | null
           project_token: string
           source?: string
           source_demo_token?: string | null
@@ -865,6 +871,9 @@ export type Database = {
           notes?: string | null
           owner_user_id?: string | null
           pipeline_stage?: string
+          portal_stage?: string
+          portal_stage_changed_at?: string | null
+          portal_stage_changed_by?: string | null
           project_token?: string
           source?: string
           source_demo_token?: string | null

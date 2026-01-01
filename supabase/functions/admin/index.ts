@@ -121,6 +121,13 @@ Deno.serve(async (req) => {
     return handleUpdatePipelineStage(req, token);
   }
 
+  // Route: PATCH /admin/projects/:token/portal-stage - Update portal stage (client-facing)
+  if (subPath.match(/^projects\/[^\/]+\/portal-stage$/) && req.method === "PATCH") {
+    const parts = subPath.split("/");
+    const token = parts[1];
+    return handleUpdatePortalStage(req, token);
+  }
+
   // Route: PATCH /admin/intake/:intakeId/approve
   if (subPath.match(/^intake\/[^\/]+\/approve$/) && req.method === "PATCH") {
     const parts = subPath.split("/");
@@ -1717,6 +1724,120 @@ async function handleUpdatePipelineStage(req: Request, token: string): Promise<R
 
   } catch (error) {
     console.error("Stage update error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+}
+
+// PATCH /admin/projects/:token/portal-stage - Update portal stage (client-facing workflow)
+async function handleUpdatePortalStage(req: Request, token: string): Promise<Response> {
+  const authError = validateAdminKey(req);
+  if (authError) return authError;
+
+  if (!isValidToken(token)) {
+    return new Response(
+      JSON.stringify({ error: "Invalid token format" }),
+      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  try {
+    const body = await req.json();
+    const { stage, reason } = body;
+
+    const validStages = ["intake", "build", "preview", "revisions", "final", "launched"];
+    if (!stage || !validStages.includes(stage)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid stage. Must be: intake, build, preview, revisions, final, or launched" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log(`Updating project ${token} portal_stage to: ${stage}`);
+
+    const supabase = getSupabaseClient();
+
+    // Get current project info
+    const { data: currentProject, error: fetchError } = await supabase
+      .from("projects")
+      .select("id, project_token, portal_stage, business_name")
+      .eq("project_token", token)
+      .is("deleted_at", null)
+      .maybeSingle();
+
+    if (fetchError || !currentProject) {
+      console.error("Project fetch error:", fetchError);
+      return new Response(
+        JSON.stringify({ error: "Project not found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const previousStage = currentProject.portal_stage || "intake";
+
+    // Don't update if same stage
+    if (previousStage === stage) {
+      return new Response(
+        JSON.stringify({ success: true, project: currentProject, message: "No change" }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Update the portal stage
+    const { data, error } = await supabase
+      .from("projects")
+      .update({ 
+        portal_stage: stage, 
+        portal_stage_changed_at: new Date().toISOString(),
+        portal_stage_changed_by: "operator",
+        updated_at: new Date().toISOString() 
+      })
+      .eq("project_token", token)
+      .is("deleted_at", null)
+      .select("id, project_token, portal_stage, portal_stage_changed_at")
+      .single();
+
+    if (error) {
+      console.error("Portal stage update error:", error);
+      return new Response(
+        JSON.stringify({ error: "Database error" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Insert audit message for stage change
+    const stageLabels: Record<string, string> = {
+      intake: "Intake",
+      build: "Build",
+      preview: "First Preview",
+      revisions: "Revisions",
+      final: "Final Approval",
+      launched: "Launched",
+    };
+
+    let auditContent = `[SYSTEM] Portal stage: ${stageLabels[previousStage] || previousStage} → ${stageLabels[stage] || stage}`;
+    if (reason) {
+      auditContent += ` | Reason: ${reason}`;
+    }
+
+    await supabase.from("messages").insert({
+      project_id: currentProject.id,
+      project_token: currentProject.project_token,
+      sender_type: "system",
+      content: auditContent,
+    });
+
+    console.log(`Project ${token} portal_stage updated: ${previousStage} → ${stage}`);
+
+    return new Response(
+      JSON.stringify({ success: true, project: data, previous_stage: previousStage }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+
+  } catch (error) {
+    console.error("Portal stage update error:", error);
     return new Response(
       JSON.stringify({ error: "Internal server error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
