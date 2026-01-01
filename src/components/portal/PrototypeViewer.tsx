@@ -503,8 +503,16 @@ export function PrototypeViewer({
 
         // Get iframe rect to calculate position inside iframe
         const iframeRect = iframe.getBoundingClientRect();
-        const xInIframe = clientX - iframeRect.left;
-        const yInIframe = clientY - iframeRect.top;
+        
+        // Calculate scale factor: screen px / iframe CSS px
+        // This handles CSS transform scaling on the iframe (e.g., mobile preview)
+        const scaleX = iframeRect.width / iframe.clientWidth;
+        const scaleY = iframeRect.height / iframe.clientHeight;
+        
+        // Convert mouse (parent viewport) -> iframe viewport coords (CSS px)
+        // Divide by scale to get unscaled iframe coordinates
+        const xInIframe = (clientX - iframeRect.left) / scaleX;
+        const yInIframe = (clientY - iframeRect.top) / scaleY;
 
         // Try to get caret position for text-precise anchoring
         let caretInfo: { node: Node; offset: number; element: Element } | null = null;
@@ -1011,19 +1019,20 @@ export function PrototypeViewer({
             
             baseDebug.mode = usedRange ? "range" : "element";
             
-            // pinRect is in iframe viewport coords (getBoundingClientRect relative to iframe viewport)
-            // We need to convert to overlay coords
-            // Step 1: pinRect coords are relative to iframe viewport (0,0 = top-left of iframe content area)
-            // Step 2: Add iframe's position in parent viewport to get parent viewport coords
-            // Step 3: Subtract overlay position to get overlay-local coords
+            // pinRect is in iframe CSS pixels (unscaled)
+            // We need to convert to overlay coords, accounting for any CSS scaling on the iframe
             
-            // pinRect.left/top are already in iframe viewport space
+            // Calculate scale factor: screen px / iframe CSS px
+            const scaleX = iframeRect.width / iframe.clientWidth;
+            const scaleY = iframeRect.height / iframe.clientHeight;
+            
+            // pinRect center in iframe CSS pixels
             const pinCenterX = pinRect.left + (pinRect.width / 2);
             const pinCenterY = pinRect.top + (pinRect.height / 2);
             
-            // Convert iframe viewport coords to parent page coords
-            const parentX = iframeRect.left + pinCenterX;
-            const parentY = iframeRect.top + pinCenterY;
+            // Convert iframe CSS coords to parent screen coords (apply scale)
+            const parentX = iframeRect.left + (pinCenterX * scaleX);
+            const parentY = iframeRect.top + (pinCenterY * scaleY);
             
             // Convert to overlay-local coords
             const localX = parentX - overlayRect.left;
