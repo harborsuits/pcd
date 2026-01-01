@@ -522,32 +522,39 @@ export function PrototypeViewer({
         const iframe = iframeRef.current;
         const overlay = overlayRef.current;
         const iframeDoc = iframe?.contentDocument;
-        const iframeWin = iframe?.contentWindow;
         
-        if (iframe && overlay && iframeDoc && iframeWin) {
+        if (iframe && overlay && iframeDoc) {
           const anchorEl = iframeDoc.querySelector(comment.anchor_selector);
           if (anchorEl) {
-            const anchorRect = anchorEl.getBoundingClientRect();
-            const overlayRect = overlay.getBoundingClientRect();
-            const iframeRect = iframe.getBoundingClientRect();
+            // All rects are in parent window viewport coordinates
+            const anchorRect = anchorEl.getBoundingClientRect(); // viewport coords inside iframe
+            const overlayRect = overlay.getBoundingClientRect(); // parent viewport coords
+            const iframeRect = iframe.getBoundingClientRect();   // parent viewport coords
             
             // Calculate position relative to anchor, fallback to center if no percentages
             const xPct = comment.x_pct ?? 50;
             const yPct = comment.y_pct ?? 50;
             
-            // Calculate absolute position within overlay (accounting for iframe offset)
-            const absX = iframeRect.left - overlayRect.left + anchorRect.left + (anchorRect.width * xPct / 100);
-            const absY = iframeRect.top - overlayRect.top + anchorRect.top + (anchorRect.height * yPct / 100);
+            // anchorRect is viewport-relative inside iframe
+            // iframeRect gives us the iframe's position in parent viewport
+            // absX/absY = position in parent window viewport coords
+            const absX = iframeRect.left + anchorRect.left + (anchorRect.width * xPct / 100);
+            const absY = iframeRect.top + anchorRect.top + (anchorRect.height * yPct / 100);
             
-            const leftPct = (absX / overlayRect.width) * 100;
-            const topPct = (absY / overlayRect.height) * 100;
+            // Convert to overlay-local pixels
+            const localX = absX - overlayRect.left;
+            const localY = absY - overlayRect.top;
             
-            // Only return if pin is visible in current viewport
-            if (topPct >= 0 && topPct <= 100 && leftPct >= 0 && leftPct <= 100) {
-              return { left: `${leftPct}%`, top: `${topPct}%` };
+            // Convert to overlay percentages
+            const leftPct = (localX / overlayRect.width) * 100;
+            const topPct = (localY / overlayRect.height) * 100;
+            
+            // If pin is offscreen, hide it instead of clamping
+            if (localX < 0 || localY < 0 || localX > overlayRect.width || localY > overlayRect.height) {
+              return null;
             }
-            // Anchor found but off-screen, still return position
-            return { left: `${Math.max(0, Math.min(100, leftPct))}%`, top: `${Math.max(0, Math.min(100, topPct))}%` };
+            
+            return { left: `${leftPct}%`, top: `${topPct}%` };
           }
         }
       } catch {
