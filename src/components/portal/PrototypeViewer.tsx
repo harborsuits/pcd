@@ -110,6 +110,7 @@ interface PrototypeViewerProps {
   onAddComment: (body: string, pinX: number, pinY: number, anchorData?: CommentAnchorData) => Promise<void>;
   onResolveComment: (commentId: string) => Promise<void>;
   onUnresolveComment: (commentId: string) => Promise<void>;
+  onMarkInProgress?: (commentId: string) => Promise<void>;
   onEditComment?: (commentId: string, newBody: string) => Promise<void>;
   onRepinComment?: (commentId: string, anchorData: CommentAnchorData) => Promise<void>;
   onRefresh: () => void;
@@ -122,6 +123,7 @@ export function PrototypeViewer({
   onAddComment,
   onResolveComment,
   onUnresolveComment,
+  onMarkInProgress,
   onEditComment,
   onRepinComment,
   onRefresh,
@@ -1260,6 +1262,7 @@ export function PrototypeViewer({
             onJumpToPage={jumpToCommentPage}
             onResolveComment={onResolveComment}
             onUnresolveComment={onUnresolveComment}
+            onMarkInProgress={onMarkInProgress}
             onEditComment={onEditComment}
             onRepin={onRepinComment ? (id) => setRepinTargetId(id) : undefined}
           />
@@ -1346,6 +1349,7 @@ function CommentsSidebar({
   onJumpToPage,
   onResolveComment,
   onUnresolveComment,
+  onMarkInProgress,
   onEditComment,
   onRepin,
 }: {
@@ -1361,6 +1365,7 @@ function CommentsSidebar({
   onJumpToPage: (comment: PrototypeComment) => void;
   onResolveComment: (commentId: string) => Promise<void>;
   onUnresolveComment: (commentId: string) => Promise<void>;
+  onMarkInProgress?: (commentId: string) => Promise<void>;
   onEditComment?: (commentId: string, newBody: string) => Promise<void>;
   onRepin?: (commentId: string) => void;
 }) {
@@ -1527,6 +1532,7 @@ function CommentsSidebar({
                     index={idx}
                     onResolve={onResolveComment}
                     onUnresolve={onUnresolveComment}
+                    onMarkInProgress={onMarkInProgress}
                     onEdit={onEditComment}
                   />
                 </div>
