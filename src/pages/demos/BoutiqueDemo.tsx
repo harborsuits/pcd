@@ -231,13 +231,14 @@ const BoutiqueDemo = () => {
             <div>
               <h2 className="font-serif text-4xl mb-6 text-amber-900">Our Story</h2>
               <p className="text-stone-600 mb-4 leading-relaxed">
-                The Copper Fox was born from a singular conviction: that a thoughtfully edited 
-                wardrobe liberates rather than limits. We believe in fewer pieces, chosen with 
-                intention, each one earning its place through versatility and quiet beauty.
+                The Copper Fox curates, rather than produces.
+              </p>
+              <p className="text-stone-600 mb-4 leading-relaxed">
+                Garments are chosen for balance, texture, and longevity — designed to exist 
+                in conversation with one another.
               </p>
               <p className="text-stone-600 mb-6 leading-relaxed">
-                Every garment in our collection has been selected to harmonize with the others. 
-                Purchase one piece or the entire capsule—the result is always a wardrobe that works.
+                We release wardrobes, not seasons. Each piece is intentional. The result is inevitable.
               </p>
               <div className="flex items-center gap-4">
                 <img 
