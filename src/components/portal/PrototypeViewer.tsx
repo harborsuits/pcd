@@ -506,8 +506,9 @@ export function PrototypeViewer({
         
         // Calculate scale factor: screen px / iframe CSS px
         // This handles CSS transform scaling on the iframe (e.g., mobile preview)
-        const scaleX = iframeRect.width / iframe.clientWidth;
-        const scaleY = iframeRect.height / iframe.clientHeight;
+        // Use offsetWidth/offsetHeight (includes border) for accurate scaling
+        const scaleX = iframeRect.width / iframe.offsetWidth;
+        const scaleY = iframeRect.height / iframe.offsetHeight;
         
         // Convert mouse (parent viewport) -> iframe viewport coords (CSS px)
         // Divide by scale to get unscaled iframe coordinates
@@ -1023,8 +1024,9 @@ export function PrototypeViewer({
             // We need to convert to overlay coords, accounting for any CSS scaling on the iframe
             
             // Calculate scale factor: screen px / iframe CSS px
-            const scaleX = iframeRect.width / iframe.clientWidth;
-            const scaleY = iframeRect.height / iframe.clientHeight;
+            // Use offsetWidth/offsetHeight (includes border) for accurate scaling
+            const scaleX = iframeRect.width / iframe.offsetWidth;
+            const scaleY = iframeRect.height / iframe.offsetHeight;
             
             // pinRect center in iframe CSS pixels
             const pinCenterX = pinRect.left + (pinRect.width / 2);
