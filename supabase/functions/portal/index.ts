@@ -1445,6 +1445,79 @@ if (action === "resolve" || action === "unresolve") {
       );
     }
 
+    // Re-pin a comment (update anchor fields for legacy or broken pins)
+    if (action === "repin") {
+      if (!comment_id) {
+        return new Response(
+          JSON.stringify({ error: "comment_id is required" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Require at least anchor_selector or anchor_id
+      if (!anchor_selector && !anchor_id) {
+        return new Response(
+          JSON.stringify({ error: "anchor_selector or anchor_id required for repin" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Verify the comment belongs to this project
+      const { data: existingComment, error: fetchError } = await supabase
+        .from("prototype_comments")
+        .select("id")
+        .eq("id", comment_id)
+        .eq("project_token", token)
+        .maybeSingle();
+
+      if (fetchError || !existingComment) {
+        return new Response(
+          JSON.stringify({ error: "Comment not found" }),
+          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Update anchor fields
+      const repinData: Record<string, unknown> = {
+        anchor_selector: anchor_selector ?? null,
+        anchor_id: anchor_id ?? null,
+        x_pct: x_pct ?? null,
+        y_pct: y_pct ?? null,
+        pin_x: body.pin_x ?? null,
+        pin_y: body.pin_y ?? null,
+        page_path: page_path ?? null,
+        page_url: page_url ?? null,
+        breakpoint: breakpoint ?? null,
+        scroll_y: scroll_y ?? null,
+        viewport_w: viewport_w ?? null,
+        viewport_h: viewport_h ?? null,
+        text_hint: text_hint ?? null,
+      };
+
+      const { data: updatedComment, error: updateError } = await supabase
+        .from("prototype_comments")
+        .update(repinData)
+        .eq("id", comment_id)
+        .eq("project_token", token)
+        .select()
+        .single();
+
+      if (updateError) {
+        console.error("Repin comment error:", updateError);
+        return new Response(
+          JSON.stringify({ error: "Failed to repin comment" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      console.log(`Comment ${comment_id.slice(0, 8)} repinned with selector: ${anchor_selector}`);
+
+      return new Response(
+        JSON.stringify({ ok: true, comment: updatedComment }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     return new Response(
       JSON.stringify({ error: "Invalid action" }),
       { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }

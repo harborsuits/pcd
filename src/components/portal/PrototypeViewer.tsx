@@ -732,6 +732,11 @@ export function PrototypeViewer({
           break;
         case "Escape":
           e.preventDefault();
+          // First priority: cancel repin mode
+          if (repinTargetId) {
+            setRepinTargetId(null);
+            return;
+          }
           if (showShortcutsHelp) {
             setShowShortcutsHelp(false);
             return;
@@ -762,6 +767,7 @@ export function PrototypeViewer({
     clearHoverHighlight,
     isTypingTarget,
     showShortcutsHelp,
+    repinTargetId,
   ]);
 
   return (
