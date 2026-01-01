@@ -10,6 +10,7 @@ import { ErrorBoundary } from "@/components/common/ErrorBoundary";
 import { canUseWebGL } from "@/lib/webgl";
 import HeroStatic from "@/components/HeroStatic";
 import { Footer } from "@/components/ui/footer";
+import { Typewriter } from "@/components/ui/typewriter-text";
 import pcdLogo from "@/assets/pcd-logo.jpeg";
 const exampleDemos = [
   {
@@ -112,8 +113,19 @@ const Index = () => {
             <h1 className="font-serif text-4xl md:text-5xl lg:text-6xl font-bold leading-tight mb-2">
               Never miss a lead again.
             </h1>
-            <h2 className="font-serif text-2xl md:text-3xl lg:text-4xl font-semibold text-accent mb-6">
-              With an AI receptionist built into your website.
+            <h2 className="font-serif text-2xl md:text-3xl lg:text-4xl font-semibold italic text-accent mb-6">
+              <Typewriter
+                text={[
+                  "With an AI receptionist built into your website.",
+                  "With 24/7 lead capture that never sleeps.",
+                  "With instant follow-ups that close more jobs.",
+                ]}
+                speed={60}
+                deleteSpeed={30}
+                delay={2500}
+                loop={true}
+                cursor="|"
+              />
             </h2>
             
             <p className="text-lg md:text-xl text-muted-foreground leading-relaxed max-w-2xl mx-auto">
