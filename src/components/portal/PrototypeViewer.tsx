@@ -394,8 +394,8 @@ export function PrototypeViewer({
         // 2) Capture scroll for nested scroll containers inside iframe
         iframeDoc.addEventListener("scroll", schedulePinUpdate, true);
 
-        // 3) Parent window scroll/resize (overlay moves relative to viewport)
-        window.addEventListener("scroll", schedulePinUpdate, true);
+        // 3) Parent window resize (in case the preview container resizes)
+        // Note: We don't need parent scroll since pins live in overlay space, not page space
         window.addEventListener("resize", schedulePinUpdate);
 
         // 4) Resize observers: iframe + overlay + iframe body
@@ -430,7 +430,6 @@ export function PrototypeViewer({
             iframeWin.removeEventListener("resize", schedulePinUpdate);
             iframeDoc.removeEventListener("scroll", schedulePinUpdate, true);
           } catch {}
-          window.removeEventListener("scroll", schedulePinUpdate, true);
           window.removeEventListener("resize", schedulePinUpdate);
 
           resizeObs?.disconnect();
@@ -504,19 +503,13 @@ export function PrototypeViewer({
         baseData.page_url = iframeWin.location.href;
         baseData.scroll_y = iframeWin.scrollY;
 
-        // Get iframe rect to calculate position inside iframe
+        // Get iframe rect to calculate click position inside iframe viewport
         const iframeRect = iframe.getBoundingClientRect();
         
-        // Calculate scale factor: screen px / iframe CSS px
-        // This handles CSS transform scaling on the iframe (e.g., mobile preview)
-        // Use offsetWidth/offsetHeight (includes border) for accurate scaling
-        const scaleX = iframeRect.width / iframe.offsetWidth;
-        const scaleY = iframeRect.height / iframe.offsetHeight;
-        
-        // Convert mouse (parent viewport) -> iframe viewport coords (CSS px)
-        // Divide by scale to get unscaled iframe coordinates
-        const xInIframe = (clientX - iframeRect.left) / scaleX;
-        const yInIframe = (clientY - iframeRect.top) / scaleY;
+        // Convert click (parent viewport coords) -> iframe viewport coords
+        // Since iframe has no CSS transforms (just w-full h-full), this is a simple offset
+        const xInIframe = clientX - iframeRect.left;
+        const yInIframe = clientY - iframeRect.top;
 
         // Try to get caret position for text-precise anchoring
         let caretInfo: { node: Node; offset: number; element: Element } | null = null;
