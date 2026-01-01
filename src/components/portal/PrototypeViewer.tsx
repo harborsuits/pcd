@@ -123,28 +123,60 @@ export function PrototypeViewer({
   const [anchorMismatch, setAnchorMismatch] = useState<string | null>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const [pinUpdateKey, setPinUpdateKey] = useState(0);
 
   const unresolvedComments = comments.filter((c) => !c.resolved_at);
   const resolvedComments = comments.filter((c) => c.resolved_at);
 
-  // Track current iframe path for same-origin prototypes
+  // Force pin recomputation
+  const triggerPinUpdate = useCallback(() => {
+    setPinUpdateKey(k => k + 1);
+  }, []);
+
+  // Track current iframe path for same-origin prototypes + set up scroll/resize listeners
   useEffect(() => {
     const iframe = iframeRef.current;
     if (!iframe || !isSameOrigin(prototype.url)) return;
+
+    let iframeWin: Window | null = null;
+    let resizeObserver: ResizeObserver | null = null;
 
     const handleLoad = () => {
       try {
         const path = iframe.contentWindow?.location.pathname ?? null;
         setCurrentIframePath(path);
+        iframeWin = iframe.contentWindow;
+
+        // Recompute pins on load
+        triggerPinUpdate();
+
+        // Listen for scroll inside iframe
+        if (iframeWin) {
+          iframeWin.addEventListener("scroll", triggerPinUpdate, { passive: true });
+          
+          // Listen for resize of iframe content
+          if (iframe.contentDocument?.body) {
+            resizeObserver = new ResizeObserver(triggerPinUpdate);
+            resizeObserver.observe(iframe.contentDocument.body);
+          }
+        }
       } catch {
-        // Cross-origin, can't read
         setCurrentIframePath(null);
       }
     };
 
     iframe.addEventListener("load", handleLoad);
-    return () => iframe.removeEventListener("load", handleLoad);
-  }, [prototype.url, iframeKey]);
+    
+    return () => {
+      iframe.removeEventListener("load", handleLoad);
+      if (iframeWin) {
+        iframeWin.removeEventListener("scroll", triggerPinUpdate);
+      }
+      if (resizeObserver) {
+        resizeObserver.disconnect();
+      }
+    };
+  }, [prototype.url, iframeKey, triggerPinUpdate]);
 
   // Capture rich anchor data from click position
   const captureAnchorData = useCallback((clientX: number, clientY: number): CommentAnchorData | null => {
@@ -346,10 +378,10 @@ export function PrototypeViewer({
     }
   }, [prototype.url]);
 
-  // Calculate pin position for a comment
+  // Calculate pin position for a comment - always try DOM anchor first
   const getPinPosition = useCallback((comment: PrototypeComment): { left: string; top: string } | null => {
-    // If this comment is focused and we have anchor data, try to position precisely
-    if (focusedCommentId === comment.id && comment.anchor_selector && isSameOrigin(prototype.url)) {
+    // For same-origin iframes with anchor data, try to position precisely
+    if (comment.anchor_selector && isSameOrigin(prototype.url)) {
       try {
         const iframe = iframeRef.current;
         const overlay = overlayRef.current;
@@ -358,19 +390,28 @@ export function PrototypeViewer({
         
         if (iframe && overlay && iframeDoc && iframeWin) {
           const anchorEl = iframeDoc.querySelector(comment.anchor_selector);
-          if (anchorEl && comment.x_pct != null && comment.y_pct != null) {
+          if (anchorEl) {
             const anchorRect = anchorEl.getBoundingClientRect();
             const overlayRect = overlay.getBoundingClientRect();
             const iframeRect = iframe.getBoundingClientRect();
             
-            // Calculate absolute position within overlay
-            const absX = iframeRect.left - overlayRect.left + anchorRect.left + (anchorRect.width * comment.x_pct / 100);
-            const absY = iframeRect.top - overlayRect.top + anchorRect.top + (anchorRect.height * comment.y_pct / 100);
+            // Calculate position relative to anchor, fallback to center if no percentages
+            const xPct = comment.x_pct ?? 50;
+            const yPct = comment.y_pct ?? 0;
+            
+            // Calculate absolute position within overlay (accounting for iframe offset)
+            const absX = iframeRect.left - overlayRect.left + anchorRect.left + (anchorRect.width * xPct / 100);
+            const absY = iframeRect.top - overlayRect.top + anchorRect.top + (anchorRect.height * yPct / 100);
             
             const leftPct = (absX / overlayRect.width) * 100;
             const topPct = (absY / overlayRect.height) * 100;
             
-            return { left: `${leftPct}%`, top: `${topPct}%` };
+            // Only return if pin is visible in current viewport
+            if (topPct >= 0 && topPct <= 100 && leftPct >= 0 && leftPct <= 100) {
+              return { left: `${leftPct}%`, top: `${topPct}%` };
+            }
+            // Anchor found but off-screen, still return position
+            return { left: `${Math.max(0, Math.min(100, leftPct))}%`, top: `${Math.max(0, Math.min(100, topPct))}%` };
           }
         }
       } catch {
@@ -384,7 +425,8 @@ export function PrototypeViewer({
     }
     
     return null;
-  }, [focusedCommentId, prototype.url]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prototype.url, pinUpdateKey]);
 
   // Filter comments to show only those matching current iframe path
   const visibleComments = comments.filter((c) => {

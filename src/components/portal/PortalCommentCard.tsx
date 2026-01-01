@@ -139,7 +139,26 @@ export function PortalCommentCard({
 
   const formatTime = (dateStr: string) => {
     const d = new Date(dateStr);
-    return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+    const now = new Date();
+    const isToday = d.toDateString() === now.toDateString();
+    const time = d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+    if (isToday) return `Today at ${time}`;
+    return `${d.toLocaleDateString(undefined, { month: "short", day: "numeric" })} at ${time}`;
+  };
+
+  const getRoleBadge = () => {
+    if (comment.author_type === "operator" || comment.author_type === "admin") {
+      return (
+        <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-violet-50 text-violet-700 border-violet-200 dark:bg-violet-900/30 dark:text-violet-300 dark:border-violet-700">
+          Operator
+        </Badge>
+      );
+    }
+    return (
+      <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-900/30 dark:text-sky-300 dark:border-sky-700">
+        Client
+      </Badge>
+    );
   };
 
   return (
@@ -162,10 +181,11 @@ export function PortalCommentCard({
           >
             {isResolved ? <Check className="h-3 w-3" /> : index + 1}
           </div>
+          {getRoleBadge()}
           {getStatusBadge()}
-          <span className="text-xs text-muted-foreground">
-            {isClient ? "You" : "Team"} · {formatTime(comment.created_at)}
-          </span>
+        </div>
+        <div className="text-xs text-muted-foreground whitespace-nowrap">
+          {formatTime(comment.created_at)}
         </div>
         <div className="flex items-center gap-1">
           {canEdit && !isEditing && (
