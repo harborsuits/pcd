@@ -965,7 +965,9 @@ export type Database = {
           scroll_y: number | null
           source_message_id: string | null
           status: string
+          text_context: string | null
           text_hint: string | null
+          text_offset: number | null
           viewport_h: number | null
           viewport_w: number | null
           x_pct: number | null
@@ -993,7 +995,9 @@ export type Database = {
           scroll_y?: number | null
           source_message_id?: string | null
           status?: string
+          text_context?: string | null
           text_hint?: string | null
+          text_offset?: number | null
           viewport_h?: number | null
           viewport_w?: number | null
           x_pct?: number | null
@@ -1021,7 +1025,9 @@ export type Database = {
           scroll_y?: number | null
           source_message_id?: string | null
           status?: string
+          text_context?: string | null
           text_hint?: string | null
+          text_offset?: number | null
           viewport_h?: number | null
           viewport_w?: number | null
           x_pct?: number | null
