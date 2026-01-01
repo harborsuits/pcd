@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { ArrowLeft, Phone, MapPin, Clock, Star, Instagram, ShoppingBag, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { GlowCard } from "@/components/ui/spotlight-card";
+import { AwardBadge } from "@/components/ui/award-badge";
 import boutiqueHero from "@/assets/boutique/boutique-hero.png";
 import foundationEdit from "@/assets/boutique/foundation-edit.png";
 import accentCollection from "@/assets/boutique/accent-collection.png";
@@ -253,6 +254,15 @@ const BoutiqueDemo = () => {
               />
               <div className="absolute -bottom-4 -left-4 bg-amber-100 rounded-xl p-4 shadow-lg">
                 <p className="font-serif text-amber-900 text-lg">"Find something you love."</p>
+              </div>
+              <div className="absolute -top-6 -right-6">
+                <AwardBadge
+                  title="Best Boutique"
+                  subtitle="Kennebunkport"
+                  year="2025"
+                  variant="gold"
+                  icon="award"
+                />
               </div>
             </div>
           </div>
