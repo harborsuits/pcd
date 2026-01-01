@@ -36,6 +36,7 @@ interface PortalCommentCardProps {
   index: number;
   onResolve: (id: string) => void;
   onUnresolve: (id: string) => void;
+  onMarkInProgress?: (id: string) => void;
   onEdit?: (id: string, newBody: string) => Promise<void>;
 }
 
@@ -47,6 +48,7 @@ export function PortalCommentCard({
   index,
   onResolve,
   onUnresolve,
+  onMarkInProgress,
   onEdit,
 }: PortalCommentCardProps) {
   const [showAttachments, setShowAttachments] = useState(false);
@@ -58,6 +60,7 @@ export function PortalCommentCard({
   const queryClient = useQueryClient();
 
   const isResolved = comment.status === "resolved" || comment.status === "wont_do" || !!comment.resolved_at;
+  const isInProgress = comment.status === "in_progress";
   const isClient = comment.author_type === "client";
   const canEdit = isClient && !isResolved;
   const status = comment.status || (comment.resolved_at ? "resolved" : "open");
@@ -211,14 +214,27 @@ export function PortalCommentCard({
               Reopen
             </Button>
           ) : (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-6 px-2 text-xs text-green-600 hover:text-green-700 hover:bg-green-50"
-              onClick={() => onResolve(comment.id)}
-            >
-              Resolve
-            </Button>
+            <div className="flex items-center gap-1">
+              {!isInProgress && onMarkInProgress && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 px-2 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                  onClick={() => onMarkInProgress(comment.id)}
+                >
+                  <Clock className="h-3 w-3 mr-1" />
+                  Working
+                </Button>
+              )}
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 px-2 text-xs text-green-600 hover:text-green-700 hover:bg-green-50"
+                onClick={() => onResolve(comment.id)}
+              >
+                Resolve
+              </Button>
+            </div>
           )}
         </div>
       </div>

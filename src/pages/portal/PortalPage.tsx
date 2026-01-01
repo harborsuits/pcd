@@ -420,8 +420,36 @@ export default function PortalPage() {
 
     if (res.ok) {
       setPrototypeComments((prev) =>
-        prev.map((c) => (c.id === commentId ? { ...c, resolved_at: null } : c))
+        prev.map((c) => (c.id === commentId ? { ...c, resolved_at: null, status: 'open' } : c))
       );
+    }
+  }
+
+  async function handleMarkInProgress(commentId: string) {
+    if (!token) return;
+
+    const res = await fetch(
+      `${SUPABASE_URL}/functions/v1/portal/${token}/comments`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": SUPABASE_ANON_KEY,
+          "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({
+          action: "update_status",
+          comment_id: commentId,
+          status: "in_progress",
+        }),
+      }
+    );
+
+    if (res.ok) {
+      setPrototypeComments((prev) =>
+        prev.map((c) => (c.id === commentId ? { ...c, status: 'in_progress' as const } : c))
+      );
+      toast({ title: "Working on it", description: "Comment marked as in progress." });
     }
   }
 
@@ -1216,6 +1244,7 @@ export default function PortalPage() {
               onAddComment={handleAddComment}
               onResolveComment={handleResolveComment}
               onUnresolveComment={handleUnresolveComment}
+              onMarkInProgress={handleMarkInProgress}
               onEditComment={handleEditComment}
               onRefresh={handleRefreshPrototype}
             />
