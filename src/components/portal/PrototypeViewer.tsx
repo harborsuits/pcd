@@ -303,6 +303,16 @@ export function PrototypeViewer({
     let resizeObserver: ResizeObserver | null = null;
     let navTimer: number | null = null;
     let lastPath: string | null = null;
+    let rafId = 0;
+
+    // RAF-throttled pin update for smooth scrolling
+    const rafThrottledPinUpdate = () => {
+      if (rafId) return;
+      rafId = iframeWin?.requestAnimationFrame(() => {
+        rafId = 0;
+        setPinUpdateKey(k => k + 1);
+      }) ?? 0;
+    };
 
     const handleLoad = () => {
       try {
@@ -317,13 +327,14 @@ export function PrototypeViewer({
         // Recompute pins on load
         triggerPinUpdate();
 
-        // Listen for scroll inside iframe
+        // Listen for scroll inside iframe with RAF throttling
         if (iframeWin) {
-          iframeWin.addEventListener("scroll", triggerPinUpdate, { passive: true });
+          iframeWin.addEventListener("scroll", rafThrottledPinUpdate, { passive: true });
+          iframeWin.addEventListener("resize", rafThrottledPinUpdate);
           
           // Listen for resize of iframe content
           if (iframe.contentDocument?.body) {
-            resizeObserver = new ResizeObserver(triggerPinUpdate);
+            resizeObserver = new ResizeObserver(rafThrottledPinUpdate);
             resizeObserver.observe(iframe.contentDocument.body);
           }
         }
@@ -348,11 +359,15 @@ export function PrototypeViewer({
     };
 
     iframe.addEventListener("load", handleLoad);
+    // Try to attach immediately in case iframe is already loaded
+    handleLoad();
     
     return () => {
       iframe.removeEventListener("load", handleLoad);
       if (iframeWin) {
-        iframeWin.removeEventListener("scroll", triggerPinUpdate);
+        if (rafId) iframeWin.cancelAnimationFrame(rafId);
+        iframeWin.removeEventListener("scroll", rafThrottledPinUpdate);
+        iframeWin.removeEventListener("resize", rafThrottledPinUpdate);
       }
       if (resizeObserver) {
         resizeObserver.disconnect();
@@ -361,7 +376,7 @@ export function PrototypeViewer({
         window.clearInterval(navTimer);
       }
     };
-  }, [prototype.url, iframeKey, triggerPinUpdate]);
+  }, [prototype.url, iframeKey, triggerPinUpdate, ensureHoverStyle]);
 
   // Capture rich anchor data from click position
   const captureAnchorData = useCallback((clientX: number, clientY: number): CommentAnchorData | null => {
