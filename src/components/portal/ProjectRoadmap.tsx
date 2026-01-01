@@ -37,6 +37,20 @@ const STEP_ICONS: Record<string, React.ElementType> = {
   final: CheckCircle2,
 };
 
+// Build phase micro-milestone indicator
+function BuildMilestone({ label, done, inProgress }: { label: string; done?: boolean; inProgress?: boolean }) {
+  return (
+    <div className="flex items-center gap-2 text-xs">
+      <div className={`w-1.5 h-1.5 rounded-full ${
+        done ? 'bg-green-500' : inProgress ? 'bg-primary animate-pulse' : 'bg-muted-foreground/30'
+      }`} />
+      <span className={done ? 'text-muted-foreground line-through' : inProgress ? 'text-foreground' : 'text-muted-foreground/60'}>
+        {label}
+      </span>
+    </div>
+  );
+}
+
 function StepIcon({ stepId, status }: { stepId: string; status: RoadmapStep['status'] }) {
   const Icon = STEP_ICONS[stepId] || Circle;
   
@@ -111,9 +125,18 @@ export function ProjectRoadmap({ steps, className }: ProjectRoadmapProps) {
                     </Badge>
                   )}
                 </div>
-                <p className="text-xs text-muted-foreground mt-0.5">
+              <p className="text-xs text-muted-foreground mt-0.5">
                   {step.description}
                 </p>
+                
+                {/* Build phase progress indicator */}
+                {step.id === 'build' && step.status === 'current' && (
+                  <div className="mt-3 pl-1 space-y-1.5">
+                    <BuildMilestone label="Structure" done />
+                    <BuildMilestone label="Visual system" inProgress />
+                    <BuildMilestone label="Content pass" />
+                  </div>
+                )}
                 
                 {/* Action button */}
                 {step.action && step.status === 'current' && (

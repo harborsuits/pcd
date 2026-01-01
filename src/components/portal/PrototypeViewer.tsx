@@ -596,51 +596,137 @@ export function PrototypeViewer({
 
         {/* Comments sidebar */}
         {showCommentsSidebar && (
-          <div className="w-80 border-l border-border bg-muted/30 flex flex-col">
-            <ScrollArea className="flex-1 bg-transparent">
-              <div className="p-3 space-y-3">
-                {comments.length === 0 ? (
+          <CommentsSidebar
+            comments={comments}
+            token={token}
+            focusedCommentId={focusedCommentId}
+            onFocusComment={focusComment}
+            onResolveComment={onResolveComment}
+            onUnresolveComment={onUnresolveComment}
+            onEditComment={onEditComment}
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Filter chip component
+function FilterChip({ 
+  label, 
+  count, 
+  active, 
+  onClick 
+}: { 
+  label: string; 
+  count: number; 
+  active: boolean; 
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`px-2 py-1 text-xs rounded-full transition-colors ${
+        active 
+          ? 'bg-primary text-primary-foreground' 
+          : 'bg-muted text-muted-foreground hover:bg-muted/80'
+      }`}
+    >
+      {label} {count > 0 && <span className="ml-0.5 opacity-70">({count})</span>}
+    </button>
+  );
+}
+
+// Comments sidebar with filter chips
+function CommentsSidebar({
+  comments,
+  token,
+  focusedCommentId,
+  onFocusComment,
+  onResolveComment,
+  onUnresolveComment,
+  onEditComment,
+}: {
+  comments: PrototypeComment[];
+  token: string;
+  focusedCommentId: string | null;
+  onFocusComment: (comment: PrototypeComment) => void;
+  onResolveComment: (commentId: string) => Promise<void>;
+  onUnresolveComment: (commentId: string) => Promise<void>;
+  onEditComment?: (commentId: string, newBody: string) => Promise<void>;
+}) {
+  const [filter, setFilter] = useState<CommentStatus | 'all'>('all');
+  
+  // Count comments by status
+  const counts = {
+    all: comments.length,
+    open: comments.filter(c => !c.status || c.status === 'open').length,
+    in_progress: comments.filter(c => c.status === 'in_progress').length,
+    resolved: comments.filter(c => c.status === 'resolved' || c.resolved_at).length,
+    wont_do: comments.filter(c => c.status === 'wont_do').length,
+  };
+  
+  // Filter comments
+  const filteredComments = filter === 'all' 
+    ? comments 
+    : comments.filter(c => {
+        if (filter === 'open') return !c.status || c.status === 'open';
+        if (filter === 'resolved') return c.status === 'resolved' || c.resolved_at;
+        return c.status === filter;
+      });
+  
+  return (
+    <div className="w-80 border-l border-border bg-muted/30 flex flex-col">
+      {/* Filter chips */}
+      <div className="p-2 border-b border-border flex flex-wrap gap-1">
+        <FilterChip label="All" count={counts.all} active={filter === 'all'} onClick={() => setFilter('all')} />
+        <FilterChip label="Open" count={counts.open} active={filter === 'open'} onClick={() => setFilter('open')} />
+        <FilterChip label="In progress" count={counts.in_progress} active={filter === 'in_progress'} onClick={() => setFilter('in_progress')} />
+        <FilterChip label="Resolved" count={counts.resolved} active={filter === 'resolved'} onClick={() => setFilter('resolved')} />
+        <FilterChip label="Won't do" count={counts.wont_do} active={filter === 'wont_do'} onClick={() => setFilter('wont_do')} />
+      </div>
+      
+      <ScrollArea className="flex-1 bg-transparent">
+        <div className="p-3 space-y-3">
+          {filteredComments.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-8">
                     No comments yet. Click "Add Comment" to leave feedback.
                   </p>
-                ) : (
-                  comments.map((comment, idx) => (
-                    <div
-                      key={comment.id}
-                      className={`cursor-pointer transition-all ${
-                        focusedCommentId === comment.id ? "ring-2 ring-primary rounded-lg" : ""
-                      }`}
-                      onClick={() => focusComment(comment)}
-                    >
-                      {/* Page badge */}
-                      {comment.page_path && (
-                        <div className="mb-1">
-                          <Badge variant="outline" className="text-xs font-mono">
-                            {comment.page_path}
-                          </Badge>
-                          {comment.breakpoint && (
-                            <Badge variant="secondary" className="text-xs ml-1">
-                              {comment.breakpoint}
-                            </Badge>
-                          )}
-                        </div>
-                      )}
-                      <PortalCommentCard
-                        token={token}
-                        comment={comment}
-                        index={idx}
-                        onResolve={onResolveComment}
-                        onUnresolve={onUnresolveComment}
-                        onEdit={onEditComment}
-                      />
-                    </div>
-                  ))
+          ) : (
+            filteredComments.map((comment, idx) => (
+              <div
+                key={comment.id}
+                className={`cursor-pointer transition-all ${
+                  focusedCommentId === comment.id ? "ring-2 ring-primary rounded-lg" : ""
+                }`}
+                onClick={() => onFocusComment(comment)}
+              >
+                {/* Page badge */}
+                {comment.page_path && (
+                  <div className="mb-1">
+                    <Badge variant="outline" className="text-xs font-mono">
+                      {comment.page_path}
+                    </Badge>
+                    {comment.breakpoint && (
+                      <Badge variant="secondary" className="text-xs ml-1">
+                        {comment.breakpoint}
+                      </Badge>
+                    )}
+                  </div>
                 )}
+                <PortalCommentCard
+                  token={token}
+                  comment={comment}
+                  index={idx}
+                  onResolve={onResolveComment}
+                  onUnresolve={onUnresolveComment}
+                  onEdit={onEditComment}
+                />
               </div>
-            </ScrollArea>
-          </div>
-        )}
-      </div>
+            ))
+          )}
+        </div>
+      </ScrollArea>
     </div>
   );
 }
