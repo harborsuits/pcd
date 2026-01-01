@@ -628,13 +628,37 @@ export function PrototypeViewer({
     onRefresh();
   };
 
-  // Navigate iframe to comment's page and scroll to anchor
+  // Helper: Try to find text_context in element and return its offset
+  const findOffsetByContext = useCallback((element: Element, context: string, doc: Document): number | null => {
+    if (!context || context.length < 5) return null;
+    
+    const fullText = element.textContent || "";
+    // Try to find the context string in the element's text
+    const idx = fullText.indexOf(context);
+    if (idx >= 0) {
+      // Return the middle of the context
+      return idx + Math.floor(context.length / 2);
+    }
+    
+    // Try partial match (first half of context)
+    const half = context.slice(0, Math.floor(context.length / 2));
+    if (half.length >= 5) {
+      const halfIdx = fullText.indexOf(half);
+      if (halfIdx >= 0) {
+        return halfIdx + half.length;
+      }
+    }
+    
+    return null;
+  }, []);
+
+  // Navigate iframe to comment's page and scroll to EXACT text position
   const focusComment = useCallback(async (comment: PrototypeComment) => {
     const iframe = iframeRef.current;
     if (!iframe) return;
 
     setFocusedCommentId(comment.id);
-    setHoveredCommentId(comment.id); // Also set hover for DOM highlight
+    setHoveredCommentId(comment.id);
     setAnchorMismatch(null);
 
     // Scroll sidebar card into view
@@ -663,6 +687,9 @@ export function PrototypeViewer({
           });
         }
 
+        // Small delay to ensure DOM is ready
+        await new Promise(r => setTimeout(r, 100));
+
         const iframeWin = iframe.contentWindow;
         const iframeDoc = iframe.contentDocument;
         if (!iframeWin || !iframeDoc) return;
@@ -670,13 +697,90 @@ export function PrototypeViewer({
         // Try to find anchor element
         if (comment.anchor_selector) {
           const anchorEl = iframeDoc.querySelector(comment.anchor_selector);
+          
           if (anchorEl) {
-            // Scroll anchor into view
-            anchorEl.scrollIntoView({ behavior: "smooth", block: "center" });
+            let targetOffset = comment.text_offset;
             
-            // Highlight briefly
-            anchorEl.classList.add("comment-anchor-highlight");
-            setTimeout(() => anchorEl.classList.remove("comment-anchor-highlight"), 2000);
+            // If text_offset doesn't work, try to recover using text_context
+            if (targetOffset != null && comment.text_context) {
+              const range = createRangeAtOffset(anchorEl, targetOffset, iframeDoc);
+              if (!range) {
+                // text_offset failed - try to find by context
+                const recoveredOffset = findOffsetByContext(anchorEl, comment.text_context, iframeDoc);
+                if (recoveredOffset != null) {
+                  targetOffset = recoveredOffset;
+                  console.log("Recovered text position using context");
+                }
+              }
+            }
+            
+            // Try to get exact text range rect for scrolling
+            if (targetOffset != null && targetOffset >= 0) {
+              const range = createRangeAtOffset(anchorEl, targetOffset, iframeDoc);
+              
+              if (range) {
+                const rangeRect = range.getBoundingClientRect();
+                
+                // Scroll to position the text in the upper third of viewport
+                if (rangeRect.height > 0) {
+                  const scrollTarget = iframeWin.scrollY + rangeRect.top - (iframeWin.innerHeight * 0.35);
+                  iframeWin.scrollTo({ top: Math.max(0, scrollTarget), behavior: "smooth" });
+                  
+                  // Flash-highlight the exact text
+                  try {
+                    const highlight = iframeDoc.createElement("span");
+                    highlight.setAttribute("data-comment-flash", "1");
+                    highlight.style.cssText = `
+                      background: rgba(59, 130, 246, 0.4);
+                      border-radius: 3px;
+                      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
+                      animation: pcd-flash 1.5s ease-out;
+                    `;
+                    
+                    // Inject animation style if not present
+                    if (!iframeDoc.getElementById("pcd-flash-style")) {
+                      const style = iframeDoc.createElement("style");
+                      style.id = "pcd-flash-style";
+                      style.textContent = `
+                        @keyframes pcd-flash {
+                          0% { background: rgba(59, 130, 246, 0.5); box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.4); }
+                          100% { background: rgba(59, 130, 246, 0.15); box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1); }
+                        }
+                      `;
+                      iframeDoc.head.appendChild(style);
+                    }
+                    
+                    range.surroundContents(highlight);
+                    
+                    // Remove highlight after animation
+                    setTimeout(() => {
+                      const hl = iframeDoc.querySelector("[data-comment-flash='1']");
+                      if (hl) {
+                        const parent = hl.parentNode;
+                        while (hl.firstChild) {
+                          parent?.insertBefore(hl.firstChild, hl);
+                        }
+                        hl.remove();
+                        // Normalize to merge adjacent text nodes
+                        parent?.normalize();
+                      }
+                    }, 1500);
+                    
+                    return; // Success - we're done
+                  } catch (e) {
+                    // surroundContents can fail if range crosses boundaries
+                    console.warn("Could not flash-highlight text:", e);
+                  }
+                }
+              }
+            }
+            
+            // Fallback: scroll element into view and highlight it
+            anchorEl.scrollIntoView({ behavior: "smooth", block: "center" });
+            (anchorEl as HTMLElement).setAttribute("data-pcd-hover", "true");
+            setTimeout(() => {
+              (anchorEl as HTMLElement).removeAttribute("data-pcd-hover");
+            }, 2000);
           } else {
             // Anchor not found - show mismatch warning
             setAnchorMismatch(comment.id);
@@ -694,7 +798,7 @@ export function PrototypeViewer({
         console.warn("Could not focus comment:", err);
       }
     }
-  }, [prototype.url]);
+  }, [prototype.url, findOffsetByContext]);
 
   // Jump to comment's page (for sidebar "Jump to page" button)
   const jumpToCommentPage = useCallback((comment: PrototypeComment) => {
