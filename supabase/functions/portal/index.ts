@@ -1312,10 +1312,11 @@ if (action === "resolve" || action === "unresolve") {
 
       const resolved_at = action === "resolve" ? new Date().toISOString() : null;
       const status = action === "resolve" ? "resolved" : "open";
+      const resolved_by = action === "resolve" ? "Client" : null;
 
       const { error: updateError } = await supabase
         .from("prototype_comments")
-        .update({ resolved_at, status })
+        .update({ resolved_at, status, resolved_by })
         .eq("id", comment_id)
         .eq("project_token", token);
 

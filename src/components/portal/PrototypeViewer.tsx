@@ -760,6 +760,7 @@ function CommentsSidebar({
   onEditComment?: (commentId: string, newBody: string) => Promise<void>;
 }) {
   const [filter, setFilter] = useState<CommentStatus | 'all'>('all');
+  const [onlyCurrentPage, setOnlyCurrentPage] = useState(true);
   
   // Count comments by status
   const counts = {
@@ -770,14 +771,24 @@ function CommentsSidebar({
     wont_do: comments.filter(c => c.status === 'wont_do').length,
   };
   
-  // Filter comments
-  const filteredComments = filter === 'all' 
+  // Filter comments by status
+  const statusFiltered = filter === 'all' 
     ? comments 
     : comments.filter(c => {
         if (filter === 'open') return !c.status || c.status === 'open';
         if (filter === 'resolved') return c.status === 'resolved' || c.resolved_at;
         return c.status === filter;
       });
+  
+  // Filter by current page
+  const filteredComments = statusFiltered.filter((c) => {
+    if (!onlyCurrentPage) return true;
+    if (!isSameOrigin || !currentIframePath) return true;
+    if (!c.page_path) return true;
+    return c.page_path === currentIframePath;
+  });
+
+  const otherPageCount = statusFiltered.length - filteredComments.length;
   
   return (
     <div className="w-80 border-l border-border bg-muted/30 flex flex-col">
@@ -788,7 +799,32 @@ function CommentsSidebar({
         <FilterChip label="In progress" count={counts.in_progress} active={filter === 'in_progress'} onClick={() => setFilter('in_progress')} />
         <FilterChip label="Resolved" count={counts.resolved} active={filter === 'resolved'} onClick={() => setFilter('resolved')} />
         <FilterChip label="Won't do" count={counts.wont_do} active={filter === 'wont_do'} onClick={() => setFilter('wont_do')} />
+        {isSameOrigin && currentIframePath && (
+          <button
+            onClick={() => setOnlyCurrentPage(v => !v)}
+            className={`px-2 py-1 text-xs rounded-full transition-colors ${
+              onlyCurrentPage 
+                ? 'bg-primary text-primary-foreground' 
+                : 'bg-muted text-muted-foreground hover:bg-muted/80'
+            }`}
+          >
+            This page
+          </button>
+        )}
       </div>
+      
+      {/* Off-page hint */}
+      {onlyCurrentPage && otherPageCount > 0 && (
+        <div className="px-3 py-1.5 text-xs text-muted-foreground bg-muted/50 border-b border-border">
+          {otherPageCount} comment{otherPageCount > 1 ? 's' : ''} on other pages — 
+          <button 
+            onClick={() => setOnlyCurrentPage(false)} 
+            className="text-primary hover:underline ml-1"
+          >
+            show all
+          </button>
+        </div>
+      )}
       
       <ScrollArea className="flex-1 bg-transparent">
         <div className="p-3 space-y-3">

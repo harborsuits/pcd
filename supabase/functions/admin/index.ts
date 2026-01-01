@@ -2646,9 +2646,9 @@ async function handleUpdateComment(req: Request, token: string, commentId: strin
     if (typeof body.resolved === "boolean") {
       updateData.resolved_at = body.resolved ? new Date().toISOString() : null;
       updateData.status = body.resolved ? "resolved" : "open";
+      updateData.resolved_by = body.resolved ? "Operator" : null;
       if (!body.resolved) {
         updateData.resolution_note = null;
-        updateData.resolved_by = null;
       }
     }
     
@@ -2661,7 +2661,7 @@ async function handleUpdateComment(req: Request, token: string, commentId: strin
         // Set resolved_at when status changes to resolved or wont_do
         if (body.status === "resolved" || body.status === "wont_do") {
           updateData.resolved_at = new Date().toISOString();
-          updateData.resolved_by = "admin";
+          updateData.resolved_by = "Operator";
         } else if (body.status === "open" || body.status === "in_progress") {
           // Clear resolved fields when reopening or setting to in_progress
           updateData.resolved_at = null;
