@@ -1,7 +1,8 @@
 import { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Paperclip, Image, FileText, ExternalLink, Upload, Loader2, Check } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Paperclip, FileText, ExternalLink, Upload, Loader2, Check, Clock, CircleDot, XCircle } from "lucide-react";
 import { toast } from "sonner";
 
 interface Attachment {
@@ -14,6 +15,8 @@ interface Attachment {
   signed_url: string | null;
 }
 
+type CommentStatus = "open" | "in_progress" | "resolved" | "wont_do";
+
 interface PortalCommentCardProps {
   token: string;
   comment: {
@@ -25,6 +28,9 @@ interface PortalCommentCardProps {
     pin_y: number | null;
     resolved_at: string | null;
     created_at: string;
+    status?: CommentStatus;
+    resolution_note?: string | null;
+    resolved_by?: string | null;
   };
   index: number;
   onResolve: (id: string) => void;
@@ -45,8 +51,22 @@ export function PortalCommentCard({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
 
-  const isResolved = !!comment.resolved_at;
+  const isResolved = comment.status === "resolved" || comment.status === "wont_do" || !!comment.resolved_at;
   const isClient = comment.author_type === "client";
+  const status = comment.status || (comment.resolved_at ? "resolved" : "open");
+
+  const getStatusBadge = () => {
+    switch (status) {
+      case "in_progress":
+        return <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-blue-50 text-blue-700 border-blue-200"><Clock className="h-2.5 w-2.5 mr-0.5" />In Progress</Badge>;
+      case "resolved":
+        return <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-green-50 text-green-700 border-green-200"><Check className="h-2.5 w-2.5 mr-0.5" />Resolved</Badge>;
+      case "wont_do":
+        return <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-gray-50 text-gray-600 border-gray-200"><XCircle className="h-2.5 w-2.5 mr-0.5" />Won't Do</Badge>;
+      default:
+        return <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-orange-50 text-orange-700 border-orange-200"><CircleDot className="h-2.5 w-2.5 mr-0.5" />Open</Badge>;
+    }
+  };
 
   // Fetch attachments only when expanded
   const { data: attachmentsData, isLoading: loadingAttachments } = useQuery({
@@ -125,7 +145,7 @@ export function PortalCommentCard({
     >
       {/* Header */}
       <div className="flex items-start justify-between gap-2 mb-2">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <div
             className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold ${
               isResolved
@@ -135,24 +155,35 @@ export function PortalCommentCard({
           >
             {isResolved ? <Check className="h-3 w-3" /> : index + 1}
           </div>
+          {getStatusBadge()}
           <span className="text-xs text-muted-foreground">
             {isClient ? "You" : "Team"} · {formatTime(comment.created_at)}
           </span>
         </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-6 px-2 text-xs"
-          onClick={() => isResolved ? onUnresolve(comment.id) : onResolve(comment.id)}
-        >
-          {isResolved ? "Reopen" : "Resolve"}
-        </Button>
+        {!isResolved && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-6 px-2 text-xs"
+            onClick={() => onResolve(comment.id)}
+          >
+            Resolve
+          </Button>
+        )}
       </div>
 
       {/* Comment body */}
       <p className={`text-sm mb-2 ${isResolved ? "text-muted-foreground" : ""}`}>
         {comment.body}
       </p>
+      
+      {/* Resolution note if present */}
+      {comment.resolution_note && (
+        <div className="mb-2 p-2 rounded bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800">
+          <p className="text-xs text-green-700 dark:text-green-400 font-medium mb-0.5">Resolution:</p>
+          <p className="text-xs text-green-600 dark:text-green-300">{comment.resolution_note}</p>
+        </div>
+      )}
 
       {/* Attachments toggle */}
       <div className="flex items-center gap-2">

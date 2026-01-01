@@ -34,6 +34,8 @@ function getPathFromUrl(url: string): string | null {
   }
 }
 
+export type CommentStatus = "open" | "in_progress" | "resolved" | "wont_do";
+
 export interface PrototypeComment {
   id: string;
   prototype_id: string;
@@ -44,7 +46,11 @@ export interface PrototypeComment {
   resolved_at: string | null;
   source_message_id: string | null;
   created_at: string;
-  // New anchor fields
+  // Status workflow fields
+  status?: CommentStatus;
+  resolution_note?: string | null;
+  resolved_by?: string | null;
+  // Anchor fields
   page_url?: string | null;
   page_path?: string | null;
   scroll_y?: number | null;

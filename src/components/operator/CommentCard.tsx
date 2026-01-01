@@ -4,13 +4,23 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { 
-  CheckCircle, Circle, Loader2, ImageIcon, FileIcon, 
-  ExternalLink, Paperclip, X, Upload, Reply, RotateCcw, Send, Lock
+  CheckCircle, Circle, Loader2, FileIcon, 
+  ExternalLink, Paperclip, X, Upload, Reply, RotateCcw, Send, Lock, Clock, CircleDot, XCircle, ChevronDown
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { adminFetch } from "@/lib/adminFetch";
+
+type CommentStatus = "open" | "in_progress" | "resolved" | "wont_do";
 
 interface PrototypeComment {
   id: string;
@@ -24,6 +34,9 @@ interface PrototypeComment {
   prototype_id?: string;
   parent_comment_id?: string | null;
   is_internal?: boolean;
+  status?: CommentStatus;
+  resolution_note?: string | null;
+  resolved_by?: string | null;
 }
 
 interface Attachment {
@@ -43,6 +56,7 @@ interface CommentCardProps {
   isHighlighted: boolean;
   onJumpToPin: (comment: PrototypeComment) => void;
   onResolveToggle: (commentId: string, resolve: boolean) => void;
+  onStatusChange?: (commentId: string, status: CommentStatus, resolutionNote?: string) => void;
   isResolving: boolean;
   onReplyAdded?: () => void;
 }
