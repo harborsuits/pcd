@@ -454,11 +454,17 @@ export function PrototypeViewer({
         </div>
       </div>
 
-      {/* Comment mode instructions */}
+      {/* Comment mode instructions - flat, no rounded container */}
       {isAddingComment && !pendingPin && (
-        <div className="bg-primary/10 border-b border-primary/20 p-3 text-center text-sm">
-          <MessageCircle className="h-4 w-4 inline mr-2" />
-          Click anywhere on the prototype to place a comment pin
+        <div className="flex items-center justify-center gap-2 px-3 py-2 border-b border-primary/20 bg-primary/5 text-sm text-muted-foreground">
+          <MessageCircle className="h-4 w-4" />
+          <span>Click anywhere on the prototype to drop a pin.</span>
+          <button 
+            onClick={() => setIsAddingComment(false)} 
+            className="text-sm underline hover:text-foreground ml-2"
+          >
+            Cancel
+          </button>
         </div>
       )}
 
@@ -591,7 +597,7 @@ export function PrototypeViewer({
         {/* Comments sidebar */}
         {showCommentsSidebar && (
           <div className="w-80 border-l border-border bg-muted/30 flex flex-col">
-            <ScrollArea className="flex-1">
+            <ScrollArea className="flex-1 bg-transparent">
               <div className="p-3 space-y-3">
                 {comments.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-8">
