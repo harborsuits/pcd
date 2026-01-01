@@ -1370,9 +1370,9 @@ function CommentsSidebar({
   // Count comments by status
   const counts = {
     all: comments.length,
-    open: comments.filter(c => !c.status || c.status === 'open').length,
+    open: comments.filter(c => (!c.status || c.status === 'open') && !c.resolved_at).length,
     in_progress: comments.filter(c => c.status === 'in_progress').length,
-    resolved: comments.filter(c => c.status === 'resolved' || c.resolved_at).length,
+    resolved: comments.filter(c => c.status === 'resolved' || !!c.resolved_at).length,
     wont_do: comments.filter(c => c.status === 'wont_do').length,
   };
   
@@ -1380,8 +1380,10 @@ function CommentsSidebar({
   const statusFiltered = filter === 'all' 
     ? comments 
     : comments.filter(c => {
-        if (filter === 'open') return !c.status || c.status === 'open';
-        if (filter === 'resolved') return c.status === 'resolved' || c.resolved_at;
+        // "Open" means not resolved (no status, or status === 'open') AND no resolved_at
+        if (filter === 'open') return (!c.status || c.status === 'open') && !c.resolved_at;
+        // "Resolved" means status === 'resolved' OR has resolved_at timestamp
+        if (filter === 'resolved') return c.status === 'resolved' || !!c.resolved_at;
         return c.status === filter;
       });
   
@@ -1417,9 +1419,6 @@ function CommentsSidebar({
               This page
             </button>
           )}
-        </div>
-        <div className="text-[10px] text-muted-foreground">
-          <kbd className="px-1 py-0.5 rounded border border-border bg-muted">J</kbd>/<kbd className="px-1 py-0.5 rounded border border-border bg-muted">K</kbd> navigate · <kbd className="px-1 py-0.5 rounded border border-border bg-muted">R</kbd> resolve · <kbd className="px-1 py-0.5 rounded border border-border bg-muted">G</kbd> jump · <kbd className="px-1 py-0.5 rounded border border-border bg-muted">?</kbd> help
         </div>
       </div>
       
