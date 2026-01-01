@@ -194,26 +194,26 @@ const BoutiqueDemo = () => {
           
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-5xl mx-auto">
             {[
-              { name: "Hand-Knit Wool Cardigan", price: "$595", subtitle: "Maine wool • hand-finished", image: woolCardigan },
-              { name: "Artisan Leather Tote", price: "$685", subtitle: "Vegetable-tanned • hand-stitched", image: leatherTote },
-              { name: "Woven Leather Ballet Flats", price: "$385", subtitle: "Italian leather • hand-woven", image: balletFlats },
-              { name: "Silk Coastal Scarf", price: "$245", subtitle: "Mulberry silk • hand-dyed", image: silkScarf },
+              { name: "Hand-Knit Wool Cardigan", price: "$595", subtitle: "Maine wool • hand-finished", image: woolCardigan, slug: "wool-cardigan" },
+              { name: "Artisan Leather Tote", price: "$685", subtitle: "Vegetable-tanned • hand-stitched", image: leatherTote, slug: "leather-tote" },
+              { name: "Woven Leather Ballet Flats", price: "$385", subtitle: "Italian leather • hand-woven", image: balletFlats, slug: "ballet-flats" },
+              { name: "Silk Coastal Scarf", price: "$245", subtitle: "Mulberry silk • hand-dyed", image: silkScarf, slug: "silk-scarf" },
             ].map((product) => (
-              <div key={product.name} className="group cursor-pointer">
+              <Link to={`/demos/boutique/product/${product.slug}`} key={product.name} className="group cursor-pointer block">
                 <div className="relative aspect-square rounded-xl overflow-hidden bg-white shadow-sm mb-3">
                   <img 
                     src={product.image} 
                     alt={product.name}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                   />
-                  <button className="absolute top-3 right-3 w-8 h-8 bg-white/90 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="absolute top-3 right-3 w-8 h-8 bg-white/90 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                     <Heart className="h-4 w-4" style={{ color: '#B87333' }} />
-                  </button>
+                  </div>
                 </div>
                 <h3 className="font-medium text-stone-800 text-sm">{product.name}</h3>
                 <p className="text-stone-500 text-xs mt-0.5">{product.subtitle}</p>
                 <p className="font-medium mt-1" style={{ color: '#B87333' }}>{product.price}</p>
-              </div>
+              </Link>
             ))}
           </div>
           
