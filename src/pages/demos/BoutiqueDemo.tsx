@@ -231,7 +231,7 @@ const BoutiqueDemo = () => {
       <section id="about" className="py-20 bg-white">
         <div className="container mx-auto px-6">
           <div className="max-w-4xl mx-auto grid md:grid-cols-2 gap-12 items-center">
-            <div>
+            <div className="text-center md:text-left">
               <h2 className="font-serif text-4xl mb-6" style={{ color: '#B87333' }}>Our Story</h2>
               <p className="text-stone-600 mb-4 leading-relaxed">
                 The Copper Fox curates, rather than produces.
@@ -243,13 +243,13 @@ const BoutiqueDemo = () => {
               <p className="text-stone-600 mb-6 leading-relaxed">
                 We release wardrobes, not seasons. Each piece is intentional. The result is inevitable.
               </p>
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-4 justify-center md:justify-start">
                 <img 
                   src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop" 
                   alt="Owner"
                   className="w-14 h-14 rounded-full object-cover border-2 border-orange-300"
                 />
-                <div>
+                <div className="text-left">
                   <p className="font-medium" style={{ color: '#B87333' }}>Sarah Mitchell</p>
                   <p className="text-stone-500 text-sm">Owner & Curator</p>
                 </div>
