@@ -37,6 +37,12 @@ const exampleDemos = [
     token: "test-acme-plumbing-2024",
     slug: "acme-plumbing",
   },
+  {
+    name: "Boutique",
+    category: "Retail",
+    token: "test-acme-plumbing-2024",
+    slug: "acme-plumbing",
+  },
 ];
 
 const capabilities = [
