@@ -11,6 +11,7 @@ import woolCardigan from "@/assets/boutique/wool-cardigan.jpg";
 import leatherTote from "@/assets/boutique/leather-tote.jpg";
 import balletFlats from "@/assets/boutique/ballet-flats.jpg";
 import silkScarf from "@/assets/boutique/silk-scarf.jpg";
+import storeInterior from "@/assets/boutique/store-interior.jpg";
 
 // Blob header component with animated text
 const BlobHeader = () => (
@@ -254,7 +255,7 @@ const BoutiqueDemo = () => {
             </div>
             <div className="relative">
               <img 
-                src="https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=600&auto=format&fit=crop" 
+                src={storeInterior}
                 alt="Inside The Copper Fox"
                 className="rounded-2xl shadow-xl"
               />
