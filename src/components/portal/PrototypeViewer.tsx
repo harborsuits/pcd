@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { RefreshCw, MessageCircle, X, Check, ExternalLink, Maximize2, Minimize2, ChevronRight, ChevronLeft, AlertTriangle, MapPin, EyeOff } from "lucide-react";
+import { RefreshCw, MessageCircle, X, Check, ExternalLink, Maximize2, Minimize2, ChevronRight, ChevronLeft, AlertTriangle, MapPin, EyeOff, ChevronUp, ChevronDown, Target } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { PortalCommentCard } from "./PortalCommentCard";
@@ -90,6 +90,13 @@ export interface CommentAnchorData {
   pin_y: number;
 }
 
+// Enhanced pin position result with direction for offscreen pins
+export type PinPositionResult = 
+  | { kind: 'visible'; left: string; top: string }
+  | { kind: 'offscreen'; direction: 'up' | 'down' | 'left' | 'right'; edgeLeft: string; edgeTop: string }
+  | { kind: 'needs-repin' }
+  | null;
+
 interface PrototypeViewerProps {
   prototype: Prototype;
   comments: PrototypeComment[];
@@ -98,6 +105,7 @@ interface PrototypeViewerProps {
   onResolveComment: (commentId: string) => Promise<void>;
   onUnresolveComment: (commentId: string) => Promise<void>;
   onEditComment?: (commentId: string, newBody: string) => Promise<void>;
+  onRepinComment?: (commentId: string, anchorData: CommentAnchorData) => Promise<void>;
   onRefresh: () => void;
 }
 
@@ -109,6 +117,7 @@ export function PrototypeViewer({
   onResolveComment,
   onUnresolveComment,
   onEditComment,
+  onRepinComment,
   onRefresh,
 }: PrototypeViewerProps) {
   const [isAddingComment, setIsAddingComment] = useState(false);
@@ -123,6 +132,7 @@ export function PrototypeViewer({
   const [hoveredCommentId, setHoveredCommentId] = useState<string | null>(null);
   const [anchorMismatch, setAnchorMismatch] = useState<string | null>(null);
   const [showShortcutsHelp, setShowShortcutsHelp] = useState(false);
+  const [repinTargetId, setRepinTargetId] = useState<string | null>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [pinUpdateKey, setPinUpdateKey] = useState(0);
@@ -365,11 +375,24 @@ export function PrototypeViewer({
   }, [prototype.url]);
 
   const handleOverlayClick = useCallback(
-    (e: React.MouseEvent<HTMLDivElement>) => {
-      if (!isAddingComment || !overlayRef.current) return;
-
+    async (e: React.MouseEvent<HTMLDivElement>) => {
       const anchorData = captureAnchorData(e.clientX, e.clientY);
       if (!anchorData) return;
+
+      // Handle repin mode
+      if (repinTargetId && onRepinComment) {
+        try {
+          await onRepinComment(repinTargetId, anchorData);
+          setRepinTargetId(null);
+          triggerPinUpdate();
+        } catch (err) {
+          console.error("Failed to repin comment:", err);
+        }
+        return;
+      }
+
+      // Handle new comment mode
+      if (!isAddingComment || !overlayRef.current) return;
 
       setPendingPin({
         x: anchorData.pin_x,
@@ -377,7 +400,7 @@ export function PrototypeViewer({
         anchorData,
       });
     },
-    [isAddingComment, captureAnchorData]
+    [isAddingComment, captureAnchorData, repinTargetId, onRepinComment, triggerPinUpdate]
   );
 
   const handleSubmitComment = async () => {
@@ -515,8 +538,8 @@ export function PrototypeViewer({
   }, [prototype.url, triggerPinUpdate, focusComment]);
 
   // Calculate pin position for a comment - always try DOM anchor first
-  // Returns: position object, 'offscreen', 'needs-repin', or null
-  const getPinPosition = useCallback((comment: PrototypeComment): { left: string; top: string } | 'offscreen' | 'needs-repin' | null => {
+  // Returns enhanced position result with direction for offscreen pins
+  const getPinPosition = useCallback((comment: PrototypeComment): PinPositionResult => {
     const sameOrigin = isSameOrigin(prototype.url);
     
     // For same-origin iframes with anchor data, try to position precisely
@@ -525,8 +548,9 @@ export function PrototypeViewer({
         const iframe = iframeRef.current;
         const overlay = overlayRef.current;
         const iframeDoc = iframe?.contentDocument;
+        const iframeWin = iframe?.contentWindow;
         
-        if (iframe && overlay && iframeDoc) {
+        if (iframe && overlay && iframeDoc && iframeWin) {
           const anchorEl = iframeDoc.querySelector(comment.anchor_selector);
           if (anchorEl) {
             // All rects are in parent window viewport coordinates
@@ -552,15 +576,56 @@ export function PrototypeViewer({
             const leftPct = (localX / overlayRect.width) * 100;
             const topPct = (localY / overlayRect.height) * 100;
             
-            // If pin is offscreen, return sentinel
+            // If pin is offscreen, compute direction
             if (localX < 0 || localY < 0 || localX > overlayRect.width || localY > overlayRect.height) {
-              return 'offscreen';
+              // Determine primary direction (where the anchor is relative to viewport)
+              let direction: 'up' | 'down' | 'left' | 'right';
+              
+              // Use anchor center to determine direction
+              const anchorCenterY = anchorRect.top + anchorRect.height / 2;
+              const anchorCenterX = anchorRect.left + anchorRect.width / 2;
+              const viewportH = iframeWin.innerHeight;
+              const viewportW = iframeWin.innerWidth;
+              
+              if (anchorCenterY < 0) {
+                direction = 'up';
+              } else if (anchorCenterY > viewportH) {
+                direction = 'down';
+              } else if (anchorCenterX < 0) {
+                direction = 'left';
+              } else {
+                direction = 'right';
+              }
+              
+              // Calculate edge position for the indicator
+              // Clamp the position to be within the overlay
+              const clampedLeftPct = Math.max(5, Math.min(95, leftPct));
+              const clampedTopPct = Math.max(5, Math.min(95, topPct));
+              
+              let edgeLeft: string;
+              let edgeTop: string;
+              
+              if (direction === 'up') {
+                edgeLeft = `${clampedLeftPct}%`;
+                edgeTop = '8px';
+              } else if (direction === 'down') {
+                edgeLeft = `${clampedLeftPct}%`;
+                edgeTop = 'calc(100% - 24px)';
+              } else if (direction === 'left') {
+                edgeLeft = '8px';
+                edgeTop = `${clampedTopPct}%`;
+              } else {
+                edgeLeft = 'calc(100% - 24px)';
+                edgeTop = `${clampedTopPct}%`;
+              }
+              
+              return { kind: 'offscreen', direction, edgeLeft, edgeTop };
             }
             
-            return { left: `${leftPct}%`, top: `${topPct}%` };
+            return { kind: 'visible', left: `${leftPct}%`, top: `${topPct}%` };
           } else {
             // Anchor selector exists but element not found - needs re-pin
-            return 'needs-repin';
+            return { kind: 'needs-repin' };
           }
         }
       } catch {
@@ -571,12 +636,12 @@ export function PrototypeViewer({
     // For same-origin: require anchors - don't show floaty pins
     if (sameOrigin) {
       // No valid anchor for same-origin = needs re-pin
-      return 'needs-repin';
+      return { kind: 'needs-repin' };
     }
     
     // Fallback to stored pin_x/pin_y only for cross-origin
     if (comment.pin_x != null && comment.pin_y != null) {
-      return { left: `${comment.pin_x}%`, top: `${comment.pin_y}%` };
+      return { kind: 'visible', left: `${comment.pin_x}%`, top: `${comment.pin_y}%` };
     }
     
     return null;
@@ -777,6 +842,20 @@ export function PrototypeViewer({
         </div>
       )}
 
+      {/* Re-pin mode instructions */}
+      {repinTargetId && (
+        <div className="flex items-center justify-center gap-2 px-3 py-2 border-b border-amber-500/20 bg-amber-500/10 text-sm text-amber-600">
+          <Target className="h-4 w-4" />
+          <span>Click the element this comment refers to…</span>
+          <button 
+            onClick={() => setRepinTargetId(null)} 
+            className="text-sm underline hover:text-amber-700 ml-2"
+          >
+            Cancel
+          </button>
+        </div>
+      )}
+
       {/* Anchor mismatch warning */}
       {anchorMismatch && (
         <div className="bg-amber-500/10 border-b border-amber-500/20 p-3 text-center text-sm text-amber-600">
@@ -802,7 +881,7 @@ export function PrototypeViewer({
           {/* Pin overlay */}
           <div
             ref={overlayRef}
-            className={`absolute inset-0 ${isAddingComment ? "cursor-crosshair" : "pointer-events-none"}`}
+            className={`absolute inset-0 ${isAddingComment || repinTargetId ? "cursor-crosshair" : "pointer-events-none"}`}
             onClick={handleOverlayClick}
           >
           {/* Existing comment pins - only show unresolved, visible ones with valid positions */}
@@ -810,9 +889,33 @@ export function PrototypeViewer({
               .filter(c => !c.resolved_at && (c.status !== 'resolved' && c.status !== 'wont_do'))
               .map((comment, idx) => {
                 const position = getPinPosition(comment);
-                // Only render pins with actual coordinate positions (not sentinels)
-                if (!position || typeof position === 'string') return null;
-              
+                if (!position) return null;
+                
+                // Handle offscreen arrows
+                if (position.kind === 'offscreen') {
+                  const ArrowIcon = position.direction === 'up' ? ChevronUp : 
+                                    position.direction === 'down' ? ChevronDown :
+                                    position.direction === 'left' ? ChevronLeft : ChevronRight;
+                  return (
+                    <div
+                      key={`offscreen-${comment.id}`}
+                      className="absolute w-6 h-6 rounded-full bg-muted border-2 border-primary flex items-center justify-center cursor-pointer pointer-events-auto hover:bg-primary hover:text-primary-foreground transition-colors"
+                      style={{ left: position.edgeLeft, top: position.edgeTop }}
+                      title={`Comment offscreen: ${comment.body.slice(0, 30)}... (click to scroll)`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        focusComment(comment);
+                      }}
+                    >
+                      <ArrowIcon className="h-3 w-3" />
+                    </div>
+                  );
+                }
+                
+                // Skip needs-repin (handled in sidebar)
+                if (position.kind === 'needs-repin') return null;
+                
+                // Visible pin
                 const isFocused = focusedCommentId === comment.id;
                 const isHovered = hoveredCommentId === comment.id;
                 const hasMismatch = anchorMismatch === comment.id;
@@ -829,7 +932,7 @@ export function PrototypeViewer({
                         ? "bg-amber-500 text-white"
                         : "bg-primary text-primary-foreground shadow-lg"
                     }`}
-                    style={position}
+                    style={{ left: position.left, top: position.top }}
                     title={`${comment.body}${comment.page_path ? ` (${comment.page_path})` : ""}\n\nJ/K: navigate • R: resolve • Esc: clear`}
                     onMouseEnter={() => setHoveredCommentId(comment.id)}
                     onMouseLeave={() => setHoveredCommentId(null)}
@@ -922,6 +1025,7 @@ export function PrototypeViewer({
             onResolveComment={onResolveComment}
             onUnresolveComment={onUnresolveComment}
             onEditComment={onEditComment}
+            onRepin={onRepinComment ? (id) => setRepinTargetId(id) : undefined}
           />
         )}
       </div>
@@ -1007,6 +1111,7 @@ function CommentsSidebar({
   onResolveComment,
   onUnresolveComment,
   onEditComment,
+  onRepin,
 }: {
   comments: PrototypeComment[];
   token: string;
@@ -1014,13 +1119,14 @@ function CommentsSidebar({
   hoveredCommentId: string | null;
   currentIframePath: string | null;
   isSameOrigin: boolean;
-  getPinStatus: (comment: PrototypeComment) => { left: string; top: string } | 'offscreen' | 'needs-repin' | null;
+  getPinStatus: (comment: PrototypeComment) => PinPositionResult;
   onFocusComment: (comment: PrototypeComment) => void;
   onHoverComment: (id: string | null) => void;
   onJumpToPage: (comment: PrototypeComment) => void;
   onResolveComment: (commentId: string) => Promise<void>;
   onUnresolveComment: (commentId: string) => Promise<void>;
   onEditComment?: (commentId: string, newBody: string) => Promise<void>;
+  onRepin?: (commentId: string) => void;
 }) {
   const [filter, setFilter] = useState<CommentStatus | 'all'>('all');
   const [onlyCurrentPage, setOnlyCurrentPage] = useState(true);
@@ -1104,8 +1210,8 @@ function CommentsSidebar({
             filteredComments.map((comment, idx) => {
               const isOnDifferentPage = comment.page_path && currentIframePath && comment.page_path !== currentIframePath;
               const pinStatus = getPinStatus(comment);
-              const isOffscreen = pinStatus === 'offscreen';
-              const needsRepin = pinStatus === 'needs-repin';
+              const isOffscreen = pinStatus?.kind === 'offscreen';
+              const needsRepin = pinStatus?.kind === 'needs-repin';
               const isResolved = comment.status === 'resolved' || !!comment.resolved_at || comment.status === 'wont_do';
               
               return (
@@ -1121,14 +1227,30 @@ function CommentsSidebar({
                   onMouseLeave={() => onHoverComment(null)}
                   onClick={() => onFocusComment(comment)}
                 >
-                  {/* Status badges (needs-repin, offscreen) */}
+                  {/* Status badges (needs-repin, offscreen) + repin button */}
                   {!isResolved && (needsRepin || isOffscreen) && (
                     <div className="mb-1 flex items-center gap-1">
                       {needsRepin && (
-                        <Badge variant="outline" className="text-xs bg-amber-500/10 text-amber-600 border-amber-500/30">
-                          <MapPin className="h-3 w-3 mr-1" />
-                          Needs re-pin
-                        </Badge>
+                        <>
+                          <Badge variant="outline" className="text-xs bg-amber-500/10 text-amber-600 border-amber-500/30">
+                            <MapPin className="h-3 w-3 mr-1" />
+                            Needs re-pin
+                          </Badge>
+                          {onRepin && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-5 px-1.5 text-[10px] text-amber-600 hover:text-amber-700"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onRepin(comment.id);
+                              }}
+                            >
+                              <Target className="h-3 w-3 mr-0.5" />
+                              Re-pin
+                            </Button>
+                          )}
+                        </>
                       )}
                       {isOffscreen && !needsRepin && (
                         <Badge variant="outline" className="text-xs bg-muted text-muted-foreground">
