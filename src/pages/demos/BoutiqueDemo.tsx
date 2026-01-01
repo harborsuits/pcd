@@ -330,7 +330,7 @@ const BoutiqueDemo = () => {
           <div className="max-w-3xl mx-auto grid md:grid-cols-2 gap-8">
             <div className="bg-amber-50/50 p-8 rounded-xl">
               <p className="text-stone-700 italic leading-relaxed mb-4">
-                "I packed three pieces for a week in Paris. Never once felt underdressed."
+                "I packed three outfits for a week in Paris. Never once felt underdressed."
               </p>
               <p className="text-stone-500 text-sm">A.M. — Kennebunkport</p>
             </div>
