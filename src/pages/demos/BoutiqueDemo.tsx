@@ -7,6 +7,10 @@ import boutiqueHero from "@/assets/boutique/boutique-hero.png";
 import foundationEdit from "@/assets/boutique/foundation-edit.png";
 import accentCollection from "@/assets/boutique/accent-collection.png";
 import coastalChapter from "@/assets/boutique/coastal-chapter.png";
+import linenBlazer from "@/assets/boutique/linen-blazer.jpg";
+import leatherSandals from "@/assets/boutique/leather-sandals.jpg";
+import strawHat from "@/assets/boutique/straw-hat.jpg";
+import cashmereWrap from "@/assets/boutique/cashmere-wrap.jpg";
 
 // Blob header component with animated text
 const BlobHeader = () => (
@@ -189,10 +193,10 @@ const BoutiqueDemo = () => {
           
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-5xl mx-auto">
             {[
-              { name: "Brass Ship Bell", price: "$145", image: "https://images.unsplash.com/photo-1590736969955-71cc94901144?w=300&auto=format&fit=crop" },
-              { name: "Linen Throw", price: "$89", image: "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=300&auto=format&fit=crop" },
-              { name: "Sea Glass Earrings", price: "$48", image: "https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?w=300&auto=format&fit=crop" },
-              { name: "Driftwood Mirror", price: "$225", image: "https://images.unsplash.com/photo-1618220179428-22790b461013?w=300&auto=format&fit=crop" },
+              { name: "Linen Blazer", price: "$285", image: linenBlazer },
+              { name: "Coastal Sandals", price: "$165", image: leatherSandals },
+              { name: "Raffia Sun Hat", price: "$78", image: strawHat },
+              { name: "Cashmere Wrap", price: "$195", image: cashmereWrap },
             ].map((product) => (
               <div key={product.name} className="group cursor-pointer">
                 <div className="relative aspect-square rounded-xl overflow-hidden bg-white shadow-sm mb-3">
