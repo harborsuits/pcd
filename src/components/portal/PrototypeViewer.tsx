@@ -1018,32 +1018,32 @@ export function PrototypeViewer({
             
             baseDebug.mode = usedRange ? "range" : "element";
             
-            // pinRect is in iframe CSS pixels (unscaled)
-            // We need to convert to overlay coords, accounting for any CSS scaling on the iframe
+            // pinRect is in IFRAME VIEWPORT COORDS (already accounts for scroll inside iframe)
+            // These are CSS pixels relative to the iframe's visible area
+            // We need to convert to overlay-local coords
             
-            // Calculate scale factor: screen px / iframe CSS px
-            // Use offsetWidth/offsetHeight (includes border) for accurate scaling
+            // The overlay and iframe should be perfectly aligned (same parent, same inset-0)
+            // So pinRect coords can be used directly as overlay coords
+            // No scale conversion needed because getBoundingClientRect() inside iframe
+            // returns viewport-relative coords, and our overlay covers the iframe viewport
+            
+            // Add scale/delta to debug info for diagnostics
             const scaleX = iframeRect.width / iframe.offsetWidth;
             const scaleY = iframeRect.height / iframe.offsetHeight;
-            
-            // Add scale/delta to debug info
             baseDebug.scale = { x: Math.round(scaleX * 1000) / 1000, y: Math.round(scaleY * 1000) / 1000 };
             baseDebug.delta = { 
               dx: Math.round(overlayRect.left - iframeRect.left), 
               dy: Math.round(overlayRect.top - iframeRect.top) 
             };
             
-            // pinRect center in iframe CSS pixels
+            // pinRect center in iframe viewport coords
             const pinCenterX = pinRect.left + (pinRect.width / 2);
             const pinCenterY = pinRect.top + (pinRect.height / 2);
             
-            // Convert iframe CSS coords to parent screen coords (apply scale)
-            const parentX = iframeRect.left + (pinCenterX * scaleX);
-            const parentY = iframeRect.top + (pinCenterY * scaleY);
-            
-            // Convert to overlay-local coords
-            const localX = parentX - overlayRect.left;
-            const localY = parentY - overlayRect.top;
+            // Since overlay is positioned absolute inset-0 over the iframe,
+            // iframe viewport coords ARE overlay coords (1:1 mapping)
+            const localX = pinCenterX;
+            const localY = pinCenterY;
             
             const leftPct = (localX / overlayRect.width) * 100;
             const topPct = (localY / overlayRect.height) * 100;
