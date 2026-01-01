@@ -591,12 +591,6 @@ export function PrototypeViewer({
         {/* Comments sidebar */}
         {showCommentsSidebar && (
           <div className="w-80 border-l border-border bg-muted/30 flex flex-col">
-            <div className="p-3 border-b border-border">
-              <h3 className="font-medium text-sm">Comments</h3>
-              <p className="text-xs text-muted-foreground mt-1">
-                {unresolvedComments.length} open · {resolvedComments.length} resolved
-              </p>
-            </div>
             <ScrollArea className="flex-1">
               <div className="p-3 space-y-3">
                 {comments.length === 0 ? (
