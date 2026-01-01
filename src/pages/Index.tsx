@@ -320,9 +320,6 @@ const Index = () => {
           <p className="text-muted-foreground mb-4">
             Already a client? <Link to="/portal" className="text-accent hover:underline">Log in to your portal</Link>
           </p>
-          <Link to="/operator" className="text-xs text-muted-foreground/40 hover:text-muted-foreground transition-colors">
-            ·
-          </Link>
         </div>
       </section>
 
@@ -336,6 +333,7 @@ const Index = () => {
           { href: "/pricing", label: "Pricing" },
           { href: "/portal", label: "Client Portal" },
           { href: "mailto:hello@pleasantcove.design", label: "Contact" },
+          { href: "/operator", label: "Operator" },
         ]}
         legalLinks={[
           { href: "/privacy", label: "Privacy" },
