@@ -19,6 +19,7 @@ import RestaurantDemo from "./pages/demos/RestaurantDemo";
 import SalonDemo from "./pages/demos/SalonDemo";
 import GalleryDemo from "./pages/demos/GalleryDemo";
 import BoutiqueDemo from "./pages/demos/BoutiqueDemo";
+import BoutiqueProductPage from "./pages/demos/BoutiqueProductPage";
 
 const queryClient = new QueryClient();
 
@@ -46,6 +47,7 @@ const App = () => (
           <Route path="/demos/salon" element={<SalonDemo />} />
           <Route path="/demos/gallery" element={<GalleryDemo />} />
           <Route path="/demos/boutique" element={<BoutiqueDemo />} />
+          <Route path="/demos/boutique/product/:slug" element={<BoutiqueProductPage />} />
 
           {/* Public Token Routes */}
           <Route path="/d/:token/:slug" element={<DemoPage />} />
