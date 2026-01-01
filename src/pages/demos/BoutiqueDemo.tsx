@@ -7,10 +7,10 @@ import boutiqueHero from "@/assets/boutique/boutique-hero.png";
 import foundationEdit from "@/assets/boutique/foundation-edit.png";
 import accentCollection from "@/assets/boutique/accent-collection.png";
 import coastalChapter from "@/assets/boutique/coastal-chapter.png";
-import linenBlazer from "@/assets/boutique/linen-blazer.jpg";
-import leatherSandals from "@/assets/boutique/leather-sandals.jpg";
-import strawHat from "@/assets/boutique/straw-hat.jpg";
-import cashmereWrap from "@/assets/boutique/cashmere-wrap.jpg";
+import woolCardigan from "@/assets/boutique/wool-cardigan.jpg";
+import leatherTote from "@/assets/boutique/leather-tote.jpg";
+import balletFlats from "@/assets/boutique/ballet-flats.jpg";
+import silkScarf from "@/assets/boutique/silk-scarf.jpg";
 
 // Blob header component with animated text
 const BlobHeader = () => (
@@ -193,10 +193,10 @@ const BoutiqueDemo = () => {
           
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-5xl mx-auto">
             {[
-              { name: "Hand-Loomed Linen Blazer", price: "$485", subtitle: "Maine flax • hand-finished", image: linenBlazer },
-              { name: "Artisan Leather Sandals", price: "$345", subtitle: "Vegetable-tanned • hand-stitched", image: leatherSandals },
-              { name: "Hand-Woven Raffia Hat", price: "$195", subtitle: "Local seagrass • hand-braided", image: strawHat },
-              { name: "Cashmere Travel Wrap", price: "$425", subtitle: "Scottish cashmere • hand-brushed", image: cashmereWrap },
+              { name: "Hand-Knit Wool Cardigan", price: "$595", subtitle: "Maine wool • hand-finished", image: woolCardigan },
+              { name: "Artisan Leather Tote", price: "$685", subtitle: "Vegetable-tanned • hand-stitched", image: leatherTote },
+              { name: "Woven Leather Ballet Flats", price: "$385", subtitle: "Italian leather • hand-woven", image: balletFlats },
+              { name: "Silk Coastal Scarf", price: "$245", subtitle: "Mulberry silk • hand-dyed", image: silkScarf },
             ].map((product) => (
               <div key={product.name} className="group cursor-pointer">
                 <div className="relative aspect-square rounded-xl overflow-hidden bg-white shadow-sm mb-3">
@@ -260,13 +260,13 @@ const BoutiqueDemo = () => {
               <div className="absolute -bottom-4 -left-4 bg-amber-100 rounded-xl p-4 shadow-lg">
                 <p className="font-serif text-amber-900 text-lg">"Find something you love."</p>
               </div>
-              <div className="absolute -top-6 -right-6">
+              <div className="absolute top-4 right-4">
                 <AwardBadge
+                  variant="badge"
                   title="Best Boutique"
                   subtitle="Kennebunkport"
-                  year="2025"
-                  variant="gold"
-                  icon="award"
+                  date="2025"
+                  level="gold"
                 />
               </div>
             </div>

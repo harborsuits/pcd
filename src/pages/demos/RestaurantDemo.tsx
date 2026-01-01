@@ -216,32 +216,32 @@ const RestaurantDemo = () => {
           
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 max-w-5xl mx-auto relative z-40">
             <AwardBadge
+              variant="badge"
               title="Best of Portland"
               subtitle="Portland Magazine"
-              year="2008"
-              variant="gold"
-              icon="trophy"
+              date="2008"
+              level="gold"
             />
             <AwardBadge
+              variant="badge"
               title="Top Restaurant"
               subtitle="Down East Magazine"
-              year="2018"
-              variant="gold"
-              icon="crown"
+              date="2018"
+              level="gold"
             />
             <AwardBadge
+              variant="badge"
               title="Best New Chef"
               subtitle="Maine Restaurant Assoc."
-              year="2016"
-              variant="silver"
-              icon="medal"
+              date="2016"
+              level="silver"
             />
             <AwardBadge
+              variant="badge"
               title="Eaters Choice"
               subtitle="Portland Press Herald"
-              year="2005"
-              variant="platinum"
-              icon="star"
+              date="2005"
+              level="platinum"
             />
           </div>
         </div>
