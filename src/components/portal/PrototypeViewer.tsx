@@ -133,19 +133,22 @@ export function PrototypeViewer({
     setPinUpdateKey(k => k + 1);
   }, []);
 
-  // Track current iframe path for same-origin prototypes + set up scroll/resize listeners
+  // Track current iframe path for same-origin prototypes + set up scroll/resize listeners + SPA nav poll
   useEffect(() => {
     const iframe = iframeRef.current;
     if (!iframe || !isSameOrigin(prototype.url)) return;
 
     let iframeWin: Window | null = null;
     let resizeObserver: ResizeObserver | null = null;
+    let navTimer: number | null = null;
+    let lastPath: string | null = null;
 
     const handleLoad = () => {
       try {
         const path = iframe.contentWindow?.location.pathname ?? null;
         setCurrentIframePath(path);
         iframeWin = iframe.contentWindow;
+        lastPath = path;
 
         // Recompute pins on load
         triggerPinUpdate();
@@ -160,6 +163,21 @@ export function PrototypeViewer({
             resizeObserver.observe(iframe.contentDocument.body);
           }
         }
+
+        // Start SPA navigation polling (catches pushState/replaceState)
+        if (navTimer) window.clearInterval(navTimer);
+        navTimer = window.setInterval(() => {
+          try {
+            const p = iframe.contentWindow?.location.pathname ?? null;
+            if (p !== lastPath) {
+              lastPath = p;
+              setCurrentIframePath(p);
+              triggerPinUpdate();
+            }
+          } catch {
+            // cross-origin, ignore
+          }
+        }, 250);
       } catch {
         setCurrentIframePath(null);
       }
@@ -174,6 +192,9 @@ export function PrototypeViewer({
       }
       if (resizeObserver) {
         resizeObserver.disconnect();
+      }
+      if (navTimer) {
+        window.clearInterval(navTimer);
       }
     };
   }, [prototype.url, iframeKey, triggerPinUpdate]);
@@ -397,7 +418,7 @@ export function PrototypeViewer({
             
             // Calculate position relative to anchor, fallback to center if no percentages
             const xPct = comment.x_pct ?? 50;
-            const yPct = comment.y_pct ?? 0;
+            const yPct = comment.y_pct ?? 50;
             
             // Calculate absolute position within overlay (accounting for iframe offset)
             const absX = iframeRect.left - overlayRect.left + anchorRect.left + (anchorRect.width * xPct / 100);
