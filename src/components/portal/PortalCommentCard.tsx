@@ -65,6 +65,20 @@ export function PortalCommentCard({
   const canEdit = isClient && !isResolved;
   const status = comment.status || (comment.resolved_at ? "resolved" : "open");
 
+  // Get status dot color
+  const getStatusDotClass = () => {
+    switch (status) {
+      case "in_progress":
+        return "bg-amber-400";
+      case "resolved":
+      case "wont_do":
+        return "bg-muted-foreground/40";
+      case "open":
+      default:
+        return "bg-primary";
+    }
+  };
+
   const getStatusBadge = () => {
     switch (status) {
       case "in_progress":
@@ -175,14 +189,29 @@ export function PortalCommentCard({
       {/* Header */}
       <div className="flex items-start justify-between gap-2 mb-2">
         <div className="flex items-center gap-2 flex-wrap">
-          <div
-            className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold ${
-              isResolved
-                ? "bg-muted text-muted-foreground"
-                : "bg-primary text-primary-foreground"
-            }`}
-          >
-            {isResolved ? <Check className="h-3 w-3" /> : index + 1}
+          <div className="relative">
+            <div
+              className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold ${
+                isResolved
+                  ? "bg-muted text-muted-foreground"
+                  : "bg-primary text-primary-foreground"
+              }`}
+            >
+              {isResolved ? <Check className="h-3 w-3" /> : index + 1}
+            </div>
+            {/* Status dot */}
+            <span
+              className={`absolute -right-0.5 -bottom-0.5 h-2 w-2 rounded-full ring-2 ring-background ${getStatusDotClass()}`}
+              title={
+                status === "in_progress"
+                  ? "In progress"
+                  : status === "resolved"
+                  ? "Resolved"
+                  : status === "wont_do"
+                  ? "Won't do"
+                  : "Open"
+              }
+            />
           </div>
           {getRoleBadge()}
           {getStatusBadge()}

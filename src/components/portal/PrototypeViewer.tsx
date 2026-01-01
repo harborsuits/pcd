@@ -1101,6 +1101,19 @@ export function PrototypeViewer({
             else onResolveComment(c.id);
           }
           break;
+        case "w":
+        case "W":
+          e.preventDefault();
+          if (focusedIndex < 0 || !onMarkInProgress) return;
+          {
+            const c = orderedVisible[focusedIndex];
+            if (!c) return;
+            const status = getEffectiveStatus(c);
+            // Only mark as in-progress if currently open
+            if (status !== "open") return;
+            onMarkInProgress(c.id);
+          }
+          break;
         case "g":
         case "G":
           e.preventDefault();
@@ -1146,6 +1159,7 @@ export function PrototypeViewer({
     focusComment,
     onResolveComment,
     onUnresolveComment,
+    onMarkInProgress,
     currentIframePath,
     prototype.url,
     jumpToCommentPage,
@@ -1447,6 +1461,8 @@ export function PrototypeViewer({
               <div><kbd className="px-2 py-0.5 rounded border border-border bg-muted text-xs">K</kbd></div>
               <div className="text-muted-foreground">Resolve / Reopen</div>
               <div><kbd className="px-2 py-0.5 rounded border border-border bg-muted text-xs">R</kbd></div>
+              <div className="text-muted-foreground">Mark In Progress</div>
+              <div><kbd className="px-2 py-0.5 rounded border border-border bg-muted text-xs">W</kbd></div>
               <div className="text-muted-foreground">Jump to page</div>
               <div><kbd className="px-2 py-0.5 rounded border border-border bg-muted text-xs">G</kbd></div>
               <div className="text-muted-foreground">Help</div>
