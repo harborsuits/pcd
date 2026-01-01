@@ -44,7 +44,7 @@ const BlobHeader = () => (
         pathLength="100"
       />
       
-      <text className="fill-amber-800 text-[8px] font-bold uppercase tracking-[2px]">
+      <text className="fill-orange-700 text-[8px] font-bold uppercase tracking-[2px]">
         <textPath href="#textPath" startOffset="0%">
           ✦ KENNEBUNKPORT ✦ CURATED GOODS ✦ KENNEBUNKPORT ✦ CURATED GOODS 
           <animate attributeName="startOffset" from="0%" to="100%" dur="20s" repeatCount="indefinite" />
@@ -60,22 +60,22 @@ const BlobHeader = () => (
 
 const BoutiqueDemo = () => {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-amber-50 via-orange-50/30 to-stone-50 text-stone-800">
+    <div className="min-h-screen bg-gradient-to-b from-orange-50 via-orange-100/30 to-stone-50 text-stone-800">
       {/* Header */}
-      <header className="bg-white/80 backdrop-blur-sm border-b border-amber-100 sticky top-0 z-50">
+      <header className="bg-white/80 backdrop-blur-sm border-b border-orange-200/50 sticky top-0 z-50">
         <div className="container mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Link to="/" className="text-amber-600 hover:text-amber-700 transition-colors text-sm font-medium flex items-center gap-1">
+            <Link to="/" className="text-orange-600 hover:text-orange-700 transition-colors text-sm font-medium flex items-center gap-1">
               <ArrowLeft className="h-4 w-4" />
               Pleasant Cove Design
             </Link>
           </div>
-          <span className="font-serif text-2xl text-amber-900 tracking-wide">The Copper Fox</span>
+          <span className="font-serif text-2xl tracking-wide" style={{ color: '#B87333' }}>The Copper Fox</span>
           <nav className="hidden md:flex items-center gap-6 text-sm">
-            <a href="#collections" className="text-stone-600 hover:text-amber-700">Collections</a>
-            <a href="#about" className="text-stone-600 hover:text-amber-700">Our Story</a>
-            <a href="#visit" className="text-stone-600 hover:text-amber-700">Visit</a>
-            <Button size="sm" className="bg-amber-700 hover:bg-amber-800">
+            <a href="#collections" className="text-stone-600 hover:text-orange-700">Collections</a>
+            <a href="#about" className="text-stone-600 hover:text-orange-700">Our Story</a>
+            <a href="#visit" className="text-stone-600 hover:text-orange-700">Visit</a>
+            <Button size="sm" className="text-white" style={{ background: 'linear-gradient(135deg, #B87333 0%, #DA8A4E 50%, #B87333 100%)' }}>
               Shop Now
             </Button>
           </nav>
@@ -88,14 +88,14 @@ const BoutiqueDemo = () => {
         <div 
           className="absolute inset-0 z-0"
           style={{
-            background: "radial-gradient(circle at 50% 50%, #F4C6A5 0%, #F9D9C2 10%, #FFF8F3 40%)"
+            background: "radial-gradient(circle at 50% 50%, #E8A87C 0%, #F4C6A5 15%, #FFF5EE 45%)"
           }}
         />
         
         <div className="relative z-20 container mx-auto px-6 text-center">
           <BlobHeader />
           
-          <h1 className="font-serif text-4xl md:text-5xl lg:text-6xl mb-4 text-amber-900 mt-8">
+          <h1 className="font-serif text-4xl md:text-5xl lg:text-6xl mb-4 mt-8" style={{ color: '#B87333' }}>
             The Copper Fox
           </h1>
           <p className="text-lg md:text-xl text-stone-600 mb-8 max-w-2xl mx-auto font-light">
@@ -104,26 +104,26 @@ const BoutiqueDemo = () => {
           </p>
           
           <div className="flex flex-wrap justify-center gap-4">
-            <Button size="lg" className="bg-amber-700 hover:bg-amber-800 shadow-lg shadow-amber-700/20">
+            <Button size="lg" className="text-white shadow-lg" style={{ background: 'linear-gradient(135deg, #B87333 0%, #DA8A4E 50%, #B87333 100%)', boxShadow: '0 10px 25px -5px rgba(184, 115, 51, 0.4)' }}>
               <ShoppingBag className="mr-2 h-5 w-5" />
               Explore Collections
             </Button>
-            <Button size="lg" variant="outline" className="border-amber-300 text-amber-800 hover:bg-amber-100 bg-white/50 backdrop-blur-sm">
+            <Button size="lg" variant="outline" className="border-orange-300 hover:bg-orange-50 bg-white/50 backdrop-blur-sm" style={{ color: '#B87333' }}>
               Our Story
             </Button>
           </div>
           
           <div className="flex flex-wrap justify-center gap-6 mt-12 text-sm text-stone-600">
             <div className="flex items-center gap-2 bg-white/60 backdrop-blur-sm px-4 py-2 rounded-full">
-              <Clock className="h-4 w-4 text-amber-600" />
+              <Clock className="h-4 w-4" style={{ color: '#B87333' }} />
               <span>Open Daily 10AM–6PM</span>
             </div>
             <div className="flex items-center gap-2 bg-white/60 backdrop-blur-sm px-4 py-2 rounded-full">
-              <Star className="h-4 w-4 text-amber-600" />
+              <Star className="h-4 w-4" style={{ color: '#B87333' }} />
               <span>4.9★ Local Favorite</span>
             </div>
             <div className="flex items-center gap-2 bg-white/60 backdrop-blur-sm px-4 py-2 rounded-full">
-              <MapPin className="h-4 w-4 text-amber-600" />
+              <MapPin className="h-4 w-4" style={{ color: '#B87333' }} />
               <span>Dock Square</span>
             </div>
           </div>
@@ -133,7 +133,7 @@ const BoutiqueDemo = () => {
       {/* Collections */}
       <section id="collections" className="py-20 bg-white relative overflow-hidden">
         <div className="container mx-auto px-6 relative z-10">
-          <h2 className="font-serif text-4xl text-center mb-4 text-amber-900">The Capsule Philosophy</h2>
+          <h2 className="font-serif text-4xl text-center mb-4" style={{ color: '#B87333' }}>The Capsule Philosophy</h2>
           <p className="text-stone-500 text-center mb-12 max-w-xl mx-auto">
             Each garment exists in dialogue with its companions. Mix, layer, reimagine—every combination, intentional.
           </p>
@@ -163,7 +163,7 @@ const BoutiqueDemo = () => {
                 key={collection.title} 
                 glowColor="orange" 
                 customSize 
-                className="bg-amber-50/80 overflow-hidden group cursor-pointer"
+                className="bg-orange-50/80 overflow-hidden group cursor-pointer"
               >
                 <div className="relative h-48 overflow-hidden">
                   <img 
@@ -171,13 +171,13 @@ const BoutiqueDemo = () => {
                     alt={collection.title}
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-amber-900/60 to-transparent" />
+                  <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(184, 115, 51, 0.7), transparent)' }} />
                   <span className="absolute bottom-3 left-4 text-white/90 text-sm font-medium">
                     {collection.items}
                   </span>
                 </div>
                 <div className="p-6 relative z-10">
-                  <h3 className="font-serif text-xl text-amber-900 mb-2">{collection.title}</h3>
+                  <h3 className="font-serif text-xl mb-2" style={{ color: '#B87333' }}>{collection.title}</h3>
                   <p className="text-stone-600 text-sm">{collection.description}</p>
                 </div>
               </GlowCard>
@@ -189,7 +189,7 @@ const BoutiqueDemo = () => {
       {/* Featured Products */}
       <section className="py-20 bg-stone-50">
         <div className="container mx-auto px-6">
-          <h2 className="font-serif text-4xl text-center mb-4 text-amber-900">New Arrivals</h2>
+          <h2 className="font-serif text-4xl text-center mb-4" style={{ color: '#B87333' }}>New Arrivals</h2>
           <p className="text-stone-500 text-center mb-12">Fresh finds just added to the shop</p>
           
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-5xl mx-auto">
@@ -207,18 +207,18 @@ const BoutiqueDemo = () => {
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                   />
                   <button className="absolute top-3 right-3 w-8 h-8 bg-white/90 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Heart className="h-4 w-4 text-amber-600" />
+                    <Heart className="h-4 w-4" style={{ color: '#B87333' }} />
                   </button>
                 </div>
                 <h3 className="font-medium text-stone-800 text-sm">{product.name}</h3>
                 <p className="text-stone-500 text-xs mt-0.5">{product.subtitle}</p>
-                <p className="text-amber-700 font-medium mt-1">{product.price}</p>
+                <p className="font-medium mt-1" style={{ color: '#B87333' }}>{product.price}</p>
               </div>
             ))}
           </div>
           
           <div className="text-center mt-12">
-            <Button variant="outline" className="border-amber-300 text-amber-800 hover:bg-amber-100">
+            <Button variant="outline" className="border-orange-300 hover:bg-orange-50" style={{ color: '#B87333' }}>
               View All Products
             </Button>
           </div>
@@ -230,7 +230,7 @@ const BoutiqueDemo = () => {
         <div className="container mx-auto px-6">
           <div className="max-w-4xl mx-auto grid md:grid-cols-2 gap-12 items-center">
             <div>
-              <h2 className="font-serif text-4xl mb-6 text-amber-900">Our Story</h2>
+              <h2 className="font-serif text-4xl mb-6" style={{ color: '#B87333' }}>Our Story</h2>
               <p className="text-stone-600 mb-4 leading-relaxed">
                 The Copper Fox curates, rather than produces.
               </p>
@@ -245,10 +245,10 @@ const BoutiqueDemo = () => {
                 <img 
                   src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop" 
                   alt="Owner"
-                  className="w-14 h-14 rounded-full object-cover border-2 border-amber-200"
+                  className="w-14 h-14 rounded-full object-cover border-2 border-orange-300"
                 />
                 <div>
-                  <p className="font-medium text-amber-900">Sarah Mitchell</p>
+                  <p className="font-medium" style={{ color: '#B87333' }}>Sarah Mitchell</p>
                   <p className="text-stone-500 text-sm">Owner & Curator</p>
                 </div>
               </div>
@@ -259,8 +259,8 @@ const BoutiqueDemo = () => {
                 alt="Inside The Copper Fox"
                 className="rounded-2xl shadow-xl"
               />
-              <div className="absolute -bottom-4 -left-4 bg-amber-100 rounded-xl p-4 shadow-lg">
-                <p className="font-serif text-amber-900 text-lg">"Find something you love."</p>
+              <div className="absolute -bottom-4 -left-4 bg-orange-100 rounded-xl p-4 shadow-lg">
+                <p className="font-serif text-lg" style={{ color: '#B87333' }}>"Find something you love."</p>
               </div>
               <div className="absolute -top-4 -right-4 md:-right-8 z-10 scale-[0.6] origin-top-right">
                 <AwardBadge
@@ -280,37 +280,37 @@ const BoutiqueDemo = () => {
       <section className="py-20 bg-stone-50">
         <div className="container mx-auto px-6">
           <div className="max-w-3xl mx-auto text-center mb-16">
-            <h2 className="font-serif text-4xl mb-4 text-amber-900">The Capsule Philosophy</h2>
+            <h2 className="font-serif text-4xl mb-4" style={{ color: '#B87333' }}>The Capsule Philosophy</h2>
             <p className="text-stone-500">How we think about building a wardrobe.</p>
           </div>
           
           <div className="max-w-2xl mx-auto space-y-12">
-            <div className="border-l-2 border-amber-300 pl-8">
-              <h3 className="font-serif text-xl text-amber-900 mb-3">Everything converses.</h3>
+            <div className="border-l-2 pl-8" style={{ borderColor: '#B87333' }}>
+              <h3 className="font-serif text-xl mb-3" style={{ color: '#B87333' }}>Everything converses.</h3>
               <p className="text-stone-600 leading-relaxed">
                 Each piece is designed to complement every other. No orphans. No single-occasion 
                 purchases gathering dust. Every garment earns its place through versatility.
               </p>
             </div>
             
-            <div className="border-l-2 border-amber-300 pl-8">
-              <h3 className="font-serif text-xl text-amber-900 mb-3">Released as complete looks.</h3>
+            <div className="border-l-2 pl-8" style={{ borderColor: '#B87333' }}>
+              <h3 className="font-serif text-xl mb-3" style={{ color: '#B87333' }}>Released as complete looks.</h3>
               <p className="text-stone-600 leading-relaxed">
                 We don't sell singles hoping you'll figure it out. Collections arrive as 
                 considered ensembles—the decisions have been made for you, thoughtfully.
               </p>
             </div>
             
-            <div className="border-l-2 border-amber-300 pl-8">
-              <h3 className="font-serif text-xl text-amber-900 mb-3">Intentional, not impulsive.</h3>
+            <div className="border-l-2 pl-8" style={{ borderColor: '#B87333' }}>
+              <h3 className="font-serif text-xl mb-3" style={{ color: '#B87333' }}>Intentional, not impulsive.</h3>
               <p className="text-stone-600 leading-relaxed">
                 Buying here is a deliberate act. You're not chasing trends—you're investing 
                 in pieces that will serve you season after season.
               </p>
             </div>
             
-            <div className="border-l-2 border-amber-300 pl-8">
-              <h3 className="font-serif text-xl text-amber-900 mb-3">Finite and curated.</h3>
+            <div className="border-l-2 pl-8" style={{ borderColor: '#B87333' }}>
+              <h3 className="font-serif text-xl mb-3" style={{ color: '#B87333' }}>Finite and curated.</h3>
               <p className="text-stone-600 leading-relaxed">
                 Each collection is limited by design. When it's gone, it's gone. 
                 This isn't scarcity marketing—it's editorial restraint.
@@ -324,32 +324,32 @@ const BoutiqueDemo = () => {
       <section className="py-20 bg-white">
         <div className="container mx-auto px-6">
           <div className="max-w-3xl mx-auto text-center mb-16">
-            <h2 className="font-serif text-4xl mb-4 text-amber-900">Client Notes</h2>
+            <h2 className="font-serif text-4xl mb-4" style={{ color: '#B87333' }}>Client Notes</h2>
           </div>
           
           <div className="max-w-3xl mx-auto grid md:grid-cols-2 gap-8">
-            <div className="bg-amber-50/50 p-8 rounded-xl">
+            <div className="bg-orange-50/50 p-8 rounded-xl">
               <p className="text-stone-700 italic leading-relaxed mb-4">
                 "I packed three outfits for a week in Paris. Never once felt underdressed."
               </p>
               <p className="text-stone-500 text-sm">A.M. — Kennebunkport</p>
             </div>
             
-            <div className="bg-amber-50/50 p-8 rounded-xl">
+            <div className="bg-orange-50/50 p-8 rounded-xl">
               <p className="text-stone-700 italic leading-relaxed mb-4">
                 "Finally, a shop that doesn't make me think. Everything just works together."
               </p>
               <p className="text-stone-500 text-sm">C.L. — Portland</p>
             </div>
             
-            <div className="bg-amber-50/50 p-8 rounded-xl">
+            <div className="bg-orange-50/50 p-8 rounded-xl">
               <p className="text-stone-700 italic leading-relaxed mb-4">
                 "My closet is half the size and I get twice the compliments."
               </p>
               <p className="text-stone-500 text-sm">R.H. — Boston</p>
             </div>
             
-            <div className="bg-amber-50/50 p-8 rounded-xl">
+            <div className="bg-orange-50/50 p-8 rounded-xl">
               <p className="text-stone-700 italic leading-relaxed mb-4">
                 "Sarah understood exactly what I needed before I could articulate it."
               </p>
@@ -360,22 +360,22 @@ const BoutiqueDemo = () => {
       </section>
 
       {/* Visit Section - Editorial Close */}
-      <section id="visit" className="py-24 md:py-32 bg-amber-900 text-white">
+      <section id="visit" className="py-24 md:py-32 text-white" style={{ background: 'linear-gradient(135deg, #8B5A2B 0%, #B87333 50%, #CD853F 100%)' }}>
         <div className="container mx-auto px-6">
           <div className="max-w-2xl mx-auto text-center">
             <h2 className="font-serif text-3xl md:text-4xl mb-6 tracking-tight">
               Visit Us in Kennebunkport
             </h2>
-            <p className="text-amber-100/80 text-lg md:text-xl leading-relaxed mb-12 font-light">
+            <p className="text-white/80 text-lg md:text-xl leading-relaxed mb-12 font-light">
               Dock Square, Kennebunkport<br />
-              <span className="text-amber-200/60">A considered space. A slower pace.</span>
+              <span className="text-white/60">A considered space. A slower pace.</span>
             </p>
             
             {/* Hairline divider */}
-            <div className="w-12 h-px bg-amber-200/30 mx-auto mb-10" />
+            <div className="w-12 h-px bg-white/30 mx-auto mb-10" />
             
             {/* Quiet metadata */}
-            <div className="space-y-2 text-amber-200/70 text-sm tracking-wide">
+            <div className="space-y-2 text-white/70 text-sm tracking-wide">
               <p className="font-light">28 Dock Square · Kennebunkport, ME 04046</p>
               <p className="font-light">Mon–Sat 10–6 · Sun 11–5</p>
               <p className="font-light">(207) 967-8520</p>
@@ -408,7 +408,7 @@ const BoutiqueDemo = () => {
             <div className="text-center text-xs text-stone-600 space-y-2">
               <p>© 2024 The Copper Fox</p>
               <p>
-                Demo site by <Link to="/" className="text-amber-600 hover:text-amber-500 transition-colors">Pleasant Cove Design</Link>
+                Demo site by <Link to="/" className="transition-colors" style={{ color: '#B87333' }}>Pleasant Cove Design</Link>
               </p>
             </div>
           </div>
