@@ -1301,7 +1301,7 @@ async function handleCommentAction(
       );
     }
 
-    if (action === "resolve" || action === "unresolve") {
+if (action === "resolve" || action === "unresolve") {
       if (!comment_id) {
         return new Response(
           JSON.stringify({ error: "comment_id is required" }),
@@ -1310,10 +1310,11 @@ async function handleCommentAction(
       }
 
       const resolved_at = action === "resolve" ? new Date().toISOString() : null;
+      const status = action === "resolve" ? "resolved" : "open";
 
       const { error: updateError } = await supabase
         .from("prototype_comments")
-        .update({ resolved_at })
+        .update({ resolved_at, status })
         .eq("id", comment_id)
         .eq("project_token", token);
 
@@ -1327,6 +1328,63 @@ async function handleCommentAction(
 
       return new Response(
         JSON.stringify({ ok: true, resolved: action === "resolve" }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Update status workflow (open → in_progress → resolved / wont_do)
+    if (action === "update_status") {
+      if (!comment_id) {
+        return new Response(
+          JSON.stringify({ error: "comment_id is required" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const { status: newStatus, resolution_note } = body;
+      const validStatuses = ["open", "in_progress", "resolved", "wont_do"];
+      
+      if (!newStatus || !validStatuses.includes(newStatus)) {
+        return new Response(
+          JSON.stringify({ error: "Invalid status. Must be one of: open, in_progress, resolved, wont_do" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const updateData: Record<string, unknown> = { status: newStatus };
+      
+      // Set resolved_at when status changes to resolved or wont_do
+      if (newStatus === "resolved" || newStatus === "wont_do") {
+        updateData.resolved_at = new Date().toISOString();
+        updateData.resolved_by = "client";
+        if (resolution_note) {
+          updateData.resolution_note = resolution_note;
+        }
+      } else {
+        // Clear resolved fields when reopening
+        updateData.resolved_at = null;
+        updateData.resolved_by = null;
+        updateData.resolution_note = null;
+      }
+
+      const { data: updatedComment, error: updateError } = await supabase
+        .from("prototype_comments")
+        .update(updateData)
+        .eq("id", comment_id)
+        .eq("project_token", token)
+        .select()
+        .single();
+
+      if (updateError) {
+        console.error("Update status error:", updateError);
+        return new Response(
+          JSON.stringify({ error: "Failed to update status" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      return new Response(
+        JSON.stringify({ ok: true, comment: updatedComment }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }

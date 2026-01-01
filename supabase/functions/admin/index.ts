@@ -2505,7 +2505,7 @@ async function handleUpdateComment(req: Request, token: string, commentId: strin
   }
 
   try {
-    let body: { resolved?: boolean };
+    let body: { resolved?: boolean; status?: string; resolution_note?: string };
     try {
       body = await req.json();
     } catch {
@@ -2519,9 +2519,40 @@ async function handleUpdateComment(req: Request, token: string, commentId: strin
 
     const supabase = getSupabaseClient();
 
-    const updateData: { resolved_at?: string | null } = {};
+    const updateData: Record<string, unknown> = {};
+    
+    // Handle legacy resolved boolean
     if (typeof body.resolved === "boolean") {
       updateData.resolved_at = body.resolved ? new Date().toISOString() : null;
+      updateData.status = body.resolved ? "resolved" : "open";
+      if (!body.resolved) {
+        updateData.resolution_note = null;
+        updateData.resolved_by = null;
+      }
+    }
+    
+    // Handle new status workflow
+    if (body.status) {
+      const validStatuses = ["open", "in_progress", "resolved", "wont_do"];
+      if (validStatuses.includes(body.status)) {
+        updateData.status = body.status;
+        
+        // Set resolved_at when status changes to resolved or wont_do
+        if (body.status === "resolved" || body.status === "wont_do") {
+          updateData.resolved_at = new Date().toISOString();
+          updateData.resolved_by = "admin";
+        } else if (body.status === "open" || body.status === "in_progress") {
+          // Clear resolved fields when reopening or setting to in_progress
+          updateData.resolved_at = null;
+          updateData.resolved_by = null;
+          updateData.resolution_note = null;
+        }
+      }
+    }
+    
+    // Handle resolution note
+    if (body.resolution_note !== undefined) {
+      updateData.resolution_note = body.resolution_note;
     }
 
     const { data: comment, error: updateError } = await supabase

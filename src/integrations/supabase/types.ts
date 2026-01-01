@@ -950,9 +950,12 @@ export type Database = {
           pin_y: number | null
           project_token: string
           prototype_id: string
+          resolution_note: string | null
           resolved_at: string | null
+          resolved_by: string | null
           scroll_y: number | null
           source_message_id: string | null
+          status: string
           text_hint: string | null
           viewport_h: number | null
           viewport_w: number | null
@@ -975,9 +978,12 @@ export type Database = {
           pin_y?: number | null
           project_token: string
           prototype_id: string
+          resolution_note?: string | null
           resolved_at?: string | null
+          resolved_by?: string | null
           scroll_y?: number | null
           source_message_id?: string | null
+          status?: string
           text_hint?: string | null
           viewport_h?: number | null
           viewport_w?: number | null
@@ -1000,9 +1006,12 @@ export type Database = {
           pin_y?: number | null
           project_token?: string
           prototype_id?: string
+          resolution_note?: string | null
           resolved_at?: string | null
+          resolved_by?: string | null
           scroll_y?: number | null
           source_message_id?: string | null
+          status?: string
           text_hint?: string | null
           viewport_h?: number | null
           viewport_w?: number | null
