@@ -261,7 +261,7 @@ const BoutiqueDemo = () => {
               <div className="absolute -bottom-4 -left-4 bg-amber-100 rounded-xl p-4 shadow-lg">
                 <p className="font-serif text-amber-900 text-lg">"Find something you love."</p>
               </div>
-              <div className="absolute -top-4 -right-16 z-10 scale-[0.6] origin-top-right">
+              <div className="absolute -top-4 -right-4 md:-right-8 z-10 scale-[0.6] origin-top-right">
                 <AwardBadge
                   variant="badge"
                   title="Best Boutique"
