@@ -1,8 +1,7 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
-import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { RefreshCw, MessageCircle, X, Check, ExternalLink, Maximize2, Minimize2, ChevronRight, ChevronLeft, AlertTriangle, MapPin, EyeOff, ChevronUp, ChevronDown, Target } from "lucide-react";
+import { RefreshCw, MessageCircle, X, ExternalLink, Maximize2, Minimize2, ChevronRight, ChevronLeft, AlertTriangle, Target, ChevronUp, ChevronDown } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { PortalCommentCard } from "./PortalCommentCard";
@@ -13,63 +12,6 @@ function getBreakpoint(width: number): string {
   if (width < 768) return "md";
   if (width < 1024) return "lg";
   return "xl";
-}
-
-// Check if URL is same-origin (used for display/logging only)
-function isSameOrigin(url: string): boolean {
-  try {
-    const urlObj = new URL(url, window.location.origin);
-    return urlObj.origin === window.location.origin;
-  } catch {
-    return false;
-  }
-}
-
-// Check if we can actually access iframe DOM (the real test - browser may allow cross-origin access in some cases)
-function canAccessIframeDOM(iframe: HTMLIFrameElement | null): boolean {
-  if (!iframe) return false;
-  try {
-    // This will throw if cross-origin is truly blocked
-    return !!iframe.contentDocument?.body;
-  } catch {
-    return false;
-  }
-}
-
-// Extract pathname from URL
-function getPathFromUrl(url: string): string | null {
-  try {
-    const urlObj = new URL(url, window.location.origin);
-    return urlObj.pathname;
-  } catch {
-    return null;
-  }
-}
-
-// Get iframe scale: ratio of screen pixels to iframe viewport pixels
-// Used for capture (converting parent clicks to iframe coords)
-// SAFE: Uses try/catch to avoid cross-origin SecurityError
-function getIframeScale(iframe: HTMLIFrameElement) {
-  const rect = iframe.getBoundingClientRect();
-  
-  // Try to get actual iframe viewport size, fall back to element size
-  let innerW = rect.width;
-  let innerH = rect.height;
-  
-  try {
-    const win = iframe.contentWindow;
-    if (win && win.innerWidth) {
-      innerW = win.innerWidth;
-      innerH = win.innerHeight;
-    }
-  } catch {
-    // Cross-origin - use element rect as fallback
-  }
-  
-  const scaleX = rect.width / (innerW || rect.width);
-  const scaleY = rect.height / (innerH || rect.height);
-
-  return { scaleX: scaleX || 1, scaleY: scaleY || 1, rect };
 }
 
 export type CommentStatus = "open" | "in_progress" | "resolved" | "wont_do";
@@ -84,11 +26,9 @@ export interface PrototypeComment {
   resolved_at: string | null;
   source_message_id: string | null;
   created_at: string;
-  // Status workflow fields
   status?: CommentStatus;
   resolution_note?: string | null;
   resolved_by?: string | null;
-  // Anchor fields
   page_url?: string | null;
   page_path?: string | null;
   scroll_y?: number | null;
@@ -100,43 +40,15 @@ export interface PrototypeComment {
   x_pct?: number | null;
   y_pct?: number | null;
   text_hint?: string | null;
-  // Text-range anchoring
   text_offset?: number | null;
   text_context?: string | null;
 }
 
-// Get effective status from a comment (normalizes resolved_at + status field)
 function getEffectiveStatus(c: PrototypeComment): CommentStatus {
   if (c.status === "wont_do") return "wont_do";
   if (c.status === "resolved" || !!c.resolved_at) return "resolved";
   if (c.status === "in_progress") return "in_progress";
   return "open";
-}
-
-// Get pin color classes based on status
-function getPinClasses(status: CommentStatus) {
-  switch (status) {
-    case "in_progress":
-      return {
-        bubble: "bg-amber-500 text-black",
-        ring: "ring-amber-300",
-        glow: "shadow-[0_0_0_4px_rgba(245,158,11,0.20)]",
-      };
-    case "resolved":
-    case "wont_do":
-      return {
-        bubble: "bg-muted text-muted-foreground",
-        ring: "ring-border",
-        glow: "",
-      };
-    case "open":
-    default:
-      return {
-        bubble: "bg-primary text-primary-foreground",
-        ring: "ring-primary/30",
-        glow: "shadow-[0_0_0_4px_rgba(59,130,246,0.18)]",
-      };
-  }
 }
 
 export interface Prototype {
@@ -148,17 +60,19 @@ export interface Prototype {
   updated_at: string;
 }
 
-// PostMessage event types for cross-origin iframe communication
+// PostMessage types
 interface IframeClickMessage {
   type: "PCD_CLICK";
   selector: string | null;
   id: string | null;
+  anchorKey: string | null;
   rect: { left: number; top: number; width: number; height: number };
   scroll: { x: number; y: number };
   viewport: { w: number; h: number };
   textOffset?: number | null;
   textContext?: string | null;
-  ts?: number; // Timestamp added on receive
+  textHint?: string | null;
+  ts: number;
 }
 
 interface IframeScrollMessage {
@@ -173,12 +87,6 @@ interface IframeRectMessage {
   rect: { left: number; top: number; width: number; height: number } | null;
 }
 
-interface IframeReadyMessage {
-  type: "PCD_IFRAME_READY";
-}
-
-type IframeMessage = IframeClickMessage | IframeScrollMessage | IframeRectMessage | IframeReadyMessage;
-
 export interface CommentAnchorData {
   page_url: string;
   page_path: string | null;
@@ -191,33 +99,17 @@ export interface CommentAnchorData {
   x_pct: number;
   y_pct: number;
   text_hint: string | null;
-  // Text-range anchoring for precise word-level pins
-  text_offset?: number | null;      // Character offset in anchor element's text
-  text_context?: string | null;     // ~40 chars around the click for re-finding
-  // Fallback overlay coords
+  text_offset?: number | null;
+  text_context?: string | null;
   pin_x: number;
   pin_y: number;
 }
 
-// Debug info for pin positioning
-export interface PinDebug {
-  mode: "range" | "element" | "pin_xy" | "pin_xy_fallback" | "none";
-  hasSelector: boolean;
-  hasTextOffset: boolean;
-  textOffset?: number | null;
-  contextPreview?: string | null;
-  selector?: string | null;
-  rangeRect?: { w: number; h: number; x: number; y: number } | null;
-  // Scale & rect info for debugging coordinate transforms
-  scale?: { x: number; y: number } | null;
-  delta?: { dx: number; dy: number } | null;
-}
-
-// Enhanced pin position result with direction for offscreen pins
 export type PinPositionResult = 
-  | { kind: 'visible'; left: string; top: string; debug?: PinDebug }
-  | { kind: 'offscreen'; direction: 'up' | 'down' | 'left' | 'right'; edgeLeft: string; edgeTop: string; debug?: PinDebug }
-  | { kind: 'needs-repin'; left?: string; top?: string; debug?: PinDebug }
+  | { kind: 'visible'; left: number; top: number }
+  | { kind: 'offscreen'; direction: 'up' | 'down' | 'left' | 'right'; edgeLeft: number; edgeTop: number }
+  | { kind: 'no-bridge' }
+  | { kind: 'no-anchor' }
   | null;
 
 interface PrototypeViewerProps {
@@ -246,353 +138,35 @@ export function PrototypeViewer({
   onRefresh,
 }: PrototypeViewerProps) {
   const [isAddingComment, setIsAddingComment] = useState(false);
-  const [pendingPin, setPendingPin] = useState<{ x: number; y: number; anchorData?: CommentAnchorData } | null>(null);
+  const [pendingPin, setPendingPin] = useState<{ anchorData: CommentAnchorData } | null>(null);
   const [commentText, setCommentText] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [iframeKey, setIframeKey] = useState(0);
   const [showCommentsSidebar, setShowCommentsSidebar] = useState(true);
-  const [currentIframePath, setCurrentIframePath] = useState<string | null>(null);
   const [focusedCommentId, setFocusedCommentId] = useState<string | null>(null);
   const [hoveredCommentId, setHoveredCommentId] = useState<string | null>(null);
-  const [anchorMismatch, setAnchorMismatch] = useState<string | null>(null);
-  const [showShortcutsHelp, setShowShortcutsHelp] = useState(false);
   const [repinTargetId, setRepinTargetId] = useState<string | null>(null);
+  
   const overlayRef = useRef<HTMLDivElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
-  const [pinUpdateKey, setPinUpdateKey] = useState(0);
-  const [debugPins, setDebugPins] = useState(false);
-  
-  // Mount node for rendering pins INSIDE the iframe (eliminates coordinate drift)
-  const [iframePinMount, setIframePinMount] = useState<HTMLDivElement | null>(null);
-  
-  // Track whether we can actually access the iframe DOM (browser security check)
-  // This may be true even if URLs are cross-origin (e.g., same-site with permissive sandbox)
-  const [canAccessDOM, setCanAccessDOM] = useState(false);
-  
-  // Refs for RAF throttling and cleanup
-  const rafIdRef = useRef<number | null>(null);
-  const detachRef = useRef<(() => void) | null>(null);
 
-  const unresolvedComments = comments.filter((c) => !c.resolved_at);
-  const resolvedComments = comments.filter((c) => c.resolved_at);
-
-  // PostMessage bridge state for cross-origin iframe communication
-  const [iframeReady, setIframeReady] = useState(false);
+  // Bridge state
+  const [bridgeReady, setBridgeReady] = useState(false);
   const [iframeViewport, setIframeViewport] = useState<{ w: number; h: number; scrollX: number; scrollY: number } | null>(null);
-  const pendingRectRequests = useRef<Map<string, (rect: { left: number; top: number; width: number; height: number } | null) => void>>(new Map());
-  
-  // Store last click data from iframe for capture
   const lastIframeClick = useRef<IframeClickMessage | null>(null);
   
-  // Rect cache for cross-origin pin positioning - maps commentId → element rect in viewport coords
+  // Rect cache: commentId → element rect in iframe viewport coords
   const [rectCache, setRectCache] = useState<Record<string, { left: number; top: number; width: number; height: number } | null>>({});
+  const pendingRectRequests = useRef<Map<string, (rect: { left: number; top: number; width: number; height: number } | null) => void>>(new Map());
   const rectRefreshRaf = useRef<number | null>(null);
 
-  // Force pin recomputation
-  const triggerPinUpdate = useCallback(() => {
-    setPinUpdateKey(k => k + 1);
-  }, []);
-  
-  // Simple pin update - no throttling until we verify it works
-  const schedulePinUpdate = useCallback(() => {
-    setPinUpdateKey(k => k + 1);
-  }, []);
+  const unresolvedComments = comments.filter((c) => !c.resolved_at && c.status !== 'resolved' && c.status !== 'wont_do');
+  const resolvedComments = comments.filter((c) => c.resolved_at || c.status === 'resolved' || c.status === 'wont_do');
 
-  // --- Hover highlight helpers (requires DOM access) ---
-  const clearHoverHighlight = useCallback(() => {
-    if (!canAccessIframeDOM(iframeRef.current)) return;
-    const doc = iframeRef.current?.contentDocument;
-    if (!doc) return;
-    
-    // Clear element-level highlight
-    doc.querySelectorAll("[data-pcd-hover]").forEach((el) => {
-      el.removeAttribute("data-pcd-hover");
-    });
-    
-    // Clear text-range highlight
-    const existingMark = doc.getElementById("pcd-text-highlight");
-    if (existingMark) {
-      // Unwrap the mark element
-      const parent = existingMark.parentNode;
-      while (existingMark.firstChild) {
-        parent?.insertBefore(existingMark.firstChild, existingMark);
-      }
-      existingMark.remove();
-    }
-  }, [prototype.url]);
-
-  const applyHoverHighlight = useCallback((comment: PrototypeComment | null) => {
-    clearHoverHighlight();
-    if (!comment) return;
-    if (!canAccessIframeDOM(iframeRef.current)) return;
-
-    try {
-      const doc = iframeRef.current?.contentDocument;
-      if (!doc) return;
-
-      const el =
-        (comment.anchor_selector ? doc.querySelector(comment.anchor_selector) : null) ||
-        (comment.anchor_id ? doc.getElementById(comment.anchor_id) : null);
-
-      if (el) {
-        // If we have text_offset, try to highlight the exact text position
-        if (comment.text_offset != null && comment.text_offset >= 0) {
-          const range = createTextRangeForHighlight(el, comment.text_offset, doc);
-          if (range) {
-            // Wrap the text in a highlight span
-            const mark = doc.createElement("span");
-            mark.id = "pcd-text-highlight";
-            mark.style.cssText = `
-              background: rgba(99, 102, 241, 0.3);
-              border-radius: 2px;
-              box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.5);
-              padding: 1px 0;
-            `;
-            try {
-              range.surroundContents(mark);
-            } catch {
-              // surroundContents can fail if range crosses element boundaries
-              // Fall back to element-level highlight
-              (el as HTMLElement).setAttribute("data-pcd-hover", "true");
-            }
-            return;
-          }
-        }
-        
-        // Fallback to element-level highlight
-        (el as HTMLElement).setAttribute("data-pcd-hover", "true");
-      }
-    } catch {
-      // ignore
-    }
-  }, [prototype.url, clearHoverHighlight]);
-
-  // Create a range that highlights ~3 characters around the offset for visibility
-  function createTextRangeForHighlight(element: Element, offset: number, doc: Document): Range | null {
-    try {
-      const range = doc.createRange();
-      const walker = doc.createTreeWalker(element, NodeFilter.SHOW_TEXT);
-      
-      let currentOffset = 0;
-      let node = walker.nextNode();
-      
-      while (node) {
-        const nodeLength = node.textContent?.length || 0;
-        
-        if (currentOffset + nodeLength > offset) {
-          const localOffset = offset - currentOffset;
-          // Highlight a few characters around the click point
-          const start = Math.max(0, localOffset - 1);
-          const end = Math.min(nodeLength, localOffset + 2);
-          range.setStart(node, start);
-          range.setEnd(node, end);
-          return range;
-        }
-        
-        currentOffset += nodeLength;
-        node = walker.nextNode();
-      }
-      
-      return null;
-    } catch {
-      return null;
-    }
-  }
-
-  const ensureHoverStyle = useCallback(() => {
-    if (!canAccessIframeDOM(iframeRef.current)) return;
-    const doc = iframeRef.current?.contentDocument;
-    if (!doc) return;
-    if (doc.getElementById("pcd-hover-style")) return;
-
-    const style = doc.createElement("style");
-    style.id = "pcd-hover-style";
-    style.textContent = `
-      [data-pcd-hover="true"]{
-        outline: 3px solid rgba(99,102,241,0.9) !important;
-        outline-offset: 2px !important;
-        border-radius: 8px !important;
-        box-shadow: 0 0 0 6px rgba(99,102,241,0.15) !important;
-        transition: outline-color .08s ease;
-      }
-    `;
-    doc.head.appendChild(style);
-  }, [prototype.url]);
-
-  // Apply hover highlight when hoveredCommentId changes
-  useEffect(() => {
-    const c = comments.find(x => x.id === hoveredCommentId) ?? null;
-    applyHoverHighlight(c);
-    return () => clearHoverHighlight();
-  }, [hoveredCommentId, comments, applyHoverHighlight, clearHoverHighlight]);
-
-  // Check if target is a typing input (don't steal keystrokes)
-  const isTypingTarget = useCallback((t: EventTarget | null) => {
-    const el = t as HTMLElement | null;
-    if (!el) return false;
-    const tag = el.tagName?.toLowerCase();
-    return (
-      tag === "input" ||
-      tag === "textarea" ||
-      el.isContentEditable ||
-      el.getAttribute("contenteditable") === "true"
-    );
-  }, []);
-
-  // Comprehensive layout listener: catches ALL scroll/resize/layout changes
-  useEffect(() => {
-    const iframe = iframeRef.current;
-    const overlay = overlayRef.current;
-    
-    // Real DOM access check (not just origin comparison)
-    const domAccessible = canAccessIframeDOM(iframe);
-    const sameOrigin = isSameOrigin(prototype.url);
-    
-    // Update state for use elsewhere
-    setCanAccessDOM(domAccessible);
-    
-    if (!iframe || !overlay || !domAccessible) return;
-
-    // Clean up any previous attachments (SPA reloads / iframe src changes)
-    detachRef.current?.();
-    detachRef.current = null;
-
-    let resizeObs: ResizeObserver | null = null;
-    let bodyResizeObs: ResizeObserver | null = null;
-    let navTimer: number | null = null;
-    let lastPath: string | null = null;
-
-    const attach = () => {
-      try {
-        const iframeWin = iframe.contentWindow;
-        const iframeDoc = iframe.contentDocument;
-        if (!iframeWin || !iframeDoc) return;
-
-        const path = iframeWin.location.pathname ?? null;
-        setCurrentIframePath(path);
-        lastPath = path;
-
-        // Inject hover highlight style into iframe
-        ensureHoverStyle();
-        
-        // Create pin mount node INSIDE the iframe document
-        // Use position: absolute on body so pins scroll WITH the document content
-        // Pin coordinates are document-relative (scroll + viewport offset)
-        let pinMount = iframeDoc.getElementById("pcd-pin-overlay") as HTMLDivElement | null;
-        if (!pinMount) {
-          pinMount = iframeDoc.createElement("div");
-          pinMount.id = "pcd-pin-overlay";
-          pinMount.style.cssText = `
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            min-height: 100vh;
-            pointer-events: none;
-            z-index: 2147483647;
-          `;
-          iframeDoc.body.appendChild(pinMount);
-          
-          // Ensure body has position:relative for absolute positioning context
-          if (iframeDoc.body.style.position !== 'relative' && iframeDoc.body.style.position !== 'absolute') {
-            iframeDoc.body.style.position = 'relative';
-          }
-        }
-        setIframePinMount(pinMount);
-        
-        // Recompute pins on scroll/resize
-        const updateAll = () => {
-          schedulePinUpdate();
-        };
-
-        // IMPORTANT: force one recompute immediately
-        updateAll();
-
-        // 1) Scroll/resize inside iframe window
-        iframeWin.addEventListener("scroll", updateAll, { passive: true });
-        iframeWin.addEventListener("resize", updateAll);
-
-        // 2) Capture scroll for nested scroll containers inside iframe
-        iframeDoc.addEventListener("scroll", updateAll, true);
-
-        // 3) Parent window resize (in case the preview container resizes)
-        window.addEventListener("resize", updateAll);
-
-        // 4) Resize observers: iframe + overlay + iframe body
-        resizeObs = new ResizeObserver(() => updateAll());
-        resizeObs.observe(iframe);
-        resizeObs.observe(overlay);
-
-        if (iframeDoc.body) {
-          bodyResizeObs = new ResizeObserver(() => updateAll());
-          bodyResizeObs.observe(iframeDoc.body);
-        }
-
-        // Start SPA navigation polling (catches pushState/replaceState)
-        if (navTimer) window.clearInterval(navTimer);
-        navTimer = window.setInterval(() => {
-          try {
-            const p = iframe.contentWindow?.location.pathname ?? null;
-            if (p !== lastPath) {
-              lastPath = p;
-              setCurrentIframePath(p);
-              updateAll();
-            }
-          } catch {
-            // cross-origin, ignore
-          }
-        }, 250);
-
-        // Detach function (handles iframe navigations too)
-        detachRef.current = () => {
-          try {
-            iframeWin.removeEventListener("scroll", updateAll);
-            iframeWin.removeEventListener("resize", updateAll);
-            iframeDoc.removeEventListener("scroll", updateAll, true);
-          } catch {}
-          window.removeEventListener("resize", updateAll);
-
-          resizeObs?.disconnect();
-          bodyResizeObs?.disconnect();
-          resizeObs = null;
-          bodyResizeObs = null;
-          
-          if (navTimer) {
-            window.clearInterval(navTimer);
-            navTimer = null;
-          }
-          
-          // Clear pin mount reference
-          setIframePinMount(null);
-        };
-      } catch {
-        setCurrentIframePath(null);
-      }
-    };
-
-    // Attach on load + also immediately (in case already loaded)
-    iframe.addEventListener("load", attach);
-    attach();
-
-    return () => {
-      iframe.removeEventListener("load", attach);
-      detachRef.current?.();
-      detachRef.current = null;
-
-      if (rafIdRef.current != null) {
-        window.cancelAnimationFrame(rafIdRef.current);
-        rafIdRef.current = null;
-      }
-    };
-  }, [prototype.url, iframeKey, ensureHoverStyle, schedulePinUpdate]);
-
-  // PostMessage handler for cross-origin iframe communication
-  // This enables pin anchoring even when DOM access is blocked
+  // PostMessage handler - THE ONLY way we communicate with the iframe
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
-      // Only accept messages from the prototype origin
       try {
         const protoOrigin = new URL(prototype.url).origin;
         if (event.origin !== protoOrigin) return;
@@ -605,20 +179,14 @@ export function PrototypeViewer({
 
       switch (data.type) {
         case "PCD_IFRAME_READY":
-          console.log("[PostMessage] Iframe helper ready");
-          setIframeReady(true);
+          console.log("[Bridge] Helper ready");
+          setBridgeReady(true);
           break;
 
         case "PCD_CLICK": {
           const msg = data as IframeClickMessage;
-          console.log("[PostMessage] Click captured:", msg);
-          // Store with timestamp so we can check recency
-          lastIframeClick.current = { ...msg, ts: Date.now() };
-          
-          // If in comment mode, use this click data
-          if (isAddingComment || repinTargetId) {
-            triggerPinUpdate();
-          }
+          console.log("[Bridge] Click:", msg.selector, msg.anchorKey);
+          lastIframeClick.current = msg;
           break;
         }
 
@@ -630,15 +198,6 @@ export function PrototypeViewer({
             scrollX: msg.scroll.x,
             scrollY: msg.scroll.y,
           });
-          // Schedule rect refresh on scroll for cross-origin pin positioning
-          if (!canAccessDOM && rectRefreshRaf.current === null) {
-            rectRefreshRaf.current = requestAnimationFrame(() => {
-              rectRefreshRaf.current = null;
-              // Call refreshRects inline since we can't reference it here
-              // Instead, just trigger pin update - the useEffect will refresh rects
-            });
-          }
-          triggerPinUpdate();
           break;
         }
 
@@ -656,12 +215,12 @@ export function PrototypeViewer({
 
     window.addEventListener("message", handleMessage);
     return () => window.removeEventListener("message", handleMessage);
-  }, [prototype.url, isAddingComment, repinTargetId, triggerPinUpdate]);
+  }, [prototype.url]);
 
-  // Request element rect from iframe via postMessage
-  const requestRectFromIframe = useCallback((selector: string | null, id: string | null): Promise<{ left: number; top: number; width: number; height: number } | null> => {
+  // Request element rect from iframe
+  const requestRect = useCallback((selector: string | null, id: string | null): Promise<{ left: number; top: number; width: number; height: number } | null> => {
     return new Promise((resolve) => {
-      if (!iframeReady || !iframeRef.current?.contentWindow) {
+      if (!bridgeReady || !iframeRef.current?.contentWindow || (!selector && !id)) {
         resolve(null);
         return;
       }
@@ -669,7 +228,6 @@ export function PrototypeViewer({
       const requestId = `rect-${Date.now()}-${Math.random().toString(36).slice(2)}`;
       pendingRectRequests.current.set(requestId, resolve);
 
-      // Timeout after 500ms
       setTimeout(() => {
         if (pendingRectRequests.current.has(requestId)) {
           pendingRectRequests.current.delete(requestId);
@@ -687,305 +245,212 @@ export function PrototypeViewer({
         resolve(null);
       }
     });
-  }, [iframeReady, prototype.url]);
+  }, [bridgeReady, prototype.url]);
 
-  // Capture rich anchor data from click position
-  // Uses postMessage data when available (cross-origin), falls back to DOM access
-  const captureAnchorData = useCallback((clientX: number, clientY: number): CommentAnchorData | null => {
-    const iframe = iframeRef.current;
-    const overlay = overlayRef.current;
-    if (!iframe || !overlay) return null;
+  // Refresh all comment rects from iframe
+  const refreshRects = useCallback(async () => {
+    if (!bridgeReady) return;
+    
+    const anchored = unresolvedComments.filter(c => c.anchor_selector || c.anchor_id);
+    
+    for (const c of anchored) {
+      const rect = await requestRect(c.anchor_selector ?? null, c.anchor_id ?? null);
+      setRectCache(prev => {
+        if (!rect && !prev[c.id]) return prev;
+        if (rect && prev[c.id] && 
+            rect.left === prev[c.id]!.left && 
+            rect.top === prev[c.id]!.top) {
+          return prev;
+        }
+        return { ...prev, [c.id]: rect };
+      });
+    }
+  }, [bridgeReady, unresolvedComments, requestRect]);
 
-    const overlayRect = overlay.getBoundingClientRect();
-    const pin_x = ((clientX - overlayRect.left) / overlayRect.width) * 100;
-    const pin_y = ((clientY - overlayRect.top) / overlayRect.height) * 100;
+  // Refresh rects on viewport change (scroll/resize)
+  useEffect(() => {
+    if (!bridgeReady) return;
+    
+    if (rectRefreshRaf.current) {
+      cancelAnimationFrame(rectRefreshRaf.current);
+    }
+    rectRefreshRaf.current = requestAnimationFrame(() => {
+      rectRefreshRaf.current = null;
+      refreshRects();
+    });
+  }, [iframeViewport, bridgeReady, refreshRects]);
 
-    // Check if we have recent click data from the iframe helper
-    const iframeClick = lastIframeClick.current as (IframeClickMessage & { ts?: number }) | null;
-    const isRecentClick = !!iframeClick?.ts && (Date.now() - iframeClick.ts) < 1000;
+  // Initial rect refresh when bridge becomes ready
+  useEffect(() => {
+    if (bridgeReady) {
+      refreshRects();
+    }
+  }, [bridgeReady, refreshRects]);
 
-    // Use iframe click data if available (cross-origin compatible)
-    if (iframeClick && isRecentClick && iframeReady) {
-      const baseData: CommentAnchorData = {
-        page_url: prototype.url,
-        page_path: getPathFromUrl(prototype.url),
-        scroll_y: iframeClick.scroll.y,
-        viewport_w: iframeClick.viewport.w,
-        viewport_h: iframeClick.viewport.h,
-        breakpoint: getBreakpoint(iframeClick.viewport.w),
-        anchor_id: iframeClick.id,
-        anchor_selector: iframeClick.selector,
-        x_pct: iframeClick.rect.width > 0 
-          ? ((iframeClick.rect.left + iframeClick.rect.width / 2) / iframeClick.viewport.w) * 100 
-          : pin_x,
-        y_pct: iframeClick.rect.height > 0 
-          ? ((iframeClick.rect.top + iframeClick.rect.height / 2) / iframeClick.viewport.h) * 100 
-          : pin_y,
-        text_hint: null,
-        text_offset: iframeClick.textOffset ?? null,
-        text_context: iframeClick.textContext ?? null,
-        pin_x,
-        pin_y,
-      };
+  // Reset bridge state on iframe reload
+  useEffect(() => {
+    setBridgeReady(false);
+    setRectCache({});
+    lastIframeClick.current = null;
+  }, [iframeKey]);
 
-      // Clear the click data so we don't reuse stale data
+  // Calculate pin position - ONLY from rectCache
+  const getPinPosition = useCallback((comment: PrototypeComment): PinPositionResult => {
+    if (!bridgeReady) {
+      return { kind: 'no-bridge' };
+    }
+    
+    if (!comment.anchor_selector && !comment.anchor_id) {
+      return { kind: 'no-anchor' };
+    }
+    
+    const rect = rectCache[comment.id];
+    if (!rect) {
+      return { kind: 'no-anchor' };
+    }
+    
+    const iframeEl = iframeRef.current;
+    const overlayEl = overlayRef.current;
+    if (!iframeEl || !overlayEl) return null;
+    
+    const iframeRect = iframeEl.getBoundingClientRect();
+    const overlayRect = overlayEl.getBoundingClientRect();
+    const viewportW = iframeRect.width;
+    const viewportH = iframeRect.height;
+    
+    // iframe→overlay offset
+    const offsetX = iframeRect.left - overlayRect.left;
+    const offsetY = iframeRect.top - overlayRect.top;
+    
+    // rect is in iframe viewport coords
+    const pinCenterX = rect.left + rect.width / 2;
+    const pinCenterY = rect.top + rect.height / 2;
+    
+    // Check offscreen
+    const isOffscreen = pinCenterX < 0 || pinCenterY < 0 || 
+                       pinCenterX > viewportW || pinCenterY > viewportH;
+    
+    if (isOffscreen) {
+      let direction: 'up' | 'down' | 'left' | 'right';
+      if (pinCenterY < 0) direction = 'up';
+      else if (pinCenterY > viewportH) direction = 'down';
+      else if (pinCenterX < 0) direction = 'left';
+      else direction = 'right';
+      
+      let edgeLeft: number, edgeTop: number;
+      if (direction === 'up') {
+        edgeLeft = offsetX + Math.max(16, Math.min(viewportW - 16, pinCenterX));
+        edgeTop = offsetY + 16;
+      } else if (direction === 'down') {
+        edgeLeft = offsetX + Math.max(16, Math.min(viewportW - 16, pinCenterX));
+        edgeTop = offsetY + viewportH - 16;
+      } else if (direction === 'left') {
+        edgeLeft = offsetX + 16;
+        edgeTop = offsetY + Math.max(16, Math.min(viewportH - 16, pinCenterY));
+      } else {
+        edgeLeft = offsetX + viewportW - 16;
+        edgeTop = offsetY + Math.max(16, Math.min(viewportH - 16, pinCenterY));
+      }
+      
+      return { kind: 'offscreen', direction, edgeLeft, edgeTop };
+    }
+    
+    return { 
+      kind: 'visible', 
+      left: offsetX + pinCenterX, 
+      top: offsetY + pinCenterY 
+    };
+  }, [bridgeReady, rectCache]);
+
+  // Handle overlay click - capture anchor from last iframe click
+  const handleOverlayClick = useCallback(async (e: React.MouseEvent<HTMLDivElement>) => {
+    const click = lastIframeClick.current;
+    
+    // Must have recent click from iframe
+    if (!click || !bridgeReady) {
+      console.warn("[Bridge] No click data from iframe - helper not installed?");
+      return;
+    }
+    
+    // Check if click is recent (within 1 second)
+    if (Date.now() - click.ts > 1000) {
+      console.warn("[Bridge] Click data is stale");
       lastIframeClick.current = null;
-      return baseData;
+      return;
+    }
+    
+    // Must have anchor
+    if (!click.selector && !click.anchorKey && !click.id) {
+      console.warn("[Bridge] Click has no anchor data");
+      return;
     }
 
-    const baseData: CommentAnchorData = {
+    const overlay = overlayRef.current;
+    if (!overlay) return;
+    
+    const overlayRect = overlay.getBoundingClientRect();
+    const pin_x = ((e.clientX - overlayRect.left) / overlayRect.width) * 100;
+    const pin_y = ((e.clientY - overlayRect.top) / overlayRect.height) * 100;
+
+    const anchorData: CommentAnchorData = {
       page_url: prototype.url,
-      page_path: getPathFromUrl(prototype.url),
-      scroll_y: iframeViewport?.scrollY ?? 0,
-      viewport_w: iframeViewport?.w ?? overlayRect.width,
-      viewport_h: iframeViewport?.h ?? overlayRect.height,
-      breakpoint: getBreakpoint(iframeViewport?.w ?? overlayRect.width),
-      anchor_id: null,
-      anchor_selector: null,
-      x_pct: pin_x,
-      y_pct: pin_y,
-      text_hint: null,
-      text_offset: null,
-      text_context: null,
+      page_path: null,
+      scroll_y: click.scroll.y,
+      viewport_w: click.viewport.w,
+      viewport_h: click.viewport.h,
+      breakpoint: getBreakpoint(click.viewport.w),
+      anchor_id: click.id,
+      anchor_selector: click.selector,
+      x_pct: click.rect.width > 0 
+        ? ((click.rect.left + click.rect.width / 2) / click.viewport.w) * 100 
+        : 50,
+      y_pct: click.rect.height > 0 
+        ? ((click.rect.top + click.rect.height / 2) / click.viewport.h) * 100 
+        : 50,
+      text_hint: click.textHint ?? null,
+      text_offset: click.textOffset ?? null,
+      text_context: click.textContext ?? null,
       pin_x,
       pin_y,
     };
 
-    // Try to get rich anchor data when DOM is accessible
-    if (canAccessIframeDOM(iframe)) {
+    // Clear click data
+    lastIframeClick.current = null;
+
+    // Handle repin
+    if (repinTargetId && onRepinComment) {
       try {
-        const iframeDoc = iframe.contentDocument;
-        const iframeWin = iframe.contentWindow;
-        if (!iframeDoc || !iframeWin) return baseData;
-
-        // Update page path and scroll from iframe
-        baseData.page_path = iframeWin.location.pathname;
-        baseData.page_url = iframeWin.location.href;
-        baseData.scroll_y = iframeWin.scrollY;
-
-        // Get scale: screen px -> iframe viewport px
-        const { scaleX, scaleY, rect: iframeRect } = getIframeScale(iframe);
-        
-        // CAPTURE: divide by scale to convert parent click coords -> iframe viewport coords
-        const xInIframe = (clientX - iframeRect.left) / scaleX;
-        const yInIframe = (clientY - iframeRect.top) / scaleY;
-
-        // Try to get caret position for text-precise anchoring
-        let caretInfo: { node: Node; offset: number; element: Element } | null = null;
-        
-        // Use caretPositionFromPoint (standard) or caretRangeFromPoint (webkit fallback)
-        const docAny = iframeDoc as any;
-        if (typeof docAny.caretPositionFromPoint === 'function') {
-          const pos = docAny.caretPositionFromPoint(xInIframe, yInIframe);
-          if (pos && pos.offsetNode) {
-            caretInfo = {
-              node: pos.offsetNode,
-              offset: pos.offset,
-              element: pos.offsetNode.parentElement || pos.offsetNode as Element
-            };
-          }
-        } else if (typeof docAny.caretRangeFromPoint === 'function') {
-          const range = docAny.caretRangeFromPoint(xInIframe, yInIframe);
-          if (range && range.startContainer) {
-            caretInfo = {
-              node: range.startContainer,
-              offset: range.startOffset,
-              element: range.startContainer.parentElement || range.startContainer as Element
-            };
-          }
-        }
-
-        // Find element at click position
-        const element = iframeDoc.elementFromPoint(xInIframe, yInIframe);
-
-        if (element) {
-          // Build a stable selector for the element
-          let targetEl: Element = element;
-          let selector: string | null = null;
-          
-          // Walk up to find closest identifiable anchor
-          let anchorEl: Element | null = element;
-          while (anchorEl && anchorEl !== iframeDoc.body) {
-            const anchorAttr = anchorEl.getAttribute("data-comment-anchor");
-            const id = anchorEl.id;
-            
-            if (anchorAttr) {
-              baseData.anchor_id = anchorAttr;
-              baseData.anchor_selector = `[data-comment-anchor="${anchorAttr}"]`;
-              targetEl = anchorEl;
-              selector = baseData.anchor_selector;
-              break;
-            } else if (id) {
-              baseData.anchor_id = id;
-              baseData.anchor_selector = `#${CSS.escape(id)}`;
-              targetEl = anchorEl;
-              selector = baseData.anchor_selector;
-              break;
-            }
-            anchorEl = anchorEl.parentElement;
-          }
-
-          // If no ID-based anchor found, build a path-based selector from the clicked element
-          if (!selector) {
-            selector = buildStableSelector(element, iframeDoc);
-            baseData.anchor_selector = selector;
-            targetEl = element;
-          }
-
-          // Calculate position relative to anchor element
-          // Note: Both xInIframe and anchorRect are in iframe viewport coords
-          // xInIframe = click position relative to iframe viewport (0,0 = top-left of visible area)
-          // anchorRect = element position relative to iframe viewport
-          // These are in the same coordinate space, so subtraction works correctly
-          if (selector && targetEl) {
-            const anchorRect = targetEl.getBoundingClientRect();
-            baseData.x_pct = ((xInIframe - anchorRect.left) / anchorRect.width) * 100;
-            baseData.y_pct = ((yInIframe - anchorRect.top) / anchorRect.height) * 100;
-          }
-
-          // If we have caret info and it's a text node, capture text-range data
-          if (caretInfo && caretInfo.node.nodeType === Node.TEXT_NODE) {
-            const textNode = caretInfo.node as Text;
-            const textContent = textNode.textContent || "";
-            const offset = caretInfo.offset;
-            
-            // Calculate offset relative to the anchor element's full text content
-            // This is important for elements with multiple text nodes
-            const fullText = targetEl.textContent || "";
-            
-            // Find where this text node starts in the full element text
-            let globalOffset = 0;
-            const walker = iframeDoc.createTreeWalker(targetEl, NodeFilter.SHOW_TEXT);
-            let currentNode = walker.nextNode();
-            while (currentNode && currentNode !== textNode) {
-              globalOffset += (currentNode.textContent?.length || 0);
-              currentNode = walker.nextNode();
-            }
-            globalOffset += offset;
-            
-            baseData.text_offset = globalOffset;
-            
-            if (debugPins) {
-              console.log("[Pin Capture] Text anchoring:", {
-                selector: baseData.anchor_selector,
-                textOffset: globalOffset,
-                textNode: textNode.textContent?.slice(0, 30),
-                localOffset: offset,
-                context: fullText.slice(Math.max(0, globalOffset - 10), globalOffset + 10),
-              });
-            }
-            
-            // Get context around the click (20 chars before and after)
-            const contextStart = Math.max(0, globalOffset - 20);
-            const contextEnd = Math.min(fullText.length, globalOffset + 20);
-            baseData.text_context = fullText.slice(contextStart, contextEnd);
-            
-            // Set text_hint to the immediate word/phrase
-            baseData.text_hint = textContent.slice(
-              Math.max(0, offset - 15),
-              Math.min(textContent.length, offset + 15)
-            ).trim();
-          } else {
-            // Get text hint from element content as fallback
-            const textContent = element.textContent?.trim().slice(0, 50);
-            if (textContent) {
-              baseData.text_hint = textContent;
-            }
-          }
-        }
+        await onRepinComment(repinTargetId, anchorData);
+        setRepinTargetId(null);
+        // Refresh rects after repin
+        setTimeout(() => refreshRects(), 100);
       } catch (err) {
-        console.warn("Could not capture anchor data from iframe:", err);
+        console.error("Failed to repin:", err);
       }
+      return;
     }
 
-    return baseData;
-  }, [prototype.url, iframeReady, iframeViewport]);
-
-  // Build a stable CSS selector for an element
-  function buildStableSelector(el: Element, doc: Document): string {
-    const parts: string[] = [];
-    let current: Element | null = el;
-    
-    while (current && current !== doc.body && current !== doc.documentElement) {
-      // Prefer ID
-      if (current.id) {
-        parts.unshift(`#${CSS.escape(current.id)}`);
-        break;
-      }
-      
-      // Prefer data attributes
-      const dataAnchor = current.getAttribute("data-comment-anchor");
-      if (dataAnchor) {
-        parts.unshift(`[data-comment-anchor="${dataAnchor}"]`);
-        break;
-      }
-      
-      // Build tag + nth-child
-      const tag = current.tagName.toLowerCase();
-      const parent = current.parentElement;
-      if (parent) {
-        const siblings = Array.from(parent.children).filter(c => c.tagName === current!.tagName);
-        if (siblings.length > 1) {
-          const idx = siblings.indexOf(current) + 1;
-          parts.unshift(`${tag}:nth-of-type(${idx})`);
-        } else {
-          parts.unshift(tag);
-        }
-      } else {
-        parts.unshift(tag);
-      }
-      
-      current = current.parentElement;
-    }
-    
-    return parts.join(" > ");
-  }
-
-  const handleOverlayClick = useCallback(
-    async (e: React.MouseEvent<HTMLDivElement>) => {
-      const anchorData = captureAnchorData(e.clientX, e.clientY);
-      if (!anchorData) return;
-
-      // Handle repin mode
-      if (repinTargetId && onRepinComment) {
-        try {
-          await onRepinComment(repinTargetId, anchorData);
-          setRepinTargetId(null);
-          triggerPinUpdate();
-        } catch (err) {
-          console.error("Failed to repin comment:", err);
-        }
-        return;
-      }
-
-      // Handle new comment mode
-      if (!isAddingComment || !overlayRef.current) return;
-
-      setPendingPin({
-        x: anchorData.pin_x,
-        y: anchorData.pin_y,
-        anchorData,
-      });
-    },
-    [isAddingComment, captureAnchorData, repinTargetId, onRepinComment, triggerPinUpdate]
-  );
+    // Handle new comment
+    if (!isAddingComment) return;
+    setPendingPin({ anchorData });
+  }, [bridgeReady, prototype.url, isAddingComment, repinTargetId, onRepinComment, refreshRects]);
 
   const handleSubmitComment = async () => {
     if (!pendingPin || !commentText.trim()) return;
-
+    
     setSubmitting(true);
     try {
       await onAddComment(
         commentText.trim(),
-        pendingPin.x,
-        pendingPin.y,
+        pendingPin.anchorData.pin_x,
+        pendingPin.anchorData.pin_y,
         pendingPin.anchorData
       );
-      setPendingPin(null);
       setCommentText("");
+      setPendingPin(null);
       setIsAddingComment(false);
-    } catch (err) {
-      console.error("Failed to add comment:", err);
+      // Refresh rects after adding comment
+      setTimeout(() => refreshRects(), 100);
     } finally {
       setSubmitting(false);
     }
@@ -994,672 +459,107 @@ export function PrototypeViewer({
   const handleCancelComment = () => {
     setPendingPin(null);
     setCommentText("");
-    setIsAddingComment(false);
   };
 
   const handleRefresh = () => {
+    setBridgeReady(false);
+    setRectCache({});
     setIframeKey((k) => k + 1);
-    setFocusedCommentId(null);
-    setAnchorMismatch(null);
     onRefresh();
   };
 
-  // Helper: Try to find text_context in element and return its offset
-  const findOffsetByContext = useCallback((element: Element, context: string, doc: Document): number | null => {
-    if (!context || context.length < 5) return null;
-    
-    const fullText = element.textContent || "";
-    // Try to find the context string in the element's text
-    const idx = fullText.indexOf(context);
-    if (idx >= 0) {
-      // Return the middle of the context
-      return idx + Math.floor(context.length / 2);
-    }
-    
-    // Try partial match (first half of context)
-    const half = context.slice(0, Math.floor(context.length / 2));
-    if (half.length >= 5) {
-      const halfIdx = fullText.indexOf(half);
-      if (halfIdx >= 0) {
-        return halfIdx + half.length;
-      }
-    }
-    
-    return null;
-  }, []);
-
-  // Navigate iframe to comment's page and scroll to EXACT text position
-  const focusComment = useCallback(async (comment: PrototypeComment) => {
-    const iframe = iframeRef.current;
-    if (!iframe) return;
-
+  const focusComment = useCallback((comment: PrototypeComment) => {
     setFocusedCommentId(comment.id);
     setHoveredCommentId(comment.id);
-    setAnchorMismatch(null);
-
+    
     // Scroll sidebar card into view
     requestAnimationFrame(() => {
       const el = document.getElementById(`comment-card-${comment.id}`);
       el?.scrollIntoView({ behavior: "smooth", block: "nearest" });
     });
+  }, []);
 
-    // If comment has a page path and we can access the iframe DOM
-    if (comment.page_path && canAccessIframeDOM(iframe)) {
-      try {
-        const currentPath = iframe.contentWindow?.location.pathname;
-        
-        // Navigate if not on the right page
-        if (currentPath !== comment.page_path) {
-          const targetUrl = new URL(comment.page_path, window.location.origin).href;
-          iframe.src = targetUrl;
-          
-          // Wait for load
-          await new Promise<void>((resolve) => {
-            const handleLoad = () => {
-              iframe.removeEventListener("load", handleLoad);
-              resolve();
-            };
-            iframe.addEventListener("load", handleLoad);
-          });
-        }
-
-        // Small delay to ensure DOM is ready
-        await new Promise(r => setTimeout(r, 100));
-
-        const iframeWin = iframe.contentWindow;
-        const iframeDoc = iframe.contentDocument;
-        if (!iframeWin || !iframeDoc) return;
-
-        // Try to find anchor element
-        if (comment.anchor_selector) {
-          const anchorEl = iframeDoc.querySelector(comment.anchor_selector);
-          
-          if (anchorEl) {
-            let targetOffset = comment.text_offset;
-            
-            // If text_offset doesn't work, try to recover using text_context
-            if (targetOffset != null && comment.text_context) {
-              const range = createRangeAtOffset(anchorEl, targetOffset, iframeDoc);
-              if (!range) {
-                // text_offset failed - try to find by context
-                const recoveredOffset = findOffsetByContext(anchorEl, comment.text_context, iframeDoc);
-                if (recoveredOffset != null) {
-                  targetOffset = recoveredOffset;
-                  console.log("Recovered text position using context");
-                }
-              }
-            }
-            
-            // Try to get exact text range rect for scrolling
-            if (targetOffset != null && targetOffset >= 0) {
-              const range = createRangeAtOffset(anchorEl, targetOffset, iframeDoc);
-              
-              if (range) {
-                const rangeRect = range.getBoundingClientRect();
-                
-                // Scroll to position the text in the upper third of viewport
-                if (rangeRect.height > 0) {
-                  const scrollTarget = iframeWin.scrollY + rangeRect.top - (iframeWin.innerHeight * 0.35);
-                  iframeWin.scrollTo({ top: Math.max(0, scrollTarget), behavior: "smooth" });
-                  
-                  // Flash-highlight the exact text
-                  try {
-                    const highlight = iframeDoc.createElement("span");
-                    highlight.setAttribute("data-comment-flash", "1");
-                    highlight.style.cssText = `
-                      background: rgba(59, 130, 246, 0.4);
-                      border-radius: 3px;
-                      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
-                      animation: pcd-flash 1.5s ease-out;
-                    `;
-                    
-                    // Inject animation style if not present
-                    if (!iframeDoc.getElementById("pcd-flash-style")) {
-                      const style = iframeDoc.createElement("style");
-                      style.id = "pcd-flash-style";
-                      style.textContent = `
-                        @keyframes pcd-flash {
-                          0% { background: rgba(59, 130, 246, 0.5); box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.4); }
-                          100% { background: rgba(59, 130, 246, 0.15); box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1); }
-                        }
-                      `;
-                      iframeDoc.head.appendChild(style);
-                    }
-                    
-                    range.surroundContents(highlight);
-                    
-                    // Remove highlight after animation
-                    setTimeout(() => {
-                      const hl = iframeDoc.querySelector("[data-comment-flash='1']");
-                      if (hl) {
-                        const parent = hl.parentNode;
-                        while (hl.firstChild) {
-                          parent?.insertBefore(hl.firstChild, hl);
-                        }
-                        hl.remove();
-                        // Normalize to merge adjacent text nodes
-                        parent?.normalize();
-                      }
-                    }, 1500);
-                    
-                    return; // Success - we're done
-                  } catch (e) {
-                    // surroundContents can fail if range crosses boundaries
-                    console.warn("Could not flash-highlight text:", e);
-                  }
-                }
-              }
-            }
-            
-            // Fallback: scroll element into view and highlight it
-            anchorEl.scrollIntoView({ behavior: "smooth", block: "center" });
-            (anchorEl as HTMLElement).setAttribute("data-pcd-hover", "true");
-            setTimeout(() => {
-              (anchorEl as HTMLElement).removeAttribute("data-pcd-hover");
-            }, 2000);
-          } else {
-            // Anchor not found - show mismatch warning
-            setAnchorMismatch(comment.id);
-            
-            // Fallback to scroll_y if available
-            if (comment.scroll_y != null) {
-              iframeWin.scrollTo({ top: comment.scroll_y, behavior: "smooth" });
-            }
-          }
-        } else if (comment.scroll_y != null) {
-          // No anchor, just scroll to saved position
-          iframeWin.scrollTo({ top: comment.scroll_y, behavior: "smooth" });
-        }
-      } catch (err) {
-        console.warn("Could not focus comment:", err);
-      }
-    }
-  }, [prototype.url, findOffsetByContext]);
-
-  // Jump to comment's page (for sidebar "Jump to page" button)
-  const jumpToCommentPage = useCallback((comment: PrototypeComment) => {
-    if (!comment.page_path) return;
-    if (!canAccessIframeDOM(iframeRef.current)) return;
-
-    const iframe = iframeRef.current;
-    const win = iframe?.contentWindow;
-    if (!iframe || !win) return;
-
-    try {
-      const currentPath = win.location.pathname;
-      if (currentPath === comment.page_path) {
-        // Already on that page: just recompute + focus
-        setCurrentIframePath(currentPath);
-        triggerPinUpdate();
-        focusComment(comment);
-        return;
-      }
-
-      // Navigate within same origin
-      win.location.assign(comment.page_path);
-
-      // After navigation, the iframe "load" handler + SPA poll will:
-      // - setCurrentIframePath(...)
-      // - triggerPinUpdate()
-      // So we just remember what to focus when the page is ready.
-      setFocusedCommentId(comment.id);
-    } catch {
-      // ignore cross-origin errors
-    }
-  }, [prototype.url, triggerPinUpdate, focusComment]);
-
-  // Calculate pin position for a comment - always try DOM anchor first
-  // Returns enhanced position result with direction for offscreen pins and debug info
-  // Since pins now render INSIDE the iframe, we use iframe viewport coords directly
-  const getPinPosition = useCallback((comment: PrototypeComment): PinPositionResult => {
-    // Use canAccessDOM directly - no alias
+  // Render pin based on position result
+  const renderPin = (comment: PrototypeComment, index: number) => {
+    const position = getPinPosition(comment);
+    if (!position) return null;
     
-    // Base debug info
-    const baseDebug: PinDebug = {
-      mode: "none",
-      hasSelector: !!comment.anchor_selector,
-      hasTextOffset: comment.text_offset != null,
-      textOffset: comment.text_offset,
-      contextPreview: comment.text_context?.slice(0, 30) ?? null,
-      selector: comment.anchor_selector ?? null,
-      rangeRect: null,
-    };
+    const status = getEffectiveStatus(comment);
+    const isFocused = focusedCommentId === comment.id;
+    const isHovered = hoveredCommentId === comment.id;
     
-    // For DOM-accessible iframes with anchor data, try to position precisely
-    // Use canAccessDOM (actual DOM test) NOT sameOrigin (URL check)
-    if (comment.anchor_selector && canAccessDOM) {
-      try {
-        const iframe = iframeRef.current;
-        const iframeDoc = iframe?.contentDocument;
-        const iframeWin = iframe?.contentWindow;
-        
-        if (iframe && iframeDoc && iframeWin) {
-          const anchorEl = iframeDoc.querySelector(comment.anchor_selector);
-          if (anchorEl) {
-            let pinRect: DOMRect;
-            let usedRange = false;
-            
-            // If we have text_offset, try to position at exact text position
-            if (comment.text_offset != null && comment.text_offset >= 0) {
-              const range = createRangeAtOffset(anchorEl, comment.text_offset, iframeDoc);
-              if (range) {
-                pinRect = range.getBoundingClientRect();
-                // If the range rect is empty (collapsed at end of text), use anchor element
-                if (pinRect.width === 0 && pinRect.height === 0) {
-                  pinRect = anchorEl.getBoundingClientRect();
-                } else {
-                  usedRange = true;
-                  baseDebug.rangeRect = { w: pinRect.width, h: pinRect.height, x: pinRect.left, y: pinRect.top };
-                }
-              } else {
-                pinRect = anchorEl.getBoundingClientRect();
-              }
-            } else {
-              // Fallback to element-percentage positioning
-              const anchorRect = anchorEl.getBoundingClientRect();
-              const xPct = comment.x_pct ?? 50;
-              const yPct = comment.y_pct ?? 50;
-              
-              // Create a synthetic rect at the percentage position
-              const x = anchorRect.left + (anchorRect.width * xPct / 100);
-              const y = anchorRect.top + (anchorRect.height * yPct / 100);
-              pinRect = new DOMRect(x, y, 0, 0);
-            }
-            
-            baseDebug.mode = usedRange ? "range" : "element";
-            
-            // pinRect is in IFRAME VIEWPORT COORDS (relative to visible area)
-            // Since pin overlay is position:absolute on body, convert to DOCUMENT coords
-            // by adding current scroll position
-            const scrollX = iframeWin.scrollX ?? 0;
-            const scrollY = iframeWin.scrollY ?? 0;
-            const pinCenterX = pinRect.left + (pinRect.width / 2) + scrollX;
-            const pinCenterY = pinRect.top + (pinRect.height / 2) + scrollY;
-            
-            // SAFE: Use iframe element rect - never throws cross-origin error
-            const iframeRect = iframeRef.current?.getBoundingClientRect();
-            const viewportW = iframeRect?.width ?? 800;
-            const viewportH = iframeRect?.height ?? 600;
-            
-            // Check if pin is currently in viewport (viewport coords for visibility check)
-            const viewportPinX = pinRect.left + (pinRect.width / 2);
-            const viewportPinY = pinRect.top + (pinRect.height / 2);
-            const isOffscreen = viewportPinX < 0 || viewportPinY < 0 || 
-                               viewportPinX > viewportW || viewportPinY > viewportH;
-            
-            if (isOffscreen) {
-              let direction: 'up' | 'down' | 'left' | 'right';
-              
-              if (viewportPinY < 0) {
-                direction = 'up';
-              } else if (viewportPinY > viewportH) {
-                direction = 'down';
-              } else if (viewportPinX < 0) {
-                direction = 'left';
-              } else {
-                direction = 'right';
-              }
-
-              // Offscreen arrows need to be in document coords too (scroll + edge offset)
-              let edgeLeft: string;
-              let edgeTop: string;
-              
-              if (direction === 'up') {
-                edgeLeft = `${Math.max(16, Math.min(viewportW - 16, viewportPinX)) + scrollX}px`;
-                edgeTop = `${scrollY + 16}px`;
-              } else if (direction === 'down') {
-                edgeLeft = `${Math.max(16, Math.min(viewportW - 16, viewportPinX)) + scrollX}px`;
-                edgeTop = `${scrollY + viewportH - 16}px`;
-              } else if (direction === 'left') {
-                edgeLeft = `${scrollX + 16}px`;
-                edgeTop = `${Math.max(16, Math.min(viewportH - 16, viewportPinY)) + scrollY}px`;
-              } else {
-                edgeLeft = `${scrollX + viewportW - 16}px`;
-                edgeTop = `${Math.max(16, Math.min(viewportH - 16, viewportPinY)) + scrollY}px`;
-              }
-
-              return { kind: 'offscreen', direction, edgeLeft, edgeTop, debug: baseDebug };
-            }
-            
-            // Visible: return document coords for absolute positioning inside iframe
-            return { kind: 'visible', left: `${pinCenterX}px`, top: `${pinCenterY}px`, debug: baseDebug };
-          } else {
-            // Anchor selector exists but element not found - needs re-pin
-            return { kind: 'needs-repin', debug: baseDebug };
-          }
-        }
-      } catch {
-        // Fall through to fallback
-      }
-    }
-    
-    // Cross-origin with rectCache: use cached rect from iframe helper
-    // This is the key path for making pins stick on scroll in cross-origin iframes
-    if (!canAccessDOM && iframeReady && (comment.anchor_selector || comment.anchor_id)) {
-      const cachedRect = rectCache[comment.id];
-      if (cachedRect) {
-        const iframeEl = iframeRef.current;
-        const overlayEl = overlayRef.current;
-        
-        if (iframeEl && overlayEl) {
-          const iframeRect = iframeEl.getBoundingClientRect();
-          const overlayRect = overlayEl.getBoundingClientRect();
-          const viewportW = iframeRect.width;
-          const viewportH = iframeRect.height;
-          
-          // Compute iframe→overlay offset for correct coordinate conversion
-          const offsetX = iframeRect.left - overlayRect.left;
-          const offsetY = iframeRect.top - overlayRect.top;
-          
-          // cachedRect is in iframe viewport coords - convert to overlay coords
-          const pinCenterX = offsetX + cachedRect.left + cachedRect.width / 2;
-          const pinCenterY = offsetY + cachedRect.top + cachedRect.height / 2;
-          
-          // Check if pin is offscreen (in iframe viewport coords for clipping)
-          const iframePinX = cachedRect.left + cachedRect.width / 2;
-          const iframePinY = cachedRect.top + cachedRect.height / 2;
-          const isOffscreen = iframePinX < 0 || iframePinY < 0 || 
-                             iframePinX > viewportW || iframePinY > viewportH;
-          
-          baseDebug.mode = "element";
-          baseDebug.rangeRect = { w: cachedRect.width, h: cachedRect.height, x: cachedRect.left, y: cachedRect.top };
-          
-          if (isOffscreen) {
-            let direction: 'up' | 'down' | 'left' | 'right';
-            if (iframePinY < 0) direction = 'up';
-            else if (iframePinY > viewportH) direction = 'down';
-            else if (iframePinX < 0) direction = 'left';
-            else direction = 'right';
-            
-            // Clamp to overlay edges using the offset conversion
-            let edgeLeft: string, edgeTop: string;
-            if (direction === 'up') {
-              edgeLeft = `${offsetX + Math.max(16, Math.min(viewportW - 16, iframePinX))}px`;
-              edgeTop = `${offsetY + 16}px`;
-            } else if (direction === 'down') {
-              edgeLeft = `${offsetX + Math.max(16, Math.min(viewportW - 16, iframePinX))}px`;
-              edgeTop = `${offsetY + viewportH - 16}px`;
-            } else if (direction === 'left') {
-              edgeLeft = `${offsetX + 16}px`;
-              edgeTop = `${offsetY + Math.max(16, Math.min(viewportH - 16, iframePinY))}px`;
-            } else {
-              edgeLeft = `${offsetX + viewportW - 16}px`;
-              edgeTop = `${offsetY + Math.max(16, Math.min(viewportH - 16, iframePinY))}px`;
-            }
-            
-            return { kind: 'offscreen', direction, edgeLeft, edgeTop, debug: baseDebug };
-          }
-          
-          return { kind: 'visible', left: `${pinCenterX}px`, top: `${pinCenterY}px`, debug: baseDebug };
-        }
-      }
-    }
-    
-    // Fallback to stored pin_x/pin_y when no anchor available
-    // For DOM-accessible iframes, mark as needs-repin so UI can offer repin
-    if (comment.pin_x != null && comment.pin_y != null) {
-      // SAFE: Use iframe element rect - never throws cross-origin error  
-      const iframeRect = iframeRef.current?.getBoundingClientRect();
-      // Use sensible defaults if iframe hasn't rendered yet
-      const viewportW = iframeRect?.width || 800;
-      const viewportH = iframeRect?.height || 600;
-      
-      // Convert percentage to viewport pixels
-      const viewportX = (comment.pin_x / 100) * viewportW;
-      const viewportY = (comment.pin_y / 100) * viewportH;
-      
-      // For DOM-accessible iframes, convert to document coords (add scroll)
-      // For cross-origin, we render in parent overlay so use viewport coords
-      let left = viewportX;
-      let top = viewportY;
-      
-      if (canAccessDOM) {
-        try {
-          const iframeWin = iframeRef.current?.contentWindow;
-          if (iframeWin) {
-            left += iframeWin.scrollX ?? 0;
-            top += iframeWin.scrollY ?? 0;
-          }
-        } catch {}
-      }
-      
-      return { 
-        kind: canAccessDOM ? 'needs-repin' : 'visible', 
-        left: `${left}px`, 
-        top: `${top}px`,
-        debug: { ...baseDebug, mode: "pin_xy_fallback" }
-      };
-    }
-    
-    // No position data at all
-    if (canAccessDOM) {
-      return { kind: 'needs-repin', debug: baseDebug };
-    }
-    
-    return null;
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [canAccessDOM, pinUpdateKey, iframeReady, rectCache]);
-
-  // Helper: Create a Range at a specific character offset within an element's text
-  function createRangeAtOffset(element: Element, offset: number, doc: Document): Range | null {
-    try {
-      const range = doc.createRange();
-      const walker = doc.createTreeWalker(element, NodeFilter.SHOW_TEXT);
-      
-      let currentOffset = 0;
-      let node = walker.nextNode();
-      
-      while (node) {
-        const nodeLength = node.textContent?.length || 0;
-        
-        if (currentOffset + nodeLength >= offset) {
-          // Found the right text node
-          const localOffset = Math.min(offset - currentOffset, nodeLength);
-          range.setStart(node, localOffset);
-          range.setEnd(node, Math.min(localOffset + 1, nodeLength));
-          return range;
-        }
-        
-        currentOffset += nodeLength;
-        node = walker.nextNode();
-      }
-      
-      // Offset beyond text content - return null
-      return null;
-    } catch {
+    // No bridge - show nothing (pins don't work without helper)
+    if (position.kind === 'no-bridge') {
       return null;
     }
-  }
-
-  // Filter comments to show only those matching current iframe path
-  const visibleComments = comments.filter((c) => {
-    // If no page_path stored, always show (legacy comments)
-    if (!c.page_path) return true;
-    // If we can't determine current path, show all
-    if (!currentIframePath) return true;
-    // Match path
-    return c.page_path === currentIframePath;
-  });
-
-  // Refresh rects for all anchored comments (call on scroll for cross-origin pin positioning)
-  const refreshRects = useCallback(() => {
-    if (!iframeReady) return;
     
-    // Only refresh for unresolved comments with anchors
-    const targets = visibleComments.filter(c => 
-      !c.resolved_at && 
-      c.status !== 'resolved' && 
-      c.status !== 'wont_do' &&
-      (c.anchor_id || c.anchor_selector)
-    );
-    
-    if (targets.length === 0) return;
-    
-    // Request rects for all targets
-    targets.forEach(async (c) => {
-      const rect = await requestRectFromIframe(c.anchor_selector ?? null, c.anchor_id ?? null);
-      setRectCache(prev => {
-        // Only update if rect changed
-        const prevRect = prev[c.id];
-        if (!rect && !prevRect) return prev;
-        if (rect && prevRect && 
-            rect.left === prevRect.left && 
-            rect.top === prevRect.top &&
-            rect.width === prevRect.width &&
-            rect.height === prevRect.height) {
-          return prev;
-        }
-        return { ...prev, [c.id]: rect };
-      });
-    });
-  }, [iframeReady, visibleComments, requestRectFromIframe]);
-
-  // Refresh rects when viewport changes (scroll/resize) - throttled via RAF
-  useEffect(() => {
-    if (!iframeReady || canAccessDOM) return; // Only for cross-origin
-    
-    // Debounce via RAF
-    if (rectRefreshRaf.current) {
-      cancelAnimationFrame(rectRefreshRaf.current);
+    // No anchor - don't show a drifting pin
+    if (position.kind === 'no-anchor') {
+      return null;
     }
-    rectRefreshRaf.current = requestAnimationFrame(() => {
-      rectRefreshRaf.current = null;
-      refreshRects();
-    });
-  }, [iframeViewport, iframeReady, canAccessDOM, refreshRects]);
-
-  // Initial rect refresh when bridge becomes ready
-  useEffect(() => {
-    if (iframeReady && !canAccessDOM) {
-      refreshRects();
+    
+    // Offscreen arrow
+    if (position.kind === 'offscreen') {
+      const ArrowIcon = position.direction === 'up' ? ChevronUp : 
+                        position.direction === 'down' ? ChevronDown :
+                        position.direction === 'left' ? ChevronLeft : ChevronRight;
+      return (
+        <div
+          key={`offscreen-${comment.id}`}
+          className="absolute pointer-events-auto"
+          style={{ 
+            left: position.edgeLeft, 
+            top: position.edgeTop,
+            transform: 'translate(-50%, -50%)',
+          }}
+        >
+          <div
+            className={`w-6 h-6 rounded-full flex items-center justify-center cursor-pointer transition-transform border-2 border-white ${
+              status === 'in_progress' ? 'bg-amber-500 text-black' : 'bg-primary text-primary-foreground'
+            }`}
+            title={`Scroll to: ${comment.body.slice(0, 30)}...`}
+            onClick={(e) => {
+              e.stopPropagation();
+              focusComment(comment);
+            }}
+          >
+            <ArrowIcon className="h-3 w-3" />
+          </div>
+        </div>
+      );
     }
-  }, [iframeReady, canAccessDOM, refreshRects]);
-
-  const hiddenCommentsCount = comments.length - visibleComments.length;
-
-  // Ordered visible comments for keyboard navigation (sorted by created_at)
-  const orderedVisible = useMemo(() => {
-    return [...visibleComments].sort((a, b) =>
-      new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+    
+    // Visible pin
+    return (
+      <div
+        key={comment.id}
+        className="absolute pointer-events-auto"
+        style={{ 
+          left: position.left, 
+          top: position.top,
+          transform: 'translate(-50%, -50%)',
+        }}
+      >
+        <div
+          className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold cursor-pointer transition-transform ${
+            status === 'in_progress' 
+              ? 'bg-amber-500 text-black shadow-[0_0_0_4px_rgba(245,158,11,0.2)]' 
+              : 'bg-primary text-primary-foreground shadow-[0_0_0_4px_rgba(59,130,246,0.18)]'
+          } ${isFocused || isHovered ? 'scale-125 ring-2 ring-primary/50' : ''}`}
+          title={comment.body}
+          onMouseEnter={() => setHoveredCommentId(comment.id)}
+          onMouseLeave={() => setHoveredCommentId(null)}
+          onClick={(e) => {
+            e.stopPropagation();
+            setShowCommentsSidebar(true);
+            focusComment(comment);
+          }}
+        >
+          {index + 1}
+        </div>
+      </div>
     );
-  }, [visibleComments]);
-
-  const focusedIndex = useMemo(() => {
-    if (!focusedCommentId) return -1;
-    return orderedVisible.findIndex(c => c.id === focusedCommentId);
-  }, [orderedVisible, focusedCommentId]);
-
-  const focusByIndex = useCallback((idx: number) => {
-    const c = orderedVisible[idx];
-    if (c) focusComment(c);
-  }, [orderedVisible, focusComment]);
-
-  // Keyboard shortcuts: J/K (nav), R (resolve), G (jump), Esc (cancel)
-  useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.metaKey || e.ctrlKey || e.altKey) return;
-      if (isTypingTarget(e.target)) return;
-      if (!orderedVisible.length) return;
-
-      const next = () => {
-        const i = focusedIndex < 0 ? 0 : Math.min(orderedVisible.length - 1, focusedIndex + 1);
-        focusByIndex(i);
-      };
-      const prev = () => {
-        const i = focusedIndex < 0 ? 0 : Math.max(0, focusedIndex - 1);
-        focusByIndex(i);
-      };
-
-      switch (e.key) {
-        case "j":
-        case "J":
-          e.preventDefault();
-          next();
-          break;
-        case "k":
-        case "K":
-          e.preventDefault();
-          prev();
-          break;
-        case "r":
-        case "R":
-          e.preventDefault();
-          if (focusedIndex < 0) return;
-          {
-            const c = orderedVisible[focusedIndex];
-            if (!c) return;
-            const isResolved = c.status === "resolved" || !!c.resolved_at;
-            if (isResolved) onUnresolveComment(c.id);
-            else onResolveComment(c.id);
-          }
-          break;
-        case "w":
-        case "W":
-          e.preventDefault();
-          if (focusedIndex < 0 || !onMarkInProgress) return;
-          {
-            const c = orderedVisible[focusedIndex];
-            if (!c) return;
-            const status = getEffectiveStatus(c);
-            // Only mark as in-progress if currently open
-            if (status !== "open") return;
-            onMarkInProgress(c.id);
-          }
-          break;
-        case "g":
-        case "G":
-          e.preventDefault();
-          if (focusedIndex < 0) return;
-          {
-            const c = orderedVisible[focusedIndex];
-            const offPage = c.page_path && currentIframePath && c.page_path !== currentIframePath;
-            if (offPage && canAccessDOM) jumpToCommentPage(c);
-          }
-          break;
-        case "?":
-          e.preventDefault();
-          setShowShortcutsHelp(v => !v);
-          break;
-        case "Escape":
-          e.preventDefault();
-          // First priority: cancel repin mode
-          if (repinTargetId) {
-            setRepinTargetId(null);
-            return;
-          }
-          if (showShortcutsHelp) {
-            setShowShortcutsHelp(false);
-            return;
-          }
-          setHoveredCommentId(null);
-          setFocusedCommentId(null);
-          setIsAddingComment(false);
-          setPendingPin(null);
-          clearHoverHighlight();
-          break;
-        default:
-          break;
-      }
-    };
-
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [
-    orderedVisible,
-    focusedIndex,
-    focusByIndex,
-    focusComment,
-    onResolveComment,
-    onUnresolveComment,
-    onMarkInProgress,
-    currentIframePath,
-    prototype.url,
-    jumpToCommentPage,
-    clearHoverHighlight,
-    isTypingTarget,
-    showShortcutsHelp,
-    repinTargetId,
-  ]);
+  };
 
   return (
     <div className={`flex flex-col ${isFullscreen ? "fixed inset-0 z-50 bg-background" : ""}`}>
@@ -1678,41 +578,29 @@ export function PrototypeViewer({
           >
             {prototype.status}
           </Badge>
-          {currentIframePath && (
-            <Badge variant="outline" className="text-xs font-mono">
-              {currentIframePath}
-            </Badge>
-          )}
-          {/* Pin mode indicator */}
+          {/* Bridge status */}
           <Badge 
             variant="outline" 
             className={`text-xs ${
-              canAccessDOM 
-                ? "bg-green-500/10 text-green-600 border-green-500/20" 
-                : iframeReady 
-                  ? "bg-blue-500/10 text-blue-600 border-blue-500/20"
-                  : "bg-amber-500/10 text-amber-600 border-amber-500/20"
+              bridgeReady 
+                ? "bg-green-500/10 text-green-600 border-green-500/20"
+                : "bg-amber-500/10 text-amber-600 border-amber-500/20"
             }`}
-            title={
-              canAccessDOM 
-                ? "Pins are anchored to exact DOM elements" 
-                : iframeReady 
-                  ? "Pins use postMessage bridge for anchoring"
-                  : "Pins use percentage-based fallback positioning"
-            }
+            title={bridgeReady ? "Helper script connected - pins anchor to elements" : "Waiting for helper script..."}
           >
-            {canAccessDOM ? "⚓ Anchored" : iframeReady ? "📡 Bridge" : "📍 Fallback"}
+            {bridgeReady ? "📡 Bridge Connected" : "⏳ Waiting for bridge..."}
           </Badge>
         </div>
         <div className="flex items-center gap-2">
           <span className="text-xs text-muted-foreground">
             {unresolvedComments.length} open · {resolvedComments.length} resolved
-            {hiddenCommentsCount > 0 && ` · ${hiddenCommentsCount} on other pages`}
           </span>
           <Button
             variant={isAddingComment ? "default" : "outline"}
             size="sm"
             onClick={() => setIsAddingComment(!isAddingComment)}
+            disabled={!bridgeReady}
+            title={!bridgeReady ? "Waiting for helper script to load..." : undefined}
           >
             <MessageCircle className="h-4 w-4 mr-1" />
             {isAddingComment ? "Cancel" : "Add Comment"}
@@ -1734,20 +622,19 @@ export function PrototypeViewer({
           >
             {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowShortcutsHelp(v => !v)}
-            title="Keyboard shortcuts (?)"
-          >
-            ?
-          </Button>
-{/* Debug button removed - was confusing for clients */}
         </div>
       </div>
 
-      {/* Comment mode instructions - flat, no rounded container */}
-      {isAddingComment && !pendingPin && (
+      {/* Bridge not ready warning */}
+      {!bridgeReady && (
+        <div className="flex items-center justify-center gap-2 px-3 py-2 border-b border-amber-500/20 bg-amber-500/10 text-sm text-amber-700">
+          <AlertTriangle className="h-4 w-4" />
+          <span>Waiting for helper script. Make sure <code className="bg-amber-100 px-1 rounded">pcd-iframe-helper.js</code> is added to the prototype.</span>
+        </div>
+      )}
+
+      {/* Comment mode instructions */}
+      {isAddingComment && !pendingPin && bridgeReady && (
         <div className="flex items-center justify-center gap-2 px-3 py-2 border-b border-primary/20 bg-primary/5 text-sm text-muted-foreground">
           <MessageCircle className="h-4 w-4" />
           <span>Click anywhere on the prototype to drop a pin.</span>
@@ -1760,7 +647,7 @@ export function PrototypeViewer({
         </div>
       )}
 
-      {/* Re-pin mode instructions */}
+      {/* Repin mode instructions */}
       {repinTargetId && (
         <div className="flex items-center justify-center gap-2 px-3 py-2 border-b border-amber-500/20 bg-amber-500/10 text-sm text-amber-600">
           <Target className="h-4 w-4" />
@@ -1774,17 +661,9 @@ export function PrototypeViewer({
         </div>
       )}
 
-      {/* Anchor mismatch warning */}
-      {anchorMismatch && (
-        <div className="bg-amber-500/10 border-b border-amber-500/20 p-3 text-center text-sm text-amber-600">
-          <AlertTriangle className="h-4 w-4 inline mr-2" />
-          This comment's anchor element was not found. The site may have changed since the comment was added.
-        </div>
-      )}
-
-      {/* Main content with sidebar */}
+      {/* Main content */}
       <div className={`flex flex-1 ${isFullscreen ? "" : "min-h-[500px]"}`}>
-        {/* Prototype iframe with overlay */}
+        {/* Iframe + overlay */}
         <div className="relative flex-1">
           <iframe
             ref={iframeRef}
@@ -1796,247 +675,40 @@ export function PrototypeViewer({
             sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
           />
 
-          {/* Click overlay for capturing pin placements (stays in parent) */}
+          {/* Click overlay for pin placement */}
           <div
             ref={overlayRef}
             className={`absolute inset-0 ${isAddingComment || repinTargetId ? "cursor-crosshair" : "pointer-events-none"}`}
             onClick={handleOverlayClick}
           >
-            {/* Pending pin indicator (stays in parent overlay) */}
+            {/* Pins - rendered in overlay using rectCache positions */}
+            {unresolvedComments.map((comment, idx) => renderPin(comment, idx))}
+
+            {/* Pending pin indicator */}
             {pendingPin && (
               <div
                 className="absolute w-6 h-6 -ml-3 -mt-3 rounded-full bg-primary text-primary-foreground flex items-center justify-center animate-pulse shadow-lg pointer-events-none"
-                style={{ left: `${pendingPin.x}%`, top: `${pendingPin.y}%` }}
+                style={{ left: `${pendingPin.anchorData.pin_x}%`, top: `${pendingPin.anchorData.pin_y}%` }}
               >
                 <MessageCircle className="h-3 w-3" />
               </div>
             )}
           </div>
-          
-          {/* Comment pins - rendered inside iframe portal when DOM accessible */}
-          {iframePinMount && canAccessDOM && createPortal(
-            <>
-              {visibleComments
-                .filter(c => !c.resolved_at && (c.status !== 'resolved' && c.status !== 'wont_do'))
-                .map((comment, idx) => {
-                    const position = getPinPosition(comment);
-                    if (!position) return null;
-                    
-                    const status = getEffectiveStatus(comment);
-                    
-                    // Handle offscreen arrows
-                    if (position.kind === 'offscreen') {
-                      const ArrowIcon = position.direction === 'up' ? ChevronUp : 
-                                        position.direction === 'down' ? ChevronDown :
-                                        position.direction === 'left' ? ChevronLeft : ChevronRight;
-                      return (
-                        <div
-                          key={`offscreen-${comment.id}`}
-                          style={{ 
-                            position: 'absolute',
-                            left: position.edgeLeft, 
-                            top: position.edgeTop,
-                            transform: 'translate(-50%, -50%)',
-                            pointerEvents: 'auto',
-                          }}
-                        >
-                          <div
-                            style={{
-                              width: 24,
-                              height: 24,
-                              borderRadius: '50%',
-                              border: '2px solid currentColor',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              cursor: 'pointer',
-                              backgroundColor: status === 'in_progress' ? '#f59e0b' : status === 'open' ? '#3b82f6' : '#6b7280',
-                              color: 'white',
-                              transition: 'transform 0.15s',
-                            }}
-                            title={`Comment offscreen: ${comment.body.slice(0, 30)}... (click to scroll)`}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              focusComment(comment);
-                            }}
-                            onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.1)')}
-                            onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
-                          >
-                            <ArrowIcon className="h-3 w-3" />
-                          </div>
-                        </div>
-                      );
-                    }
-                    
-                    // needs-repin: render with fallback position but show warning style
-                    const needsRepin = position.kind === 'needs-repin';
-                    
-                    // Get position - needs-repin may have left/top from fallback
-                    let pinLeft: string | undefined;
-                    let pinTop: string | undefined;
-                    
-                    if (position.kind === 'visible') {
-                      pinLeft = position.left;
-                      pinTop = position.top;
-                    } else if (position.kind === 'needs-repin') {
-                      pinLeft = position.left;
-                      pinTop = position.top;
-                    }
-                    
-                    // Skip if no position data
-                    if (!pinLeft || !pinTop) return null;
-                    
-                    // Visible pin
-                    const isFocused = focusedCommentId === comment.id;
-                    const isHovered = hoveredCommentId === comment.id;
-                    const hasMismatch = anchorMismatch === comment.id || needsRepin;
-
-                    return (
-                      <div
-                        key={comment.id}
-                        style={{ 
-                          position: 'absolute',
-                          left: pinLeft, 
-                          top: pinTop,
-                          transform: 'translate(-50%, -50%)',
-                          pointerEvents: 'auto',
-                        }}
-                      >
-                        <div
-                          style={{
-                            width: 24,
-                            height: 24,
-                            borderRadius: '50%',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontSize: 12,
-                            fontWeight: 'bold',
-                            cursor: 'pointer',
-                            transition: 'transform 0.15s',
-                            boxShadow: hasMismatch 
-                              ? '0 0 0 4px rgba(239, 68, 68, 0.2)' 
-                              : status === 'open' 
-                                ? '0 0 0 4px rgba(59, 130, 246, 0.18)' 
-                                : status === 'in_progress'
-                                  ? '0 0 0 4px rgba(245, 158, 11, 0.2)'
-                                  : 'none',
-                            backgroundColor: hasMismatch 
-                              ? '#ef4444' 
-                              : status === 'in_progress' 
-                                ? '#f59e0b' 
-                                : status === 'open' 
-                                  ? '#3b82f6' 
-                                  : '#6b7280',
-                            color: status === 'in_progress' ? 'black' : 'white',
-                            transform: isFocused || isHovered ? 'scale(1.25)' : 'scale(1)',
-                            outline: isFocused || isHovered ? '2px solid rgba(59, 130, 246, 0.5)' : 'none',
-                            outlineOffset: 2,
-                          }}
-                          title={`${comment.body}${comment.page_path ? ` (${comment.page_path})` : ""}\n\nJ/K: navigate • R: resolve • Esc: clear`}
-                          onMouseEnter={() => setHoveredCommentId(comment.id)}
-                          onMouseLeave={() => setHoveredCommentId(null)}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setShowCommentsSidebar(true);
-                            setFocusedCommentId(comment.id);
-                          }}
-                        >
-                          {hasMismatch ? <AlertTriangle className="h-3 w-3" /> : idx + 1}
-                        </div>
-                        {/* Debug overlay */}
-                        {debugPins && position.debug && (
-                          <div style={{ 
-                            position: 'absolute', 
-                            left: 28, 
-                            top: 0, 
-                            zIndex: 50,
-                            pointerEvents: 'none',
-                          }}>
-                            <div style={{
-                              borderRadius: 4,
-                              backgroundColor: 'rgba(0,0,0,0.85)',
-                              color: 'white',
-                              fontSize: 10,
-                              lineHeight: 1.3,
-                              padding: '4px 8px',
-                              maxWidth: 240,
-                              whiteSpace: 'nowrap',
-                            }}>
-                              <div><b>{comment.id.slice(0,6)}</b> · {position.kind}</div>
-                              <div>mode: <span style={{ color: position.debug.mode === 'range' ? '#4ade80' : position.debug.mode === 'element' ? '#fbbf24' : '#f87171' }}>{position.debug.mode}</span></div>
-                              <div>sel: {position.debug.hasSelector ? '✓' : '✗'} · offset: {position.debug.hasTextOffset ? position.debug.textOffset : 'N'}</div>
-                              {position.debug.contextPreview && <div style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>ctx: "{position.debug.contextPreview}…"</div>}
-                              {position.debug.rangeRect && (
-                                <div style={{ color: '#4ade80' }}>rect: {Math.round(position.debug.rangeRect.w)}×{Math.round(position.debug.rangeRect.h)}</div>
-                              )}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-            </>,
-            iframePinMount
-          )}
-          
-          {/* Fallback pins in parent overlay - ALWAYS render when portal not available */}
-          {!(iframePinMount && canAccessDOM) && visibleComments
-            .filter(c => !c.resolved_at && (c.status !== 'resolved' && c.status !== 'wont_do'))
-            .filter(c => c.pin_x != null && c.pin_y != null)
-            .map((comment, idx) => {
-              const status = getEffectiveStatus(comment);
-              const isFocused = focusedCommentId === comment.id;
-              const isHovered = hoveredCommentId === comment.id;
-
-              return (
-                <div
-                  key={comment.id}
-                  className="absolute pointer-events-auto"
-                  style={{ 
-                    left: `${comment.pin_x}%`, 
-                    top: `${comment.pin_y}%`,
-                    transform: 'translate(-50%, -50%)',
-                  }}
-                >
-                  <div
-                    className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold cursor-pointer transition-transform ${
-                      status === 'in_progress' 
-                        ? 'bg-amber-500 text-black' 
-                        : status === 'open' 
-                          ? 'bg-primary text-primary-foreground' 
-                          : 'bg-muted-foreground text-white'
-                    } ${isFocused || isHovered ? 'scale-125 ring-2 ring-primary/50' : ''}`}
-                    title={`${comment.body}\n\n⚠️ Fallback mode: pins use fixed % position`}
-                    onMouseEnter={() => setHoveredCommentId(comment.id)}
-                    onMouseLeave={() => setHoveredCommentId(null)}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setShowCommentsSidebar(true);
-                      setFocusedCommentId(comment.id);
-                    }}
-                  >
-                    {idx + 1}
-                  </div>
-                </div>
-              );
-            })
-          }
 
           {/* Comment input popover */}
           {pendingPin && (
             <div
               className="absolute z-10 bg-card border border-border rounded-lg shadow-xl p-3 w-72"
               style={{
-                left: `min(${pendingPin.x}%, calc(100% - 300px))`,
-                top: `${pendingPin.y}%`,
+                left: `min(${pendingPin.anchorData.pin_x}%, calc(100% - 300px))`,
+                top: `${pendingPin.anchorData.pin_y}%`,
                 transform: "translate(10px, -50%)",
               }}
               onClick={(e) => e.stopPropagation()}
             >
-              {pendingPin.anchorData?.anchor_id && (
-                <div className="mb-2 text-xs text-muted-foreground">
-                  Anchored to: <code className="bg-muted px-1 rounded">{pendingPin.anchorData.anchor_id}</code>
+              {pendingPin.anchorData.anchor_selector && (
+                <div className="mb-2 text-xs text-muted-foreground truncate">
+                  Anchored to: <code className="bg-muted px-1 rounded">{pendingPin.anchorData.anchor_selector.slice(0, 40)}</code>
                 </div>
               )}
               <Textarea
@@ -2080,12 +752,10 @@ export function PrototypeViewer({
             token={token}
             focusedCommentId={focusedCommentId}
             hoveredCommentId={hoveredCommentId}
-            currentIframePath={currentIframePath}
-            isSameOrigin={canAccessDOM}
+            bridgeReady={bridgeReady}
             getPinStatus={getPinPosition}
             onFocusComment={focusComment}
             onHoverComment={setHoveredCommentId}
-            onJumpToPage={jumpToCommentPage}
             onResolveComment={onResolveComment}
             onUnresolveComment={onUnresolveComment}
             onMarkInProgress={onMarkInProgress}
@@ -2094,45 +764,6 @@ export function PrototypeViewer({
           />
         )}
       </div>
-
-      {/* Keyboard shortcuts help modal */}
-      {showShortcutsHelp && (
-        <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center">
-          <div
-            className="absolute inset-0 bg-black/40"
-            onClick={() => setShowShortcutsHelp(false)}
-          />
-          <div className="relative w-full sm:w-[420px] m-4 rounded-xl border border-border bg-background shadow-lg p-4">
-            <div className="flex items-center justify-between">
-              <div className="font-semibold">Keyboard shortcuts</div>
-              <Button variant="ghost" size="sm" onClick={() => setShowShortcutsHelp(false)}>
-                Close
-              </Button>
-            </div>
-
-            <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
-              <div className="text-muted-foreground">Next comment</div>
-              <div><kbd className="px-2 py-0.5 rounded border border-border bg-muted text-xs">J</kbd></div>
-              <div className="text-muted-foreground">Prev comment</div>
-              <div><kbd className="px-2 py-0.5 rounded border border-border bg-muted text-xs">K</kbd></div>
-              <div className="text-muted-foreground">Resolve / Reopen</div>
-              <div><kbd className="px-2 py-0.5 rounded border border-border bg-muted text-xs">R</kbd></div>
-              <div className="text-muted-foreground">Mark In Progress</div>
-              <div><kbd className="px-2 py-0.5 rounded border border-border bg-muted text-xs">W</kbd></div>
-              <div className="text-muted-foreground">Jump to page</div>
-              <div><kbd className="px-2 py-0.5 rounded border border-border bg-muted text-xs">G</kbd></div>
-              <div className="text-muted-foreground">Help</div>
-              <div><kbd className="px-2 py-0.5 rounded border border-border bg-muted text-xs">?</kbd></div>
-              <div className="text-muted-foreground">Cancel / Close</div>
-              <div><kbd className="px-2 py-0.5 rounded border border-border bg-muted text-xs">Esc</kbd></div>
-            </div>
-
-            <div className="mt-3 text-xs text-muted-foreground">
-              Shortcuts won't trigger while typing in inputs.
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -2163,18 +794,16 @@ function FilterChip({
   );
 }
 
-// Comments sidebar with filter chips
+// Comments sidebar
 function CommentsSidebar({
   comments,
   token,
   focusedCommentId,
   hoveredCommentId,
-  currentIframePath,
-  isSameOrigin,
+  bridgeReady,
   getPinStatus,
   onFocusComment,
   onHoverComment,
-  onJumpToPage,
   onResolveComment,
   onUnresolveComment,
   onMarkInProgress,
@@ -2185,12 +814,10 @@ function CommentsSidebar({
   token: string;
   focusedCommentId: string | null;
   hoveredCommentId: string | null;
-  currentIframePath: string | null;
-  isSameOrigin: boolean;
+  bridgeReady: boolean;
   getPinStatus: (comment: PrototypeComment) => PinPositionResult;
   onFocusComment: (comment: PrototypeComment) => void;
   onHoverComment: (id: string | null) => void;
-  onJumpToPage: (comment: PrototypeComment) => void;
   onResolveComment: (commentId: string) => Promise<void>;
   onUnresolveComment: (commentId: string) => Promise<void>;
   onMarkInProgress?: (commentId: string) => Promise<void>;
@@ -2198,9 +825,7 @@ function CommentsSidebar({
   onRepin?: (commentId: string) => void;
 }) {
   const [filter, setFilter] = useState<CommentStatus | 'all'>('all');
-  const [onlyCurrentPage, setOnlyCurrentPage] = useState(true);
   
-  // Count comments by status
   const counts = {
     all: comments.length,
     open: comments.filter(c => (!c.status || c.status === 'open') && !c.resolved_at).length,
@@ -2209,77 +834,35 @@ function CommentsSidebar({
     wont_do: comments.filter(c => c.status === 'wont_do').length,
   };
   
-  // Filter comments by status
-  const statusFiltered = filter === 'all' 
+  const filteredComments = filter === 'all' 
     ? comments 
     : comments.filter(c => {
-        // "Open" means not resolved (no status, or status === 'open') AND no resolved_at
         if (filter === 'open') return (!c.status || c.status === 'open') && !c.resolved_at;
-        // "Resolved" means status === 'resolved' OR has resolved_at timestamp
         if (filter === 'resolved') return c.status === 'resolved' || !!c.resolved_at;
         return c.status === filter;
       });
   
-  // Filter by current page
-  const filteredComments = statusFiltered.filter((c) => {
-    if (!onlyCurrentPage) return true;
-    if (!isSameOrigin || !currentIframePath) return true;
-    if (!c.page_path) return true;
-    return c.page_path === currentIframePath;
-  });
-
-  const otherPageCount = statusFiltered.length - filteredComments.length;
-  
   return (
     <div className="w-80 border-l border-border bg-muted/30 flex flex-col">
-      {/* Header with shortcuts hint */}
-      <div className="p-2 border-b border-border space-y-2">
+      <div className="p-2 border-b border-border">
         <div className="flex flex-wrap gap-1">
           <FilterChip label="All" count={counts.all} active={filter === 'all'} onClick={() => setFilter('all')} />
           <FilterChip label="Open" count={counts.open} active={filter === 'open'} onClick={() => setFilter('open')} />
           <FilterChip label="In progress" count={counts.in_progress} active={filter === 'in_progress'} onClick={() => setFilter('in_progress')} />
           <FilterChip label="Resolved" count={counts.resolved} active={filter === 'resolved'} onClick={() => setFilter('resolved')} />
-          <FilterChip label="Won't do" count={counts.wont_do} active={filter === 'wont_do'} onClick={() => setFilter('wont_do')} />
-          {isSameOrigin && currentIframePath && (
-            <button
-              onClick={() => setOnlyCurrentPage(v => !v)}
-              className={`px-2 py-1 text-xs rounded-full transition-colors ${
-                onlyCurrentPage 
-                  ? 'bg-primary text-primary-foreground' 
-                  : 'bg-muted text-muted-foreground hover:bg-muted/80'
-              }`}
-            >
-              This page
-            </button>
-          )}
         </div>
       </div>
       
-      {/* Off-page hint */}
-      {onlyCurrentPage && otherPageCount > 0 && (
-        <div className="px-3 py-1.5 text-xs text-muted-foreground bg-muted/50 border-b border-border">
-          {otherPageCount} comment{otherPageCount > 1 ? 's' : ''} on other pages — 
-          <button 
-            onClick={() => setOnlyCurrentPage(false)} 
-            className="text-primary hover:underline ml-1"
-          >
-            show all
-          </button>
-        </div>
-      )}
-      
-      <ScrollArea className="flex-1 bg-transparent">
+      <ScrollArea className="flex-1">
         <div className="p-3 space-y-3">
           {filteredComments.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-8">
-                    No comments yet. Click "Add Comment" to leave feedback.
-                  </p>
+            <p className="text-sm text-muted-foreground text-center py-8">
+              No comments yet. Click "Add Comment" to leave feedback.
+            </p>
           ) : (
             filteredComments.map((comment, idx) => {
-              const isOnDifferentPage = comment.page_path && currentIframePath && comment.page_path !== currentIframePath;
               const pinStatus = getPinStatus(comment);
-              const isOffscreen = pinStatus?.kind === 'offscreen';
-              const needsRepin = pinStatus?.kind === 'needs-repin';
+              const needsAnchor = pinStatus?.kind === 'no-anchor';
               const isResolved = comment.status === 'resolved' || !!comment.resolved_at || comment.status === 'wont_do';
               
               return (
@@ -2295,62 +878,44 @@ function CommentsSidebar({
                   onMouseLeave={() => onHoverComment(null)}
                   onClick={() => onFocusComment(comment)}
                 >
-                  {/* Status badges (needs-repin, offscreen) + repin button */}
-                  {!isResolved && (
+                  {/* Needs anchor badge + repin button */}
+                  {!isResolved && needsAnchor && (
                     <div className="mb-1 flex items-center gap-1">
-                      {needsRepin && (
-                        <Badge variant="outline" className="text-xs bg-amber-500/10 text-amber-600 border-amber-500/30">
-                          <MapPin className="h-3 w-3 mr-1" />
-                          Needs re-pin
-                        </Badge>
-                      )}
-                      {isOffscreen && !needsRepin && (
-                        <Badge variant="outline" className="text-xs bg-muted text-muted-foreground">
-                          <EyeOff className="h-3 w-3 mr-1" />
-                          Offscreen
-                        </Badge>
-                      )}
-                      {/* Repin button - always available for unresolved comments */}
+                      <Badge variant="outline" className="text-xs bg-amber-500/10 text-amber-600 border-amber-500/30">
+                        <AlertTriangle className="h-3 w-3 mr-1" />
+                        No pin
+                      </Badge>
                       {onRepin && (
                         <Button
                           variant="ghost"
                           size="sm"
-                          className={`h-5 px-1.5 text-[10px] ${needsRepin ? 'text-amber-600 hover:text-amber-700' : 'text-muted-foreground hover:text-foreground'}`}
+                          className="h-5 px-1.5 text-[10px] text-amber-600 hover:text-amber-700"
                           onClick={(e) => {
                             e.stopPropagation();
                             onRepin(comment.id);
                           }}
                         >
                           <Target className="h-3 w-3 mr-0.5" />
-                          {needsRepin ? 'Re-pin' : 'Move pin'}
+                          Add pin
                         </Button>
                       )}
                     </div>
                   )}
-                  {/* Page badge + Jump to page button */}
-                  {comment.page_path && (
-                    <div className="mb-1 flex items-center gap-1 flex-wrap">
-                      <Badge variant="outline" className="text-xs font-mono">
-                        {comment.page_path}
-                      </Badge>
-                      {comment.breakpoint && (
-                        <Badge variant="secondary" className="text-xs">
-                          {comment.breakpoint}
-                        </Badge>
-                      )}
-                      {isOnDifferentPage && isSameOrigin && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-5 px-1.5 text-[10px] text-primary hover:text-primary"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onJumpToPage(comment);
-                          }}
-                        >
-                          Jump to page
-                        </Button>
-                      )}
+                  {/* Move pin button for pinned comments */}
+                  {!isResolved && !needsAnchor && onRepin && (
+                    <div className="mb-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-5 px-1.5 text-[10px] text-muted-foreground hover:text-foreground"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onRepin(comment.id);
+                        }}
+                      >
+                        <Target className="h-3 w-3 mr-0.5" />
+                        Move pin
+                      </Button>
                     </div>
                   )}
                   <PortalCommentCard
