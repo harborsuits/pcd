@@ -158,6 +158,7 @@ interface IframeClickMessage {
   viewport: { w: number; h: number };
   textOffset?: number | null;
   textContext?: string | null;
+  ts?: number; // Timestamp added on receive
 }
 
 interface IframeScrollMessage {
@@ -598,7 +599,8 @@ export function PrototypeViewer({
         case "PCD_CLICK": {
           const msg = data as IframeClickMessage;
           console.log("[PostMessage] Click captured:", msg);
-          lastIframeClick.current = msg;
+          // Store with timestamp so we can check recency
+          lastIframeClick.current = { ...msg, ts: Date.now() };
           
           // If in comment mode, use this click data
           if (isAddingComment || repinTargetId) {
@@ -678,9 +680,8 @@ export function PrototypeViewer({
     const pin_y = ((clientY - overlayRect.top) / overlayRect.height) * 100;
 
     // Check if we have recent click data from the iframe helper
-    const iframeClick = lastIframeClick.current;
-    const clickAge = iframeClick ? Date.now() : Infinity;
-    const isRecentClick = clickAge < 1000; // Click within last 1 second
+    const iframeClick = lastIframeClick.current as (IframeClickMessage & { ts?: number }) | null;
+    const isRecentClick = !!iframeClick?.ts && (Date.now() - iframeClick.ts) < 1000;
 
     // Use iframe click data if available (cross-origin compatible)
     if (iframeClick && isRecentClick && iframeReady) {
