@@ -238,13 +238,9 @@ export function PrototypeViewer({
     setPinUpdateKey(k => k + 1);
   }, []);
   
-  // RAF-throttled pin update using PARENT window's RAF (more reliable)
+  // Simple pin update - no throttling until we verify it works
   const schedulePinUpdate = useCallback(() => {
-    if (rafIdRef.current != null) return;
-    rafIdRef.current = window.requestAnimationFrame(() => {
-      rafIdRef.current = null;
-      setPinUpdateKey(k => k + 1);
-    });
+    setPinUpdateKey(k => k + 1);
   }, []);
 
   // --- Hover highlight helpers (requires DOM access) ---
@@ -451,10 +447,12 @@ export function PrototypeViewer({
         
         // Recompute pins on scroll/resize
         const updateAll = () => {
+          console.log('[pins] scroll/resize triggered, updating pins');
           schedulePinUpdate();
         };
 
         // IMPORTANT: force one recompute immediately
+        console.log('[pins] initial pin update');
         updateAll();
 
         // 1) Scroll/resize inside iframe window
@@ -1024,7 +1022,7 @@ export function PrototypeViewer({
   // Returns enhanced position result with direction for offscreen pins and debug info
   // Since pins now render INSIDE the iframe, we use iframe viewport coords directly
   const getPinPosition = useCallback((comment: PrototypeComment): PinPositionResult => {
-    const sameOrigin = canAccessDOM;
+    // Use canAccessDOM directly - no alias
     
     // Base debug info
     const baseDebug: PinDebug = {
