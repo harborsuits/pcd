@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
+import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { RefreshCw, MessageCircle, X, Check, ExternalLink, Maximize2, Minimize2, ChevronRight, ChevronLeft, AlertTriangle, MapPin, EyeOff, ChevronUp, ChevronDown, Target } from "lucide-react";
@@ -35,14 +36,12 @@ function getPathFromUrl(url: string): string | null {
 }
 
 // Get iframe scale: ratio of screen pixels to iframe viewport pixels
-// This is the single source of truth for coordinate transforms
+// Used for capture (converting parent clicks to iframe coords)
 function getIframeScale(iframe: HTMLIFrameElement) {
   const win = iframe.contentWindow;
   const rect = iframe.getBoundingClientRect();
   if (!win) return { scaleX: 1, scaleY: 1, rect };
 
-  // rect.width = how wide iframe appears on screen (screen px)
-  // win.innerWidth = how wide iframe viewport is internally (CSS px)
   const scaleX = rect.width / (win.innerWidth || rect.width);
   const scaleY = rect.height / (win.innerHeight || rect.height);
 
@@ -208,6 +207,9 @@ export function PrototypeViewer({
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [pinUpdateKey, setPinUpdateKey] = useState(0);
   const [debugPins, setDebugPins] = useState(false);
+  
+  // Mount node for rendering pins INSIDE the iframe (eliminates coordinate drift)
+  const [iframePinMount, setIframePinMount] = useState<HTMLDivElement | null>(null);
   
   // Refs for RAF throttling and cleanup
   const rafIdRef = useRef<number | null>(null);
@@ -398,6 +400,22 @@ export function PrototypeViewer({
 
         // Inject hover highlight style into iframe
         ensureHoverStyle();
+        
+        // Create pin mount node INSIDE the iframe document
+        // This eliminates all coordinate drift issues
+        let pinMount = iframeDoc.getElementById("pcd-pin-overlay") as HTMLDivElement | null;
+        if (!pinMount) {
+          pinMount = iframeDoc.createElement("div");
+          pinMount.id = "pcd-pin-overlay";
+          pinMount.style.cssText = `
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 999999;
+          `;
+          iframeDoc.body.appendChild(pinMount);
+        }
+        setIframePinMount(pinMount);
 
         // IMPORTANT: force one recompute immediately
         schedulePinUpdate();
@@ -410,7 +428,6 @@ export function PrototypeViewer({
         iframeDoc.addEventListener("scroll", schedulePinUpdate, true);
 
         // 3) Parent window resize (in case the preview container resizes)
-        // Note: We don't need parent scroll since pins live in overlay space, not page space
         window.addEventListener("resize", schedulePinUpdate);
 
         // 4) Resize observers: iframe + overlay + iframe body
@@ -456,6 +473,9 @@ export function PrototypeViewer({
             window.clearInterval(navTimer);
             navTimer = null;
           }
+          
+          // Clear pin mount reference
+          setIframePinMount(null);
         };
       } catch {
         setCurrentIframePath(null);
@@ -965,6 +985,7 @@ export function PrototypeViewer({
 
   // Calculate pin position for a comment - always try DOM anchor first
   // Returns enhanced position result with direction for offscreen pins and debug info
+  // Since pins now render INSIDE the iframe, we use iframe viewport coords directly
   const getPinPosition = useCallback((comment: PrototypeComment): PinPositionResult => {
     const sameOrigin = isSameOrigin(prototype.url);
     
@@ -983,16 +1004,12 @@ export function PrototypeViewer({
     if (comment.anchor_selector && sameOrigin) {
       try {
         const iframe = iframeRef.current;
-        const overlay = overlayRef.current;
         const iframeDoc = iframe?.contentDocument;
         const iframeWin = iframe?.contentWindow;
         
-        if (iframe && overlay && iframeDoc && iframeWin) {
+        if (iframe && iframeDoc && iframeWin) {
           const anchorEl = iframeDoc.querySelector(comment.anchor_selector);
           if (anchorEl) {
-            const overlayRect = overlay.getBoundingClientRect();
-            const iframeRect = iframe.getBoundingClientRect();
-            
             let pinRect: DOMRect;
             let usedRange = false;
             
@@ -1025,69 +1042,52 @@ export function PrototypeViewer({
             
             baseDebug.mode = usedRange ? "range" : "element";
             
-            // pinRect is in IFRAME VIEWPORT COORDS (CSS px relative to iframe's visible area)
-            // We need to convert to overlay-local coords (screen px)
-            
-            // RENDER: multiply by scale to convert iframe viewport coords -> overlay/screen coords
-            const { scaleX, scaleY } = getIframeScale(iframe);
-            baseDebug.scale = { x: Math.round(scaleX * 1000) / 1000, y: Math.round(scaleY * 1000) / 1000 };
-            baseDebug.delta = { 
-              dx: Math.round(overlayRect.left - iframeRect.left), 
-              dy: Math.round(overlayRect.top - iframeRect.top) 
-            };
-            
-            // pinRect center in iframe viewport coords, then multiply by scale for overlay coords
+            // pinRect is in IFRAME VIEWPORT COORDS
+            // Since pins now render INSIDE the iframe (position: fixed overlay),
+            // we can use these coords directly - no scale conversion needed!
             const pinCenterX = pinRect.left + (pinRect.width / 2);
             const pinCenterY = pinRect.top + (pinRect.height / 2);
             
-            // Convert iframe viewport coords -> overlay/screen coords
-            const localX = pinCenterX * scaleX;
-            const localY = pinCenterY * scaleY;
+            const viewportW = iframeWin.innerWidth;
+            const viewportH = iframeWin.innerHeight;
             
-            const leftPct = (localX / overlayRect.width) * 100;
-            const topPct = (localY / overlayRect.height) * 100;
-            
-            // If pin is offscreen, compute direction
-            if (localX < 0 || localY < 0 || localX > overlayRect.width || localY > overlayRect.height) {
+            // Check if offscreen
+            if (pinCenterX < 0 || pinCenterY < 0 || pinCenterX > viewportW || pinCenterY > viewportH) {
               let direction: 'up' | 'down' | 'left' | 'right';
               
-              const viewportH = iframeWin.innerHeight;
-              const viewportW = iframeWin.innerWidth;
-              
-              if (pinRect.top + pinRect.height / 2 < 0) {
+              if (pinCenterY < 0) {
                 direction = 'up';
-              } else if (pinRect.top + pinRect.height / 2 > viewportH) {
+              } else if (pinCenterY > viewportH) {
                 direction = 'down';
-              } else if (pinRect.left + pinRect.width / 2 < 0) {
+              } else if (pinCenterX < 0) {
                 direction = 'left';
               } else {
                 direction = 'right';
               }
               
-              const clampedLeftPct = Math.max(5, Math.min(95, leftPct));
-              const clampedTopPct = Math.max(5, Math.min(95, topPct));
-              
+              // Clamp to edges (in px for fixed positioning)
               let edgeLeft: string;
               let edgeTop: string;
               
               if (direction === 'up') {
-                edgeLeft = `${clampedLeftPct}%`;
-                edgeTop = '8px';
+                edgeLeft = `${Math.max(16, Math.min(viewportW - 16, pinCenterX))}px`;
+                edgeTop = '16px';
               } else if (direction === 'down') {
-                edgeLeft = `${clampedLeftPct}%`;
-                edgeTop = 'calc(100% - 24px)';
+                edgeLeft = `${Math.max(16, Math.min(viewportW - 16, pinCenterX))}px`;
+                edgeTop = `${viewportH - 16}px`;
               } else if (direction === 'left') {
-                edgeLeft = '8px';
-                edgeTop = `${clampedTopPct}%`;
+                edgeLeft = '16px';
+                edgeTop = `${Math.max(16, Math.min(viewportH - 16, pinCenterY))}px`;
               } else {
-                edgeLeft = 'calc(100% - 24px)';
-                edgeTop = `${clampedTopPct}%`;
+                edgeLeft = `${viewportW - 16}px`;
+                edgeTop = `${Math.max(16, Math.min(viewportH - 16, pinCenterY))}px`;
               }
               
               return { kind: 'offscreen', direction, edgeLeft, edgeTop, debug: baseDebug };
             }
             
-            return { kind: 'visible', left: `${leftPct}%`, top: `${topPct}%`, debug: baseDebug };
+            // Visible: return px coords for fixed positioning inside iframe
+            return { kind: 'visible', left: `${pinCenterX}px`, top: `${pinCenterY}px`, debug: baseDebug };
           } else {
             // Anchor selector exists but element not found - needs re-pin
             return { kind: 'needs-repin', debug: baseDebug };
@@ -1408,130 +1408,175 @@ export function PrototypeViewer({
             sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
           />
 
-          {/* Pin overlay */}
+          {/* Click overlay for capturing pin placements (stays in parent) */}
           <div
             ref={overlayRef}
             className={`absolute inset-0 ${isAddingComment || repinTargetId ? "cursor-crosshair" : "pointer-events-none"}`}
             onClick={handleOverlayClick}
           >
-          {/* Existing comment pins - only show unresolved, visible ones with valid positions */}
-            {visibleComments
-              .filter(c => !c.resolved_at && (c.status !== 'resolved' && c.status !== 'wont_do'))
-              .map((comment, idx) => {
-                const position = getPinPosition(comment);
-                if (!position) return null;
-                
-                const status = getEffectiveStatus(comment);
-                const pinStyle = getPinClasses(status);
-                
-                // Handle offscreen arrows
-                if (position.kind === 'offscreen') {
-                  const ArrowIcon = position.direction === 'up' ? ChevronUp : 
-                                    position.direction === 'down' ? ChevronDown :
-                                    position.direction === 'left' ? ChevronLeft : ChevronRight;
-                  return (
-                    <div
-                      key={`offscreen-${comment.id}`}
-                      className="absolute"
-                      style={{ left: position.edgeLeft, top: position.edgeTop }}
-                    >
-                      <div
-                        className={`w-6 h-6 rounded-full border-2 flex items-center justify-center cursor-pointer pointer-events-auto transition-all hover:scale-110 ${pinStyle.bubble} ${pinStyle.ring}`}
-                        title={`Comment offscreen: ${comment.body.slice(0, 30)}... (click to scroll)`}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          focusComment(comment);
-                        }}
-                      >
-                        <ArrowIcon className="h-3 w-3" />
-                      </div>
-                      {/* Debug overlay for offscreen */}
-                      {debugPins && position.debug && (
-                        <div className="absolute left-7 top-0 z-50 pointer-events-none">
-                          <div className="rounded-md bg-black/80 text-white text-[10px] leading-tight px-2 py-1 max-w-[200px] whitespace-nowrap">
-                            <div><b>{comment.id.slice(0,6)}</b> · offscreen</div>
-                            <div>mode: {position.debug.mode}</div>
-                            <div>sel: {position.debug.hasSelector ? "Y" : "N"} · off: {position.debug.hasTextOffset ? String(position.debug.textOffset) : "N"}</div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                }
-                
-                // Skip needs-repin (handled in sidebar)
-                if (position.kind === 'needs-repin') return null;
-                
-                // Visible pin
-                const isFocused = focusedCommentId === comment.id;
-                const isHovered = hoveredCommentId === comment.id;
-                const hasMismatch = anchorMismatch === comment.id;
-
-                return (
-                  <div
-                    key={comment.id}
-                    className="absolute"
-                    style={{ left: position.left, top: position.top }}
-                  >
-                    <div
-                      className={`w-6 h-6 -ml-3 -mt-3 rounded-full flex items-center justify-center text-xs font-bold cursor-pointer transition-all hover:scale-110 pointer-events-auto shadow-lg ${
-                        hasMismatch 
-                          ? "bg-rose-500 text-white ring-rose-300" 
-                          : `${pinStyle.bubble} ${pinStyle.glow}`
-                      } ${
-                        isFocused || isHovered
-                          ? `ring-2 ${pinStyle.ring} ring-offset-2 scale-125`
-                          : ""
-                      }`}
-                      title={`${comment.body}${comment.page_path ? ` (${comment.page_path})` : ""}\n\nJ/K: navigate • R: resolve • Esc: clear`}
-                      onMouseEnter={() => setHoveredCommentId(comment.id)}
-                      onMouseLeave={() => setHoveredCommentId(null)}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setShowCommentsSidebar(true);
-                        setFocusedCommentId(comment.id);
-                      }}
-                    >
-                      {hasMismatch ? <AlertTriangle className="h-3 w-3" /> : idx + 1}
-                    </div>
-                    {/* Debug overlay for visible pin */}
-                    {debugPins && position.debug && (
-                      <div className="absolute left-4 top-0 z-50 pointer-events-none">
-                        <div className="rounded-md bg-black/80 text-white text-[10px] leading-tight px-2 py-1 max-w-[240px]">
-                          <div><b>{comment.id.slice(0,6)}</b> · {position.kind}</div>
-                          <div>mode: <span className={position.debug.mode === "range" ? "text-green-400" : position.debug.mode === "element" ? "text-amber-400" : "text-red-400"}>{position.debug.mode}</span></div>
-                          <div>sel: {position.debug.hasSelector ? "✓" : "✗"} · offset: {position.debug.hasTextOffset ? <span className="text-green-400">{position.debug.textOffset}</span> : <span className="text-red-400">N</span>}</div>
-                          {position.debug.scale && (
-                            <div className={position.debug.scale.x === 1 && position.debug.scale.y === 1 ? "text-green-400" : "text-amber-400"}>
-                              scale: {position.debug.scale.x}×{position.debug.scale.y}
-                            </div>
-                          )}
-                          {position.debug.delta && (
-                            <div className={position.debug.delta.dx === 0 && position.debug.delta.dy === 0 ? "text-green-400" : "text-amber-400"}>
-                              delta: {position.debug.delta.dx},{position.debug.delta.dy}
-                            </div>
-                          )}
-                          {position.debug.contextPreview && <div className="truncate">ctx: "{position.debug.contextPreview}…"</div>}
-                          {position.debug.rangeRect && (
-                            <div className="text-green-400">rect: {Math.round(position.debug.rangeRect.w)}×{Math.round(position.debug.rangeRect.h)}</div>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-
-            {/* Pending pin */}
+            {/* Pending pin indicator (stays in parent overlay) */}
             {pendingPin && (
               <div
-                className="absolute w-6 h-6 -ml-3 -mt-3 rounded-full bg-primary text-primary-foreground flex items-center justify-center animate-pulse shadow-lg"
+                className="absolute w-6 h-6 -ml-3 -mt-3 rounded-full bg-primary text-primary-foreground flex items-center justify-center animate-pulse shadow-lg pointer-events-none"
                 style={{ left: `${pendingPin.x}%`, top: `${pendingPin.y}%` }}
               >
                 <MessageCircle className="h-3 w-3" />
               </div>
             )}
           </div>
+          
+          {/* Comment pins rendered INSIDE the iframe via portal - eliminates coordinate drift */}
+          {iframePinMount && isSameOrigin(prototype.url) && createPortal(
+            <>
+              {visibleComments
+                .filter(c => !c.resolved_at && (c.status !== 'resolved' && c.status !== 'wont_do'))
+                .map((comment, idx) => {
+                  const position = getPinPosition(comment);
+                  if (!position) return null;
+                  
+                  const status = getEffectiveStatus(comment);
+                  const pinStyle = getPinClasses(status);
+                  
+                  // Handle offscreen arrows
+                  if (position.kind === 'offscreen') {
+                    const ArrowIcon = position.direction === 'up' ? ChevronUp : 
+                                      position.direction === 'down' ? ChevronDown :
+                                      position.direction === 'left' ? ChevronLeft : ChevronRight;
+                    return (
+                      <div
+                        key={`offscreen-${comment.id}`}
+                        style={{ 
+                          position: 'fixed',
+                          left: position.edgeLeft, 
+                          top: position.edgeTop,
+                          transform: 'translate(-50%, -50%)',
+                          pointerEvents: 'auto',
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: 24,
+                            height: 24,
+                            borderRadius: '50%',
+                            border: '2px solid currentColor',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            cursor: 'pointer',
+                            backgroundColor: status === 'in_progress' ? '#f59e0b' : status === 'open' ? '#3b82f6' : '#6b7280',
+                            color: 'white',
+                            transition: 'transform 0.15s',
+                          }}
+                          title={`Comment offscreen: ${comment.body.slice(0, 30)}... (click to scroll)`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            focusComment(comment);
+                          }}
+                          onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.1)')}
+                          onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+                        >
+                          <ArrowIcon className="h-3 w-3" />
+                        </div>
+                      </div>
+                    );
+                  }
+                  
+                  // Skip needs-repin (handled in sidebar)
+                  if (position.kind === 'needs-repin') return null;
+                  
+                  // Visible pin
+                  const isFocused = focusedCommentId === comment.id;
+                  const isHovered = hoveredCommentId === comment.id;
+                  const hasMismatch = anchorMismatch === comment.id;
+
+                  return (
+                    <div
+                      key={comment.id}
+                      style={{ 
+                        position: 'fixed',
+                        left: position.left, 
+                        top: position.top,
+                        transform: 'translate(-50%, -50%)',
+                        pointerEvents: 'auto',
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: 24,
+                          height: 24,
+                          borderRadius: '50%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: 12,
+                          fontWeight: 'bold',
+                          cursor: 'pointer',
+                          transition: 'transform 0.15s',
+                          boxShadow: hasMismatch 
+                            ? '0 0 0 4px rgba(239, 68, 68, 0.2)' 
+                            : status === 'open' 
+                              ? '0 0 0 4px rgba(59, 130, 246, 0.18)' 
+                              : status === 'in_progress'
+                                ? '0 0 0 4px rgba(245, 158, 11, 0.2)'
+                                : 'none',
+                          backgroundColor: hasMismatch 
+                            ? '#ef4444' 
+                            : status === 'in_progress' 
+                              ? '#f59e0b' 
+                              : status === 'open' 
+                                ? '#3b82f6' 
+                                : '#6b7280',
+                          color: status === 'in_progress' ? 'black' : 'white',
+                          transform: isFocused || isHovered ? 'scale(1.25)' : 'scale(1)',
+                          outline: isFocused || isHovered ? '2px solid rgba(59, 130, 246, 0.5)' : 'none',
+                          outlineOffset: 2,
+                        }}
+                        title={`${comment.body}${comment.page_path ? ` (${comment.page_path})` : ""}\n\nJ/K: navigate • R: resolve • Esc: clear`}
+                        onMouseEnter={() => setHoveredCommentId(comment.id)}
+                        onMouseLeave={() => setHoveredCommentId(null)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShowCommentsSidebar(true);
+                          setFocusedCommentId(comment.id);
+                        }}
+                      >
+                        {hasMismatch ? <AlertTriangle className="h-3 w-3" /> : idx + 1}
+                      </div>
+                      {/* Debug overlay */}
+                      {debugPins && position.debug && (
+                        <div style={{ 
+                          position: 'absolute', 
+                          left: 28, 
+                          top: 0, 
+                          zIndex: 50,
+                          pointerEvents: 'none',
+                        }}>
+                          <div style={{
+                            borderRadius: 4,
+                            backgroundColor: 'rgba(0,0,0,0.85)',
+                            color: 'white',
+                            fontSize: 10,
+                            lineHeight: 1.3,
+                            padding: '4px 8px',
+                            maxWidth: 240,
+                            whiteSpace: 'nowrap',
+                          }}>
+                            <div><b>{comment.id.slice(0,6)}</b> · {position.kind}</div>
+                            <div>mode: <span style={{ color: position.debug.mode === 'range' ? '#4ade80' : position.debug.mode === 'element' ? '#fbbf24' : '#f87171' }}>{position.debug.mode}</span></div>
+                            <div>sel: {position.debug.hasSelector ? '✓' : '✗'} · offset: {position.debug.hasTextOffset ? position.debug.textOffset : 'N'}</div>
+                            {position.debug.contextPreview && <div style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>ctx: "{position.debug.contextPreview}…"</div>}
+                            {position.debug.rangeRect && (
+                              <div style={{ color: '#4ade80' }}>rect: {Math.round(position.debug.rangeRect.w)}×{Math.round(position.debug.rangeRect.h)}</div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+            </>,
+            iframePinMount
+          )}
 
           {/* Comment input popover */}
           {pendingPin && (
