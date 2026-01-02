@@ -492,6 +492,37 @@ export function PrototypeViewer({
     if (!isAddingComment && !repinTargetId) setHover(null);
   }, [isAddingComment, repinTargetId]);
 
+  // Send PCD_FOCUS to iframe when a comment is focused/hovered
+  useEffect(() => {
+    if (!bridgeReady || !iframeRef.current?.contentWindow) return;
+    
+    const selectedId = focusedCommentId ?? hoveredCommentId;
+    const selectedComment = selectedId 
+      ? comments.find(c => c.id === selectedId) 
+      : null;
+    
+    if (selectedComment?.anchor_id || selectedComment?.anchor_selector) {
+      try {
+        iframeRef.current.contentWindow.postMessage(
+          { 
+            type: "PCD_FOCUS", 
+            anchorKey: selectedComment.anchor_id,
+            selector: selectedComment.anchor_selector 
+          },
+          "*"
+        );
+      } catch {}
+    } else {
+      // Clear focus if no valid selection
+      try {
+        iframeRef.current.contentWindow.postMessage(
+          { type: "PCD_CLEAR_FOCUS" },
+          "*"
+        );
+      } catch {}
+    }
+  }, [bridgeReady, focusedCommentId, hoveredCommentId, comments]);
+
   // Helper: convert iframe-viewport rect → overlay coords
   const iframeRectToOverlayRect = useCallback((
     r: { left: number; top: number; width: number; height: number } | null | undefined
@@ -778,6 +809,7 @@ export function PrototypeViewer({
     const status = getEffectiveStatus(comment);
     const isFocused = focusedCommentId === comment.id;
     const isHovered = hoveredCommentId === comment.id;
+    const isSelected = isFocused || isHovered;
     
     // No bridge - show nothing (pins don't work without helper)
     if (position.kind === 'no-bridge') {
@@ -807,7 +839,7 @@ export function PrototypeViewer({
           <div
             className={`w-6 h-6 rounded-full flex items-center justify-center cursor-pointer transition-transform border-2 border-white ${
               status === 'in_progress' ? 'bg-amber-500 text-black' : 'bg-primary text-primary-foreground'
-            }`}
+            } ${isSelected ? 'scale-125 ring-2 ring-primary/50' : ''}`}
             title={`Scroll to: ${comment.body.slice(0, 30)}...`}
             onClick={(e) => {
               e.stopPropagation();
@@ -820,7 +852,7 @@ export function PrototypeViewer({
       );
     }
     
-    // Visible pin
+    // Visible pin - enhanced when selected
     return (
       <div
         key={comment.id}
@@ -831,23 +863,59 @@ export function PrototypeViewer({
           transform: 'translate(-50%, -50%)',
         }}
       >
-        <div
-          className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold cursor-pointer transition-transform ${
-            status === 'in_progress' 
-              ? 'bg-amber-500 text-black shadow-[0_0_0_4px_rgba(245,158,11,0.2)]' 
-              : 'bg-primary text-primary-foreground shadow-[0_0_0_4px_rgba(59,130,246,0.18)]'
-          } ${isFocused || isHovered ? 'scale-125 ring-2 ring-primary/50' : ''}`}
-          title={comment.body}
-          onMouseEnter={() => setHoveredCommentId(comment.id)}
-          onMouseLeave={() => setHoveredCommentId(null)}
-          onClick={(e) => {
-            e.stopPropagation();
-            setShowCommentsSidebar(true);
-            focusComment(comment);
-          }}
-        >
-          {index + 1}
-        </div>
+        {/* Selected state: larger icon with glow + element badge */}
+        {isSelected ? (
+          <div className="relative">
+            {/* Pulsing ring effect */}
+            <div className="absolute inset-0 w-10 h-10 -ml-2 -mt-2 rounded-full bg-primary/20 animate-ping" />
+            {/* Main selected icon */}
+            <div
+              className={`relative w-10 h-10 rounded-full flex items-center justify-center cursor-pointer transition-all ${
+                status === 'in_progress' 
+                  ? 'bg-amber-500 text-black ring-4 ring-amber-400/40' 
+                  : 'bg-primary text-primary-foreground ring-4 ring-primary/40'
+              } shadow-lg`}
+              title={comment.body}
+              onMouseEnter={() => setHoveredCommentId(comment.id)}
+              onMouseLeave={() => setHoveredCommentId(null)}
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowCommentsSidebar(true);
+                focusComment(comment);
+              }}
+            >
+              <MessageCircle className="h-5 w-5" />
+            </div>
+            {/* Element badge - shows what this comment refers to */}
+            {comment.text_hint && (
+              <div
+                className="absolute left-12 top-1/2 -translate-y-1/2 px-2 py-1 rounded-md text-xs bg-background/95 border border-border shadow-lg whitespace-nowrap max-w-48 truncate flex items-center gap-1.5 pointer-events-none"
+              >
+                <Target className="h-3 w-3 shrink-0 text-primary" />
+                <span className="truncate">{comment.text_hint}</span>
+              </div>
+            )}
+          </div>
+        ) : (
+          /* Default pin state */
+          <div
+            className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold cursor-pointer transition-transform ${
+              status === 'in_progress' 
+                ? 'bg-amber-500 text-black shadow-[0_0_0_4px_rgba(245,158,11,0.2)]' 
+                : 'bg-primary text-primary-foreground shadow-[0_0_0_4px_rgba(59,130,246,0.18)]'
+            }`}
+            title={comment.body}
+            onMouseEnter={() => setHoveredCommentId(comment.id)}
+            onMouseLeave={() => setHoveredCommentId(null)}
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowCommentsSidebar(true);
+              focusComment(comment);
+            }}
+          >
+            {index + 1}
+          </div>
+        )}
       </div>
     );
   };
