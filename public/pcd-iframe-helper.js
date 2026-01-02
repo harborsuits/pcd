@@ -24,9 +24,30 @@
     }
   };
 
-  // Build a CSS selector for an element
-  const buildSelector = (el) => {
+  // Generate stable anchor key
+  const generateAnchorKey = () => "pcd_" + Math.random().toString(36).slice(2, 10);
+
+  // Stamp element with stable data-pcd-anchor if not already stamped
+  const ensureAnchorStamp = (el) => {
     if (!el || !(el instanceof Element)) return null;
+    try {
+      if (!el.dataset.pcdAnchor) {
+        el.dataset.pcdAnchor = generateAnchorKey();
+      }
+      return el.dataset.pcdAnchor;
+    } catch {
+      return null;
+    }
+  };
+
+  // Build a CSS selector for an element - prioritize stable data-pcd-anchor
+  const buildSelector = (el, anchorKey) => {
+    if (!el || !(el instanceof Element)) return null;
+    
+    // Prefer stable anchor selector
+    if (anchorKey) {
+      return `[data-pcd-anchor="${anchorKey}"]`;
+    }
     
     // Prefer ID if available
     if (el.id) {
@@ -109,13 +130,16 @@
   // Tell parent we're alive
   send({ type: "PCD_IFRAME_READY" });
 
-  // Click capture
+  // Click capture - stamp element with stable anchor key
   window.addEventListener("click", (e) => {
     const t = e.target;
     if (!(t instanceof Element)) return;
 
+    // Stamp the clicked element with a stable anchor key for reliable re-finding
+    const anchorKey = ensureAnchorStamp(t);
+    
     const r = t.getBoundingClientRect();
-    const selector = buildSelector(t);
+    const selector = buildSelector(t, anchorKey);
     const id = t.id || null;
     const { textOffset, textContext, textHint } = getTextContext(t, e.clientX, e.clientY);
 
@@ -123,6 +147,7 @@
       type: "PCD_CLICK",
       selector,
       id,
+      anchorKey, // Include the stable anchor key
       rect: { left: r.left, top: r.top, width: r.width, height: r.height },
       scroll: { x: window.scrollX, y: window.scrollY },
       viewport: { w: window.innerWidth, h: window.innerHeight },
