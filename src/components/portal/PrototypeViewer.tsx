@@ -34,6 +34,21 @@ function getPathFromUrl(url: string): string | null {
   }
 }
 
+// Get iframe scale: ratio of screen pixels to iframe viewport pixels
+// This is the single source of truth for coordinate transforms
+function getIframeScale(iframe: HTMLIFrameElement) {
+  const win = iframe.contentWindow;
+  const rect = iframe.getBoundingClientRect();
+  if (!win) return { scaleX: 1, scaleY: 1, rect };
+
+  // rect.width = how wide iframe appears on screen (screen px)
+  // win.innerWidth = how wide iframe viewport is internally (CSS px)
+  const scaleX = rect.width / (win.innerWidth || rect.width);
+  const scaleY = rect.height / (win.innerHeight || rect.height);
+
+  return { scaleX: scaleX || 1, scaleY: scaleY || 1, rect };
+}
+
 export type CommentStatus = "open" | "in_progress" | "resolved" | "wont_do";
 
 export interface PrototypeComment {
@@ -503,13 +518,12 @@ export function PrototypeViewer({
         baseData.page_url = iframeWin.location.href;
         baseData.scroll_y = iframeWin.scrollY;
 
-        // Get iframe rect to calculate click position inside iframe viewport
-        const iframeRect = iframe.getBoundingClientRect();
+        // Get scale: screen px -> iframe viewport px
+        const { scaleX, scaleY, rect: iframeRect } = getIframeScale(iframe);
         
-        // Convert click (parent viewport coords) -> iframe viewport coords
-        // Since iframe has no CSS transforms (just w-full h-full), this is a simple offset
-        const xInIframe = clientX - iframeRect.left;
-        const yInIframe = clientY - iframeRect.top;
+        // CAPTURE: divide by scale to convert parent click coords -> iframe viewport coords
+        const xInIframe = (clientX - iframeRect.left) / scaleX;
+        const yInIframe = (clientY - iframeRect.top) / scaleY;
 
         // Try to get caret position for text-precise anchoring
         let caretInfo: { node: Node; offset: number; element: Element } | null = null;
@@ -1011,32 +1025,24 @@ export function PrototypeViewer({
             
             baseDebug.mode = usedRange ? "range" : "element";
             
-            // pinRect is in IFRAME VIEWPORT COORDS (already accounts for scroll inside iframe)
-            // These are CSS pixels relative to the iframe's visible area
-            // We need to convert to overlay-local coords
+            // pinRect is in IFRAME VIEWPORT COORDS (CSS px relative to iframe's visible area)
+            // We need to convert to overlay-local coords (screen px)
             
-            // The overlay and iframe should be perfectly aligned (same parent, same inset-0)
-            // So pinRect coords can be used directly as overlay coords
-            // No scale conversion needed because getBoundingClientRect() inside iframe
-            // returns viewport-relative coords, and our overlay covers the iframe viewport
-            
-            // Add scale/delta to debug info for diagnostics
-            const scaleX = iframeRect.width / iframe.offsetWidth;
-            const scaleY = iframeRect.height / iframe.offsetHeight;
+            // RENDER: multiply by scale to convert iframe viewport coords -> overlay/screen coords
+            const { scaleX, scaleY } = getIframeScale(iframe);
             baseDebug.scale = { x: Math.round(scaleX * 1000) / 1000, y: Math.round(scaleY * 1000) / 1000 };
             baseDebug.delta = { 
               dx: Math.round(overlayRect.left - iframeRect.left), 
               dy: Math.round(overlayRect.top - iframeRect.top) 
             };
             
-            // pinRect center in iframe viewport coords
+            // pinRect center in iframe viewport coords, then multiply by scale for overlay coords
             const pinCenterX = pinRect.left + (pinRect.width / 2);
             const pinCenterY = pinRect.top + (pinRect.height / 2);
             
-            // Since overlay is positioned absolute inset-0 over the iframe,
-            // iframe viewport coords ARE overlay coords (1:1 mapping)
-            const localX = pinCenterX;
-            const localY = pinCenterY;
+            // Convert iframe viewport coords -> overlay/screen coords
+            const localX = pinCenterX * scaleX;
+            const localY = pinCenterY * scaleY;
             
             const leftPct = (localX / overlayRect.width) * 100;
             const topPct = (localY / overlayRect.height) * 100;
