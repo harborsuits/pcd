@@ -37,9 +37,29 @@ function isValidToken(token: string): boolean {
 
 // Rewrite HTML to route all assets through the proxy
 function rewriteUrls(html: string, prototypeUrl: string, proxyBaseUrl: string): string {
-  // Set base href to the PROXY URL so all relative paths go through our proxy
-  // This is the key fix - assets like /assets/index.js will resolve to proxyBaseUrl/assets/index.js
-  const baseTag = `<base href="${proxyBaseUrl}">`;
+  const prototypeOrigin = new URL(prototypeUrl).origin;
+  
+  // CRITICAL: Rewrite absolute paths like /assets/index.js to go through proxy
+  // The <base href> only affects RELATIVE paths, not absolute ones starting with /
+  // So we must rewrite src="/assets/..." and href="/assets/..." to use full proxy URL
+  
+  // Rewrite script src attributes with absolute paths
+  html = html.replace(
+    /(<script[^>]*\s+src=["'])\/([^"']+)(["'][^>]*>)/gi,
+    `$1${proxyBaseUrl}$2$3`
+  );
+  
+  // Rewrite link href attributes with absolute paths  
+  html = html.replace(
+    /(<link[^>]*\s+href=["'])\/([^"']+)(["'][^>]*>)/gi,
+    `$1${proxyBaseUrl}$2$3`
+  );
+  
+  // Rewrite img src attributes with absolute paths
+  html = html.replace(
+    /(<img[^>]*\s+src=["'])\/([^"']+)(["'][^>]*>)/gi,
+    `$1${proxyBaseUrl}$2$3`
+  );
   
   // Script to enable parent-to-iframe communication for pin anchoring
   const helperScript = `
@@ -47,10 +67,11 @@ function rewriteUrls(html: string, prototypeUrl: string, proxyBaseUrl: string): 
 (function() {
   // Pin anchoring helper - enables same-origin DOM access for parent
   window.__PCD_PROTOTYPE_READY = true;
+  window.__PCD_PROTOTYPE_ORIGIN = "${prototypeOrigin}";
   
   // Notify parent that prototype is ready
   if (window.parent !== window) {
-    window.parent.postMessage({ type: 'PCD_PROTOTYPE_READY', origin: window.location.origin }, '*');
+    window.parent.postMessage({ type: 'PCD_PROTOTYPE_READY', origin: "${prototypeOrigin}" }, '*');
   }
   
   // Listen for pin queries from parent
@@ -101,14 +122,13 @@ function rewriteUrls(html: string, prototypeUrl: string, proxyBaseUrl: string): 
 </script>
 `;
 
-  // Insert base tag and helper script after <head>
+  // Insert helper script after <head> (no base tag needed since we rewrite URLs directly)
   if (html.includes('<head>')) {
-    html = html.replace('<head>', `<head>${baseTag}${helperScript}`);
+    html = html.replace('<head>', `<head>${helperScript}`);
   } else if (html.includes('<HEAD>')) {
-    html = html.replace('<HEAD>', `<HEAD>${baseTag}${helperScript}`);
+    html = html.replace('<HEAD>', `<HEAD>${helperScript}`);
   } else {
-    // No head tag, prepend
-    html = `${baseTag}${helperScript}${html}`;
+    html = `${helperScript}${html}`;
   }
   
   return html;
