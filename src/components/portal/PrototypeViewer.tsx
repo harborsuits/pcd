@@ -1471,14 +1471,12 @@ export function PrototypeViewer({
             )}
           </div>
           
-          {/* Comment pins - rendered inside iframe portal when DOM accessible, or in parent overlay otherwise */}
-          {iframePinMount && canAccessDOM ? (
-            // DOM accessible: render inside iframe for perfect anchoring
-            createPortal(
-              <>
-                {visibleComments
-                  .filter(c => !c.resolved_at && (c.status !== 'resolved' && c.status !== 'wont_do'))
-                  .map((comment, idx) => {
+          {/* Comment pins - rendered inside iframe portal when DOM accessible */}
+          {iframePinMount && canAccessDOM && createPortal(
+            <>
+              {visibleComments
+                .filter(c => !c.resolved_at && (c.status !== 'resolved' && c.status !== 'wont_do'))
+                .map((comment, idx) => {
                     const position = getPinPosition(comment);
                     if (!position) return null;
                     
@@ -1621,52 +1619,52 @@ export function PrototypeViewer({
                       </div>
                     );
                   })}
-              </>,
-              iframePinMount
-            )
-          ) : (
-            // Cross-origin fallback: render pins in parent overlay using viewport click % (pin_x/pin_y)
-            visibleComments
-              .filter(c => !c.resolved_at && (c.status !== 'resolved' && c.status !== 'wont_do'))
-              .filter(c => c.pin_x != null && c.pin_y != null)
-              .map((comment, idx) => {
-                const status = getEffectiveStatus(comment);
-                const isFocused = focusedCommentId === comment.id;
-                const isHovered = hoveredCommentId === comment.id;
+            </>,
+            iframePinMount
+          )}
+          
+          {/* Fallback pins in parent overlay - ALWAYS render when portal not available */}
+          {!(iframePinMount && canAccessDOM) && visibleComments
+            .filter(c => !c.resolved_at && (c.status !== 'resolved' && c.status !== 'wont_do'))
+            .filter(c => c.pin_x != null && c.pin_y != null)
+            .map((comment, idx) => {
+              const status = getEffectiveStatus(comment);
+              const isFocused = focusedCommentId === comment.id;
+              const isHovered = hoveredCommentId === comment.id;
 
-                return (
+              return (
+                <div
+                  key={comment.id}
+                  className="absolute pointer-events-auto"
+                  style={{ 
+                    left: `${comment.pin_x}%`, 
+                    top: `${comment.pin_y}%`,
+                    transform: 'translate(-50%, -50%)',
+                  }}
+                >
                   <div
-                    key={comment.id}
-                    className="absolute pointer-events-auto"
-                    style={{ 
-                      left: `${comment.pin_x}%`, 
-                      top: `${comment.pin_y}%`,
-                      transform: 'translate(-50%, -50%)',
+                    className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold cursor-pointer transition-transform ${
+                      status === 'in_progress' 
+                        ? 'bg-amber-500 text-black' 
+                        : status === 'open' 
+                          ? 'bg-primary text-primary-foreground' 
+                          : 'bg-muted-foreground text-white'
+                    } ${isFocused || isHovered ? 'scale-125 ring-2 ring-primary/50' : ''}`}
+                    title={`${comment.body}\n\n⚠️ Fallback mode: pins use fixed % position`}
+                    onMouseEnter={() => setHoveredCommentId(comment.id)}
+                    onMouseLeave={() => setHoveredCommentId(null)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowCommentsSidebar(true);
+                      setFocusedCommentId(comment.id);
                     }}
                   >
-                    <div
-                      className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold cursor-pointer transition-transform ${
-                        status === 'in_progress' 
-                          ? 'bg-amber-500 text-black' 
-                          : status === 'open' 
-                            ? 'bg-primary text-primary-foreground' 
-                            : 'bg-muted-foreground text-white'
-                      } ${isFocused || isHovered ? 'scale-125 ring-2 ring-primary/50' : ''}`}
-                      title={`${comment.body}\n\n⚠️ Cross-origin: pins use fixed % position`}
-                      onMouseEnter={() => setHoveredCommentId(comment.id)}
-                      onMouseLeave={() => setHoveredCommentId(null)}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setShowCommentsSidebar(true);
-                        setFocusedCommentId(comment.id);
-                      }}
-                    >
-                      {idx + 1}
-                    </div>
+                    {idx + 1}
                   </div>
-                );
-              })
-          )}
+                </div>
+              );
+            })
+          }
 
           {/* Comment input popover */}
           {pendingPin && (
