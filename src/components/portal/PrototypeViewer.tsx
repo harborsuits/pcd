@@ -184,6 +184,11 @@ export function PrototypeViewer({
 
       const data = event.data;
       if (!data || typeof data !== "object" || !data.type) return;
+      
+      // Log all PCD messages for debugging
+      if (data.__pcd || data.type?.startsWith("PCD_")) {
+        console.log("[Bridge] Received:", data.type, data);
+      }
 
       switch (data.type) {
         case "PCD_IFRAME_READY":
@@ -303,6 +308,22 @@ export function PrototypeViewer({
     setRectCache({});
     lastIframeClick.current = null;
   }, [iframeKey]);
+
+  // Send pin mode to iframe (changes cursor to crosshair inside iframe)
+  useEffect(() => {
+    if (!bridgeReady || !iframeRef.current?.contentWindow) return;
+    
+    const isPinMode = isAddingComment || !!repinTargetId;
+    try {
+      const protoOrigin = new URL(prototype.url).origin;
+      iframeRef.current.contentWindow.postMessage(
+        { type: "PCD_MODE", mode: isPinMode ? "pin" : "off" },
+        protoOrigin
+      );
+    } catch (e) {
+      console.warn("[Bridge] Failed to send mode:", e);
+    }
+  }, [bridgeReady, isAddingComment, repinTargetId, prototype.url]);
 
   // Calculate pin position - ONLY from rectCache
   const getPinPosition = useCallback((comment: PrototypeComment): PinPositionResult => {
