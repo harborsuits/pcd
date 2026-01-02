@@ -15,11 +15,22 @@ function getBreakpoint(width: number): string {
   return "xl";
 }
 
-// Check if URL is same-origin
+// Check if URL is same-origin (used for display/logging only)
 function isSameOrigin(url: string): boolean {
   try {
     const urlObj = new URL(url, window.location.origin);
     return urlObj.origin === window.location.origin;
+  } catch {
+    return false;
+  }
+}
+
+// Check if we can actually access iframe DOM (the real test - browser may allow cross-origin access in some cases)
+function canAccessIframeDOM(iframe: HTMLIFrameElement | null): boolean {
+  if (!iframe) return false;
+  try {
+    // This will throw if cross-origin is truly blocked
+    return !!iframe.contentDocument?.body;
   } catch {
     return false;
   }
@@ -211,6 +222,10 @@ export function PrototypeViewer({
   // Mount node for rendering pins INSIDE the iframe (eliminates coordinate drift)
   const [iframePinMount, setIframePinMount] = useState<HTMLDivElement | null>(null);
   
+  // Track whether we can actually access the iframe DOM (browser security check)
+  // This may be true even if URLs are cross-origin (e.g., same-site with permissive sandbox)
+  const [canAccessDOM, setCanAccessDOM] = useState(false);
+  
   // Refs for RAF throttling and cleanup
   const rafIdRef = useRef<number | null>(null);
   const detachRef = useRef<(() => void) | null>(null);
@@ -232,9 +247,9 @@ export function PrototypeViewer({
     });
   }, []);
 
-  // --- Hover highlight helpers (same-origin only) ---
+  // --- Hover highlight helpers (requires DOM access) ---
   const clearHoverHighlight = useCallback(() => {
-    if (!isSameOrigin(prototype.url)) return;
+    if (!canAccessIframeDOM(iframeRef.current)) return;
     const doc = iframeRef.current?.contentDocument;
     if (!doc) return;
     
@@ -258,7 +273,7 @@ export function PrototypeViewer({
   const applyHoverHighlight = useCallback((comment: PrototypeComment | null) => {
     clearHoverHighlight();
     if (!comment) return;
-    if (!isSameOrigin(prototype.url)) return;
+    if (!canAccessIframeDOM(iframeRef.current)) return;
 
     try {
       const doc = iframeRef.current?.contentDocument;
@@ -334,7 +349,7 @@ export function PrototypeViewer({
   }
 
   const ensureHoverStyle = useCallback(() => {
-    if (!isSameOrigin(prototype.url)) return;
+    if (!canAccessIframeDOM(iframeRef.current)) return;
     const doc = iframeRef.current?.contentDocument;
     if (!doc) return;
     if (doc.getElementById("pcd-hover-style")) return;
@@ -378,23 +393,22 @@ export function PrototypeViewer({
     const iframe = iframeRef.current;
     const overlay = overlayRef.current;
     
-    // 🔍 DEBUG: Log same-origin status - this is the root cause check
+    // Real DOM access check (not just origin comparison)
+    const domAccessible = canAccessIframeDOM(iframe);
     const sameOrigin = isSameOrigin(prototype.url);
+    
+    // 🔍 DEBUG: Log access status
     console.log("[pins] 🔍 Origin check:", {
       sameOrigin,
+      canAccessDOM: domAccessible,
       prototypeUrl: prototype.url,
       currentOrigin: window.location.origin,
-      iframeDoc: !!iframe?.contentDocument,
-      canAccessDoc: (() => {
-        try {
-          return !!iframe?.contentDocument?.body;
-        } catch (e) {
-          return false;
-        }
-      })()
     });
     
-    if (!iframe || !overlay || !sameOrigin) return;
+    // Update state for use elsewhere
+    setCanAccessDOM(domAccessible);
+    
+    if (!iframe || !overlay || !domAccessible) return;
 
     // Clean up any previous attachments (SPA reloads / iframe src changes)
     detachRef.current?.();
@@ -543,8 +557,8 @@ export function PrototypeViewer({
       pin_y,
     };
 
-    // Try to get rich anchor data for same-origin iframes
-    if (isSameOrigin(prototype.url)) {
+    // Try to get rich anchor data when DOM is accessible
+    if (canAccessIframeDOM(iframe)) {
       try {
         const iframeDoc = iframe.contentDocument;
         const iframeWin = iframe.contentWindow;
@@ -835,8 +849,8 @@ export function PrototypeViewer({
       el?.scrollIntoView({ behavior: "smooth", block: "nearest" });
     });
 
-    // If comment has a page path and iframe is same-origin
-    if (comment.page_path && isSameOrigin(prototype.url)) {
+    // If comment has a page path and we can access the iframe DOM
+    if (comment.page_path && canAccessIframeDOM(iframe)) {
       try {
         const currentPath = iframe.contentWindow?.location.pathname;
         
@@ -971,7 +985,7 @@ export function PrototypeViewer({
   // Jump to comment's page (for sidebar "Jump to page" button)
   const jumpToCommentPage = useCallback((comment: PrototypeComment) => {
     if (!comment.page_path) return;
-    if (!isSameOrigin(prototype.url)) return;
+    if (!canAccessIframeDOM(iframeRef.current)) return;
 
     const iframe = iframeRef.current;
     const win = iframe?.contentWindow;
@@ -1004,7 +1018,7 @@ export function PrototypeViewer({
   // Returns enhanced position result with direction for offscreen pins and debug info
   // Since pins now render INSIDE the iframe, we use iframe viewport coords directly
   const getPinPosition = useCallback((comment: PrototypeComment): PinPositionResult => {
-    const sameOrigin = isSameOrigin(prototype.url);
+    const sameOrigin = canAccessDOM;
     
     // Base debug info
     const baseDebug: PinDebug = {
@@ -1133,7 +1147,7 @@ export function PrototypeViewer({
     
     return null;
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [prototype.url, pinUpdateKey]);
+  }, [canAccessDOM, pinUpdateKey]);
 
   // Helper: Create a Range at a specific character offset within an element's text
   function createRangeAtOffset(element: Element, offset: number, doc: Document): Range | null {
@@ -1254,7 +1268,7 @@ export function PrototypeViewer({
           {
             const c = orderedVisible[focusedIndex];
             const offPage = c.page_path && currentIframePath && c.page_path !== currentIframePath;
-            if (offPage && isSameOrigin(prototype.url)) jumpToCommentPage(c);
+            if (offPage && canAccessDOM) jumpToCommentPage(c);
           }
           break;
         case "?":
@@ -1442,9 +1456,9 @@ export function PrototypeViewer({
             )}
           </div>
           
-          {/* Comment pins - rendered inside iframe portal when same-origin, or in parent overlay when cross-origin */}
-          {iframePinMount && isSameOrigin(prototype.url) ? (
-            // Same-origin: render inside iframe for perfect anchoring
+          {/* Comment pins - rendered inside iframe portal when DOM accessible, or in parent overlay otherwise */}
+          {iframePinMount && canAccessDOM ? (
+            // DOM accessible: render inside iframe for perfect anchoring
             createPortal(
               <>
                 {visibleComments
@@ -1697,7 +1711,7 @@ export function PrototypeViewer({
             focusedCommentId={focusedCommentId}
             hoveredCommentId={hoveredCommentId}
             currentIframePath={currentIframePath}
-            isSameOrigin={isSameOrigin(prototype.url)}
+            isSameOrigin={canAccessDOM}
             getPinStatus={getPinPosition}
             onFocusComment={focusComment}
             onHoverComment={setHoveredCommentId}
