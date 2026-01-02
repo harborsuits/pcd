@@ -1596,10 +1596,10 @@ export function PrototypeViewer({
               iframePinMount
             )
           ) : (
-            // Cross-origin fallback: render pins in parent overlay using percentage positioning
+            // Cross-origin fallback: render pins in parent overlay using viewport click % (pin_x/pin_y)
             visibleComments
               .filter(c => !c.resolved_at && (c.status !== 'resolved' && c.status !== 'wont_do'))
-              .filter(c => c.x_pct != null && c.y_pct != null)
+              .filter(c => c.pin_x != null && c.pin_y != null)
               .map((comment, idx) => {
                 const status = getEffectiveStatus(comment);
                 const isFocused = focusedCommentId === comment.id;
@@ -1610,8 +1610,8 @@ export function PrototypeViewer({
                     key={comment.id}
                     className="absolute pointer-events-auto"
                     style={{ 
-                      left: `${comment.x_pct}%`, 
-                      top: `${comment.y_pct}%`,
+                      left: `${comment.pin_x}%`, 
+                      top: `${comment.pin_y}%`,
                       transform: 'translate(-50%, -50%)',
                     }}
                   >
