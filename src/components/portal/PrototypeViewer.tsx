@@ -381,9 +381,9 @@ export function PrototypeViewer({
   }, [prototype.url, PCD_DEBUG, getIframeOrigin]);
 
   // Request element rect from iframe
-  const requestRect = useCallback((selector: string | null, id: string | null): Promise<{ left: number; top: number; width: number; height: number } | null> => {
+  const requestRect = useCallback((selector: string | null, anchorId: string | null): Promise<{ left: number; top: number; width: number; height: number } | null> => {
     return new Promise((resolve) => {
-      if (!bridgeReady || !iframeRef.current?.contentWindow || (!selector && !id)) {
+      if (!bridgeReady || !iframeRef.current?.contentWindow || (!selector && !anchorId)) {
         resolve(null);
         return;
       }
@@ -401,7 +401,14 @@ export function PrototypeViewer({
       try {
         const protoOrigin = new URL(prototype.url).origin;
         iframeRef.current.contentWindow.postMessage(
-          { type: "PCD_GET_RECT", requestId, selector, id },
+          { 
+            type: "PCD_GET_RECT", 
+            requestId, 
+            selector, 
+            // Pass anchor_id as both 'id' and 'anchorKey' for compatibility
+            id: anchorId,
+            anchorKey: anchorId,
+          },
           protoOrigin
         );
       } catch {
@@ -633,7 +640,8 @@ export function PrototypeViewer({
       viewport_w: click.viewport?.w ?? window.innerWidth,
       viewport_h: click.viewport?.h ?? window.innerHeight,
       breakpoint: getBreakpoint(click.viewport?.w ?? window.innerWidth),
-      anchor_id: click.id,
+      // Use anchorKey (the stable data-pcd-anchor stamp) for anchor_id
+      anchor_id: click.anchorKey ?? click.id,
       anchor_selector: click.selector,
       x_pct: click.rect?.width > 0 
         ? ((click.rect.left + click.rect.width / 2) / (click.viewport?.w ?? window.innerWidth)) * 100 

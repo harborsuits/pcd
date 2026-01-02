@@ -230,11 +230,19 @@
     }
 
     if (d.type === "PCD_GET_RECT") {
-      const { requestId, selector, id } = d;
+      const { requestId, selector, id, anchorKey } = d;
       let el = null;
 
       try {
-        if (id) el = document.getElementById(id);
+        // Priority 1: Look up by data-pcd-anchor (most reliable)
+        if (anchorKey) el = document.querySelector(`[data-pcd-anchor="${anchorKey}"]`);
+        // Priority 2: Look up by id if it's an anchor key format (pcd_...)
+        if (!el && id && id.startsWith("pcd_")) {
+          el = document.querySelector(`[data-pcd-anchor="${id}"]`);
+        }
+        // Priority 3: Look up by native HTML id
+        if (!el && id) el = document.getElementById(id);
+        // Priority 4: Fall back to selector
         if (!el && selector) {
           try { el = document.querySelector(selector); } catch (_) {}
         }
