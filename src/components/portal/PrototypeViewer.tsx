@@ -405,20 +405,13 @@ export function PrototypeViewer({
         // This eliminates all coordinate drift issues
         let pinMount = iframeDoc.getElementById("pcd-pin-overlay") as HTMLDivElement | null;
         if (!pinMount) {
-          // Ensure body is the positioning context
-          iframeDoc.body.style.position = "relative";
-          
           pinMount = iframeDoc.createElement("div");
           pinMount.id = "pcd-pin-overlay";
           pinMount.style.cssText = `
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            min-height: 100vh;
+            position: fixed;
+            inset: 0;
             pointer-events: none;
-            z-index: 999999;
+            z-index: 2147483647;
           `;
           iframeDoc.body.appendChild(pinMount);
         }
