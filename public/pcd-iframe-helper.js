@@ -412,10 +412,11 @@
 
     const badge = document.createElement("div");
     badge.style.position = "fixed";
-    badge.style.zIndex = "2147483646";
+    badge.style.top = "0";
+    badge.style.left = "0";
+    badge.style.zIndex = "2147483647";
     badge.style.pointerEvents = "none";
     badge.style.display = "none";
-    badge.style.transform = "translate(-8px, -10px)";
     badge.style.fontFamily = "ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial";
     badge.style.fontSize = "11px";
     badge.style.padding = "4px 7px";
@@ -472,11 +473,13 @@
       entry.box.style.width = `${Math.max(0, r.width)}px`;
       entry.box.style.height = `${Math.max(0, r.height)}px`;
 
-      // badge at top-left
-      entry.badge.style.display = entry.badge.textContent ? "block" : "none";
+      // badge at top-left corner of the box, offset slightly outside
       if (entry.badge.textContent) {
-        entry.badge.style.top = `${Math.max(0, r.top)}px`;
-        entry.badge.style.left = `${Math.max(0, r.left)}px`;
+        entry.badge.style.display = "block";
+        entry.badge.style.top = `${Math.max(0, r.top - 12)}px`;
+        entry.badge.style.left = `${Math.max(0, r.left - 8)}px`;
+      } else {
+        entry.badge.style.display = "none";
       }
     }
 
