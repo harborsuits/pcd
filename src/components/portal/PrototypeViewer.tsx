@@ -48,13 +48,26 @@ function getPathFromUrl(url: string): string | null {
 
 // Get iframe scale: ratio of screen pixels to iframe viewport pixels
 // Used for capture (converting parent clicks to iframe coords)
+// SAFE: Uses try/catch to avoid cross-origin SecurityError
 function getIframeScale(iframe: HTMLIFrameElement) {
-  const win = iframe.contentWindow;
   const rect = iframe.getBoundingClientRect();
-  if (!win) return { scaleX: 1, scaleY: 1, rect };
-
-  const scaleX = rect.width / (win.innerWidth || rect.width);
-  const scaleY = rect.height / (win.innerHeight || rect.height);
+  
+  // Try to get actual iframe viewport size, fall back to element size
+  let innerW = rect.width;
+  let innerH = rect.height;
+  
+  try {
+    const win = iframe.contentWindow;
+    if (win && win.innerWidth) {
+      innerW = win.innerWidth;
+      innerH = win.innerHeight;
+    }
+  } catch {
+    // Cross-origin - use element rect as fallback
+  }
+  
+  const scaleX = rect.width / (innerW || rect.width);
+  const scaleY = rect.height / (innerH || rect.height);
 
   return { scaleX: scaleX || 1, scaleY: scaleY || 1, rect };
 }
@@ -1084,8 +1097,10 @@ export function PrototypeViewer({
             const pinCenterX = pinRect.left + (pinRect.width / 2);
             const pinCenterY = pinRect.top + (pinRect.height / 2);
             
-            const viewportW = iframeWin.innerWidth;
-            const viewportH = iframeWin.innerHeight;
+            // SAFE: Use iframe element rect - never throws cross-origin error
+            const iframeRect = iframeRef.current?.getBoundingClientRect();
+            const viewportW = iframeRect?.width ?? 800;
+            const viewportH = iframeRect?.height ?? 600;
             
             // Check if pin is currently in viewport (viewport coords, so 0 to viewport size)
             const isOffscreen = pinCenterX < 0 || pinCenterY < 0 || 
@@ -1140,9 +1155,10 @@ export function PrototypeViewer({
     // Fallback to stored pin_x/pin_y when no anchor available
     // For DOM-accessible iframes, mark as needs-repin so UI can offer repin
     if (comment.pin_x != null && comment.pin_y != null) {
-      const iframeWin = iframeRef.current?.contentWindow;
-      const viewportW = iframeWin?.innerWidth ?? 0;
-      const viewportH = iframeWin?.innerHeight ?? 0;
+      // SAFE: Use iframe element rect - never throws cross-origin error  
+      const iframeRect = iframeRef.current?.getBoundingClientRect();
+      const viewportW = iframeRect?.width ?? 0;
+      const viewportH = iframeRect?.height ?? 0;
       
       // Convert percentage to viewport pixels for fixed positioning
       const left = (comment.pin_x / 100) * viewportW;
