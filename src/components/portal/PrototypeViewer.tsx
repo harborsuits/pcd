@@ -1037,8 +1037,9 @@ export function PrototypeViewer({
       rangeRect: null,
     };
     
-    // For same-origin iframes with anchor data, try to position precisely
-    if (comment.anchor_selector && sameOrigin) {
+    // For DOM-accessible iframes with anchor data, try to position precisely
+    // Use canAccessDOM (actual DOM test) NOT sameOrigin (URL check)
+    if (comment.anchor_selector && canAccessDOM) {
       try {
         const iframe = iframeRef.current;
         const iframeDoc = iframe?.contentDocument;
