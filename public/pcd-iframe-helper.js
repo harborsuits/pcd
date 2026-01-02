@@ -73,6 +73,14 @@
       if (pinModeActive) {
         e.preventDefault();
         e.stopPropagation();
+        
+        // Show immediate visual feedback - cyan border on clicked element
+        focusedEl = t;
+        focusLocked = true; // Lock so subsequent clicks don't clear it
+        ensureFocusUI();
+        focusMarker.style.opacity = "1";
+        focusMarker.style.transform = "scale(1)";
+        placeFocusUI();
       }
 
       const anchorKey = ensureAnchorStamp(t);
