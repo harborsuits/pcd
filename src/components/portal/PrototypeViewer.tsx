@@ -496,6 +496,36 @@ export function PrototypeViewer({
     }
   }, [bridgeReady, isAddingComment, repinTargetId]);
 
+  // Build list of "active" comments that should show persistent cyan borders
+  // Open/In-progress = highlighted, Resolved/Archived = not highlighted
+  const activeHighlightItems = useMemo(() => {
+    return comments
+      .filter((c) => {
+        const status = getEffectiveStatus(c);
+        return (status === "open" || status === "in_progress") && !c.archived_at;
+      })
+      .filter((c) => !!c.anchor_id) // must be pinned
+      .map((c, idx) => ({
+        anchorKey: c.anchor_id,
+        label: String(idx + 1), // numbering badge
+      }));
+  }, [comments]);
+
+  // Send persistent highlights to iframe whenever active comments change
+  useEffect(() => {
+    if (!bridgeReady || !iframeRef.current?.contentWindow) return;
+
+    try {
+      iframeRef.current.contentWindow.postMessage(
+        { __pcd: true, type: "PCD_HIGHLIGHTS_SET", items: activeHighlightItems },
+        "*"
+      );
+      console.log("[Bridge] Sent PCD_HIGHLIGHTS_SET:", activeHighlightItems.length, "items");
+    } catch (e) {
+      console.warn("[Bridge] Failed to send highlights:", e);
+    }
+  }, [bridgeReady, activeHighlightItems]);
+
   // Clear hover when leaving pin mode
   useEffect(() => {
     if (!isAddingComment && !repinTargetId) setHover(null);
