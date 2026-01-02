@@ -14,14 +14,50 @@
   if (window.__PCD_HELPER_INIT__) return;
   window.__PCD_HELPER_INIT__ = true;
 
+  // ---- PCD DEBUG HUD (iframe) ----
+  const PCD_DEBUG = /[?&]pcd_debug=1\b/.test(location.search) || localStorage.getItem("pcd_debug") === "1";
+
+  let hudEl = null;
+  function hudInit() {
+    if (!PCD_DEBUG || hudEl) return;
+    hudEl = document.createElement("div");
+    hudEl.style.cssText = `
+      position:fixed; bottom:10px; left:10px; z-index:2147483647;
+      font:12px/1.35 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      background:rgba(0,0,0,.78); color:#0f0; padding:10px 12px; border-radius:10px;
+      max-width:360px; pointer-events:none; white-space:pre-wrap;
+    `;
+    hudEl.textContent = "[PCD HUD] init…";
+    document.documentElement.appendChild(hudEl);
+  }
+
+  function hudSet(obj) {
+    if (!PCD_DEBUG) return;
+    hudInit();
+    try { hudEl.textContent = "[PCD iframe]\n" + JSON.stringify(obj, null, 2); } catch {}
+  }
+
+  // Show HUD on load if debug mode
+  if (PCD_DEBUG) {
+    hudInit();
+    hudSet({ status: "helper loaded", href: location.href.slice(0, 80) });
+  }
+
   const send = (msg) => {
     try {
       if (window.parent && window.parent !== window) {
         // Always broadcast with "*"; parent filters by origin anyway.
         window.parent.postMessage({ __pcd: true, ...msg }, "*");
+        hudSet({
+          ok: true,
+          sentType: msg.type,
+          anchorKey: msg.anchorKey || null,
+          selector: (msg.selector || "").slice(0, 100),
+          ts: msg.ts || Date.now(),
+        });
       }
     } catch (e) {
-      // Silently fail if postMessage is blocked
+      hudSet({ ok: false, error: String(e) });
     }
   };
 
