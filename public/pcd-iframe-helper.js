@@ -164,41 +164,114 @@
     scrollRaf = requestAnimationFrame(sendScrollUpdate);
   }, { passive: true });
 
-  // ----- Focus highlight state -----
+  // ----- Focus highlight state with visible marker -----
   let focusedEl = null;
-  const FOCUS_OUTLINE_STYLE = "2px solid rgba(56, 189, 248, 0.9)";
-  const FOCUS_OUTLINE_OFFSET = "3px";
-  const FOCUS_BOX_SHADOW = "0 0 0 4px rgba(56, 189, 248, 0.2)";
+  let focusRing = null;
+  let focusMarker = null;
 
-  function clearFocus() {
-    if (focusedEl) {
-      focusedEl.style.outline = "";
-      focusedEl.style.outlineOffset = "";
-      focusedEl.style.boxShadow = focusedEl.__pcdOriginalBoxShadow || "";
-      delete focusedEl.__pcdOriginalBoxShadow;
-      focusedEl = null;
+  function ensureFocusUI() {
+    if (!focusRing) {
+      focusRing = document.createElement("div");
+      focusRing.id = "__pcd_focus_ring";
+      focusRing.style.cssText = `
+        position: fixed;
+        pointer-events: none;
+        z-index: 2147483646;
+        border: 2px solid rgba(34, 211, 238, 0.95);
+        box-shadow: 0 0 0 4px rgba(34, 211, 238, 0.25), 0 0 16px rgba(34, 211, 238, 0.4);
+        border-radius: 6px;
+        transition: all 0.15s ease-out;
+        width: 0; height: 0;
+      `;
+      document.documentElement.appendChild(focusRing);
+    }
+    if (!focusMarker) {
+      focusMarker = document.createElement("div");
+      focusMarker.id = "__pcd_focus_marker";
+      focusMarker.style.cssText = `
+        position: fixed;
+        pointer-events: none;
+        z-index: 2147483647;
+        width: 24px;
+        height: 24px;
+        border-radius: 999px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+        font-weight: 700;
+        font-family: system-ui, sans-serif;
+        background: linear-gradient(135deg, rgba(34, 211, 238, 1), rgba(56, 189, 248, 1));
+        color: #001520;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3), 0 0 0 2px rgba(255, 255, 255, 0.9);
+        transition: opacity 0.15s ease-out, transform 0.15s ease-out;
+        opacity: 0;
+        transform: scale(0.8);
+      `;
+      focusMarker.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`;
+      document.documentElement.appendChild(focusMarker);
     }
   }
+
+  function placeFocusUI() {
+    if (!focusedEl || !focusRing || !focusMarker) return;
+    const r = focusedEl.getBoundingClientRect();
+    if (r.width === 0 && r.height === 0) return;
+
+    // Position ring around element with padding
+    const pad = 4;
+    focusRing.style.left = `${Math.max(0, r.left - pad)}px`;
+    focusRing.style.top = `${Math.max(0, r.top - pad)}px`;
+    focusRing.style.width = `${r.width + pad * 2}px`;
+    focusRing.style.height = `${r.height + pad * 2}px`;
+
+    // Position marker at top-left corner of element
+    focusMarker.style.left = `${Math.max(4, r.left - 12)}px`;
+    focusMarker.style.top = `${Math.max(4, r.top - 12)}px`;
+  }
+
+  function clearFocus() {
+    focusedEl = null;
+    if (focusRing) {
+      focusRing.style.width = "0";
+      focusRing.style.height = "0";
+    }
+    if (focusMarker) {
+      focusMarker.style.opacity = "0";
+      focusMarker.style.transform = "scale(0.8)";
+    }
+  }
+
+  // Update focus UI position on scroll/resize
+  window.addEventListener("scroll", () => placeFocusUI(), true);
+  window.addEventListener("resize", () => placeFocusUI());
 
   function focusAnchor(anchorKey, selector) {
     clearFocus();
     
     let el = null;
     try {
-      if (anchorKey) el = document.querySelector(`[data-pcd-anchor="${anchorKey}"]`);
-      if (!el && selector) el = document.querySelector(selector);
+      if (anchorKey) el = document.querySelector(`[data-pcd-anchor="${CSS.escape(anchorKey)}"]`);
+      if (!el && selector) {
+        try { el = document.querySelector(selector); } catch (_) {}
+      }
     } catch (_) {}
     
     if (!el) return;
     
     focusedEl = el;
-    focusedEl.__pcdOriginalBoxShadow = focusedEl.style.boxShadow || "";
-    focusedEl.style.outline = FOCUS_OUTLINE_STYLE;
-    focusedEl.style.outlineOffset = FOCUS_OUTLINE_OFFSET;
-    focusedEl.style.boxShadow = FOCUS_BOX_SHADOW;
+    ensureFocusUI();
+    
+    // Show and position the focus UI
+    focusMarker.style.opacity = "1";
+    focusMarker.style.transform = "scale(1)";
+    placeFocusUI();
     
     // Scroll element into view smoothly
     el.scrollIntoView({ block: "center", inline: "nearest", behavior: "smooth" });
+    
+    // Re-position after scroll animation
+    setTimeout(() => placeFocusUI(), 350);
   }
 
   // ----- Parent messages: MODE + PING + GET_RECT + FOCUS -----
