@@ -148,12 +148,35 @@ export interface Prototype {
   updated_at: string;
 }
 
-// Build proxied URL for same-origin iframe access
-// This enables full DOM access for content-anchored pins
-function getProxiedPrototypeUrl(token: string): string {
-  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-  return `${supabaseUrl}/functions/v1/prototype-proxy/${token}`;
+// PostMessage event types for cross-origin iframe communication
+interface IframeClickMessage {
+  type: "PCD_CLICK";
+  selector: string | null;
+  id: string | null;
+  rect: { left: number; top: number; width: number; height: number };
+  scroll: { x: number; y: number };
+  viewport: { w: number; h: number };
+  textOffset?: number | null;
+  textContext?: string | null;
 }
+
+interface IframeScrollMessage {
+  type: "PCD_SCROLL";
+  scroll: { x: number; y: number };
+  viewport: { w: number; h: number };
+}
+
+interface IframeRectMessage {
+  type: "PCD_RECT";
+  requestId: string;
+  rect: { left: number; top: number; width: number; height: number } | null;
+}
+
+interface IframeReadyMessage {
+  type: "PCD_IFRAME_READY";
+}
+
+type IframeMessage = IframeClickMessage | IframeScrollMessage | IframeRectMessage | IframeReadyMessage;
 
 export interface CommentAnchorData {
   page_url: string;
@@ -253,8 +276,13 @@ export function PrototypeViewer({
   const unresolvedComments = comments.filter((c) => !c.resolved_at);
   const resolvedComments = comments.filter((c) => c.resolved_at);
 
-  // Build proxied URL for same-origin DOM access (enables content-anchored pins)
-  const proxiedUrl = useMemo(() => getProxiedPrototypeUrl(token), [token]);
+  // PostMessage bridge state for cross-origin iframe communication
+  const [iframeReady, setIframeReady] = useState(false);
+  const [iframeViewport, setIframeViewport] = useState<{ w: number; h: number; scrollX: number; scrollY: number } | null>(null);
+  const pendingRectRequests = useRef<Map<string, (rect: { left: number; top: number; width: number; height: number } | null) => void>>(new Map());
+  
+  // Store last click data from iframe for capture
+  const lastIframeClick = useRef<IframeClickMessage | null>(null);
 
   // Force pin recomputation
   const triggerPinUpdate = useCallback(() => {
@@ -544,9 +572,102 @@ export function PrototypeViewer({
         rafIdRef.current = null;
       }
     };
-  }, [proxiedUrl, iframeKey, ensureHoverStyle, schedulePinUpdate]);
+  }, [prototype.url, iframeKey, ensureHoverStyle, schedulePinUpdate]);
+
+  // PostMessage handler for cross-origin iframe communication
+  // This enables pin anchoring even when DOM access is blocked
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      // Only accept messages from the prototype origin
+      try {
+        const protoOrigin = new URL(prototype.url).origin;
+        if (event.origin !== protoOrigin) return;
+      } catch {
+        return;
+      }
+
+      const data = event.data;
+      if (!data || typeof data !== "object" || !data.type) return;
+
+      switch (data.type) {
+        case "PCD_IFRAME_READY":
+          console.log("[PostMessage] Iframe helper ready");
+          setIframeReady(true);
+          break;
+
+        case "PCD_CLICK": {
+          const msg = data as IframeClickMessage;
+          console.log("[PostMessage] Click captured:", msg);
+          lastIframeClick.current = msg;
+          
+          // If in comment mode, use this click data
+          if (isAddingComment || repinTargetId) {
+            triggerPinUpdate();
+          }
+          break;
+        }
+
+        case "PCD_SCROLL": {
+          const msg = data as IframeScrollMessage;
+          setIframeViewport({
+            w: msg.viewport.w,
+            h: msg.viewport.h,
+            scrollX: msg.scroll.x,
+            scrollY: msg.scroll.y,
+          });
+          triggerPinUpdate();
+          break;
+        }
+
+        case "PCD_RECT": {
+          const msg = data as IframeRectMessage;
+          const resolver = pendingRectRequests.current.get(msg.requestId);
+          if (resolver) {
+            resolver(msg.rect);
+            pendingRectRequests.current.delete(msg.requestId);
+          }
+          break;
+        }
+      }
+    };
+
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
+  }, [prototype.url, isAddingComment, repinTargetId, triggerPinUpdate]);
+
+  // Request element rect from iframe via postMessage
+  const requestRectFromIframe = useCallback((selector: string | null, id: string | null): Promise<{ left: number; top: number; width: number; height: number } | null> => {
+    return new Promise((resolve) => {
+      if (!iframeReady || !iframeRef.current?.contentWindow) {
+        resolve(null);
+        return;
+      }
+
+      const requestId = `rect-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      pendingRectRequests.current.set(requestId, resolve);
+
+      // Timeout after 500ms
+      setTimeout(() => {
+        if (pendingRectRequests.current.has(requestId)) {
+          pendingRectRequests.current.delete(requestId);
+          resolve(null);
+        }
+      }, 500);
+
+      try {
+        const protoOrigin = new URL(prototype.url).origin;
+        iframeRef.current.contentWindow.postMessage(
+          { type: "PCD_GET_RECT", requestId, selector, id },
+          protoOrigin
+        );
+      } catch {
+        resolve(null);
+      }
+    });
+  }, [iframeReady, prototype.url]);
 
   // Capture rich anchor data from click position
+  // Uses postMessage data when available (cross-origin), falls back to DOM access
   const captureAnchorData = useCallback((clientX: number, clientY: number): CommentAnchorData | null => {
     const iframe = iframeRef.current;
     const overlay = overlayRef.current;
@@ -556,13 +677,47 @@ export function PrototypeViewer({
     const pin_x = ((clientX - overlayRect.left) / overlayRect.width) * 100;
     const pin_y = ((clientY - overlayRect.top) / overlayRect.height) * 100;
 
+    // Check if we have recent click data from the iframe helper
+    const iframeClick = lastIframeClick.current;
+    const clickAge = iframeClick ? Date.now() : Infinity;
+    const isRecentClick = clickAge < 1000; // Click within last 1 second
+
+    // Use iframe click data if available (cross-origin compatible)
+    if (iframeClick && isRecentClick && iframeReady) {
+      const baseData: CommentAnchorData = {
+        page_url: prototype.url,
+        page_path: getPathFromUrl(prototype.url),
+        scroll_y: iframeClick.scroll.y,
+        viewport_w: iframeClick.viewport.w,
+        viewport_h: iframeClick.viewport.h,
+        breakpoint: getBreakpoint(iframeClick.viewport.w),
+        anchor_id: iframeClick.id,
+        anchor_selector: iframeClick.selector,
+        x_pct: iframeClick.rect.width > 0 
+          ? ((iframeClick.rect.left + iframeClick.rect.width / 2) / iframeClick.viewport.w) * 100 
+          : pin_x,
+        y_pct: iframeClick.rect.height > 0 
+          ? ((iframeClick.rect.top + iframeClick.rect.height / 2) / iframeClick.viewport.h) * 100 
+          : pin_y,
+        text_hint: null,
+        text_offset: iframeClick.textOffset ?? null,
+        text_context: iframeClick.textContext ?? null,
+        pin_x,
+        pin_y,
+      };
+
+      // Clear the click data so we don't reuse stale data
+      lastIframeClick.current = null;
+      return baseData;
+    }
+
     const baseData: CommentAnchorData = {
       page_url: prototype.url,
       page_path: getPathFromUrl(prototype.url),
-      scroll_y: 0,
-      viewport_w: overlayRect.width,
-      viewport_h: overlayRect.height,
-      breakpoint: getBreakpoint(overlayRect.width),
+      scroll_y: iframeViewport?.scrollY ?? 0,
+      viewport_w: iframeViewport?.w ?? overlayRect.width,
+      viewport_h: iframeViewport?.h ?? overlayRect.height,
+      breakpoint: getBreakpoint(iframeViewport?.w ?? overlayRect.width),
       anchor_id: null,
       anchor_selector: null,
       x_pct: pin_x,
@@ -722,7 +877,7 @@ export function PrototypeViewer({
     }
 
     return baseData;
-  }, [prototype.url]);
+  }, [prototype.url, iframeReady, iframeViewport]);
 
   // Build a stable CSS selector for an element
   function buildStableSelector(el: Element, doc: Document): string {
@@ -1371,6 +1526,26 @@ export function PrototypeViewer({
               {currentIframePath}
             </Badge>
           )}
+          {/* Pin mode indicator */}
+          <Badge 
+            variant="outline" 
+            className={`text-xs ${
+              canAccessDOM 
+                ? "bg-green-500/10 text-green-600 border-green-500/20" 
+                : iframeReady 
+                  ? "bg-blue-500/10 text-blue-600 border-blue-500/20"
+                  : "bg-amber-500/10 text-amber-600 border-amber-500/20"
+            }`}
+            title={
+              canAccessDOM 
+                ? "Pins are anchored to exact DOM elements" 
+                : iframeReady 
+                  ? "Pins use postMessage bridge for anchoring"
+                  : "Pins use percentage-based fallback positioning"
+            }
+          >
+            {canAccessDOM ? "⚓ Anchored" : iframeReady ? "📡 Bridge" : "📍 Fallback"}
+          </Badge>
         </div>
         <div className="flex items-center gap-2">
           <span className="text-xs text-muted-foreground">
@@ -1457,7 +1632,7 @@ export function PrototypeViewer({
           <iframe
             ref={iframeRef}
             key={iframeKey}
-            src={proxiedUrl}
+            src={prototype.url}
             className="w-full h-full border-0"
             style={{ minHeight: isFullscreen ? "calc(100vh - 120px)" : "500px" }}
             title="Prototype preview"
