@@ -14,15 +14,28 @@
   if (window.__PCD_HELPER_INIT__) return;
   window.__PCD_HELPER_INIT__ = true;
 
+  // Determine the parent origin for postMessage (more reliable delivery)
+  const parentOrigin = (() => {
+    try {
+      return document.referrer ? new URL(document.referrer).origin : "*";
+    } catch {
+      return "*";
+    }
+  })();
+
   const send = (msg) => {
     try {
       if (window.parent && window.parent !== window) {
-        window.parent.postMessage(msg, "*");
+        // Include __pcd marker for easy filtering
+        window.parent.postMessage({ __pcd: true, ...msg }, parentOrigin);
       }
     } catch (e) {
       // Silently fail if postMessage is blocked
     }
   };
+
+  // Track pin mode for cursor changes
+  let pinModeActive = false;
 
   // Generate stable anchor key
   const generateAnchorKey = () => "pcd_" + Math.random().toString(36).slice(2, 10);
@@ -158,10 +171,18 @@
     });
   }, true);
 
-  // Parent asks for element rect
+  // Parent asks for element rect OR sets pin mode
   window.addEventListener("message", (e) => {
     const d = e.data;
     if (!d || typeof d !== "object") return;
+
+    // Handle pin mode toggle from parent
+    if (d.type === "PCD_MODE") {
+      pinModeActive = d.mode === "pin";
+      document.documentElement.style.cursor = pinModeActive ? "crosshair" : "";
+      console.log("[PCD Helper] Pin mode:", pinModeActive ? "ON" : "OFF");
+      return;
+    }
 
     if (d.type === "PCD_GET_RECT") {
       const { requestId, selector, id } = d;
