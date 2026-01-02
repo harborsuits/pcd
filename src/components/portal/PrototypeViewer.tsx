@@ -1926,35 +1926,34 @@ function CommentsSidebar({
                   onClick={() => onFocusComment(comment)}
                 >
                   {/* Status badges (needs-repin, offscreen) + repin button */}
-                  {!isResolved && (needsRepin || isOffscreen) && (
+                  {!isResolved && (
                     <div className="mb-1 flex items-center gap-1">
                       {needsRepin && (
-                        <>
-                          <Badge variant="outline" className="text-xs bg-amber-500/10 text-amber-600 border-amber-500/30">
-                            <MapPin className="h-3 w-3 mr-1" />
-                            Needs re-pin
-                          </Badge>
-                          {onRepin && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-5 px-1.5 text-[10px] text-amber-600 hover:text-amber-700"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onRepin(comment.id);
-                              }}
-                            >
-                              <Target className="h-3 w-3 mr-0.5" />
-                              Re-pin
-                            </Button>
-                          )}
-                        </>
+                        <Badge variant="outline" className="text-xs bg-amber-500/10 text-amber-600 border-amber-500/30">
+                          <MapPin className="h-3 w-3 mr-1" />
+                          Needs re-pin
+                        </Badge>
                       )}
                       {isOffscreen && !needsRepin && (
                         <Badge variant="outline" className="text-xs bg-muted text-muted-foreground">
                           <EyeOff className="h-3 w-3 mr-1" />
                           Offscreen
                         </Badge>
+                      )}
+                      {/* Repin button - always available for unresolved comments */}
+                      {onRepin && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className={`h-5 px-1.5 text-[10px] ${needsRepin ? 'text-amber-600 hover:text-amber-700' : 'text-muted-foreground hover:text-foreground'}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onRepin(comment.id);
+                          }}
+                        >
+                          <Target className="h-3 w-3 mr-0.5" />
+                          {needsRepin ? 'Re-pin' : 'Move pin'}
+                        </Button>
                       )}
                     </div>
                   )}
