@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { Paperclip, FileText, ExternalLink, Upload, Loader2, Check, Clock, CircleDot, XCircle, Pencil, X } from "lucide-react";
+import { Paperclip, FileText, ExternalLink, Upload, Loader2, Check, Clock, CircleDot, XCircle, Pencil, X, Archive } from "lucide-react";
 import { toast } from "sonner";
 
 interface Attachment {
@@ -32,12 +32,14 @@ interface PortalCommentCardProps {
     status?: CommentStatus;
     resolution_note?: string | null;
     resolved_by?: string | null;
+    archived_at?: string | null;
   };
   index: number;
   onResolve: (id: string) => void;
   onUnresolve: (id: string) => void;
   onMarkInProgress?: (id: string) => void;
   onEdit?: (id: string, newBody: string) => Promise<void>;
+  onArchive?: (id: string) => Promise<void>;
 }
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
@@ -50,12 +52,14 @@ export function PortalCommentCard({
   onUnresolve,
   onMarkInProgress,
   onEdit,
+  onArchive,
 }: PortalCommentCardProps) {
   const [showAttachments, setShowAttachments] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState(comment.body);
   const [saving, setSaving] = useState(false);
+  const [archiving, setArchiving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
 
@@ -238,6 +242,27 @@ export function PortalCommentCard({
               }}
             >
               <Pencil className="h-3 w-3" />
+            </Button>
+          )}
+          {/* Archive button - only for resolved comments */}
+          {isResolved && onArchive && !comment.archived_at && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+              title="Archive comment"
+              disabled={archiving}
+              onClick={async (e) => {
+                e.stopPropagation();
+                setArchiving(true);
+                try {
+                  await onArchive(comment.id);
+                } finally {
+                  setArchiving(false);
+                }
+              }}
+            >
+              <Archive className="h-3 w-3" />
             </Button>
           )}
           {isResolved ? (

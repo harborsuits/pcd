@@ -550,6 +550,60 @@ export default function PortalPage() {
     }
   }
 
+  async function handleArchiveComment(commentId: string) {
+    if (!token) return;
+
+    const res = await fetch(
+      `${SUPABASE_URL}/functions/v1/portal/${token}/comments`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": SUPABASE_ANON_KEY,
+          "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({
+          action: "archive",
+          comment_id: commentId,
+        }),
+      }
+    );
+
+    if (res.ok) {
+      setPrototypeComments((prev) =>
+        prev.map((c) => (c.id === commentId ? { ...c, archived_at: new Date().toISOString() } : c))
+      );
+      toast({ title: "Comment archived" });
+    }
+  }
+
+  async function handleUnarchiveComment(commentId: string) {
+    if (!token) return;
+
+    const res = await fetch(
+      `${SUPABASE_URL}/functions/v1/portal/${token}/comments`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": SUPABASE_ANON_KEY,
+          "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({
+          action: "unarchive",
+          comment_id: commentId,
+        }),
+      }
+    );
+
+    if (res.ok) {
+      setPrototypeComments((prev) =>
+        prev.map((c) => (c.id === commentId ? { ...c, archived_at: null } : c))
+      );
+      toast({ title: "Comment unarchived" });
+    }
+  }
+
   function handleRefreshPrototype() {
     if (token) {
       fetchPrototypes(token);
@@ -1315,6 +1369,8 @@ export default function PortalPage() {
               onMarkInProgress={handleMarkInProgress}
               onEditComment={handleEditComment}
               onRepinComment={handleRepinComment}
+              onArchiveComment={handleArchiveComment}
+              onUnarchiveComment={handleUnarchiveComment}
               onRefresh={handleRefreshPrototype}
             />
           </BrandCard>
