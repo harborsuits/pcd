@@ -40,6 +40,8 @@ export function TimelineContent<T extends React.ElementType = "div">({
     }),
   };
 
+  const content = React.createElement(Comp, props as Record<string, unknown>, children);
+  
   return (
     <motion.div
       ref={localRef}
@@ -49,7 +51,7 @@ export function TimelineContent<T extends React.ElementType = "div">({
       variants={variants}
       className={cn(className)}
     >
-      <Comp {...(props as Record<string, unknown>)}>{children}</Comp>
+      {content}
     </motion.div>
   );
 }
