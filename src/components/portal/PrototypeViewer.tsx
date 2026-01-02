@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { RefreshCw, MessageCircle, X, ExternalLink, Maximize2, Minimize2, ChevronRight, ChevronLeft, AlertTriangle, Target, ChevronUp, ChevronDown } from "lucide-react";
+import { RefreshCw, MessageCircle, X, ExternalLink, Maximize2, Minimize2, ChevronRight, ChevronLeft, AlertTriangle, Target, ChevronUp, ChevronDown, Archive, ArchiveRestore } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { PortalCommentCard } from "./PortalCommentCard";
@@ -42,6 +42,7 @@ export interface PrototypeComment {
   text_hint?: string | null;
   text_offset?: number | null;
   text_context?: string | null;
+  archived_at?: string | null;
 }
 
 function getEffectiveStatus(c: PrototypeComment): CommentStatus {
@@ -122,6 +123,8 @@ interface PrototypeViewerProps {
   onMarkInProgress?: (commentId: string) => Promise<void>;
   onEditComment?: (commentId: string, newBody: string) => Promise<void>;
   onRepinComment?: (commentId: string, anchorData: CommentAnchorData) => Promise<void>;
+  onArchiveComment?: (commentId: string) => Promise<void>;
+  onUnarchiveComment?: (commentId: string) => Promise<void>;
   onRefresh: () => void;
 }
 
@@ -135,6 +138,8 @@ export function PrototypeViewer({
   onMarkInProgress,
   onEditComment,
   onRepinComment,
+  onArchiveComment,
+  onUnarchiveComment,
   onRefresh,
 }: PrototypeViewerProps) {
   const [isAddingComment, setIsAddingComment] = useState(false);
@@ -161,8 +166,10 @@ export function PrototypeViewer({
   const pendingRectRequests = useRef<Map<string, (rect: { left: number; top: number; width: number; height: number } | null) => void>>(new Map());
   const rectRefreshRaf = useRef<number | null>(null);
 
-  const unresolvedComments = comments.filter((c) => !c.resolved_at && c.status !== 'resolved' && c.status !== 'wont_do');
-  const resolvedComments = comments.filter((c) => c.resolved_at || c.status === 'resolved' || c.status === 'wont_do');
+  // Filter out archived comments from main views
+  const activeComments = comments.filter((c) => !c.archived_at);
+  const unresolvedComments = activeComments.filter((c) => !c.resolved_at && c.status !== 'resolved' && c.status !== 'wont_do');
+  const resolvedComments = activeComments.filter((c) => c.resolved_at || c.status === 'resolved' || c.status === 'wont_do');
 
   // PostMessage handler - THE ONLY way we communicate with the iframe
   useEffect(() => {
@@ -761,6 +768,8 @@ export function PrototypeViewer({
             onMarkInProgress={onMarkInProgress}
             onEditComment={onEditComment}
             onRepin={onRepinComment ? (id) => setRepinTargetId(id) : undefined}
+            onArchiveComment={onArchiveComment}
+            onUnarchiveComment={onUnarchiveComment}
           />
         )}
       </div>
@@ -809,6 +818,8 @@ function CommentsSidebar({
   onMarkInProgress,
   onEditComment,
   onRepin,
+  onArchiveComment,
+  onUnarchiveComment,
 }: {
   comments: PrototypeComment[];
   token: string;
@@ -823,24 +834,33 @@ function CommentsSidebar({
   onMarkInProgress?: (commentId: string) => Promise<void>;
   onEditComment?: (commentId: string, newBody: string) => Promise<void>;
   onRepin?: (commentId: string) => void;
+  onArchiveComment?: (commentId: string) => Promise<void>;
+  onUnarchiveComment?: (commentId: string) => Promise<void>;
 }) {
-  const [filter, setFilter] = useState<CommentStatus | 'all'>('all');
+  const [filter, setFilter] = useState<CommentStatus | 'all' | 'archived'>('all');
+  
+  // Split active vs archived
+  const activeComments = comments.filter(c => !c.archived_at);
+  const archivedComments = comments.filter(c => !!c.archived_at);
   
   const counts = {
-    all: comments.length,
-    open: comments.filter(c => (!c.status || c.status === 'open') && !c.resolved_at).length,
-    in_progress: comments.filter(c => c.status === 'in_progress').length,
-    resolved: comments.filter(c => c.status === 'resolved' || !!c.resolved_at).length,
-    wont_do: comments.filter(c => c.status === 'wont_do').length,
+    all: activeComments.length,
+    open: activeComments.filter(c => (!c.status || c.status === 'open') && !c.resolved_at).length,
+    in_progress: activeComments.filter(c => c.status === 'in_progress').length,
+    resolved: activeComments.filter(c => c.status === 'resolved' || !!c.resolved_at).length,
+    wont_do: activeComments.filter(c => c.status === 'wont_do').length,
+    archived: archivedComments.length,
   };
   
-  const filteredComments = filter === 'all' 
-    ? comments 
-    : comments.filter(c => {
-        if (filter === 'open') return (!c.status || c.status === 'open') && !c.resolved_at;
-        if (filter === 'resolved') return c.status === 'resolved' || !!c.resolved_at;
-        return c.status === filter;
-      });
+  const filteredComments = filter === 'archived'
+    ? archivedComments
+    : filter === 'all' 
+      ? activeComments 
+      : activeComments.filter(c => {
+          if (filter === 'open') return (!c.status || c.status === 'open') && !c.resolved_at;
+          if (filter === 'resolved') return c.status === 'resolved' || !!c.resolved_at;
+          return c.status === filter;
+        });
   
   return (
     <div className="w-80 border-l border-border bg-muted/30 flex flex-col">
@@ -850,6 +870,9 @@ function CommentsSidebar({
           <FilterChip label="Open" count={counts.open} active={filter === 'open'} onClick={() => setFilter('open')} />
           <FilterChip label="In progress" count={counts.in_progress} active={filter === 'in_progress'} onClick={() => setFilter('in_progress')} />
           <FilterChip label="Resolved" count={counts.resolved} active={filter === 'resolved'} onClick={() => setFilter('resolved')} />
+          {counts.archived > 0 && (
+            <FilterChip label="Archived" count={counts.archived} active={filter === 'archived'} onClick={() => setFilter('archived')} />
+          )}
         </div>
       </div>
       
@@ -857,13 +880,14 @@ function CommentsSidebar({
         <div className="p-3 space-y-3">
           {filteredComments.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-8">
-              No comments yet. Click "Add Comment" to leave feedback.
+              {filter === 'archived' ? 'No archived comments.' : 'No comments yet. Click "Add Comment" to leave feedback.'}
             </p>
           ) : (
             filteredComments.map((comment, idx) => {
               const pinStatus = getPinStatus(comment);
               const needsAnchor = pinStatus?.kind === 'no-anchor';
               const isResolved = comment.status === 'resolved' || !!comment.resolved_at || comment.status === 'wont_do';
+              const isArchived = !!comment.archived_at;
               
               return (
                 <div
@@ -873,13 +897,36 @@ function CommentsSidebar({
                     focusedCommentId === comment.id || hoveredCommentId === comment.id
                       ? "ring-2 ring-primary rounded-lg"
                       : ""
-                  }`}
+                  } ${isArchived ? "opacity-60" : ""}`}
                   onMouseEnter={() => onHoverComment(comment.id)}
                   onMouseLeave={() => onHoverComment(null)}
                   onClick={() => onFocusComment(comment)}
                 >
+                  {/* Archived badge */}
+                  {isArchived && (
+                    <div className="mb-1 flex items-center gap-1">
+                      <Badge variant="outline" className="text-xs bg-gray-500/10 text-gray-600 border-gray-500/30">
+                        <Archive className="h-3 w-3 mr-1" />
+                        Archived
+                      </Badge>
+                      {onUnarchiveComment && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-5 px-1.5 text-[10px] text-gray-600 hover:text-gray-700"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onUnarchiveComment(comment.id);
+                          }}
+                        >
+                          <ArchiveRestore className="h-3 w-3 mr-0.5" />
+                          Unarchive
+                        </Button>
+                      )}
+                    </div>
+                  )}
                   {/* Needs anchor badge + repin button */}
-                  {!isResolved && needsAnchor && (
+                  {!isArchived && !isResolved && needsAnchor && (
                     <div className="mb-1 flex items-center gap-1">
                       <Badge variant="outline" className="text-xs bg-amber-500/10 text-amber-600 border-amber-500/30">
                         <AlertTriangle className="h-3 w-3 mr-1" />
@@ -902,7 +949,7 @@ function CommentsSidebar({
                     </div>
                   )}
                   {/* Move pin button for pinned comments */}
-                  {!isResolved && !needsAnchor && onRepin && (
+                  {!isArchived && !isResolved && !needsAnchor && onRepin && (
                     <div className="mb-1">
                       <Button
                         variant="ghost"
@@ -926,6 +973,7 @@ function CommentsSidebar({
                     onUnresolve={onUnresolveComment}
                     onMarkInProgress={onMarkInProgress}
                     onEdit={onEditComment}
+                    onArchive={onArchiveComment}
                   />
                 </div>
               );

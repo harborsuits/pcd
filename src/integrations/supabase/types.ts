@@ -946,6 +946,7 @@ export type Database = {
         Row: {
           anchor_id: string | null
           anchor_selector: string | null
+          archived_at: string | null
           author_type: string
           body: string
           breakpoint: string | null
@@ -976,6 +977,7 @@ export type Database = {
         Insert: {
           anchor_id?: string | null
           anchor_selector?: string | null
+          archived_at?: string | null
           author_type: string
           body: string
           breakpoint?: string | null
@@ -1006,6 +1008,7 @@ export type Database = {
         Update: {
           anchor_id?: string | null
           anchor_selector?: string | null
+          archived_at?: string | null
           author_type?: string
           body?: string
           breakpoint?: string | null

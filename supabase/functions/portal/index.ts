@@ -1525,6 +1525,72 @@ if (action === "resolve" || action === "unresolve") {
       );
     }
 
+    // Archive a comment
+    if (action === "archive") {
+      if (!comment_id) {
+        return new Response(
+          JSON.stringify({ error: "comment_id is required" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const { data: updatedComment, error: updateError } = await supabase
+        .from("prototype_comments")
+        .update({ archived_at: new Date().toISOString() })
+        .eq("id", comment_id)
+        .eq("project_token", token)
+        .select()
+        .single();
+
+      if (updateError) {
+        console.error("Archive comment error:", updateError);
+        return new Response(
+          JSON.stringify({ error: "Failed to archive comment" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      console.log(`Comment ${comment_id.slice(0, 8)} archived`);
+
+      return new Response(
+        JSON.stringify({ ok: true, comment: updatedComment }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Unarchive a comment
+    if (action === "unarchive") {
+      if (!comment_id) {
+        return new Response(
+          JSON.stringify({ error: "comment_id is required" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const { data: updatedComment, error: updateError } = await supabase
+        .from("prototype_comments")
+        .update({ archived_at: null })
+        .eq("id", comment_id)
+        .eq("project_token", token)
+        .select()
+        .single();
+
+      if (updateError) {
+        console.error("Unarchive comment error:", updateError);
+        return new Response(
+          JSON.stringify({ error: "Failed to unarchive comment" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      console.log(`Comment ${comment_id.slice(0, 8)} unarchived`);
+
+      return new Response(
+        JSON.stringify({ ok: true, comment: updatedComment }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     return new Response(
       JSON.stringify({ error: "Invalid action" }),
       { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
