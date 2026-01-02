@@ -477,19 +477,28 @@ export function PrototypeViewer({
         ensureHoverStyle();
         
         // Create pin mount node INSIDE the iframe document
-        // Use position: fixed (viewport model) - pins use viewport coords
-        // Scroll triggers re-render so pins move with content
+        // Use position: absolute on body so pins scroll WITH the document content
+        // Pin coordinates are document-relative (scroll + viewport offset)
         let pinMount = iframeDoc.getElementById("pcd-pin-overlay") as HTMLDivElement | null;
         if (!pinMount) {
           pinMount = iframeDoc.createElement("div");
           pinMount.id = "pcd-pin-overlay";
           pinMount.style.cssText = `
-            position: fixed;
-            inset: 0;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            min-height: 100vh;
             pointer-events: none;
             z-index: 2147483647;
           `;
           iframeDoc.body.appendChild(pinMount);
+          
+          // Ensure body has position:relative for absolute positioning context
+          if (iframeDoc.body.style.position !== 'relative' && iframeDoc.body.style.position !== 'absolute') {
+            iframeDoc.body.style.position = 'relative';
+          }
         }
         setIframePinMount(pinMount);
         
@@ -1260,55 +1269,59 @@ export function PrototypeViewer({
             baseDebug.mode = usedRange ? "range" : "element";
             
             // pinRect is in IFRAME VIEWPORT COORDS (relative to visible area)
-            // Using viewport model: overlay is position:fixed, so use viewport coords directly
-            // NO scroll offsets - pins move with content via re-render on scroll
-            const pinCenterX = pinRect.left + (pinRect.width / 2);
-            const pinCenterY = pinRect.top + (pinRect.height / 2);
+            // Since pin overlay is position:absolute on body, convert to DOCUMENT coords
+            // by adding current scroll position
+            const scrollX = iframeWin.scrollX ?? 0;
+            const scrollY = iframeWin.scrollY ?? 0;
+            const pinCenterX = pinRect.left + (pinRect.width / 2) + scrollX;
+            const pinCenterY = pinRect.top + (pinRect.height / 2) + scrollY;
             
             // SAFE: Use iframe element rect - never throws cross-origin error
             const iframeRect = iframeRef.current?.getBoundingClientRect();
             const viewportW = iframeRect?.width ?? 800;
             const viewportH = iframeRect?.height ?? 600;
             
-            // Check if pin is currently in viewport (viewport coords, so 0 to viewport size)
-            const isOffscreen = pinCenterX < 0 || pinCenterY < 0 || 
-                               pinCenterX > viewportW || pinCenterY > viewportH;
+            // Check if pin is currently in viewport (viewport coords for visibility check)
+            const viewportPinX = pinRect.left + (pinRect.width / 2);
+            const viewportPinY = pinRect.top + (pinRect.height / 2);
+            const isOffscreen = viewportPinX < 0 || viewportPinY < 0 || 
+                               viewportPinX > viewportW || viewportPinY > viewportH;
             
             if (isOffscreen) {
               let direction: 'up' | 'down' | 'left' | 'right';
               
-              if (pinCenterY < 0) {
+              if (viewportPinY < 0) {
                 direction = 'up';
-              } else if (pinCenterY > viewportH) {
+              } else if (viewportPinY > viewportH) {
                 direction = 'down';
-              } else if (pinCenterX < 0) {
+              } else if (viewportPinX < 0) {
                 direction = 'left';
               } else {
                 direction = 'right';
               }
 
-              // Clamp to viewport edges (viewport coords for fixed positioning)
+              // Offscreen arrows need to be in document coords too (scroll + edge offset)
               let edgeLeft: string;
               let edgeTop: string;
               
               if (direction === 'up') {
-                edgeLeft = `${Math.max(16, Math.min(viewportW - 16, pinCenterX))}px`;
-                edgeTop = `16px`;
+                edgeLeft = `${Math.max(16, Math.min(viewportW - 16, viewportPinX)) + scrollX}px`;
+                edgeTop = `${scrollY + 16}px`;
               } else if (direction === 'down') {
-                edgeLeft = `${Math.max(16, Math.min(viewportW - 16, pinCenterX))}px`;
-                edgeTop = `${viewportH - 16}px`;
+                edgeLeft = `${Math.max(16, Math.min(viewportW - 16, viewportPinX)) + scrollX}px`;
+                edgeTop = `${scrollY + viewportH - 16}px`;
               } else if (direction === 'left') {
-                edgeLeft = `16px`;
-                edgeTop = `${Math.max(16, Math.min(viewportH - 16, pinCenterY))}px`;
+                edgeLeft = `${scrollX + 16}px`;
+                edgeTop = `${Math.max(16, Math.min(viewportH - 16, viewportPinY)) + scrollY}px`;
               } else {
-                edgeLeft = `${viewportW - 16}px`;
-                edgeTop = `${Math.max(16, Math.min(viewportH - 16, pinCenterY))}px`;
+                edgeLeft = `${scrollX + viewportW - 16}px`;
+                edgeTop = `${Math.max(16, Math.min(viewportH - 16, viewportPinY)) + scrollY}px`;
               }
 
               return { kind: 'offscreen', direction, edgeLeft, edgeTop, debug: baseDebug };
             }
             
-            // Visible: return viewport coords for fixed positioning inside iframe
+            // Visible: return document coords for absolute positioning inside iframe
             return { kind: 'visible', left: `${pinCenterX}px`, top: `${pinCenterY}px`, debug: baseDebug };
           } else {
             // Anchor selector exists but element not found - needs re-pin
@@ -1391,9 +1404,24 @@ export function PrototypeViewer({
       const viewportW = iframeRect?.width || 800;
       const viewportH = iframeRect?.height || 600;
       
-      // Convert percentage to viewport pixels for fixed positioning
-      const left = (comment.pin_x / 100) * viewportW;
-      const top = (comment.pin_y / 100) * viewportH;
+      // Convert percentage to viewport pixels
+      const viewportX = (comment.pin_x / 100) * viewportW;
+      const viewportY = (comment.pin_y / 100) * viewportH;
+      
+      // For DOM-accessible iframes, convert to document coords (add scroll)
+      // For cross-origin, we render in parent overlay so use viewport coords
+      let left = viewportX;
+      let top = viewportY;
+      
+      if (canAccessDOM) {
+        try {
+          const iframeWin = iframeRef.current?.contentWindow;
+          if (iframeWin) {
+            left += iframeWin.scrollX ?? 0;
+            top += iframeWin.scrollY ?? 0;
+          }
+        } catch {}
+      }
       
       return { 
         kind: canAccessDOM ? 'needs-repin' : 'visible', 
