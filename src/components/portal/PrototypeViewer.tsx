@@ -673,12 +673,22 @@ export function PrototypeViewer({
     const overlayRect = overlayEl.getBoundingClientRect();
     
     // Convert iframe-relative click coords to overlay percentage
-    // click.rect is already in iframe-viewport coords (from getBoundingClientRect inside iframe)
-    // So we just need to convert to percentage of iframe dimensions
+    // click.rect is in iframe-viewport coords (from getBoundingClientRect inside iframe)
+    // The pin renders inside overlayRef with left/top as %, so use overlayRect dimensions
+    // Since overlay is absolute inset-0 over iframe, they SHOULD match - but use overlay for safety
     const pinCenterX = click.rect.left + click.rect.width / 2;
     const pinCenterY = click.rect.top + click.rect.height / 2;
-    const pin_x = (pinCenterX / iframeRect.width) * 100;
-    const pin_y = (pinCenterY / iframeRect.height) * 100;
+    const pin_x = (pinCenterX / overlayRect.width) * 100;
+    const pin_y = (pinCenterY / overlayRect.height) * 100;
+    
+    // Debug: log both dimensions to verify they match
+    if (Math.abs(iframeRect.width - overlayRect.width) > 1 || Math.abs(iframeRect.height - overlayRect.height) > 1) {
+      console.warn('[PCD Pin] Dimension mismatch!', {
+        iframeW: iframeRect.width, overlayW: overlayRect.width,
+        iframeH: iframeRect.height, overlayH: overlayRect.height,
+      });
+    }
+    console.log('[PCD Pin] Calculated:', { pinCenterX, pinCenterY, pin_x, pin_y, overlayW: overlayRect.width });
 
     const anchorData: CommentAnchorData = {
       page_url: prototype.url,
