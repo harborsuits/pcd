@@ -8,7 +8,8 @@ import {
   MessageSquare, 
   Eye, 
   ExternalLink,
-  Hammer
+  Hammer,
+  type LucideIcon
 } from "lucide-react";
 
 export type RoadmapStep = {
@@ -29,7 +30,7 @@ interface ProjectRoadmapProps {
   className?: string;
 }
 
-const STEP_ICONS: Record<string, React.ElementType> = {
+const STEP_ICONS: Record<string, LucideIcon> = {
   intake: FileText,
   build: Hammer,
   preview: Eye,
@@ -52,7 +53,7 @@ function BuildMilestone({ label, done, inProgress }: { label: string; done?: boo
 }
 
 function StepIcon({ stepId, status }: { stepId: string; status: RoadmapStep['status'] }) {
-  const Icon = STEP_ICONS[stepId] || Circle;
+  const Icon: LucideIcon = STEP_ICONS[stepId] || Circle;
   
   if (status === 'completed') {
     return (

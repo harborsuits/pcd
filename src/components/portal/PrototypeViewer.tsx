@@ -1199,6 +1199,7 @@ export function PrototypeViewer({
             token={token}
             focusedCommentId={focusedCommentId}
             hoveredCommentId={hoveredCommentId}
+            repinTargetId={repinTargetId}
             bridgeReady={bridgeReady}
             getPinStatus={getPinPosition}
             onFocusComment={focusComment}
@@ -1207,7 +1208,14 @@ export function PrototypeViewer({
             onUnresolveComment={onUnresolveComment}
             onMarkInProgress={onMarkInProgress}
             onEditComment={onEditComment}
-            onRepin={onRepinComment ? (id) => setRepinTargetId(id) : undefined}
+            onRepin={onRepinComment ? (id) => {
+              setRepinTargetId(id);
+              toast({
+                title: "Repin mode active",
+                description: "Click on the element this comment refers to",
+              });
+            } : undefined}
+            onCancelRepin={() => setRepinTargetId(null)}
             onArchiveComment={onArchiveComment}
             onUnarchiveComment={onUnarchiveComment}
           />
@@ -1364,6 +1372,7 @@ function CommentsSidebar({
   token,
   focusedCommentId,
   hoveredCommentId,
+  repinTargetId,
   bridgeReady,
   getPinStatus,
   onFocusComment,
@@ -1373,6 +1382,7 @@ function CommentsSidebar({
   onMarkInProgress,
   onEditComment,
   onRepin,
+  onCancelRepin,
   onArchiveComment,
   onUnarchiveComment,
 }: {
@@ -1380,6 +1390,7 @@ function CommentsSidebar({
   token: string;
   focusedCommentId: string | null;
   hoveredCommentId: string | null;
+  repinTargetId: string | null;
   bridgeReady: boolean;
   getPinStatus: (comment: PrototypeComment) => PinPositionResult;
   onFocusComment: (comment: PrototypeComment) => void;
@@ -1389,6 +1400,7 @@ function CommentsSidebar({
   onMarkInProgress?: (commentId: string) => Promise<void>;
   onEditComment?: (commentId: string, newBody: string) => Promise<void>;
   onRepin?: (commentId: string) => void;
+  onCancelRepin?: () => void;
   onArchiveComment?: (commentId: string) => Promise<void>;
   onUnarchiveComment?: (commentId: string) => Promise<void>;
 }) {
@@ -1443,22 +1455,48 @@ function CommentsSidebar({
               const needsAnchor = pinStatus?.kind === 'no-anchor';
               const isResolved = comment.status === 'resolved' || !!comment.resolved_at || comment.status === 'wont_do';
               const isArchived = !!comment.archived_at;
+              const isRepinning = repinTargetId === comment.id;
               
               return (
                 <div
                   id={`comment-card-${comment.id}`}
                   key={comment.id}
                   className={`cursor-pointer transition-all ${
-                    focusedCommentId === comment.id || hoveredCommentId === comment.id
-                      ? "ring-2 ring-primary rounded-lg"
-                      : ""
+                    isRepinning
+                      ? "ring-2 ring-amber-500 rounded-lg bg-amber-500/5"
+                      : focusedCommentId === comment.id || hoveredCommentId === comment.id
+                        ? "ring-2 ring-primary rounded-lg"
+                        : ""
                   } ${isArchived ? "opacity-60" : ""}`}
                   onMouseEnter={() => onHoverComment(comment.id)}
                   onMouseLeave={() => onHoverComment(null)}
                   onClick={() => onFocusComment(comment)}
                 >
+                  {/* Repinning indicator */}
+                  {isRepinning && (
+                    <div className="mb-1 flex items-center gap-1 p-2 rounded-t-lg bg-amber-500/10 border-b border-amber-500/20">
+                      <Target className="h-4 w-4 text-amber-600 animate-pulse" />
+                      <span className="text-xs text-amber-700 font-medium flex-1">
+                        Click an element in the preview...
+                      </span>
+                      {onCancelRepin && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-5 px-1.5 text-[10px] text-amber-600 hover:text-amber-700"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onCancelRepin();
+                          }}
+                        >
+                          <X className="h-3 w-3 mr-0.5" />
+                          Cancel
+                        </Button>
+                      )}
+                    </div>
+                  )}
                   {/* Archived badge */}
-                  {isArchived && (
+                  {isArchived && !isRepinning && (
                     <div className="mb-1 flex items-center gap-1">
                       <Badge variant="outline" className="text-xs bg-gray-500/10 text-gray-600 border-gray-500/30">
                         <Archive className="h-3 w-3 mr-1" />
@@ -1481,7 +1519,7 @@ function CommentsSidebar({
                     </div>
                   )}
                   {/* Needs anchor badge + repin button */}
-                  {!isArchived && !isResolved && needsAnchor && (
+                  {!isArchived && !isResolved && !isRepinning && needsAnchor && (
                     <div className="mb-1 flex items-center gap-1">
                       <Badge variant="outline" className="text-xs bg-amber-500/10 text-amber-600 border-amber-500/30">
                         <AlertTriangle className="h-3 w-3 mr-1" />
@@ -1504,7 +1542,7 @@ function CommentsSidebar({
                     </div>
                   )}
                   {/* Move pin button for pinned comments */}
-                  {!isArchived && !isResolved && !needsAnchor && onRepin && (
+                  {!isArchived && !isResolved && !isRepinning && !needsAnchor && onRepin && (
                     <div className="mb-1">
                       <Button
                         variant="ghost"
