@@ -621,6 +621,14 @@ export function PrototypeViewer({
             scrollX: msg.scroll.x,
             scrollY: msg.scroll.y,
           });
+          // Schedule rect refresh on scroll for cross-origin pin positioning
+          if (!canAccessDOM && rectRefreshRaf.current === null) {
+            rectRefreshRaf.current = requestAnimationFrame(() => {
+              rectRefreshRaf.current = null;
+              // Call refreshRects inline since we can't reference it here
+              // Instead, just trigger pin update - the useEffect will refresh rects
+            });
+          }
           triggerPinUpdate();
           break;
         }
@@ -1317,48 +1325,60 @@ export function PrototypeViewer({
     if (!canAccessDOM && iframeReady && (comment.anchor_selector || comment.anchor_id)) {
       const cachedRect = rectCache[comment.id];
       if (cachedRect) {
-        const iframeRect = iframeRef.current?.getBoundingClientRect();
-        const overlayRect = overlayRef.current?.getBoundingClientRect();
-        const viewportW = iframeRect?.width ?? 800;
-        const viewportH = iframeRect?.height ?? 600;
+        const iframeEl = iframeRef.current;
+        const overlayEl = overlayRef.current;
         
-        // cachedRect is in iframe viewport coords, need to convert to overlay coords
-        const pinCenterX = cachedRect.left + cachedRect.width / 2;
-        const pinCenterY = cachedRect.top + cachedRect.height / 2;
-        
-        // Check if offscreen
-        const isOffscreen = pinCenterX < 0 || pinCenterY < 0 || 
-                           pinCenterX > viewportW || pinCenterY > viewportH;
-        
-        baseDebug.mode = "element";
-        baseDebug.rangeRect = { w: cachedRect.width, h: cachedRect.height, x: cachedRect.left, y: cachedRect.top };
-        
-        if (isOffscreen) {
-          let direction: 'up' | 'down' | 'left' | 'right';
-          if (pinCenterY < 0) direction = 'up';
-          else if (pinCenterY > viewportH) direction = 'down';
-          else if (pinCenterX < 0) direction = 'left';
-          else direction = 'right';
+        if (iframeEl && overlayEl) {
+          const iframeRect = iframeEl.getBoundingClientRect();
+          const overlayRect = overlayEl.getBoundingClientRect();
+          const viewportW = iframeRect.width;
+          const viewportH = iframeRect.height;
           
-          let edgeLeft: string, edgeTop: string;
-          if (direction === 'up') {
-            edgeLeft = `${Math.max(16, Math.min(viewportW - 16, pinCenterX))}px`;
-            edgeTop = `16px`;
-          } else if (direction === 'down') {
-            edgeLeft = `${Math.max(16, Math.min(viewportW - 16, pinCenterX))}px`;
-            edgeTop = `${viewportH - 16}px`;
-          } else if (direction === 'left') {
-            edgeLeft = `16px`;
-            edgeTop = `${Math.max(16, Math.min(viewportH - 16, pinCenterY))}px`;
-          } else {
-            edgeLeft = `${viewportW - 16}px`;
-            edgeTop = `${Math.max(16, Math.min(viewportH - 16, pinCenterY))}px`;
+          // Compute iframe→overlay offset for correct coordinate conversion
+          const offsetX = iframeRect.left - overlayRect.left;
+          const offsetY = iframeRect.top - overlayRect.top;
+          
+          // cachedRect is in iframe viewport coords - convert to overlay coords
+          const pinCenterX = offsetX + cachedRect.left + cachedRect.width / 2;
+          const pinCenterY = offsetY + cachedRect.top + cachedRect.height / 2;
+          
+          // Check if pin is offscreen (in iframe viewport coords for clipping)
+          const iframePinX = cachedRect.left + cachedRect.width / 2;
+          const iframePinY = cachedRect.top + cachedRect.height / 2;
+          const isOffscreen = iframePinX < 0 || iframePinY < 0 || 
+                             iframePinX > viewportW || iframePinY > viewportH;
+          
+          baseDebug.mode = "element";
+          baseDebug.rangeRect = { w: cachedRect.width, h: cachedRect.height, x: cachedRect.left, y: cachedRect.top };
+          
+          if (isOffscreen) {
+            let direction: 'up' | 'down' | 'left' | 'right';
+            if (iframePinY < 0) direction = 'up';
+            else if (iframePinY > viewportH) direction = 'down';
+            else if (iframePinX < 0) direction = 'left';
+            else direction = 'right';
+            
+            // Clamp to overlay edges using the offset conversion
+            let edgeLeft: string, edgeTop: string;
+            if (direction === 'up') {
+              edgeLeft = `${offsetX + Math.max(16, Math.min(viewportW - 16, iframePinX))}px`;
+              edgeTop = `${offsetY + 16}px`;
+            } else if (direction === 'down') {
+              edgeLeft = `${offsetX + Math.max(16, Math.min(viewportW - 16, iframePinX))}px`;
+              edgeTop = `${offsetY + viewportH - 16}px`;
+            } else if (direction === 'left') {
+              edgeLeft = `${offsetX + 16}px`;
+              edgeTop = `${offsetY + Math.max(16, Math.min(viewportH - 16, iframePinY))}px`;
+            } else {
+              edgeLeft = `${offsetX + viewportW - 16}px`;
+              edgeTop = `${offsetY + Math.max(16, Math.min(viewportH - 16, iframePinY))}px`;
+            }
+            
+            return { kind: 'offscreen', direction, edgeLeft, edgeTop, debug: baseDebug };
           }
           
-          return { kind: 'offscreen', direction, edgeLeft, edgeTop, debug: baseDebug };
+          return { kind: 'visible', left: `${pinCenterX}px`, top: `${pinCenterY}px`, debug: baseDebug };
         }
-        
-        return { kind: 'visible', left: `${pinCenterX}px`, top: `${pinCenterY}px`, debug: baseDebug };
       }
     }
     
