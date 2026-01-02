@@ -598,17 +598,17 @@ export function PrototypeViewer({
     const anchorData: CommentAnchorData = {
       page_url: prototype.url,
       page_path: null,
-      scroll_y: click.scroll.y,
-      viewport_w: click.viewport.w,
-      viewport_h: click.viewport.h,
-      breakpoint: getBreakpoint(click.viewport.w),
+      scroll_y: click.scroll?.y ?? 0,
+      viewport_w: click.viewport?.w ?? window.innerWidth,
+      viewport_h: click.viewport?.h ?? window.innerHeight,
+      breakpoint: getBreakpoint(click.viewport?.w ?? window.innerWidth),
       anchor_id: click.id,
       anchor_selector: click.selector,
-      x_pct: click.rect.width > 0 
-        ? ((click.rect.left + click.rect.width / 2) / click.viewport.w) * 100 
+      x_pct: click.rect?.width > 0 
+        ? ((click.rect.left + click.rect.width / 2) / (click.viewport?.w ?? window.innerWidth)) * 100 
         : 50,
-      y_pct: click.rect.height > 0 
-        ? ((click.rect.top + click.rect.height / 2) / click.viewport.h) * 100 
+      y_pct: click.rect?.height > 0 
+        ? ((click.rect.top + click.rect.height / 2) / (click.viewport?.h ?? window.innerHeight)) * 100 
         : 50,
       text_hint: click.textHint ?? null,
       text_offset: click.textOffset ?? null,

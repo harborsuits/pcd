@@ -60,6 +60,12 @@
       const t = e.target;
       if (!(t instanceof Element)) return;
 
+      // If we're in pin mode, don't let the demo site "use" the click (navigate, submit, etc.)
+      if (pinModeActive) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+
       const anchorKey = ensureAnchorStamp(t);
       const rect = t.getBoundingClientRect();
       const selector = buildSelector(t, anchorKey);
