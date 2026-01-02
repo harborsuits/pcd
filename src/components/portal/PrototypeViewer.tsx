@@ -151,6 +151,8 @@ export function PrototypeViewer({
   const [showCommentsSidebar, setShowCommentsSidebar] = useState(true);
   const [focusedCommentId, setFocusedCommentId] = useState<string | null>(null);
   const [hoveredCommentId, setHoveredCommentId] = useState<string | null>(null);
+  // Sticky selection: persists until user explicitly selects another comment
+  const [selectedCommentId, setSelectedCommentId] = useState<string | null>(null);
   const [repinTargetId, setRepinTargetId] = useState<string | null>(null);
   const [clickFeedback, setClickFeedback] = useState<{ x: number; y: number } | null>(null);
   const [showDebugDrawer, setShowDebugDrawer] = useState(false);
@@ -499,43 +501,36 @@ export function PrototypeViewer({
     if (!isAddingComment && !repinTargetId) setHover(null);
   }, [isAddingComment, repinTargetId]);
 
-  // Send PCD_FOCUS to iframe when a comment is focused/hovered
-  // Priority: focusedCommentId (clicked) > hoveredCommentId (mouse over)
-  // Focus persists until explicitly changed by clicking another comment or clearing
+  // Send PCD_FOCUS to iframe when a comment is selected (sticky selection)
+  // Uses selectedCommentId which only changes when user clicks a different comment
   useEffect(() => {
     if (!bridgeReady || !iframeRef.current?.contentWindow) return;
     
-    // Use focused (clicked) comment, or hovered if no focus is set
-    const selectedId = focusedCommentId ?? hoveredCommentId;
-    const selectedComment = selectedId 
-      ? comments.find(c => c.id === selectedId) 
-      : null;
-    
-    if (selectedComment?.anchor_id || selectedComment?.anchor_selector) {
-      // Focus the element in iframe
+    // Only clear focus when no comment is selected
+    if (!selectedCommentId) {
       try {
-        iframeRef.current.contentWindow.postMessage(
-          { 
-            type: "PCD_FOCUS", 
-            anchorKey: selectedComment.anchor_id,
-            selector: selectedComment.anchor_selector 
-          },
-          "*"
-        );
+        iframeRef.current.contentWindow.postMessage({ type: "PCD_CLEAR_FOCUS" }, "*");
       } catch {}
-    } else if (!selectedId) {
-      // Only clear focus when nothing is selected at all
-      // Don't clear just because a comment lacks anchor data
-      try {
-        iframeRef.current.contentWindow.postMessage(
-          { type: "PCD_CLEAR_FOCUS" },
-          "*"
-        );
-      } catch {}
+      return;
     }
-    // If selectedId exists but comment lacks anchor, just don't update iframe focus
-    // (keeps previous focus visible, or shows nothing if this is first selection)
-  }, [bridgeReady, focusedCommentId, hoveredCommentId, comments]);
+    
+    const selected = comments.find(c => c.id === selectedCommentId);
+    
+    // If selected comment lacks anchor, do nothing (keep previous focus visible)
+    if (!selected?.anchor_id && !selected?.anchor_selector) return;
+    
+    // Focus the element in iframe
+    try {
+      iframeRef.current.contentWindow.postMessage(
+        { 
+          type: "PCD_FOCUS", 
+          anchorKey: selected.anchor_id,
+          selector: selected.anchor_selector 
+        },
+        "*"
+      );
+    } catch {}
+  }, [bridgeReady, selectedCommentId, comments]);
 
   // Helper: convert iframe-viewport rect → overlay coords
   const iframeRectToOverlayRect = useCallback((
@@ -808,6 +803,8 @@ export function PrototypeViewer({
   const focusComment = useCallback((comment: PrototypeComment) => {
     setFocusedCommentId(comment.id);
     setHoveredCommentId(comment.id);
+    // Set sticky selection - this is what drives PCD_FOCUS
+    setSelectedCommentId(comment.id);
     
     // Scroll sidebar card into view
     requestAnimationFrame(() => {
@@ -1485,7 +1482,8 @@ function CommentsSidebar({
                   } ${isArchived ? "opacity-60" : ""}`}
                   onMouseEnter={() => onHoverComment(comment.id)}
                   onMouseLeave={() => onHoverComment(null)}
-                  onClick={() => onFocusComment(comment)}
+                  // Use onMouseDownCapture to ensure selection happens before any button handlers
+                  onMouseDownCapture={() => onFocusComment(comment)}
                 >
                   {/* Repinning indicator */}
                   {isRepinning && (
