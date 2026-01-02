@@ -406,14 +406,6 @@ export function PrototypeViewer({
     const domAccessible = canAccessIframeDOM(iframe);
     const sameOrigin = isSameOrigin(prototype.url);
     
-    // 🔍 DEBUG: Log access status
-    console.log("[pins] 🔍 Origin check:", {
-      sameOrigin,
-      canAccessDOM: domAccessible,
-      prototypeUrl: prototype.url,
-      currentOrigin: window.location.origin,
-    });
-    
     // Update state for use elsewhere
     setCanAccessDOM(domAccessible);
     
@@ -460,12 +452,10 @@ export function PrototypeViewer({
         
         // Recompute pins on scroll/resize
         const updateAll = () => {
-          console.log('[pins] scroll/resize triggered, updating pins');
           schedulePinUpdate();
         };
 
         // IMPORTANT: force one recompute immediately
-        console.log('[pins] initial pin update');
         updateAll();
 
         // 1) Scroll/resize inside iframe window
@@ -1157,8 +1147,9 @@ export function PrototypeViewer({
     if (comment.pin_x != null && comment.pin_y != null) {
       // SAFE: Use iframe element rect - never throws cross-origin error  
       const iframeRect = iframeRef.current?.getBoundingClientRect();
-      const viewportW = iframeRect?.width ?? 0;
-      const viewportH = iframeRect?.height ?? 0;
+      // Use sensible defaults if iframe hasn't rendered yet
+      const viewportW = iframeRect?.width || 800;
+      const viewportH = iframeRect?.height || 600;
       
       // Convert percentage to viewport pixels for fixed positioning
       const left = (comment.pin_x / 100) * viewportW;
@@ -1409,15 +1400,7 @@ export function PrototypeViewer({
           >
             ?
           </Button>
-          <Button
-            variant={debugPins ? "default" : "outline"}
-            size="sm"
-            onClick={() => setDebugPins(v => !v)}
-            title="Toggle debug overlay for pin positioning"
-            className={debugPins ? "bg-amber-500 hover:bg-amber-600 text-black" : ""}
-          >
-            🐛
-          </Button>
+{/* Debug button removed - was confusing for clients */}
         </div>
       </div>
 
@@ -1489,22 +1472,12 @@ export function PrototypeViewer({
           </div>
           
           {/* Comment pins - rendered inside iframe portal when DOM accessible */}
-          {(() => {
-            console.log('[pins] render check:', { 
-              iframePinMount: !!iframePinMount, 
-              canAccessDOM, 
-              visibleCommentsCount: visibleComments.filter(c => !c.resolved_at && (c.status !== 'resolved' && c.status !== 'wont_do')).length,
-              usingPortal: !!(iframePinMount && canAccessDOM)
-            });
-            return null;
-          })()}
           {iframePinMount && canAccessDOM && createPortal(
             <>
               {visibleComments
                 .filter(c => !c.resolved_at && (c.status !== 'resolved' && c.status !== 'wont_do'))
                 .map((comment, idx) => {
                     const position = getPinPosition(comment);
-                    console.log('[pins] comment position:', comment.id.slice(0,6), position?.kind, position?.kind === 'needs-repin' && position?.left ? 'has-fallback' : '');
                     if (!position) return null;
                     
                     const status = getEffectiveStatus(comment);
