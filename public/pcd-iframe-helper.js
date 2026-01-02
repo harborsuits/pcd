@@ -6,6 +6,7 @@
   // Prevent double init
   if (window.__PCD_HELPER_INIT__) return;
   window.__PCD_HELPER_INIT__ = true;
+  window.__PCD_HELPER_VERSION__ = "2026-01-02-ORIGIN-1";
 
   let pinModeActive = false;
   let focusLocked = false; // When true, clicks cannot clear focus
