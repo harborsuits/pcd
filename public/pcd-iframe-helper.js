@@ -260,13 +260,29 @@
     
     let el = null;
     try {
+      // Priority 1: data-pcd-anchor attribute (current format)
       if (anchorKey) el = document.querySelector(`[data-pcd-anchor="${CSS.escape(anchorKey)}"]`);
+      
+      // Priority 2: Try as native HTML id (for backwards compatibility with old anchor format)
+      if (!el && anchorKey) {
+        try { el = document.getElementById(anchorKey); } catch (_) {}
+      }
+      
+      // Priority 3: Try data-anchor attribute (alternate format some helpers use)
+      if (!el && anchorKey) {
+        try { el = document.querySelector(`[data-anchor="${CSS.escape(anchorKey)}"]`); } catch (_) {}
+      }
+      
+      // Priority 4: Use selector as fallback
       if (!el && selector) {
         try { el = document.querySelector(selector); } catch (_) {}
       }
     } catch (_) {}
     
-    if (!el) return;
+    if (!el) {
+      console.log("[PCD Helper] Could not find element for focus:", { anchorKey, selector });
+      return;
+    }
     
     focusedEl = el;
     ensureFocusUI();
