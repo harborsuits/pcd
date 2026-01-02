@@ -432,45 +432,64 @@ export function PrototypeViewer({
         // Inject hover highlight style into iframe
         ensureHoverStyle();
         
-                        // Create pin mount node INSIDE the iframe document
-                        // Use position: absolute to anchor pins to document, not viewport
-                        let pinMount = iframeDoc.getElementById("pcd-pin-overlay") as HTMLDivElement | null;
-                        if (!pinMount) {
-                          pinMount = iframeDoc.createElement("div");
-                          pinMount.id = "pcd-pin-overlay";
-                          pinMount.style.cssText = `
-                            position: absolute;
-                            top: 0;
-                            left: 0;
-                            width: 100%;
-                            height: 100%;
-                            pointer-events: none;
-                            z-index: 2147483647;
-                          `;
-                          iframeDoc.body.appendChild(pinMount);
-                        }
+        // Helper to update pin overlay size to match document
+        const updatePinOverlaySize = (mount: HTMLDivElement) => {
+          const docWidth = Math.max(
+            iframeDoc.body.scrollWidth,
+            iframeDoc.documentElement.scrollWidth
+          );
+          const docHeight = Math.max(
+            iframeDoc.body.scrollHeight,
+            iframeDoc.documentElement.scrollHeight
+          );
+          mount.style.width = `${docWidth}px`;
+          mount.style.height = `${docHeight}px`;
+        };
+
+        // Create pin mount node INSIDE the iframe document
+        // Use position: absolute to anchor pins to document, not viewport
+        let pinMount = iframeDoc.getElementById("pcd-pin-overlay") as HTMLDivElement | null;
+        if (!pinMount) {
+          pinMount = iframeDoc.createElement("div");
+          pinMount.id = "pcd-pin-overlay";
+          pinMount.style.cssText = `
+            position: absolute;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+            z-index: 2147483647;
+          `;
+          iframeDoc.body.appendChild(pinMount);
+        }
+        updatePinOverlaySize(pinMount);
         setIframePinMount(pinMount);
+        
+        // Update overlay size and recompute pins
+        const updateAll = () => {
+          if (pinMount) updatePinOverlaySize(pinMount);
+          schedulePinUpdate();
+        };
 
         // IMPORTANT: force one recompute immediately
-        schedulePinUpdate();
+        updateAll();
 
         // 1) Scroll/resize inside iframe window
-        iframeWin.addEventListener("scroll", schedulePinUpdate, { passive: true });
-        iframeWin.addEventListener("resize", schedulePinUpdate);
+        iframeWin.addEventListener("scroll", updateAll, { passive: true });
+        iframeWin.addEventListener("resize", updateAll);
 
         // 2) Capture scroll for nested scroll containers inside iframe
-        iframeDoc.addEventListener("scroll", schedulePinUpdate, true);
+        iframeDoc.addEventListener("scroll", updateAll, true);
 
         // 3) Parent window resize (in case the preview container resizes)
-        window.addEventListener("resize", schedulePinUpdate);
+        window.addEventListener("resize", updateAll);
 
         // 4) Resize observers: iframe + overlay + iframe body
-        resizeObs = new ResizeObserver(() => schedulePinUpdate());
+        resizeObs = new ResizeObserver(() => updateAll());
         resizeObs.observe(iframe);
         resizeObs.observe(overlay);
 
         if (iframeDoc.body) {
-          bodyResizeObs = new ResizeObserver(() => schedulePinUpdate());
+          bodyResizeObs = new ResizeObserver(() => updateAll());
           bodyResizeObs.observe(iframeDoc.body);
         }
 
@@ -482,7 +501,7 @@ export function PrototypeViewer({
             if (p !== lastPath) {
               lastPath = p;
               setCurrentIframePath(p);
-              schedulePinUpdate();
+              updateAll();
             }
           } catch {
             // cross-origin, ignore
@@ -492,11 +511,11 @@ export function PrototypeViewer({
         // Detach function (handles iframe navigations too)
         detachRef.current = () => {
           try {
-            iframeWin.removeEventListener("scroll", schedulePinUpdate);
-            iframeWin.removeEventListener("resize", schedulePinUpdate);
-            iframeDoc.removeEventListener("scroll", schedulePinUpdate, true);
+            iframeWin.removeEventListener("scroll", updateAll);
+            iframeWin.removeEventListener("resize", updateAll);
+            iframeDoc.removeEventListener("scroll", updateAll, true);
           } catch {}
-          window.removeEventListener("resize", schedulePinUpdate);
+          window.removeEventListener("resize", updateAll);
 
           resizeObs?.disconnect();
           bodyResizeObs?.disconnect();
@@ -1144,9 +1163,10 @@ export function PrototypeViewer({
       }
     }
     
-    // For same-origin: require anchors - don't show floaty pins
-    if (sameOrigin) {
-      // No valid anchor for same-origin = needs re-pin
+    // When we have DOM access: require anchors - don't show floaty pins
+    // Use canAccessDOM (actual DOM test) NOT sameOrigin (URL check)
+    if (canAccessDOM) {
+      // No valid anchor when DOM accessible = needs re-pin
       return { kind: 'needs-repin', debug: baseDebug };
     }
     
