@@ -62,7 +62,8 @@ export function PortalCommentCard({
   const isResolved = comment.status === "resolved" || comment.status === "wont_do" || !!comment.resolved_at;
   const isInProgress = comment.status === "in_progress";
   const isClient = comment.author_type === "client";
-  const canEdit = isClient && !isResolved;
+  // Allow editing for unresolved comments - onEdit prop controls whether editing is available
+  const canEdit = !isResolved && !!onEdit;
   const status = comment.status || (comment.resolved_at ? "resolved" : "open");
 
   // Get status dot color
