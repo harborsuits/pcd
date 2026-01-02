@@ -377,7 +377,24 @@ export function PrototypeViewer({
   useEffect(() => {
     const iframe = iframeRef.current;
     const overlay = overlayRef.current;
-    if (!iframe || !overlay || !isSameOrigin(prototype.url)) return;
+    
+    // 🔍 DEBUG: Log same-origin status - this is the root cause check
+    const sameOrigin = isSameOrigin(prototype.url);
+    console.log("[pins] 🔍 Origin check:", {
+      sameOrigin,
+      prototypeUrl: prototype.url,
+      currentOrigin: window.location.origin,
+      iframeDoc: !!iframe?.contentDocument,
+      canAccessDoc: (() => {
+        try {
+          return !!iframe?.contentDocument?.body;
+        } catch (e) {
+          return false;
+        }
+      })()
+    });
+    
+    if (!iframe || !overlay || !sameOrigin) return;
 
     // Clean up any previous attachments (SPA reloads / iframe src changes)
     detachRef.current?.();
