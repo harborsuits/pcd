@@ -519,18 +519,31 @@ export function PrototypeViewer({
     // If selected comment lacks anchor, do nothing (keep previous focus visible)
     if (!selected?.anchor_id && !selected?.anchor_selector) return;
     
-    // Focus the element in iframe
+    // Focus the element in iframe with lock: true to prevent clicks from clearing it
     try {
       iframeRef.current.contentWindow.postMessage(
         { 
           type: "PCD_FOCUS", 
           anchorKey: selected.anchor_id,
-          selector: selected.anchor_selector 
+          selector: selected.anchor_selector,
+          lock: true // 🔐 Focus is locked until explicitly cleared
         },
         "*"
       );
     } catch {}
   }, [bridgeReady, selectedCommentId, comments]);
+
+  // Escape key clears selection
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && selectedCommentId) {
+        setSelectedCommentId(null);
+        setFocusedCommentId(null);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [selectedCommentId]);
 
   // Helper: convert iframe-viewport rect → overlay coords
   const iframeRectToOverlayRect = useCallback((
