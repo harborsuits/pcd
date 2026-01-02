@@ -84,17 +84,20 @@
 
 ```
 Parent → Iframe:
-  PCD_MODE { mode: "pin" | "off" }     // Toggle pin mode
-  PCD_PING { }                          // Health check
-  PCD_GET_RECT { requestId, selector }  // Request element position
+  PCD_MODE { mode: "pin" | "off" }           // Toggle pin mode (crosshair cursor)
+  PCD_PING { }                                // Health check
+  PCD_GET_RECT { requestId, selector, id, anchorKey }  // Request element position
+  PCD_FOCUS { anchorKey, selector }           // Highlight selected comment's element
+  PCD_CLEAR_FOCUS { }                         // Remove element highlight
 
 Iframe → Parent:
-  PCD_IFRAME_READY { href, viewport }   // Helper initialized
-  PCD_PONG { }                          // Health check response
-  PCD_HOVER { selector, rect, ... }     // Element hovered
-  PCD_CLICK { selector, rect, ... }     // Element clicked
-  PCD_SCROLL { scroll, viewport }       // Scroll/resize update
-  PCD_RECT { requestId, rect }          // Element position response
+  PCD_IFRAME_READY { href, viewport }         // Helper initialized
+  PCD_PONG { }                                // Health check response
+  PCD_HOVER { selector, anchorKey, rect, ... }// Element hovered (pin mode)
+  PCD_CLICK { selector, anchorKey, rect, ... }// Element clicked (pin mode)
+  PCD_SCROLL { scroll, viewport }             // Scroll/resize update
+  PCD_RECT { requestId, rect }                // Element position response
+  PCD_KEY { key }                             // Keyboard shortcut (Escape, C, P)
 ```
 
 ---
