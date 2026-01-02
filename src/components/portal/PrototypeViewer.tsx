@@ -154,6 +154,26 @@ export function PrototypeViewer({
   const [repinTargetId, setRepinTargetId] = useState<string | null>(null);
   const [clickFeedback, setClickFeedback] = useState<{ x: number; y: number } | null>(null);
   
+  // Debug HUD state
+  const PCD_DEBUG = typeof window !== "undefined" && 
+    (new URLSearchParams(window.location.search).get("pcd_debug") === "1" ||
+     window.localStorage?.getItem("pcd_debug") === "1");
+  const [pcdHud, setPcdHud] = useState<{
+    bridgeReady: boolean;
+    acceptedOrigin: string | null;
+    iframeOrigin: string | null;
+    lastType: string | null;
+    lastTs: number | null;
+    lastSelector?: string | null;
+    lastAnchorKey?: string | null;
+    lastNote?: string | null;
+  }>({
+    bridgeReady: false,
+    acceptedOrigin: null,
+    iframeOrigin: null,
+    lastType: null,
+    lastTs: null,
+  });
   const overlayRef = useRef<HTMLDivElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
@@ -191,8 +211,29 @@ export function PrototypeViewer({
       const acceptedOrigin = iframeOrigin || (() => {
         try { return new URL(prototype.url).origin; } catch { return null; }
       })();
+
+      // Update HUD with origin info
+      if (PCD_DEBUG) {
+        setPcdHud(s => ({
+          ...s,
+          iframeOrigin: iframeOrigin ?? null,
+          acceptedOrigin: acceptedOrigin ?? null,
+          lastNote: `recv origin=${event.origin}`,
+        }));
+      }
       
-      if (!acceptedOrigin || event.origin !== acceptedOrigin) return;
+      if (!acceptedOrigin || event.origin !== acceptedOrigin) {
+        // Log rejection for debugging
+        if (PCD_DEBUG) {
+          setPcdHud(s => ({
+            ...s,
+            lastType: "REJECTED",
+            lastTs: Date.now(),
+            lastNote: `rejected: got=${event.origin} expected=${acceptedOrigin}`,
+          }));
+        }
+        return;
+      }
 
       const data = event.data;
       if (!data || typeof data !== "object") return;
@@ -203,10 +244,24 @@ export function PrototypeViewer({
       // Log all PCD messages for debugging
       console.log("[Bridge] Received:", data.type, data);
 
+      // Update HUD with message info
+      if (PCD_DEBUG) {
+        setPcdHud(s => ({
+          ...s,
+          lastType: data.type ?? "NO_TYPE",
+          lastTs: Date.now(),
+          lastSelector: (data.selector ?? "").slice(0, 100),
+          lastAnchorKey: data.anchorKey ?? null,
+        }));
+      }
+
       switch (data.type) {
         case "PCD_IFRAME_READY":
           console.log("[Bridge] Helper ready");
           setBridgeReady(true);
+          if (PCD_DEBUG) {
+            setPcdHud(s => ({ ...s, bridgeReady: true }));
+          }
           break;
 
         case "PCD_CLICK": {
@@ -243,7 +298,7 @@ export function PrototypeViewer({
 
     window.addEventListener("message", handleMessage);
     return () => window.removeEventListener("message", handleMessage);
-  }, [prototype.url]);
+  }, [prototype.url, PCD_DEBUG, getIframeOrigin]);
 
   // Request element rect from iframe
   const requestRect = useCallback((selector: string | null, id: string | null): Promise<{ left: number; top: number; width: number; height: number } | null> => {
@@ -902,6 +957,34 @@ export function PrototypeViewer({
           />
         )}
       </div>
+
+      {/* Debug HUD - activate with ?pcd_debug=1 */}
+      {PCD_DEBUG && (
+        <div
+          style={{
+            position: "fixed",
+            bottom: 10,
+            right: 10,
+            zIndex: 999999,
+            background: "rgba(0,0,0,.85)",
+            color: "#0f0",
+            padding: "10px 12px",
+            borderRadius: 10,
+            maxWidth: 420,
+            fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+            fontSize: 12,
+            lineHeight: 1.35,
+            whiteSpace: "pre-wrap",
+            pointerEvents: "none",
+          }}
+        >
+          {"[PCD parent]\n" + JSON.stringify({
+            bridgeReady,
+            mode: isAddingComment ? "add" : repinTargetId ? "repin" : "off",
+            ...pcdHud,
+          }, null, 2)}
+        </div>
+      )}
     </div>
   );
 }
