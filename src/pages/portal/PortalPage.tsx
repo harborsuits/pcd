@@ -485,6 +485,71 @@ export default function PortalPage() {
     }
   }
 
+  // Handle re-pinning a comment to a new anchor
+  async function handleRepinComment(commentId: string, anchorData: CommentAnchorData) {
+    if (!token) return;
+
+    const res = await fetch(
+      `${SUPABASE_URL}/functions/v1/portal/${token}/comments`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": SUPABASE_ANON_KEY,
+          "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({
+          action: "repin",
+          comment_id: commentId,
+          // Spread anchor data at top level (backend expects flat structure)
+          anchor_selector: anchorData.anchor_selector,
+          anchor_id: anchorData.anchor_id,
+          x_pct: anchorData.x_pct,
+          y_pct: anchorData.y_pct,
+          pin_x: anchorData.pin_x,
+          pin_y: anchorData.pin_y,
+          page_path: anchorData.page_path,
+          page_url: anchorData.page_url,
+          breakpoint: anchorData.breakpoint,
+          scroll_y: anchorData.scroll_y,
+          viewport_w: anchorData.viewport_w,
+          viewport_h: anchorData.viewport_h,
+          text_hint: anchorData.text_hint,
+          text_offset: anchorData.text_offset,
+          text_context: anchorData.text_context,
+        }),
+      }
+    );
+
+    if (res.ok) {
+      // Update local state with new anchor data
+      setPrototypeComments((prev) =>
+        prev.map((c) => (c.id === commentId ? { 
+          ...c, 
+          anchor_selector: anchorData.anchor_selector,
+          anchor_id: anchorData.anchor_id,
+          text_offset: anchorData.text_offset,
+          text_context: anchorData.text_context,
+          text_hint: anchorData.text_hint,
+          pin_x: anchorData.pin_x,
+          pin_y: anchorData.pin_y,
+          x_pct: anchorData.x_pct,
+          y_pct: anchorData.y_pct,
+          scroll_y: anchorData.scroll_y,
+          viewport_w: anchorData.viewport_w,
+          viewport_h: anchorData.viewport_h,
+          breakpoint: anchorData.breakpoint,
+          page_url: anchorData.page_url,
+          page_path: anchorData.page_path,
+        } : c))
+      );
+      toast({ title: "Comment re-pinned successfully" });
+    } else {
+      toast({ title: "Failed to re-pin comment", variant: "destructive" });
+      throw new Error("Failed to re-pin comment");
+    }
+  }
+
   function handleRefreshPrototype() {
     if (token) {
       fetchPrototypes(token);
@@ -1249,6 +1314,7 @@ export default function PortalPage() {
               onUnresolveComment={handleUnresolveComment}
               onMarkInProgress={handleMarkInProgress}
               onEditComment={handleEditComment}
+              onRepinComment={handleRepinComment}
               onRefresh={handleRefreshPrototype}
             />
           </BrandCard>
