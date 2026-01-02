@@ -14,20 +14,11 @@
   if (window.__PCD_HELPER_INIT__) return;
   window.__PCD_HELPER_INIT__ = true;
 
-  // Determine the parent origin for postMessage (more reliable delivery)
-  const parentOrigin = (() => {
-    try {
-      return document.referrer ? new URL(document.referrer).origin : "*";
-    } catch {
-      return "*";
-    }
-  })();
-
   const send = (msg) => {
     try {
       if (window.parent && window.parent !== window) {
-        // Include __pcd marker for easy filtering
-        window.parent.postMessage({ __pcd: true, ...msg }, parentOrigin);
+        // Always broadcast with "*"; parent filters by origin anyway.
+        window.parent.postMessage({ __pcd: true, ...msg }, "*");
       }
     } catch (e) {
       // Silently fail if postMessage is blocked
@@ -156,7 +147,7 @@
     const id = t.id || null;
     const { textOffset, textContext, textHint } = getTextContext(t, e.clientX, e.clientY);
 
-    send({
+    const msg = {
       type: "PCD_CLICK",
       selector,
       id,
@@ -168,7 +159,10 @@
       textContext,
       textHint,
       ts: Date.now()
-    });
+    };
+
+    console.log("[PCD Helper] Sending PCD_CLICK", { selector, anchorKey, rect: msg.rect });
+    send(msg);
   }, true);
 
   // Parent asks for element rect OR sets pin mode

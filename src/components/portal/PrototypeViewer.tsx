@@ -172,23 +172,36 @@ export function PrototypeViewer({
   const unresolvedComments = activeComments.filter((c) => !c.resolved_at && c.status !== 'resolved' && c.status !== 'wont_do');
   const resolvedComments = activeComments.filter((c) => c.resolved_at || c.status === 'resolved' || c.status === 'wont_do');
 
+  // Get the actual iframe src origin (more reliable than prototype.url)
+  const getIframeOrigin = useCallback(() => {
+    try {
+      const src = iframeRef.current?.src;
+      return src ? new URL(src).origin : null;
+    } catch {
+      return null;
+    }
+  }, []);
+
   // PostMessage handler - THE ONLY way we communicate with the iframe
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
-      try {
-        const protoOrigin = new URL(prototype.url).origin;
-        if (event.origin !== protoOrigin) return;
-      } catch {
-        return;
-      }
+      const iframeOrigin = getIframeOrigin();
+      
+      // Accept from iframe origin OR if we don't have one yet, check against prototype.url
+      const acceptedOrigin = iframeOrigin || (() => {
+        try { return new URL(prototype.url).origin; } catch { return null; }
+      })();
+      
+      if (!acceptedOrigin || event.origin !== acceptedOrigin) return;
 
       const data = event.data;
-      if (!data || typeof data !== "object" || !data.type) return;
+      if (!data || typeof data !== "object") return;
+      
+      // Only accept PCD messages (with marker or type prefix)
+      if (!data.__pcd && !(typeof data.type === "string" && data.type.startsWith("PCD_"))) return;
       
       // Log all PCD messages for debugging
-      if (data.__pcd || data.type?.startsWith("PCD_")) {
-        console.log("[Bridge] Received:", data.type, data);
-      }
+      console.log("[Bridge] Received:", data.type, data);
 
       switch (data.type) {
         case "PCD_IFRAME_READY":
@@ -315,15 +328,16 @@ export function PrototypeViewer({
     
     const isPinMode = isAddingComment || !!repinTargetId;
     try {
-      const protoOrigin = new URL(prototype.url).origin;
+      // Use "*" for bulletproof delivery - origin filtering happens on receive
       iframeRef.current.contentWindow.postMessage(
         { type: "PCD_MODE", mode: isPinMode ? "pin" : "off" },
-        protoOrigin
+        "*"
       );
+      console.log("[Bridge] Sent PCD_MODE:", isPinMode ? "pin" : "off");
     } catch (e) {
       console.warn("[Bridge] Failed to send mode:", e);
     }
-  }, [bridgeReady, isAddingComment, repinTargetId, prototype.url]);
+  }, [bridgeReady, isAddingComment, repinTargetId]);
 
   // Calculate pin position - ONLY from rectCache
   const getPinPosition = useCallback((comment: PrototypeComment): PinPositionResult => {
