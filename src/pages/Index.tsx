@@ -1,17 +1,19 @@
 import { Link } from "react-router-dom";
-import { useMemo } from "react";
+import { useMemo, lazy, Suspense } from "react";
 import { ArrowRight, MessageSquare, FolderOpen, Sparkles, Shield, Smartphone, CreditCard, LogIn, Globe, CalendarCheck, Zap, Bot, Clock, CheckCircle, Phone, Brain, Clock3, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LiquidButton } from "@/components/ui/liquid-glass-button";
 import { GlowCard } from "@/components/ui/spotlight-card";
 import { FeaturedDemosAccordion } from "@/components/ui/interactive-image-accordion";
-import { Hero3DModel } from "@/components/Hero3DModel";
 import { ErrorBoundary } from "@/components/common/ErrorBoundary";
 import { canUseWebGL } from "@/lib/webgl";
 import HeroStatic from "@/components/HeroStatic";
 import { Footer } from "@/components/ui/footer";
 import { Typewriter } from "@/components/ui/typewriter-text";
 import pcdLogo from "@/assets/pcd-logo.jpeg";
+
+// Lazy load 3D component to isolate React Three Fiber from crashing the whole app
+const Hero3DModel = lazy(() => import("@/components/Hero3DModel").then(m => ({ default: m.Hero3DModel })));
 const exampleDemos = [
   {
     name: "Roofer",
@@ -85,7 +87,9 @@ const Index = () => {
     if (!webglSupported) return <HeroStatic />;
     return (
       <ErrorBoundary fallback={<HeroStatic />}>
-        <Hero3DModel />
+        <Suspense fallback={<HeroStatic />}>
+          <Hero3DModel />
+        </Suspense>
       </ErrorBoundary>
     );
   };
