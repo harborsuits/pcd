@@ -370,7 +370,154 @@
         ts: Date.now(),
       });
     }
+    // ================================
+    // PERSISTENT MULTI-COMMENT BORDERS
+    // ================================
+    if (msg.type === "PCD_HIGHLIGHTS_SET") {
+      __pcdSetHighlights(msg.items || []);
+      return;
+    }
+
+    if (msg.type === "PCD_HIGHLIGHTS_CLEAR") {
+      // Clear all and stop loop
+      for (const k of __pcdHighlights.activeKeys) __pcdHideHighlight(k);
+      __pcdHighlights.activeKeys = new Set();
+      __pcdStopHighlightLoopIfEmpty();
+      return;
+    }
   });
+
+  // ================================
+  // PERSISTENT MULTI-COMMENT BORDERS
+  // ================================
+  // Stores highlight boxes keyed by anchorKey
+  const __pcdHighlights = {
+    items: new Map(), // anchorKey -> { box, badge }
+    activeKeys: new Set(),
+    raf: null,
+  };
+
+  function __pcdEnsureHighlightUI(anchorKey) {
+    if (__pcdHighlights.items.has(anchorKey)) return __pcdHighlights.items.get(anchorKey);
+
+    const box = document.createElement("div");
+    box.style.position = "fixed";
+    box.style.zIndex = "2147483646";
+    box.style.pointerEvents = "none";
+    box.style.border = "2px solid #00E5FF";
+    box.style.borderRadius = "8px";
+    box.style.boxShadow = "0 0 0 2px rgba(0,229,255,0.18)";
+    box.style.display = "none";
+    document.documentElement.appendChild(box);
+
+    const badge = document.createElement("div");
+    badge.style.position = "fixed";
+    badge.style.zIndex = "2147483646";
+    badge.style.pointerEvents = "none";
+    badge.style.display = "none";
+    badge.style.transform = "translate(-8px, -10px)";
+    badge.style.fontFamily = "ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial";
+    badge.style.fontSize = "11px";
+    badge.style.padding = "4px 7px";
+    badge.style.borderRadius = "999px";
+    badge.style.background = "rgba(0,0,0,0.75)";
+    badge.style.color = "white";
+    badge.style.border = "1px solid rgba(0,229,255,0.65)";
+    badge.style.boxShadow = "0 0 12px rgba(0,229,255,0.35)";
+    badge.textContent = "";
+    document.documentElement.appendChild(badge);
+
+    const entry = { box, badge };
+    __pcdHighlights.items.set(anchorKey, entry);
+    return entry;
+  }
+
+  function __pcdHideHighlight(anchorKey) {
+    const entry = __pcdHighlights.items.get(anchorKey);
+    if (!entry) return;
+    entry.box.style.display = "none";
+    entry.badge.style.display = "none";
+  }
+
+  function __pcdFindByAnchorMulti(anchorKey) {
+    if (!anchorKey) return null;
+    try {
+      const safe = (window.CSS && CSS.escape) ? CSS.escape(String(anchorKey)) : String(anchorKey);
+      return document.querySelector(`[data-pcd-anchor="${safe}"]`);
+    } catch {
+      return null;
+    }
+  }
+
+  function __pcdUpdateAllHighlights() {
+    for (const anchorKey of __pcdHighlights.activeKeys) {
+      const entry = __pcdHighlights.items.get(anchorKey);
+      if (!entry) continue;
+
+      const el = __pcdFindByAnchorMulti(anchorKey);
+      if (!el) {
+        __pcdHideHighlight(anchorKey);
+        continue;
+      }
+
+      const r = el.getBoundingClientRect();
+      if (r.width < 2 || r.height < 2) {
+        __pcdHideHighlight(anchorKey);
+        continue;
+      }
+
+      entry.box.style.display = "block";
+      entry.box.style.top = `${Math.max(0, r.top)}px`;
+      entry.box.style.left = `${Math.max(0, r.left)}px`;
+      entry.box.style.width = `${Math.max(0, r.width)}px`;
+      entry.box.style.height = `${Math.max(0, r.height)}px`;
+
+      // badge at top-left
+      entry.badge.style.display = entry.badge.textContent ? "block" : "none";
+      if (entry.badge.textContent) {
+        entry.badge.style.top = `${Math.max(0, r.top)}px`;
+        entry.badge.style.left = `${Math.max(0, r.left)}px`;
+      }
+    }
+
+    __pcdHighlights.raf = requestAnimationFrame(__pcdUpdateAllHighlights);
+  }
+
+  function __pcdStartHighlightLoop() {
+    if (__pcdHighlights.raf) return;
+    __pcdHighlights.raf = requestAnimationFrame(__pcdUpdateAllHighlights);
+  }
+
+  function __pcdStopHighlightLoopIfEmpty() {
+    if (__pcdHighlights.activeKeys.size > 0) return;
+    if (__pcdHighlights.raf) cancelAnimationFrame(__pcdHighlights.raf);
+    __pcdHighlights.raf = null;
+  }
+
+  function __pcdSetHighlights(items) {
+    const nextKeys = new Set();
+
+    for (const it of Array.isArray(items) ? items : []) {
+      const anchorKey = it?.anchorKey;
+      if (!anchorKey) continue;
+      nextKeys.add(anchorKey);
+
+      const entry = __pcdEnsureHighlightUI(anchorKey);
+      entry.badge.textContent = it?.label ? String(it.label) : "";
+    }
+
+    // Hide highlights not in the new set
+    for (const existingKey of Array.from(__pcdHighlights.activeKeys)) {
+      if (!nextKeys.has(existingKey)) {
+        __pcdHideHighlight(existingKey);
+      }
+    }
+
+    __pcdHighlights.activeKeys = nextKeys;
+
+    if (__pcdHighlights.activeKeys.size > 0) __pcdStartHighlightLoop();
+    else __pcdStopHighlightLoopIfEmpty();
+  }
 
   // ----- Boot signal -----
   send({
@@ -380,5 +527,5 @@
     ts: Date.now(),
   });
 
-  console.log("[PCD Helper] Prototype helper initialized");
+  console.log("[PCD Helper] Prototype helper initialized with multi-highlight support");
 })();
