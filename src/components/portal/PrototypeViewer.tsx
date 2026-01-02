@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { RefreshCw, MessageCircle, X, ExternalLink, Maximize2, Minimize2, ChevronRight, ChevronLeft, AlertTriangle, Target, ChevronUp, ChevronDown, Archive, ArchiveRestore } from "lucide-react";
+import { RefreshCw, MessageCircle, X, ExternalLink, Maximize2, Minimize2, ChevronRight, ChevronLeft, AlertTriangle, Target, ChevronUp, ChevronDown, Archive, ArchiveRestore, Copy, Bug } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { PortalCommentCard } from "./PortalCommentCard";
@@ -153,6 +153,7 @@ export function PrototypeViewer({
   const [hoveredCommentId, setHoveredCommentId] = useState<string | null>(null);
   const [repinTargetId, setRepinTargetId] = useState<string | null>(null);
   const [clickFeedback, setClickFeedback] = useState<{ x: number; y: number } | null>(null);
+  const [showDebugDrawer, setShowDebugDrawer] = useState(false);
   
   // Hover state for pin preview tooltip
   type HoverPayload = {
@@ -920,14 +921,35 @@ export function PrototypeViewer({
           >
             {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
           </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowDebugDrawer(!showDebugDrawer)}
+            title="Toggle bridge debug drawer"
+          >
+            <Bug className="h-4 w-4" />
+          </Button>
         </div>
       </div>
 
-      {/* Bridge not ready warning */}
+      {/* Bridge not ready warning with copy helper button */}
       {!bridgeReady && (
         <div className="flex items-center justify-center gap-2 px-3 py-2 border-b border-amber-500/20 bg-amber-500/10 text-sm text-amber-700">
           <AlertTriangle className="h-4 w-4" />
           <span>Waiting for helper script. Make sure <code className="bg-amber-100 px-1 rounded">pcd-iframe-helper.js</code> is added to the prototype.</span>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-6 text-xs border-amber-500/30 text-amber-700 hover:bg-amber-100"
+            onClick={async () => {
+              const snippet = `<script src="/pcd-iframe-helper.js"></script>`;
+              await navigator.clipboard.writeText(snippet);
+              toast({ title: "Copied!", description: "Add this to your prototype's index.html" });
+            }}
+          >
+            <Copy className="h-3 w-3 mr-1" />
+            Copy Script Tag
+          </Button>
         </div>
       )}
 
@@ -1149,6 +1171,93 @@ export function PrototypeViewer({
             mode: isAddingComment ? "add" : repinTargetId ? "repin" : "off",
             ...pcdHud,
           }, null, 2)}
+        </div>
+      )}
+
+      {/* Bridge Debug Drawer */}
+      {showDebugDrawer && (
+        <div className="fixed bottom-4 right-4 w-80 bg-card border border-border rounded-lg shadow-xl z-50 text-xs">
+          <div className="flex items-center justify-between p-2 border-b border-border bg-muted/50 rounded-t-lg">
+            <span className="font-semibold flex items-center gap-1">
+              <Bug className="h-3 w-3" /> Bridge Debug
+            </span>
+            <Button variant="ghost" size="sm" className="h-5 w-5 p-0" onClick={() => setShowDebugDrawer(false)}>
+              <X className="h-3 w-3" />
+            </Button>
+          </div>
+          <div className="p-3 space-y-2 font-mono text-[10px]">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Helper Ready:</span>
+              <span className={bridgeHealth.helperReady ? "text-green-600" : "text-red-600"}>
+                {bridgeHealth.helperReady ? "✓ Yes" : "✗ No"}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Bridge Alive:</span>
+              <span className={bridgeAlive ? "text-green-600" : "text-yellow-600"}>
+                {bridgeAlive ? "✓ Yes" : "✗ Stale"}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Last Ready:</span>
+              <span>{bridgeHealth.lastReadyAt ? new Date(bridgeHealth.lastReadyAt).toLocaleTimeString() : "—"}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Last Pong:</span>
+              <span>{bridgeHealth.lastPongAt ? new Date(bridgeHealth.lastPongAt).toLocaleTimeString() : "—"}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Pong Age:</span>
+              <span>{bridgeHealth.lastPongAt ? `${Math.round((Date.now() - bridgeHealth.lastPongAt) / 1000)}s ago` : "—"}</span>
+            </div>
+            {PCD_DEBUG && pcdHud.lastType && (
+              <>
+                <hr className="border-border" />
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Last Msg:</span>
+                  <span className="text-primary">{pcdHud.lastType}</span>
+                </div>
+                {pcdHud.lastSelector && (
+                  <div className="flex flex-col gap-1">
+                    <span className="text-muted-foreground">Selector:</span>
+                    <span className="break-all text-[9px] bg-muted p-1 rounded">{pcdHud.lastSelector}</span>
+                  </div>
+                )}
+                {pcdHud.lastNote && (
+                  <div className="flex flex-col gap-1">
+                    <span className="text-muted-foreground">Note:</span>
+                    <span className="break-all text-[9px] bg-muted p-1 rounded">{pcdHud.lastNote}</span>
+                  </div>
+                )}
+              </>
+            )}
+            <hr className="border-border" />
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex-1 h-6 text-[10px]"
+                onClick={async () => {
+                  const snippet = `<script src="/pcd-iframe-helper.js"></script>`;
+                  await navigator.clipboard.writeText(snippet);
+                  toast({ title: "Copied script tag!" });
+                }}
+              >
+                <Copy className="h-2.5 w-2.5 mr-1" />
+                Script Tag
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex-1 h-6 text-[10px]"
+                onClick={() => {
+                  window.open("/pcd-iframe-helper.js", "_blank");
+                }}
+              >
+                View Full Script
+              </Button>
+            </div>
+          </div>
         </div>
       )}
     </div>
