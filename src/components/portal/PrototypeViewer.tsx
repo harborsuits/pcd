@@ -152,6 +152,7 @@ export function PrototypeViewer({
   const [focusedCommentId, setFocusedCommentId] = useState<string | null>(null);
   const [hoveredCommentId, setHoveredCommentId] = useState<string | null>(null);
   const [repinTargetId, setRepinTargetId] = useState<string | null>(null);
+  const [clickFeedback, setClickFeedback] = useState<{ x: number; y: number } | null>(null);
   
   const overlayRef = useRef<HTMLDivElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -441,12 +442,39 @@ export function PrototypeViewer({
     
     const handler = (e: Event) => {
       const msg = (e as CustomEvent<IframeClickMessage>).detail;
+      
+      // Show click feedback
+      const iframeEl = iframeRef.current;
+      if (iframeEl) {
+        const iframeRect = iframeEl.getBoundingClientRect();
+        const clickX = iframeRect.left + msg.rect.left + msg.rect.width / 2;
+        const clickY = iframeRect.top + msg.rect.top + msg.rect.height / 2;
+        setClickFeedback({ x: clickX, y: clickY });
+        setTimeout(() => setClickFeedback(null), 600);
+      }
+      
       handleIframeClick(msg);
     };
     
     window.addEventListener("pcd-iframe-click", handler);
     return () => window.removeEventListener("pcd-iframe-click", handler);
   }, [isAddingComment, repinTargetId, handleIframeClick]);
+
+  // ESC key to cancel pin mode
+  useEffect(() => {
+    if (!isAddingComment && !repinTargetId) return;
+    
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setIsAddingComment(false);
+        setRepinTargetId(null);
+        setPendingPin(null);
+      }
+    };
+    
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [isAddingComment, repinTargetId]);
 
   const handleSubmitComment = async () => {
     if (!pendingPin || !commentText.trim()) return;
@@ -649,28 +677,20 @@ export function PrototypeViewer({
       {/* Comment mode instructions */}
       {isAddingComment && !pendingPin && bridgeReady && (
         <div className="flex items-center justify-center gap-2 px-3 py-2 border-b border-primary/20 bg-primary/5 text-sm text-muted-foreground">
-          <MessageCircle className="h-4 w-4" />
+          <MessageCircle className="h-4 w-4 text-primary" />
           <span>Click anywhere on the prototype to drop a pin.</span>
-          <button 
-            onClick={() => setIsAddingComment(false)} 
-            className="text-sm underline hover:text-foreground ml-2"
-          >
-            Cancel
-          </button>
+          <kbd className="px-1.5 py-0.5 text-xs bg-muted rounded border">ESC</kbd>
+          <span className="text-muted-foreground/60">to cancel</span>
         </div>
       )}
 
       {/* Repin mode instructions */}
-      {repinTargetId && (
+      {repinTargetId && bridgeReady && (
         <div className="flex items-center justify-center gap-2 px-3 py-2 border-b border-amber-500/20 bg-amber-500/10 text-sm text-amber-600">
           <Target className="h-4 w-4" />
           <span>Click the element this comment refers to…</span>
-          <button 
-            onClick={() => setRepinTargetId(null)} 
-            className="text-sm underline hover:text-amber-700 ml-2"
-          >
-            Cancel
-          </button>
+          <kbd className="px-1.5 py-0.5 text-xs bg-amber-100 rounded border border-amber-300">ESC</kbd>
+          <span className="text-amber-500">to cancel</span>
         </div>
       )}
 
@@ -713,6 +733,18 @@ export function PrototypeViewer({
               >
                 <MessageCircle className="h-3 w-3" />
               </div>
+            )}
+
+            {/* Click feedback ripple */}
+            {clickFeedback && (
+              <div
+                className="fixed w-8 h-8 rounded-full bg-primary/50 animate-ping pointer-events-none"
+                style={{ 
+                  left: clickFeedback.x, 
+                  top: clickFeedback.y,
+                  transform: 'translate(-50%, -50%)'
+                }}
+              />
             )}
           </div>
 
