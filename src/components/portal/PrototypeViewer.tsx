@@ -157,7 +157,7 @@ export interface CommentAnchorData {
 
 // Debug info for pin positioning
 export interface PinDebug {
-  mode: "range" | "element" | "pin_xy" | "none";
+  mode: "range" | "element" | "pin_xy" | "pin_xy_fallback" | "none";
   hasSelector: boolean;
   hasTextOffset: boolean;
   textOffset?: number | null;
@@ -173,7 +173,7 @@ export interface PinDebug {
 export type PinPositionResult = 
   | { kind: 'visible'; left: string; top: string; debug?: PinDebug }
   | { kind: 'offscreen'; direction: 'up' | 'down' | 'left' | 'right'; edgeLeft: string; edgeTop: string; debug?: PinDebug }
-  | { kind: 'needs-repin'; debug?: PinDebug }
+  | { kind: 'needs-repin'; left?: string; top?: string; debug?: PinDebug }
   | null;
 
 interface PrototypeViewerProps {
@@ -1137,21 +1137,28 @@ export function PrototypeViewer({
       }
     }
     
-    // When we have DOM access: require anchors - don't show floaty pins
-    // Use canAccessDOM (actual DOM test) NOT sameOrigin (URL check)
-    if (canAccessDOM) {
-      // No valid anchor when DOM accessible = needs re-pin
-      return { kind: 'needs-repin', debug: baseDebug };
+    // Fallback to stored pin_x/pin_y when no anchor available
+    // For DOM-accessible iframes, mark as needs-repin so UI can offer repin
+    if (comment.pin_x != null && comment.pin_y != null) {
+      const iframeWin = iframeRef.current?.contentWindow;
+      const viewportW = iframeWin?.innerWidth ?? 0;
+      const viewportH = iframeWin?.innerHeight ?? 0;
+      
+      // Convert percentage to viewport pixels for fixed positioning
+      const left = (comment.pin_x / 100) * viewportW;
+      const top = (comment.pin_y / 100) * viewportH;
+      
+      return { 
+        kind: canAccessDOM ? 'needs-repin' : 'visible', 
+        left: `${left}px`, 
+        top: `${top}px`,
+        debug: { ...baseDebug, mode: "pin_xy_fallback" }
+      };
     }
     
-    // Fallback to stored pin_x/pin_y only for cross-origin
-    if (comment.pin_x != null && comment.pin_y != null) {
-      return { 
-        kind: 'visible', 
-        left: `${comment.pin_x}%`, 
-        top: `${comment.pin_y}%`,
-        debug: { ...baseDebug, mode: "pin_xy" }
-      };
+    // No position data at all
+    if (canAccessDOM) {
+      return { kind: 'needs-repin', debug: baseDebug };
     }
     
     return null;
@@ -1481,7 +1488,7 @@ export function PrototypeViewer({
                 .filter(c => !c.resolved_at && (c.status !== 'resolved' && c.status !== 'wont_do'))
                 .map((comment, idx) => {
                     const position = getPinPosition(comment);
-                    console.log('[pins] comment position:', comment.id.slice(0,6), position?.kind);
+                    console.log('[pins] comment position:', comment.id.slice(0,6), position?.kind, position?.kind === 'needs-repin' && position?.left ? 'has-fallback' : '');
                     if (!position) return null;
                     
                     const status = getEffectiveStatus(comment);
@@ -1530,21 +1537,36 @@ export function PrototypeViewer({
                       );
                     }
                     
-                    // Skip needs-repin (handled in sidebar)
-                    if (position.kind === 'needs-repin') return null;
+                    // needs-repin: render with fallback position but show warning style
+                    const needsRepin = position.kind === 'needs-repin';
+                    
+                    // Get position - needs-repin may have left/top from fallback
+                    let pinLeft: string | undefined;
+                    let pinTop: string | undefined;
+                    
+                    if (position.kind === 'visible') {
+                      pinLeft = position.left;
+                      pinTop = position.top;
+                    } else if (position.kind === 'needs-repin') {
+                      pinLeft = position.left;
+                      pinTop = position.top;
+                    }
+                    
+                    // Skip if no position data
+                    if (!pinLeft || !pinTop) return null;
                     
                     // Visible pin
                     const isFocused = focusedCommentId === comment.id;
                     const isHovered = hoveredCommentId === comment.id;
-                    const hasMismatch = anchorMismatch === comment.id;
+                    const hasMismatch = anchorMismatch === comment.id || needsRepin;
 
                     return (
                       <div
                         key={comment.id}
                         style={{ 
                           position: 'absolute',
-                          left: position.left, 
-                          top: position.top,
+                          left: pinLeft, 
+                          top: pinTop,
                           transform: 'translate(-50%, -50%)',
                           pointerEvents: 'auto',
                         }}
