@@ -128,7 +128,8 @@
       viewport: { w: window.innerWidth, h: window.innerHeight },
       textOffset,
       textContext,
-      textHint
+      textHint,
+      ts: Date.now()
     });
   }, true);
 
