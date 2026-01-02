@@ -5,7 +5,7 @@ import { RefreshCw, MessageCircle, X, ExternalLink, Maximize2, Minimize2, Chevro
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { PortalCommentCard } from "./PortalCommentCard";
-
+import { toast } from "@/hooks/use-toast";
 // Determine breakpoint from viewport width
 function getBreakpoint(width: number): string {
   if (width < 640) return "sm";
@@ -423,10 +423,19 @@ export function PrototypeViewer({
       try {
         await onRepinComment(repinTargetId, anchorData);
         setRepinTargetId(null);
+        toast({
+          title: "Pin updated",
+          description: "This comment is now anchored to the new element.",
+        });
         // Refresh rects after repin
         setTimeout(() => refreshRects(), 100);
       } catch (err) {
         console.error("Failed to repin:", err);
+        toast({
+          title: "Repin failed",
+          description: "Could not update the pin location.",
+          variant: "destructive",
+        });
       }
       return;
     }
@@ -460,21 +469,56 @@ export function PrototypeViewer({
     return () => window.removeEventListener("pcd-iframe-click", handler);
   }, [isAddingComment, repinTargetId, handleIframeClick]);
 
-  // ESC key to cancel pin mode
+  // Keyboard shortcuts: ESC to cancel, C to start comment mode
   useEffect(() => {
-    if (!isAddingComment && !repinTargetId) return;
-    
+    const isTypingTarget = (el: EventTarget | null) => {
+      const n = el as HTMLElement | null;
+      if (!n) return false;
+      const tag = n.tagName?.toLowerCase();
+      return (
+        tag === "input" ||
+        tag === "textarea" ||
+        n.isContentEditable === true ||
+        n.closest?.("[contenteditable='true']") != null
+      );
+    };
+
     const handler = (e: KeyboardEvent) => {
+      // ESC to cancel pin mode
       if (e.key === "Escape") {
-        setIsAddingComment(false);
-        setRepinTargetId(null);
-        setPendingPin(null);
+        const wasActive = isAddingComment || repinTargetId;
+        if (wasActive) {
+          setIsAddingComment(false);
+          setRepinTargetId(null);
+          setPendingPin(null);
+          toast({
+            title: "Pin mode cancelled",
+            description: "No changes were made.",
+          });
+        }
+        return;
+      }
+
+      // Don't hijack shortcuts while typing
+      if (isTypingTarget(e.target)) return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+
+      // C = add comment mode
+      if (e.key.toLowerCase() === "c" && bridgeReady) {
+        if (!isAddingComment && !repinTargetId) {
+          setIsAddingComment(true);
+          setPendingPin(null);
+          toast({
+            title: "Add comment mode",
+            description: "Click on the prototype to place a pin.",
+          });
+        }
       }
     };
     
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [isAddingComment, repinTargetId]);
+  }, [isAddingComment, repinTargetId, bridgeReady]);
 
   const handleSubmitComment = async () => {
     if (!pendingPin || !commentText.trim()) return;
@@ -490,6 +534,10 @@ export function PrototypeViewer({
       setCommentText("");
       setPendingPin(null);
       setIsAddingComment(false);
+      toast({
+        title: "Comment added",
+        description: "Your feedback has been saved.",
+      });
       // Refresh rects after adding comment
       setTimeout(() => refreshRects(), 100);
     } finally {
