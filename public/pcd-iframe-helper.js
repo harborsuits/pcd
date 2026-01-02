@@ -201,6 +201,55 @@
     send(msg);
   }, true);
 
+  // Hover capture - only in pin mode, throttled
+  let lastHoverEl = null;
+  let hoverRaf = 0;
+  
+  window.addEventListener("mousemove", (e) => {
+    if (!pinModeActive) return;
+    
+    const t = document.elementFromPoint(e.clientX, e.clientY);
+    if (!(t instanceof Element) || t === lastHoverEl) return;
+    lastHoverEl = t;
+    
+    if (hoverRaf) cancelAnimationFrame(hoverRaf);
+    hoverRaf = requestAnimationFrame(() => {
+      hoverRaf = 0;
+      const anchorKey = ensureAnchorStamp(t);
+      const r = t.getBoundingClientRect();
+      const selector = buildSelector(t, anchorKey);
+      const { textHint, textContext } = getTextContext(t, e.clientX, e.clientY);
+      
+      send({
+        type: "PCD_HOVER",
+        selector,
+        id: t.id || null,
+        anchorKey,
+        rect: { left: r.left, top: r.top, width: r.width, height: r.height },
+        viewport: { w: window.innerWidth, h: window.innerHeight },
+        textHint,
+        textContext,
+        ts: Date.now()
+      });
+    });
+  }, { passive: true });
+
+  // Keyboard shortcuts from inside iframe
+  window.addEventListener("keydown", (e) => {
+    // Only forward Escape, C, P when not typing
+    const tag = (e.target && e.target.tagName) || "";
+    if (tag === "INPUT" || tag === "TEXTAREA" || (e.target && e.target.isContentEditable)) return;
+    
+    const key = e.key;
+    if (key === "Escape" || key.toLowerCase() === "c" || key.toLowerCase() === "p") {
+      send({
+        type: "PCD_KEY",
+        key,
+        ts: Date.now()
+      });
+    }
+  });
+
   // Parent asks for element rect OR sets pin mode
   window.addEventListener("message", (e) => {
     const d = e.data;
@@ -214,13 +263,21 @@
       return;
     }
 
+    // Handle ping (health check)
+    if (d.type === "PCD_PING") {
+      send({ type: "PCD_PONG", ts: Date.now() });
+      return;
+    }
+
     if (d.type === "PCD_GET_RECT") {
       const { requestId, selector, id } = d;
       let el = null;
 
       try {
         if (id) el = document.getElementById(id);
-        if (!el && selector) el = document.querySelector(selector);
+        if (!el && selector) {
+          try { el = document.querySelector(selector); } catch (err) { el = null; }
+        }
       } catch (err) {
         // Invalid selector
       }

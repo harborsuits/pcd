@@ -154,6 +154,19 @@ export function PrototypeViewer({
   const [repinTargetId, setRepinTargetId] = useState<string | null>(null);
   const [clickFeedback, setClickFeedback] = useState<{ x: number; y: number } | null>(null);
   
+  // Hover state for pin preview tooltip
+  type HoverPayload = {
+    selector: string | null;
+    id?: string | null;
+    anchorKey?: string | null;
+    rect?: { left: number; top: number; width: number; height: number } | null;
+    viewport?: { w: number; h: number } | null;
+    textHint?: string | null;
+    textContext?: string | null;
+    ts?: number;
+  };
+  const [hover, setHover] = useState<HoverPayload | null>(null);
+  
   // Debug HUD state
   const PCD_DEBUG = typeof window !== "undefined" && 
     (new URLSearchParams(window.location.search).get("pcd_debug") === "1" ||
@@ -293,6 +306,62 @@ export function PrototypeViewer({
           }
           break;
         }
+
+        case "PCD_HOVER": {
+          // Only care when user is trying to place/re-pin
+          if (!isAddingComment && !repinTargetId) return;
+          setHover({
+            selector: data.selector ?? null,
+            id: data.id ?? null,
+            anchorKey: data.anchorKey ?? null,
+            rect: data.rect ?? null,
+            viewport: data.viewport ?? null,
+            textHint: data.textHint ?? null,
+            textContext: data.textContext ?? null,
+            ts: data.ts ?? Date.now(),
+          });
+          break;
+        }
+
+        case "PCD_KEY": {
+          const key = String(data.key || "");
+          
+          // Keyboard shortcuts controlled from inside iframe
+          if (key === "Escape") {
+            setIsAddingComment(false);
+            setRepinTargetId(null);
+            setHover(null);
+            toast({ title: "Cancelled" });
+            return;
+          }
+
+          if (key.toLowerCase() === "c") {
+            setRepinTargetId(null);
+            setIsAddingComment(true);
+            toast({ title: "Click the site to place a comment" });
+            return;
+          }
+
+          if (key.toLowerCase() === "p") {
+            if (isAddingComment || repinTargetId) {
+              setIsAddingComment(false);
+              setRepinTargetId(null);
+              setHover(null);
+              toast({ title: "Pin mode off" });
+            } else {
+              setIsAddingComment(true);
+              toast({ title: "Pin mode on", description: "Click the site to place a comment" });
+            }
+            return;
+          }
+          break;
+        }
+
+        case "PCD_PONG": {
+          // Bridge health check response - could update lastSeen timestamp
+          console.log("[Bridge] Pong received");
+          break;
+        }
       }
     };
 
@@ -393,6 +462,25 @@ export function PrototypeViewer({
       console.warn("[Bridge] Failed to send mode:", e);
     }
   }, [bridgeReady, isAddingComment, repinTargetId]);
+
+  // Clear hover when leaving pin mode
+  useEffect(() => {
+    if (!isAddingComment && !repinTargetId) setHover(null);
+  }, [isAddingComment, repinTargetId]);
+
+  // Helper: convert iframe-viewport rect → overlay coords
+  const iframeRectToOverlayRect = useCallback((
+    r: { left: number; top: number; width: number; height: number } | null | undefined
+  ) => {
+    if (!iframeRef.current || !r) return null;
+    const ib = iframeRef.current.getBoundingClientRect();
+    return {
+      left: ib.left + r.left,
+      top: ib.top + r.top,
+      width: r.width,
+      height: r.height,
+    };
+  }, []);
 
   // Calculate pin position - ONLY from rectCache
   const getPinPosition = useCallback((comment: PrototypeComment): PinPositionResult => {
@@ -884,6 +972,53 @@ export function PrototypeViewer({
                 }}
               />
             )}
+
+            {/* Hover outline + tooltip for pin preview */}
+            {(() => {
+              const hoverOverlayRect = iframeRectToOverlayRect(hover?.rect ?? null);
+              const hoverLabel = (hover?.textHint || hover?.selector || "element").slice(0, 80);
+              
+              if (!(isAddingComment || repinTargetId) || !hoverOverlayRect) return null;
+              
+              return (
+                <>
+                  {/* Hover outline */}
+                  <div
+                    style={{
+                      position: "fixed",
+                      left: hoverOverlayRect.left,
+                      top: hoverOverlayRect.top,
+                      width: hoverOverlayRect.width,
+                      height: hoverOverlayRect.height,
+                      border: "2px solid rgba(56, 189, 248, 0.9)",
+                      borderRadius: 8,
+                      boxShadow: "0 0 0 2px rgba(56, 189, 248, 0.18)",
+                      pointerEvents: "none",
+                      zIndex: 999999,
+                    }}
+                  />
+
+                  {/* Tooltip */}
+                  <div
+                    style={{
+                      position: "fixed",
+                      left: hoverOverlayRect.left + 8,
+                      top: Math.max(8, hoverOverlayRect.top - 48),
+                      pointerEvents: "none",
+                      zIndex: 1000000,
+                    }}
+                    className="rounded-lg border bg-background/95 px-3 py-2 text-xs shadow-lg backdrop-blur"
+                  >
+                    <div className="font-medium">
+                      {repinTargetId ? "Re-pin to:" : "Pin to:"} {hoverLabel}
+                    </div>
+                    <div className="text-muted-foreground">
+                      {repinTargetId ? "Click to attach to this element" : "Click to place comment here"} · ESC to cancel
+                    </div>
+                  </div>
+                </>
+              );
+            })()}
           </div>
 
           {/* Comment input popover */}
