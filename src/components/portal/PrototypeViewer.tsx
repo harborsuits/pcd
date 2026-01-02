@@ -432,41 +432,25 @@ export function PrototypeViewer({
         // Inject hover highlight style into iframe
         ensureHoverStyle();
         
-        // Helper to update pin overlay size to match document
-        const updatePinOverlaySize = (mount: HTMLDivElement) => {
-          const docWidth = Math.max(
-            iframeDoc.body.scrollWidth,
-            iframeDoc.documentElement.scrollWidth
-          );
-          const docHeight = Math.max(
-            iframeDoc.body.scrollHeight,
-            iframeDoc.documentElement.scrollHeight
-          );
-          mount.style.width = `${docWidth}px`;
-          mount.style.height = `${docHeight}px`;
-        };
-
         // Create pin mount node INSIDE the iframe document
-        // Use position: absolute to anchor pins to document, not viewport
+        // Use position: fixed (viewport model) - pins use viewport coords
+        // Scroll triggers re-render so pins move with content
         let pinMount = iframeDoc.getElementById("pcd-pin-overlay") as HTMLDivElement | null;
         if (!pinMount) {
           pinMount = iframeDoc.createElement("div");
           pinMount.id = "pcd-pin-overlay";
           pinMount.style.cssText = `
-            position: absolute;
-            top: 0;
-            left: 0;
+            position: fixed;
+            inset: 0;
             pointer-events: none;
             z-index: 2147483647;
           `;
           iframeDoc.body.appendChild(pinMount);
         }
-        updatePinOverlaySize(pinMount);
         setIframePinMount(pinMount);
         
-        // Update overlay size and recompute pins
+        // Recompute pins on scroll/resize
         const updateAll = () => {
-          if (pinMount) updatePinOverlaySize(pinMount);
           schedulePinUpdate();
         };
 
@@ -1095,64 +1079,55 @@ export function PrototypeViewer({
             
             baseDebug.mode = usedRange ? "range" : "element";
             
-                            // pinRect is in IFRAME VIEWPORT COORDS (relative to visible area)
-                            // Convert to DOCUMENT COORDS by adding scroll position
-                            // Pins are rendered in an absolute-positioned container, so they need doc coords
-                            const scrollX = iframeWin.scrollX || iframeWin.pageXOffset || 0;
-                            const scrollY = iframeWin.scrollY || iframeWin.pageYOffset || 0;
-                            
-                            const pinCenterX = pinRect.left + (pinRect.width / 2) + scrollX;
-                            const pinCenterY = pinRect.top + (pinRect.height / 2) + scrollY;
-                            
-                            const viewportW = iframeWin.innerWidth;
-                            const viewportH = iframeWin.innerHeight;
-                            
-                            // Check if pin is currently in viewport (for offscreen indicator)
-                            const viewportLeft = scrollX;
-                            const viewportTop = scrollY;
-                            const viewportRight = scrollX + viewportW;
-                            const viewportBottom = scrollY + viewportH;
+            // pinRect is in IFRAME VIEWPORT COORDS (relative to visible area)
+            // Using viewport model: overlay is position:fixed, so use viewport coords directly
+            // NO scroll offsets - pins move with content via re-render on scroll
+            const pinCenterX = pinRect.left + (pinRect.width / 2);
+            const pinCenterY = pinRect.top + (pinRect.height / 2);
             
-                            // Check if offscreen (compare to current viewport bounds)
-                            const isOffscreen = pinCenterX < viewportLeft || pinCenterY < viewportTop || 
-                                               pinCenterX > viewportRight || pinCenterY > viewportBottom;
-                            
-                            if (isOffscreen) {
-                              let direction: 'up' | 'down' | 'left' | 'right';
-                              
-                              if (pinCenterY < viewportTop) {
-                                direction = 'up';
-                              } else if (pinCenterY > viewportBottom) {
-                                direction = 'down';
-                              } else if (pinCenterX < viewportLeft) {
-                                direction = 'left';
-                              } else {
-                                direction = 'right';
-                              }
+            const viewportW = iframeWin.innerWidth;
+            const viewportH = iframeWin.innerHeight;
+            
+            // Check if pin is currently in viewport (viewport coords, so 0 to viewport size)
+            const isOffscreen = pinCenterX < 0 || pinCenterY < 0 || 
+                               pinCenterX > viewportW || pinCenterY > viewportH;
+            
+            if (isOffscreen) {
+              let direction: 'up' | 'down' | 'left' | 'right';
               
-                              // Clamp to edges (in document coords for absolute positioning, but at viewport edge)
-                              let edgeLeft: string;
-                              let edgeTop: string;
-                              
-                              if (direction === 'up') {
-                                edgeLeft = `${Math.max(viewportLeft + 16, Math.min(viewportRight - 16, pinCenterX))}px`;
-                                edgeTop = `${viewportTop + 16}px`;
-                              } else if (direction === 'down') {
-                                edgeLeft = `${Math.max(viewportLeft + 16, Math.min(viewportRight - 16, pinCenterX))}px`;
-                                edgeTop = `${viewportBottom - 16}px`;
-                              } else if (direction === 'left') {
-                                edgeLeft = `${viewportLeft + 16}px`;
-                                edgeTop = `${Math.max(viewportTop + 16, Math.min(viewportBottom - 16, pinCenterY))}px`;
-                              } else {
-                                edgeLeft = `${viewportRight - 16}px`;
-                                edgeTop = `${Math.max(viewportTop + 16, Math.min(viewportBottom - 16, pinCenterY))}px`;
-                              }
+              if (pinCenterY < 0) {
+                direction = 'up';
+              } else if (pinCenterY > viewportH) {
+                direction = 'down';
+              } else if (pinCenterX < 0) {
+                direction = 'left';
+              } else {
+                direction = 'right';
+              }
+
+              // Clamp to viewport edges (viewport coords for fixed positioning)
+              let edgeLeft: string;
+              let edgeTop: string;
               
+              if (direction === 'up') {
+                edgeLeft = `${Math.max(16, Math.min(viewportW - 16, pinCenterX))}px`;
+                edgeTop = `16px`;
+              } else if (direction === 'down') {
+                edgeLeft = `${Math.max(16, Math.min(viewportW - 16, pinCenterX))}px`;
+                edgeTop = `${viewportH - 16}px`;
+              } else if (direction === 'left') {
+                edgeLeft = `16px`;
+                edgeTop = `${Math.max(16, Math.min(viewportH - 16, pinCenterY))}px`;
+              } else {
+                edgeLeft = `${viewportW - 16}px`;
+                edgeTop = `${Math.max(16, Math.min(viewportH - 16, pinCenterY))}px`;
+              }
+
               return { kind: 'offscreen', direction, edgeLeft, edgeTop, debug: baseDebug };
             }
-                            
-                            // Visible: return document coords for absolute positioning inside iframe
-                            return { kind: 'visible', left: `${pinCenterX}px`, top: `${pinCenterY}px`, debug: baseDebug };
+            
+            // Visible: return viewport coords for fixed positioning inside iframe
+            return { kind: 'visible', left: `${pinCenterX}px`, top: `${pinCenterY}px`, debug: baseDebug };
           } else {
             // Anchor selector exists but element not found - needs re-pin
             return { kind: 'needs-repin', debug: baseDebug };
