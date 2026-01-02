@@ -148,6 +148,13 @@ export interface Prototype {
   updated_at: string;
 }
 
+// Build proxied URL for same-origin iframe access
+// This enables full DOM access for content-anchored pins
+function getProxiedPrototypeUrl(token: string): string {
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+  return `${supabaseUrl}/functions/v1/prototype-proxy/${token}`;
+}
+
 export interface CommentAnchorData {
   page_url: string;
   page_path: string | null;
@@ -245,6 +252,9 @@ export function PrototypeViewer({
 
   const unresolvedComments = comments.filter((c) => !c.resolved_at);
   const resolvedComments = comments.filter((c) => c.resolved_at);
+
+  // Build proxied URL for same-origin DOM access (enables content-anchored pins)
+  const proxiedUrl = useMemo(() => getProxiedPrototypeUrl(token), [token]);
 
   // Force pin recomputation
   const triggerPinUpdate = useCallback(() => {
@@ -534,7 +544,7 @@ export function PrototypeViewer({
         rafIdRef.current = null;
       }
     };
-  }, [prototype.url, iframeKey, ensureHoverStyle, schedulePinUpdate]);
+  }, [proxiedUrl, iframeKey, ensureHoverStyle, schedulePinUpdate]);
 
   // Capture rich anchor data from click position
   const captureAnchorData = useCallback((clientX: number, clientY: number): CommentAnchorData | null => {
@@ -1447,7 +1457,7 @@ export function PrototypeViewer({
           <iframe
             ref={iframeRef}
             key={iframeKey}
-            src={prototype.url}
+            src={proxiedUrl}
             className="w-full h-full border-0"
             style={{ minHeight: isFullscreen ? "calc(100vh - 120px)" : "500px" }}
             title="Prototype preview"

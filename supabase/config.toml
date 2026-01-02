@@ -12,9 +12,6 @@ verify_jwt = false
 [functions.messages]
 verify_jwt = false
 
-[functions.admin]
-verify_jwt = false
-
 [functions.widget]
 verify_jwt = false
 
@@ -49,4 +46,7 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.verify-code]
+verify_jwt = false
+
+[functions.prototype-proxy]
 verify_jwt = false
