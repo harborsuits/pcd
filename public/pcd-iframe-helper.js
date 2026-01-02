@@ -164,7 +164,44 @@
     scrollRaf = requestAnimationFrame(sendScrollUpdate);
   }, { passive: true });
 
-  // ----- Parent messages: MODE + PING + GET_RECT -----
+  // ----- Focus highlight state -----
+  let focusedEl = null;
+  const FOCUS_OUTLINE_STYLE = "2px solid rgba(56, 189, 248, 0.9)";
+  const FOCUS_OUTLINE_OFFSET = "3px";
+  const FOCUS_BOX_SHADOW = "0 0 0 4px rgba(56, 189, 248, 0.2)";
+
+  function clearFocus() {
+    if (focusedEl) {
+      focusedEl.style.outline = "";
+      focusedEl.style.outlineOffset = "";
+      focusedEl.style.boxShadow = focusedEl.__pcdOriginalBoxShadow || "";
+      delete focusedEl.__pcdOriginalBoxShadow;
+      focusedEl = null;
+    }
+  }
+
+  function focusAnchor(anchorKey, selector) {
+    clearFocus();
+    
+    let el = null;
+    try {
+      if (anchorKey) el = document.querySelector(`[data-pcd-anchor="${anchorKey}"]`);
+      if (!el && selector) el = document.querySelector(selector);
+    } catch (_) {}
+    
+    if (!el) return;
+    
+    focusedEl = el;
+    focusedEl.__pcdOriginalBoxShadow = focusedEl.style.boxShadow || "";
+    focusedEl.style.outline = FOCUS_OUTLINE_STYLE;
+    focusedEl.style.outlineOffset = FOCUS_OUTLINE_OFFSET;
+    focusedEl.style.boxShadow = FOCUS_BOX_SHADOW;
+    
+    // Scroll element into view smoothly
+    el.scrollIntoView({ block: "center", inline: "nearest", behavior: "smooth" });
+  }
+
+  // ----- Parent messages: MODE + PING + GET_RECT + FOCUS -----
   window.addEventListener("message", (e) => {
     const d = e.data;
     if (!d || typeof d !== "object") return;
@@ -172,11 +209,23 @@
     if (d.type === "PCD_MODE") {
       pinModeActive = d.mode === "pin";
       document.documentElement.style.cursor = pinModeActive ? "crosshair" : "";
+      // Clear focus highlight when entering pin mode
+      if (pinModeActive) clearFocus();
       return;
     }
 
     if (d.type === "PCD_PING") {
       send({ type: "PCD_PONG", ts: Date.now() });
+      return;
+    }
+
+    if (d.type === "PCD_FOCUS") {
+      focusAnchor(d.anchorKey, d.selector);
+      return;
+    }
+
+    if (d.type === "PCD_CLEAR_FOCUS") {
+      clearFocus();
       return;
     }
 
