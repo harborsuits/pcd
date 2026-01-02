@@ -190,8 +190,13 @@ export function PrototypeViewer({
   const overlayRef = useRef<HTMLDivElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
-  // Bridge state
+  // Bridge state with health monitoring
   const [bridgeReady, setBridgeReady] = useState(false);
+  const [bridgeHealth, setBridgeHealth] = useState({
+    helperReady: false,
+    lastReadyAt: 0,
+    lastPongAt: 0,
+  });
   const [iframeViewport, setIframeViewport] = useState<{ w: number; h: number; scrollX: number; scrollY: number } | null>(null);
   const lastIframeClick = useRef<IframeClickMessage | null>(null);
   
@@ -199,6 +204,9 @@ export function PrototypeViewer({
   const [rectCache, setRectCache] = useState<Record<string, { left: number; top: number; width: number; height: number } | null>>({});
   const pendingRectRequests = useRef<Map<string, (rect: { left: number; top: number; width: number; height: number } | null) => void>>(new Map());
   const rectRefreshRaf = useRef<number | null>(null);
+  
+  // Derived bridge status
+  const bridgeAlive = bridgeHealth.helperReady && (Date.now() - bridgeHealth.lastPongAt) < 3000;
 
   // Filter out archived comments from main views
   const activeComments = comments.filter((c) => !c.archived_at);
@@ -272,6 +280,7 @@ export function PrototypeViewer({
         case "PCD_IFRAME_READY":
           console.log("[Bridge] Helper ready");
           setBridgeReady(true);
+          setBridgeHealth(s => ({ ...s, helperReady: true, lastReadyAt: Date.now() }));
           if (PCD_DEBUG) {
             setPcdHud(s => ({ ...s, bridgeReady: true }));
           }
@@ -358,8 +367,9 @@ export function PrototypeViewer({
         }
 
         case "PCD_PONG": {
-          // Bridge health check response - could update lastSeen timestamp
+          // Bridge health check response - update lastPongAt timestamp
           console.log("[Bridge] Pong received");
+          setBridgeHealth(s => ({ ...s, lastPongAt: Date.now() }));
           break;
         }
       }
@@ -442,8 +452,21 @@ export function PrototypeViewer({
   // Reset bridge state on iframe reload
   useEffect(() => {
     setBridgeReady(false);
+    setBridgeHealth({ helperReady: false, lastReadyAt: 0, lastPongAt: 0 });
     setRectCache({});
     lastIframeClick.current = null;
+  }, [iframeKey]);
+
+  // Ping loop for bridge health monitoring
+  useEffect(() => {
+    const w = iframeRef.current?.contentWindow;
+    if (!w) return;
+
+    const id = window.setInterval(() => {
+      try { w.postMessage({ type: "PCD_PING" }, "*"); } catch {}
+    }, 1500);
+
+    return () => window.clearInterval(id);
   }, [iframeKey]);
 
   // Send pin mode to iframe (changes cursor to crosshair inside iframe)
@@ -845,17 +868,25 @@ export function PrototypeViewer({
           >
             {prototype.status}
           </Badge>
-          {/* Bridge status */}
+          {/* Bridge status - 3 states: green (alive), yellow (ready but stale), red (not connected) */}
           <Badge 
             variant="outline" 
             className={`text-xs ${
-              bridgeReady 
+              bridgeAlive 
                 ? "bg-green-500/10 text-green-600 border-green-500/20"
-                : "bg-amber-500/10 text-amber-600 border-amber-500/20"
+                : bridgeHealth.helperReady
+                  ? "bg-yellow-500/10 text-yellow-600 border-yellow-500/20"
+                  : "bg-red-500/10 text-red-600 border-red-500/20"
             }`}
-            title={bridgeReady ? "Helper script connected - pins anchor to elements" : "Waiting for helper script..."}
+            title={
+              bridgeAlive 
+                ? "Bridge active - helper script connected and responding" 
+                : bridgeHealth.helperReady
+                  ? "Bridge stale - helper loaded but not responding (iframe may have navigated)"
+                  : "No bridge - helper script not installed in the prototype"
+            }
           >
-            {bridgeReady ? "📡 Bridge Connected" : "⏳ Waiting for bridge..."}
+            {bridgeAlive ? "🟢 Bridge Active" : bridgeHealth.helperReady ? "🟡 Bridge Stale" : "🔴 No Bridge"}
           </Badge>
         </div>
         <div className="flex items-center gap-2">
