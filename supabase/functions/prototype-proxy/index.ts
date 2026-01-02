@@ -35,13 +35,11 @@ function isValidToken(token: string): boolean {
   return /^[a-zA-Z0-9\-_]{12,128}$/.test(token);
 }
 
-// Rewrite relative URLs in HTML to go through our proxy
-function rewriteUrls(html: string, baseUrl: string, proxyBaseUrl: string): string {
-  const base = new URL(baseUrl);
-  
-  // Inject a <base> tag so relative URLs resolve correctly
-  // Also inject our pin helper script
-  const baseTag = `<base href="${base.origin}${base.pathname.replace(/\/[^\/]*$/, '/')}">`;
+// Rewrite HTML to route all assets through the proxy
+function rewriteUrls(html: string, prototypeUrl: string, proxyBaseUrl: string): string {
+  // Set base href to the PROXY URL so all relative paths go through our proxy
+  // This is the key fix - assets like /assets/index.js will resolve to proxyBaseUrl/assets/index.js
+  const baseTag = `<base href="${proxyBaseUrl}">`;
   
   // Script to enable parent-to-iframe communication for pin anchoring
   const helperScript = `
@@ -153,7 +151,9 @@ Deno.serve(async (req) => {
     }
     
     const token = pathParts[proxyIdx + 1];
-    const isAssetRequest = pathParts[proxyIdx + 2] === "asset";
+    // Everything after the token is the asset path
+    const assetPath = "/" + pathParts.slice(proxyIdx + 2).join("/");
+    const isAssetRequest = assetPath !== "/";
     
     if (!isValidToken(token)) {
       return new Response(
@@ -162,7 +162,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log(`[prototype-proxy] Request for token: ${token.slice(0, 8)}..., asset: ${isAssetRequest}`);
+    console.log(`[prototype-proxy] Request for token: ${token.slice(0, 8)}..., path: ${assetPath}`);
 
     // Initialize Supabase
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -202,20 +202,12 @@ Deno.serve(async (req) => {
     }
 
     const prototypeUrl = prototype.url;
-    console.log(`[prototype-proxy] Proxying: ${prototypeUrl}`);
+    const prototypeBase = new URL(prototypeUrl);
 
-    // Handle asset proxy requests
+    // Handle asset/path requests (anything after /:token/)
     if (isAssetRequest) {
-      const assetUrl = url.searchParams.get("url");
-      if (!assetUrl) {
-        return new Response(
-          JSON.stringify({ error: "Asset URL required" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-
-      // Resolve relative URLs against prototype base
-      const resolvedUrl = new URL(assetUrl, prototypeUrl).href;
+      // Resolve the path against the prototype base
+      const resolvedUrl = new URL(assetPath + url.search, prototypeBase.origin).href;
       console.log(`[prototype-proxy] Fetching asset: ${resolvedUrl}`);
 
       const assetResp = await fetch(resolvedUrl, {
@@ -226,6 +218,7 @@ Deno.serve(async (req) => {
       });
 
       if (!assetResp.ok) {
+        console.error(`[prototype-proxy] Asset fetch failed: ${assetResp.status} for ${resolvedUrl}`);
         return new Response(
           JSON.stringify({ error: "Asset fetch failed" }),
           { status: assetResp.status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -245,7 +238,8 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Fetch the prototype HTML
+    // Fetch the prototype HTML (root page)
+    console.log(`[prototype-proxy] Proxying HTML: ${prototypeUrl}`);
     const protoResp = await fetch(prototypeUrl, {
       headers: {
         "User-Agent": "Mozilla/5.0 (compatible; PrototypeProxy/1.0)",
@@ -263,8 +257,8 @@ Deno.serve(async (req) => {
 
     let html = await protoResp.text();
     
-    // Get the proxy base URL for asset rewrites
-    const proxyBaseUrl = `${url.origin}/functions/v1/prototype-proxy/${token}`;
+    // Get the proxy base URL - this is where assets should be fetched from
+    const proxyBaseUrl = `${url.origin}/functions/v1/prototype-proxy/${token}/`;
     
     // Rewrite URLs and inject helper script
     html = rewriteUrls(html, prototypeUrl, proxyBaseUrl);
@@ -277,8 +271,8 @@ Deno.serve(async (req) => {
         ...corsHeaders,
         "Content-Type": "text/html; charset=utf-8",
         "Cache-Control": "no-cache",
-        // Allow iframe embedding from same origin
-        "X-Frame-Options": "SAMEORIGIN",
+        // Allow iframe embedding
+        "X-Frame-Options": "ALLOWALL",
       },
     });
 
