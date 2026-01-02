@@ -500,15 +500,19 @@ export function PrototypeViewer({
   }, [isAddingComment, repinTargetId]);
 
   // Send PCD_FOCUS to iframe when a comment is focused/hovered
+  // Priority: focusedCommentId (clicked) > hoveredCommentId (mouse over)
+  // Focus persists until explicitly changed by clicking another comment or clearing
   useEffect(() => {
     if (!bridgeReady || !iframeRef.current?.contentWindow) return;
     
+    // Use focused (clicked) comment, or hovered if no focus is set
     const selectedId = focusedCommentId ?? hoveredCommentId;
     const selectedComment = selectedId 
       ? comments.find(c => c.id === selectedId) 
       : null;
     
     if (selectedComment?.anchor_id || selectedComment?.anchor_selector) {
+      // Focus the element in iframe
       try {
         iframeRef.current.contentWindow.postMessage(
           { 
@@ -519,8 +523,9 @@ export function PrototypeViewer({
           "*"
         );
       } catch {}
-    } else {
-      // Clear focus if no valid selection
+    } else if (!selectedId) {
+      // Only clear focus when nothing is selected at all
+      // Don't clear just because a comment lacks anchor data
       try {
         iframeRef.current.contentWindow.postMessage(
           { type: "PCD_CLEAR_FOCUS" },
@@ -528,6 +533,8 @@ export function PrototypeViewer({
         );
       } catch {}
     }
+    // If selectedId exists but comment lacks anchor, just don't update iframe focus
+    // (keeps previous focus visible, or shows nothing if this is first selection)
   }, [bridgeReady, focusedCommentId, hoveredCommentId, comments]);
 
   // Helper: convert iframe-viewport rect → overlay coords
