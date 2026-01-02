@@ -1466,12 +1466,22 @@ export function PrototypeViewer({
           </div>
           
           {/* Comment pins - rendered inside iframe portal when DOM accessible */}
+          {(() => {
+            console.log('[pins] render check:', { 
+              iframePinMount: !!iframePinMount, 
+              canAccessDOM, 
+              visibleCommentsCount: visibleComments.filter(c => !c.resolved_at && (c.status !== 'resolved' && c.status !== 'wont_do')).length,
+              usingPortal: !!(iframePinMount && canAccessDOM)
+            });
+            return null;
+          })()}
           {iframePinMount && canAccessDOM && createPortal(
             <>
               {visibleComments
                 .filter(c => !c.resolved_at && (c.status !== 'resolved' && c.status !== 'wont_do'))
                 .map((comment, idx) => {
                     const position = getPinPosition(comment);
+                    console.log('[pins] comment position:', comment.id.slice(0,6), position?.kind);
                     if (!position) return null;
                     
                     const status = getEffectiveStatus(comment);
