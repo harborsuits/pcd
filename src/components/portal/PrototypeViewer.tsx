@@ -673,10 +673,12 @@ export function PrototypeViewer({
     const overlayRect = overlayEl.getBoundingClientRect();
     
     // Convert iframe-relative click coords to overlay percentage
-    const clickX = iframeRect.left + click.rect.left + click.rect.width / 2;
-    const clickY = iframeRect.top + click.rect.top + click.rect.height / 2;
-    const pin_x = ((clickX - overlayRect.left) / overlayRect.width) * 100;
-    const pin_y = ((clickY - overlayRect.top) / overlayRect.height) * 100;
+    // click.rect is already in iframe-viewport coords (from getBoundingClientRect inside iframe)
+    // So we just need to convert to percentage of iframe dimensions
+    const pinCenterX = click.rect.left + click.rect.width / 2;
+    const pinCenterY = click.rect.top + click.rect.height / 2;
+    const pin_x = (pinCenterX / iframeRect.width) * 100;
+    const pin_y = (pinCenterY / iframeRect.height) * 100;
 
     const anchorData: CommentAnchorData = {
       page_url: prototype.url,
