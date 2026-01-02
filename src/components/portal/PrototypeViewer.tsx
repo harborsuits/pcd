@@ -1442,30 +1442,78 @@ export function PrototypeViewer({
             )}
           </div>
           
-          {/* Comment pins rendered INSIDE the iframe via portal - eliminates coordinate drift */}
-          {iframePinMount && isSameOrigin(prototype.url) && createPortal(
-            <>
-              {visibleComments
-                .filter(c => !c.resolved_at && (c.status !== 'resolved' && c.status !== 'wont_do'))
-                .map((comment, idx) => {
-                  const position = getPinPosition(comment);
-                  if (!position) return null;
-                  
-                  const status = getEffectiveStatus(comment);
-                  const pinStyle = getPinClasses(status);
-                  
-                  // Handle offscreen arrows
-                  if (position.kind === 'offscreen') {
-                    const ArrowIcon = position.direction === 'up' ? ChevronUp : 
-                                      position.direction === 'down' ? ChevronDown :
-                                      position.direction === 'left' ? ChevronLeft : ChevronRight;
+          {/* Comment pins - rendered inside iframe portal when same-origin, or in parent overlay when cross-origin */}
+          {iframePinMount && isSameOrigin(prototype.url) ? (
+            // Same-origin: render inside iframe for perfect anchoring
+            createPortal(
+              <>
+                {visibleComments
+                  .filter(c => !c.resolved_at && (c.status !== 'resolved' && c.status !== 'wont_do'))
+                  .map((comment, idx) => {
+                    const position = getPinPosition(comment);
+                    if (!position) return null;
+                    
+                    const status = getEffectiveStatus(comment);
+                    
+                    // Handle offscreen arrows
+                    if (position.kind === 'offscreen') {
+                      const ArrowIcon = position.direction === 'up' ? ChevronUp : 
+                                        position.direction === 'down' ? ChevronDown :
+                                        position.direction === 'left' ? ChevronLeft : ChevronRight;
+                      return (
+                        <div
+                          key={`offscreen-${comment.id}`}
+                          style={{ 
+                            position: 'fixed',
+                            left: position.edgeLeft, 
+                            top: position.edgeTop,
+                            transform: 'translate(-50%, -50%)',
+                            pointerEvents: 'auto',
+                          }}
+                        >
+                          <div
+                            style={{
+                              width: 24,
+                              height: 24,
+                              borderRadius: '50%',
+                              border: '2px solid currentColor',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              cursor: 'pointer',
+                              backgroundColor: status === 'in_progress' ? '#f59e0b' : status === 'open' ? '#3b82f6' : '#6b7280',
+                              color: 'white',
+                              transition: 'transform 0.15s',
+                            }}
+                            title={`Comment offscreen: ${comment.body.slice(0, 30)}... (click to scroll)`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              focusComment(comment);
+                            }}
+                            onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.1)')}
+                            onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+                          >
+                            <ArrowIcon className="h-3 w-3" />
+                          </div>
+                        </div>
+                      );
+                    }
+                    
+                    // Skip needs-repin (handled in sidebar)
+                    if (position.kind === 'needs-repin') return null;
+                    
+                    // Visible pin
+                    const isFocused = focusedCommentId === comment.id;
+                    const isHovered = hoveredCommentId === comment.id;
+                    const hasMismatch = anchorMismatch === comment.id;
+
                     return (
                       <div
-                        key={`offscreen-${comment.id}`}
+                        key={comment.id}
                         style={{ 
                           position: 'fixed',
-                          left: position.edgeLeft, 
-                          top: position.edgeTop,
+                          left: position.left, 
+                          top: position.top,
                           transform: 'translate(-50%, -50%)',
                           pointerEvents: 'auto',
                         }}
@@ -1475,124 +1523,120 @@ export function PrototypeViewer({
                             width: 24,
                             height: 24,
                             borderRadius: '50%',
-                            border: '2px solid currentColor',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
+                            fontSize: 12,
+                            fontWeight: 'bold',
                             cursor: 'pointer',
-                            backgroundColor: status === 'in_progress' ? '#f59e0b' : status === 'open' ? '#3b82f6' : '#6b7280',
-                            color: 'white',
                             transition: 'transform 0.15s',
+                            boxShadow: hasMismatch 
+                              ? '0 0 0 4px rgba(239, 68, 68, 0.2)' 
+                              : status === 'open' 
+                                ? '0 0 0 4px rgba(59, 130, 246, 0.18)' 
+                                : status === 'in_progress'
+                                  ? '0 0 0 4px rgba(245, 158, 11, 0.2)'
+                                  : 'none',
+                            backgroundColor: hasMismatch 
+                              ? '#ef4444' 
+                              : status === 'in_progress' 
+                                ? '#f59e0b' 
+                                : status === 'open' 
+                                  ? '#3b82f6' 
+                                  : '#6b7280',
+                            color: status === 'in_progress' ? 'black' : 'white',
+                            transform: isFocused || isHovered ? 'scale(1.25)' : 'scale(1)',
+                            outline: isFocused || isHovered ? '2px solid rgba(59, 130, 246, 0.5)' : 'none',
+                            outlineOffset: 2,
                           }}
-                          title={`Comment offscreen: ${comment.body.slice(0, 30)}... (click to scroll)`}
+                          title={`${comment.body}${comment.page_path ? ` (${comment.page_path})` : ""}\n\nJ/K: navigate • R: resolve • Esc: clear`}
+                          onMouseEnter={() => setHoveredCommentId(comment.id)}
+                          onMouseLeave={() => setHoveredCommentId(null)}
                           onClick={(e) => {
                             e.stopPropagation();
-                            focusComment(comment);
+                            setShowCommentsSidebar(true);
+                            setFocusedCommentId(comment.id);
                           }}
-                          onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.1)')}
-                          onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
                         >
-                          <ArrowIcon className="h-3 w-3" />
+                          {hasMismatch ? <AlertTriangle className="h-3 w-3" /> : idx + 1}
                         </div>
+                        {/* Debug overlay */}
+                        {debugPins && position.debug && (
+                          <div style={{ 
+                            position: 'absolute', 
+                            left: 28, 
+                            top: 0, 
+                            zIndex: 50,
+                            pointerEvents: 'none',
+                          }}>
+                            <div style={{
+                              borderRadius: 4,
+                              backgroundColor: 'rgba(0,0,0,0.85)',
+                              color: 'white',
+                              fontSize: 10,
+                              lineHeight: 1.3,
+                              padding: '4px 8px',
+                              maxWidth: 240,
+                              whiteSpace: 'nowrap',
+                            }}>
+                              <div><b>{comment.id.slice(0,6)}</b> · {position.kind}</div>
+                              <div>mode: <span style={{ color: position.debug.mode === 'range' ? '#4ade80' : position.debug.mode === 'element' ? '#fbbf24' : '#f87171' }}>{position.debug.mode}</span></div>
+                              <div>sel: {position.debug.hasSelector ? '✓' : '✗'} · offset: {position.debug.hasTextOffset ? position.debug.textOffset : 'N'}</div>
+                              {position.debug.contextPreview && <div style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>ctx: "{position.debug.contextPreview}…"</div>}
+                              {position.debug.rangeRect && (
+                                <div style={{ color: '#4ade80' }}>rect: {Math.round(position.debug.rangeRect.w)}×{Math.round(position.debug.rangeRect.h)}</div>
+                              )}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     );
-                  }
-                  
-                  // Skip needs-repin (handled in sidebar)
-                  if (position.kind === 'needs-repin') return null;
-                  
-                  // Visible pin
-                  const isFocused = focusedCommentId === comment.id;
-                  const isHovered = hoveredCommentId === comment.id;
-                  const hasMismatch = anchorMismatch === comment.id;
+                  })}
+              </>,
+              iframePinMount
+            )
+          ) : (
+            // Cross-origin fallback: render pins in parent overlay using percentage positioning
+            visibleComments
+              .filter(c => !c.resolved_at && (c.status !== 'resolved' && c.status !== 'wont_do'))
+              .filter(c => c.x_pct != null && c.y_pct != null)
+              .map((comment, idx) => {
+                const status = getEffectiveStatus(comment);
+                const isFocused = focusedCommentId === comment.id;
+                const isHovered = hoveredCommentId === comment.id;
 
-                  return (
+                return (
+                  <div
+                    key={comment.id}
+                    className="absolute pointer-events-auto"
+                    style={{ 
+                      left: `${comment.x_pct}%`, 
+                      top: `${comment.y_pct}%`,
+                      transform: 'translate(-50%, -50%)',
+                    }}
+                  >
                     <div
-                      key={comment.id}
-                      style={{ 
-                        position: 'fixed',
-                        left: position.left, 
-                        top: position.top,
-                        transform: 'translate(-50%, -50%)',
-                        pointerEvents: 'auto',
+                      className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold cursor-pointer transition-transform ${
+                        status === 'in_progress' 
+                          ? 'bg-amber-500 text-black' 
+                          : status === 'open' 
+                            ? 'bg-primary text-primary-foreground' 
+                            : 'bg-muted-foreground text-white'
+                      } ${isFocused || isHovered ? 'scale-125 ring-2 ring-primary/50' : ''}`}
+                      title={`${comment.body}\n\n⚠️ Cross-origin: pins use fixed % position`}
+                      onMouseEnter={() => setHoveredCommentId(comment.id)}
+                      onMouseLeave={() => setHoveredCommentId(null)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowCommentsSidebar(true);
+                        setFocusedCommentId(comment.id);
                       }}
                     >
-                      <div
-                        style={{
-                          width: 24,
-                          height: 24,
-                          borderRadius: '50%',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontSize: 12,
-                          fontWeight: 'bold',
-                          cursor: 'pointer',
-                          transition: 'transform 0.15s',
-                          boxShadow: hasMismatch 
-                            ? '0 0 0 4px rgba(239, 68, 68, 0.2)' 
-                            : status === 'open' 
-                              ? '0 0 0 4px rgba(59, 130, 246, 0.18)' 
-                              : status === 'in_progress'
-                                ? '0 0 0 4px rgba(245, 158, 11, 0.2)'
-                                : 'none',
-                          backgroundColor: hasMismatch 
-                            ? '#ef4444' 
-                            : status === 'in_progress' 
-                              ? '#f59e0b' 
-                              : status === 'open' 
-                                ? '#3b82f6' 
-                                : '#6b7280',
-                          color: status === 'in_progress' ? 'black' : 'white',
-                          transform: isFocused || isHovered ? 'scale(1.25)' : 'scale(1)',
-                          outline: isFocused || isHovered ? '2px solid rgba(59, 130, 246, 0.5)' : 'none',
-                          outlineOffset: 2,
-                        }}
-                        title={`${comment.body}${comment.page_path ? ` (${comment.page_path})` : ""}\n\nJ/K: navigate • R: resolve • Esc: clear`}
-                        onMouseEnter={() => setHoveredCommentId(comment.id)}
-                        onMouseLeave={() => setHoveredCommentId(null)}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setShowCommentsSidebar(true);
-                          setFocusedCommentId(comment.id);
-                        }}
-                      >
-                        {hasMismatch ? <AlertTriangle className="h-3 w-3" /> : idx + 1}
-                      </div>
-                      {/* Debug overlay */}
-                      {debugPins && position.debug && (
-                        <div style={{ 
-                          position: 'absolute', 
-                          left: 28, 
-                          top: 0, 
-                          zIndex: 50,
-                          pointerEvents: 'none',
-                        }}>
-                          <div style={{
-                            borderRadius: 4,
-                            backgroundColor: 'rgba(0,0,0,0.85)',
-                            color: 'white',
-                            fontSize: 10,
-                            lineHeight: 1.3,
-                            padding: '4px 8px',
-                            maxWidth: 240,
-                            whiteSpace: 'nowrap',
-                          }}>
-                            <div><b>{comment.id.slice(0,6)}</b> · {position.kind}</div>
-                            <div>mode: <span style={{ color: position.debug.mode === 'range' ? '#4ade80' : position.debug.mode === 'element' ? '#fbbf24' : '#f87171' }}>{position.debug.mode}</span></div>
-                            <div>sel: {position.debug.hasSelector ? '✓' : '✗'} · offset: {position.debug.hasTextOffset ? position.debug.textOffset : 'N'}</div>
-                            {position.debug.contextPreview && <div style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>ctx: "{position.debug.contextPreview}…"</div>}
-                            {position.debug.rangeRect && (
-                              <div style={{ color: '#4ade80' }}>rect: {Math.round(position.debug.rangeRect.w)}×{Math.round(position.debug.rangeRect.h)}</div>
-                            )}
-                          </div>
-                        </div>
-                      )}
+                      {idx + 1}
                     </div>
-                  );
-                })}
-            </>,
-            iframePinMount
+                  </div>
+                );
+              })
           )}
 
           {/* Comment input popover */}
