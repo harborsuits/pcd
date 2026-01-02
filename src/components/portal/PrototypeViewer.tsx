@@ -194,6 +194,8 @@ export function PrototypeViewer({
           const msg = data as IframeClickMessage;
           console.log("[Bridge] Click:", msg.selector, msg.anchorKey);
           lastIframeClick.current = msg;
+          // Dispatch custom event so handleIframeClick can pick it up
+          window.dispatchEvent(new CustomEvent("pcd-iframe-click", { detail: msg }));
           break;
         }
 
@@ -369,35 +371,26 @@ export function PrototypeViewer({
     };
   }, [bridgeReady, rectCache]);
 
-  // Handle overlay click - capture anchor from last iframe click
-  const handleOverlayClick = useCallback(async (e: React.MouseEvent<HTMLDivElement>) => {
-    const click = lastIframeClick.current;
-    
-    // Must have recent click from iframe
-    if (!click || !bridgeReady) {
-      console.warn("[Bridge] No click data from iframe - helper not installed?");
-      return;
-    }
-    
-    // Check if click is recent (within 1 second)
-    if (Date.now() - click.ts > 1000) {
-      console.warn("[Bridge] Click data is stale");
-      lastIframeClick.current = null;
-      return;
-    }
-    
+  // Handle iframe click via postMessage bridge
+  const handleIframeClick = useCallback(async (click: IframeClickMessage) => {
     // Must have anchor
     if (!click.selector && !click.anchorKey && !click.id) {
       console.warn("[Bridge] Click has no anchor data");
       return;
     }
 
-    const overlay = overlayRef.current;
-    if (!overlay) return;
+    const iframeEl = iframeRef.current;
+    const overlayEl = overlayRef.current;
+    if (!iframeEl || !overlayEl) return;
     
-    const overlayRect = overlay.getBoundingClientRect();
-    const pin_x = ((e.clientX - overlayRect.left) / overlayRect.width) * 100;
-    const pin_y = ((e.clientY - overlayRect.top) / overlayRect.height) * 100;
+    const iframeRect = iframeEl.getBoundingClientRect();
+    const overlayRect = overlayEl.getBoundingClientRect();
+    
+    // Convert iframe-relative click coords to overlay percentage
+    const clickX = iframeRect.left + click.rect.left + click.rect.width / 2;
+    const clickY = iframeRect.top + click.rect.top + click.rect.height / 2;
+    const pin_x = ((clickX - overlayRect.left) / overlayRect.width) * 100;
+    const pin_y = ((clickY - overlayRect.top) / overlayRect.height) * 100;
 
     const anchorData: CommentAnchorData = {
       page_url: prototype.url,
@@ -440,7 +433,20 @@ export function PrototypeViewer({
     // Handle new comment
     if (!isAddingComment) return;
     setPendingPin({ anchorData });
-  }, [bridgeReady, prototype.url, isAddingComment, repinTargetId, onRepinComment, refreshRects]);
+  }, [prototype.url, isAddingComment, repinTargetId, onRepinComment, refreshRects]);
+
+  // Listen for iframe clicks via custom event
+  useEffect(() => {
+    if (!isAddingComment && !repinTargetId) return;
+    
+    const handler = (e: Event) => {
+      const msg = (e as CustomEvent<IframeClickMessage>).detail;
+      handleIframeClick(msg);
+    };
+    
+    window.addEventListener("pcd-iframe-click", handler);
+    return () => window.removeEventListener("pcd-iframe-click", handler);
+  }, [isAddingComment, repinTargetId, handleIframeClick]);
 
   const handleSubmitComment = async () => {
     if (!pendingPin || !commentText.trim()) return;
@@ -682,12 +688,20 @@ export function PrototypeViewer({
             sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
           />
 
-          {/* Click overlay for pin placement */}
+          {/* Click overlay for pin placement - always pointer-events-none to let clicks through to iframe */}
           <div
             ref={overlayRef}
-            className={`absolute inset-0 ${isAddingComment || repinTargetId ? "cursor-crosshair" : "pointer-events-none"}`}
-            onClick={handleOverlayClick}
+            className="absolute inset-0 pointer-events-none"
           >
+            {/* Visual hint when in comment mode */}
+            {(isAddingComment || repinTargetId) && bridgeReady && (
+              <div className="absolute inset-0 bg-primary/5 border-2 border-dashed border-primary/30 flex items-center justify-center">
+                <div className="bg-primary text-primary-foreground px-4 py-2 rounded-lg shadow-lg text-sm font-medium animate-pulse">
+                  {repinTargetId ? "Click to repin comment..." : "Click to place pin..."}
+                </div>
+              </div>
+            )}
+
             {/* Pins - rendered in overlay using rectCache positions */}
             {unresolvedComments.map((comment, idx) => renderPin(comment, idx))}
 
