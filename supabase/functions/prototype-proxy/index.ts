@@ -40,25 +40,19 @@ function rewriteUrls(html: string, prototypeUrl: string, proxyBaseUrl: string): 
   const prototypeOrigin = new URL(prototypeUrl).origin;
   
   // CRITICAL: Rewrite absolute paths like /assets/index.js to go through proxy
-  // The <base href> only affects RELATIVE paths, not absolute ones starting with /
-  // So we must rewrite src="/assets/..." and href="/assets/..." to use full proxy URL
+  // We use simpler regex that matches src="/..." or href="/..." anywhere in a tag
+  // This handles Vite's output: <script type="module" crossorigin src="/assets/...">
   
-  // Rewrite script src attributes with absolute paths
+  // Rewrite all src="/..." attributes (works for script, img, etc)
   html = html.replace(
-    /(<script[^>]*\s+src=["'])\/([^"']+)(["'][^>]*>)/gi,
-    `$1${proxyBaseUrl}$2$3`
+    /\ssrc=(["'])\/([^"']+)\1/gi,
+    ` src=$1${proxyBaseUrl}$2$1`
   );
   
-  // Rewrite link href attributes with absolute paths  
+  // Rewrite all href="/..." attributes (works for link, a, etc)
   html = html.replace(
-    /(<link[^>]*\s+href=["'])\/([^"']+)(["'][^>]*>)/gi,
-    `$1${proxyBaseUrl}$2$3`
-  );
-  
-  // Rewrite img src attributes with absolute paths
-  html = html.replace(
-    /(<img[^>]*\s+src=["'])\/([^"']+)(["'][^>]*>)/gi,
-    `$1${proxyBaseUrl}$2$3`
+    /\shref=(["'])\/([^"']+)\1/gi,
+    ` href=$1${proxyBaseUrl}$2$1`
   );
   
   // Script to enable parent-to-iframe communication for pin anchoring
