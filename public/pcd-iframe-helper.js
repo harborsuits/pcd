@@ -373,12 +373,12 @@
     // ================================
     // PERSISTENT MULTI-COMMENT BORDERS
     // ================================
-    if (msg.type === "PCD_HIGHLIGHTS_SET") {
-      __pcdSetHighlights(msg.items || []);
+    if (d.type === "PCD_HIGHLIGHTS_SET") {
+      __pcdSetHighlights(d.items || []);
       return;
     }
 
-    if (msg.type === "PCD_HIGHLIGHTS_CLEAR") {
+    if (d.type === "PCD_HIGHLIGHTS_CLEAR") {
       // Clear all and stop loop
       for (const k of __pcdHighlights.activeKeys) __pcdHideHighlight(k);
       __pcdHighlights.activeKeys = new Set();
