@@ -284,6 +284,10 @@ export function PrototypeViewer({
   
   // Store last click data from iframe for capture
   const lastIframeClick = useRef<IframeClickMessage | null>(null);
+  
+  // Rect cache for cross-origin pin positioning - maps commentId → element rect in viewport coords
+  const [rectCache, setRectCache] = useState<Record<string, { left: number; top: number; width: number; height: number } | null>>({});
+  const rectRefreshRaf = useRef<number | null>(null);
 
   // Force pin recomputation
   const triggerPinUpdate = useCallback(() => {
@@ -1308,6 +1312,56 @@ export function PrototypeViewer({
       }
     }
     
+    // Cross-origin with rectCache: use cached rect from iframe helper
+    // This is the key path for making pins stick on scroll in cross-origin iframes
+    if (!canAccessDOM && iframeReady && (comment.anchor_selector || comment.anchor_id)) {
+      const cachedRect = rectCache[comment.id];
+      if (cachedRect) {
+        const iframeRect = iframeRef.current?.getBoundingClientRect();
+        const overlayRect = overlayRef.current?.getBoundingClientRect();
+        const viewportW = iframeRect?.width ?? 800;
+        const viewportH = iframeRect?.height ?? 600;
+        
+        // cachedRect is in iframe viewport coords, need to convert to overlay coords
+        const pinCenterX = cachedRect.left + cachedRect.width / 2;
+        const pinCenterY = cachedRect.top + cachedRect.height / 2;
+        
+        // Check if offscreen
+        const isOffscreen = pinCenterX < 0 || pinCenterY < 0 || 
+                           pinCenterX > viewportW || pinCenterY > viewportH;
+        
+        baseDebug.mode = "element";
+        baseDebug.rangeRect = { w: cachedRect.width, h: cachedRect.height, x: cachedRect.left, y: cachedRect.top };
+        
+        if (isOffscreen) {
+          let direction: 'up' | 'down' | 'left' | 'right';
+          if (pinCenterY < 0) direction = 'up';
+          else if (pinCenterY > viewportH) direction = 'down';
+          else if (pinCenterX < 0) direction = 'left';
+          else direction = 'right';
+          
+          let edgeLeft: string, edgeTop: string;
+          if (direction === 'up') {
+            edgeLeft = `${Math.max(16, Math.min(viewportW - 16, pinCenterX))}px`;
+            edgeTop = `16px`;
+          } else if (direction === 'down') {
+            edgeLeft = `${Math.max(16, Math.min(viewportW - 16, pinCenterX))}px`;
+            edgeTop = `${viewportH - 16}px`;
+          } else if (direction === 'left') {
+            edgeLeft = `16px`;
+            edgeTop = `${Math.max(16, Math.min(viewportH - 16, pinCenterY))}px`;
+          } else {
+            edgeLeft = `${viewportW - 16}px`;
+            edgeTop = `${Math.max(16, Math.min(viewportH - 16, pinCenterY))}px`;
+          }
+          
+          return { kind: 'offscreen', direction, edgeLeft, edgeTop, debug: baseDebug };
+        }
+        
+        return { kind: 'visible', left: `${pinCenterX}px`, top: `${pinCenterY}px`, debug: baseDebug };
+      }
+    }
+    
     // Fallback to stored pin_x/pin_y when no anchor available
     // For DOM-accessible iframes, mark as needs-repin so UI can offer repin
     if (comment.pin_x != null && comment.pin_y != null) {
@@ -1336,7 +1390,7 @@ export function PrototypeViewer({
     
     return null;
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [canAccessDOM, pinUpdateKey]);
+  }, [canAccessDOM, pinUpdateKey, iframeReady, rectCache]);
 
   // Helper: Create a Range at a specific character offset within an element's text
   function createRangeAtOffset(element: Element, offset: number, doc: Document): Range | null {
@@ -1378,6 +1432,60 @@ export function PrototypeViewer({
     // Match path
     return c.page_path === currentIframePath;
   });
+
+  // Refresh rects for all anchored comments (call on scroll for cross-origin pin positioning)
+  const refreshRects = useCallback(() => {
+    if (!iframeReady) return;
+    
+    // Only refresh for unresolved comments with anchors
+    const targets = visibleComments.filter(c => 
+      !c.resolved_at && 
+      c.status !== 'resolved' && 
+      c.status !== 'wont_do' &&
+      (c.anchor_id || c.anchor_selector)
+    );
+    
+    if (targets.length === 0) return;
+    
+    // Request rects for all targets
+    targets.forEach(async (c) => {
+      const rect = await requestRectFromIframe(c.anchor_selector ?? null, c.anchor_id ?? null);
+      setRectCache(prev => {
+        // Only update if rect changed
+        const prevRect = prev[c.id];
+        if (!rect && !prevRect) return prev;
+        if (rect && prevRect && 
+            rect.left === prevRect.left && 
+            rect.top === prevRect.top &&
+            rect.width === prevRect.width &&
+            rect.height === prevRect.height) {
+          return prev;
+        }
+        return { ...prev, [c.id]: rect };
+      });
+    });
+  }, [iframeReady, visibleComments, requestRectFromIframe]);
+
+  // Refresh rects when viewport changes (scroll/resize) - throttled via RAF
+  useEffect(() => {
+    if (!iframeReady || canAccessDOM) return; // Only for cross-origin
+    
+    // Debounce via RAF
+    if (rectRefreshRaf.current) {
+      cancelAnimationFrame(rectRefreshRaf.current);
+    }
+    rectRefreshRaf.current = requestAnimationFrame(() => {
+      rectRefreshRaf.current = null;
+      refreshRects();
+    });
+  }, [iframeViewport, iframeReady, canAccessDOM, refreshRects]);
+
+  // Initial rect refresh when bridge becomes ready
+  useEffect(() => {
+    if (iframeReady && !canAccessDOM) {
+      refreshRects();
+    }
+  }, [iframeReady, canAccessDOM, refreshRects]);
 
   const hiddenCommentsCount = comments.length - visibleComments.length;
 
