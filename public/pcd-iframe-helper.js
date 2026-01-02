@@ -8,6 +8,7 @@
   window.__PCD_HELPER_INIT__ = true;
 
   let pinModeActive = false;
+  let focusLocked = false; // When true, clicks cannot clear focus
 
   const send = (payload) => {
     try {
@@ -59,6 +60,14 @@
     (e) => {
       const t = e.target;
       if (!(t instanceof Element)) return;
+
+      // If focus is locked (comment selected), prevent all clicks from affecting the demo
+      // This ensures the focus marker persists until Mother explicitly clears it
+      if (focusLocked) {
+        e.preventDefault();
+        e.stopPropagation();
+        return;
+      }
 
       // If we're in pin mode, don't let the demo site "use" the click (navigate, submit, etc.)
       if (pinModeActive) {
@@ -293,11 +302,13 @@
     }
 
     if (d.type === "PCD_FOCUS") {
+      focusLocked = d.lock === true; // Lock focus when Mother says so
       focusAnchor(d.anchorKey, d.selector);
       return;
     }
 
     if (d.type === "PCD_CLEAR_FOCUS") {
+      focusLocked = false; // Unlock on clear
       clearFocus();
       return;
     }
