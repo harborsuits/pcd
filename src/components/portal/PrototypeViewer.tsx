@@ -143,7 +143,8 @@ export function PrototypeViewer({
   onRefresh,
 }: PrototypeViewerProps) {
   const [isAddingComment, setIsAddingComment] = useState(false);
-  const [pendingPin, setPendingPin] = useState<{ anchorData: CommentAnchorData } | null>(null);
+  const [pendingPin, setPendingPin] = useState<{ anchorData: CommentAnchorData; pixelPos: { x: number; y: number } } | null>(null);
+  const [debugDot, setDebugDot] = useState<{ x: number; y: number } | null>(null);
   const [commentText, setCommentText] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -672,23 +673,26 @@ export function PrototypeViewer({
     const iframeRect = iframeEl.getBoundingClientRect();
     const overlayRect = overlayEl.getBoundingClientRect();
     
-    // Convert iframe-relative click coords to overlay percentage
-    // click.rect is in iframe-viewport coords (from getBoundingClientRect inside iframe)
-    // The pin renders inside overlayRef with left/top as %, so use overlayRect dimensions
-    // Since overlay is absolute inset-0 over iframe, they SHOULD match - but use overlay for safety
-    const pinCenterX = click.rect.left + click.rect.width / 2;
-    const pinCenterY = click.rect.top + click.rect.height / 2;
-    const pin_x = (pinCenterX / overlayRect.width) * 100;
-    const pin_y = (pinCenterY / overlayRect.height) * 100;
+    // Use PIXEL positioning for pending pin - overlay sits exactly over iframe
+    // click.rect is iframe-viewport coords from getBoundingClientRect inside iframe
+    // Since overlay is absolute inset-0, these pixels ARE overlay-relative pixels
+    const pixelX = click.rect.left + click.rect.width / 2;
+    const pixelY = click.rect.top + click.rect.height / 2;
     
-    // Debug: log both dimensions to verify they match
-    if (Math.abs(iframeRect.width - overlayRect.width) > 1 || Math.abs(iframeRect.height - overlayRect.height) > 1) {
-      console.warn('[PCD Pin] Dimension mismatch!', {
-        iframeW: iframeRect.width, overlayW: overlayRect.width,
-        iframeH: iframeRect.height, overlayH: overlayRect.height,
-      });
-    }
-    console.log('[PCD Pin] Calculated:', { pinCenterX, pinCenterY, pin_x, pin_y, overlayW: overlayRect.width });
+    // Debug dot to verify click position
+    setDebugDot({ x: pixelX, y: pixelY });
+    
+    // Only compute % for DB persistence (using overlay dimensions)
+    const pin_x = (pixelX / overlayRect.width) * 100;
+    const pin_y = (pixelY / overlayRect.height) * 100;
+    
+    console.log('[PCD Pin] Click:', { 
+      rectLeft: click.rect.left, rectTop: click.rect.top,
+      pixelX, pixelY, 
+      pin_x, pin_y,
+      overlayW: overlayRect.width, overlayH: overlayRect.height,
+      iframeW: iframeRect.width, iframeH: iframeRect.height,
+    });
 
     const anchorData: CommentAnchorData = {
       page_url: prototype.url,
@@ -740,7 +744,7 @@ export function PrototypeViewer({
 
     // Handle new comment
     if (!isAddingComment) return;
-    setPendingPin({ anchorData });
+    setPendingPin({ anchorData, pixelPos: { x: pixelX, y: pixelY } });
   }, [prototype.url, isAddingComment, repinTargetId, onRepinComment, refreshRects]);
 
   // Listen for iframe clicks via custom event
@@ -1139,14 +1143,30 @@ export function PrototypeViewer({
             {/* Pins - rendered in overlay using rectCache positions */}
             {unresolvedComments.map((comment, idx) => renderPin(comment, idx))}
 
-            {/* Pending pin indicator */}
+            {/* Pending pin indicator - use PIXEL position for accuracy */}
             {pendingPin && (
               <div
-                className="absolute w-6 h-6 -ml-3 -mt-3 rounded-full bg-primary text-primary-foreground flex items-center justify-center animate-pulse shadow-lg pointer-events-none"
-                style={{ left: `${pendingPin.anchorData.pin_x}%`, top: `${pendingPin.anchorData.pin_y}%` }}
+                className="absolute w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center animate-pulse shadow-lg pointer-events-none"
+                style={{ 
+                  left: pendingPin.pixelPos.x, 
+                  top: pendingPin.pixelPos.y,
+                  transform: 'translate(-50%, -50%)'
+                }}
               >
                 <MessageCircle className="h-3 w-3" />
               </div>
+            )}
+
+            {/* Debug dot - red dot to verify exact click position */}
+            {debugDot && (
+              <div
+                className="absolute w-3 h-3 rounded-full bg-red-500 border-2 border-white pointer-events-none z-[999999]"
+                style={{ 
+                  left: debugDot.x, 
+                  top: debugDot.y,
+                  transform: 'translate(-50%, -50%)'
+                }}
+              />
             )}
 
             {/* Click feedback ripple */}
