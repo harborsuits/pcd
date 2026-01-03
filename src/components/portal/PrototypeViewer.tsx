@@ -569,20 +569,26 @@ export function PrototypeViewer({
       }));
   }, [pageComments]);
 
-  // Send persistent highlights to iframe whenever active comments change
+  // Send persistent highlights to iframe whenever active comments change OR page changes
+  // We include currentPageKey so that when user navigates back to a page, highlights are re-sent
   useEffect(() => {
     if (!bridgeReady || !iframeRef.current?.contentWindow) return;
 
-    try {
-      iframeRef.current.contentWindow.postMessage(
-        { __pcd: true, type: "PCD_HIGHLIGHTS_SET", items: activeHighlightItems },
-        "*"
-      );
-      console.log("[Bridge] Sent PCD_HIGHLIGHTS_SET:", activeHighlightItems.length, "items");
-    } catch (e) {
-      console.warn("[Bridge] Failed to send highlights:", e);
-    }
-  }, [bridgeReady, activeHighlightItems]);
+    // Small delay to let iframe settle after page change
+    const timer = setTimeout(() => {
+      try {
+        iframeRef.current?.contentWindow?.postMessage(
+          { __pcd: true, type: "PCD_HIGHLIGHTS_SET", items: activeHighlightItems },
+          "*"
+        );
+        console.log("[Bridge] Sent PCD_HIGHLIGHTS_SET:", activeHighlightItems.length, "items for page:", currentPageKey);
+      } catch (e) {
+        console.warn("[Bridge] Failed to send highlights:", e);
+      }
+    }, 100);
+    
+    return () => clearTimeout(timer);
+  }, [bridgeReady, activeHighlightItems, currentPageKey]);
 
   // Clear hover when leaving pin mode
   useEffect(() => {
