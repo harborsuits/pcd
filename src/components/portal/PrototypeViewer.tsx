@@ -591,7 +591,7 @@ export function PrototypeViewer({
     };
   }, []);
 
-  // Calculate pin position - ONLY from rectCache
+  // Calculate pin position - uses stored pin_x/pin_y (actual click point) when available
   const getPinPosition = useCallback((comment: PrototypeComment): PinPositionResult => {
     if (!bridgeReady) {
       return { kind: 'no-bridge' };
@@ -619,9 +619,22 @@ export function PrototypeViewer({
     const offsetX = iframeRect.left - overlayRect.left;
     const offsetY = iframeRect.top - overlayRect.top;
     
-    // rect is in iframe viewport coords
-    const pinCenterX = rect.left + rect.width / 2;
-    const pinCenterY = rect.top + rect.height / 2;
+    // Use stored pin_x/pin_y (percentage of viewport at save time) if available
+    // These represent the actual click point, not element center
+    // Fallback to element center for legacy pins without pin_x/pin_y
+    let pinCenterX: number;
+    let pinCenterY: number;
+    
+    if (comment.pin_x != null && comment.pin_y != null) {
+      // pin_x/pin_y are percentages (0-100) of the viewport
+      // Convert to current iframe viewport pixels
+      pinCenterX = (comment.pin_x / 100) * viewportW;
+      pinCenterY = (comment.pin_y / 100) * viewportH;
+    } else {
+      // Fallback: use element center for legacy pins
+      pinCenterX = rect.left + rect.width / 2;
+      pinCenterY = rect.top + rect.height / 2;
+    }
     
     // Check offscreen
     const isOffscreen = pinCenterX < 0 || pinCenterY < 0 || 
