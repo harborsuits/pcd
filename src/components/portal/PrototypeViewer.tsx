@@ -702,12 +702,8 @@ export function PrototypeViewer({
       // Use anchorKey (the stable data-pcd-anchor stamp) for anchor_id
       anchor_id: click.anchorKey ?? click.id,
       anchor_selector: click.selector,
-      x_pct: click.rect?.width > 0 
-        ? ((click.rect.left + click.rect.width / 2) / (click.viewport?.w ?? window.innerWidth)) * 100 
-        : 50,
-      y_pct: click.rect?.height > 0 
-        ? ((click.rect.top + click.rect.height / 2) / (click.viewport?.h ?? window.innerHeight)) * 100 
-        : 50,
+      x_pct: ((click.click?.x ?? (click.rect.left + click.rect.width / 2)) / (click.viewport?.w ?? window.innerWidth)) * 100,
+      y_pct: ((click.click?.y ?? (click.rect.top + click.rect.height / 2)) / (click.viewport?.h ?? window.innerHeight)) * 100,
       text_hint: click.textHint ?? null,
       text_offset: click.textOffset ?? null,
       text_context: click.textContext ?? null,
@@ -756,8 +752,8 @@ export function PrototypeViewer({
       const iframeEl = iframeRef.current;
       if (iframeEl) {
         const iframeRect = iframeEl.getBoundingClientRect();
-        const clickX = iframeRect.left + msg.rect.left + msg.rect.width / 2;
-        const clickY = iframeRect.top + msg.rect.top + msg.rect.height / 2;
+        const clickX = iframeRect.left + (msg.click?.x ?? (msg.rect.left + msg.rect.width / 2));
+        const clickY = iframeRect.top + (msg.click?.y ?? (msg.rect.top + msg.rect.height / 2));
         setClickFeedback({ x: clickX, y: clickY });
         setTimeout(() => setClickFeedback(null), 600);
       }
