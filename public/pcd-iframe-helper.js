@@ -394,6 +394,7 @@
   // Stores highlight boxes keyed by anchorKey
   const __pcdHighlights = {
     items: new Map(), // anchorKey -> { box, badge }
+    itemData: new Map(), // anchorKey -> { selector, label } - store full item data for fallback lookups
     activeKeys: new Set(),
     raf: null,
   };
@@ -441,22 +442,37 @@
     entry.badge.style.display = "none";
   }
 
-  function __pcdFindByAnchorMulti(anchorKey) {
-    if (!anchorKey) return null;
-    try {
-      const safe = (window.CSS && CSS.escape) ? CSS.escape(String(anchorKey)) : String(anchorKey);
-      return document.querySelector(`[data-pcd-anchor="${safe}"]`);
-    } catch {
-      return null;
+  function __pcdFindByAnchorMulti(anchorKey, selector) {
+    // First try by anchor attribute
+    if (anchorKey) {
+      try {
+        const safe = (window.CSS && CSS.escape) ? CSS.escape(String(anchorKey)) : String(anchorKey);
+        const el = document.querySelector(`[data-pcd-anchor="${safe}"]`);
+        if (el) return el;
+      } catch {}
     }
+    // Fallback to selector (after page reload, anchor attributes are gone)
+    if (selector) {
+      try {
+        const el = document.querySelector(selector);
+        if (el) {
+          // Re-stamp the anchor so future lookups work faster
+          ensureAnchorStamp(el);
+          return el;
+        }
+      } catch {}
+    }
+    return null;
   }
 
   function __pcdUpdateAllHighlights() {
     for (const anchorKey of __pcdHighlights.activeKeys) {
+      const itemData = __pcdHighlights.itemData.get(anchorKey);
       const entry = __pcdHighlights.items.get(anchorKey);
       if (!entry) continue;
 
-      const el = __pcdFindByAnchorMulti(anchorKey);
+      // Use both anchorKey and selector to find element
+      const el = __pcdFindByAnchorMulti(anchorKey, itemData?.selector);
       if (!el) {
         __pcdHideHighlight(anchorKey);
         continue;
@@ -505,6 +521,9 @@
       const anchorKey = it?.anchorKey;
       if (!anchorKey) continue;
       nextKeys.add(anchorKey);
+
+      // Store item data (including selector) for fallback element lookup
+      __pcdHighlights.itemData.set(anchorKey, { selector: it?.selector || null, label: it?.label || "" });
 
       const entry = __pcdEnsureHighlightUI(anchorKey);
       entry.badge.textContent = it?.label ? String(it.label) : "";

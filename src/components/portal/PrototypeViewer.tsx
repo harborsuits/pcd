@@ -556,25 +556,30 @@ export function PrototypeViewer({
   // Build list of "active" comments that should show persistent cyan borders
   // Open/In-progress = highlighted, Resolved/Archived = not highlighted
   // IMPORTANT: Only show highlights for comments on the current page
+  // Include selector for fallback (anchor attributes are lost on page reload)
   const activeHighlightItems = useMemo(() => {
     return pageComments
       .filter((c) => {
         const status = getEffectiveStatus(c);
         return (status === "open" || status === "in_progress") && !c.archived_at;
       })
-      .filter((c) => !!c.anchor_id) // must be pinned
+      .filter((c) => !!c.anchor_id || !!c.anchor_selector) // must be pinned (check both)
       .map((c, idx) => ({
         anchorKey: c.anchor_id,
+        selector: c.anchor_selector, // Include selector for fallback after page reload
         label: String(idx + 1), // numbering badge
       }));
   }, [pageComments]);
 
-  // Send persistent highlights to iframe whenever active comments change OR page changes
-  // We include currentPageKey so that when user navigates back to a page, highlights are re-sent
+  // Send persistent highlights to iframe whenever active comments change OR bridge becomes ready
+  // The key insight: when navigating pages, iframeKey changes -> bridgeReady resets to false
+  // -> when helper script loads and responds to ping, bridgeReady becomes true again
+  // At that point we MUST re-send highlights for the current page
   useEffect(() => {
     if (!bridgeReady || !iframeRef.current?.contentWindow) return;
 
-    // Small delay to let iframe settle after page change
+    // Wait for iframe helper script to fully initialize after page load
+    // 300ms gives enough time for the helper script to inject data-pcd-anchor attributes
     const timer = setTimeout(() => {
       try {
         iframeRef.current?.contentWindow?.postMessage(
@@ -585,7 +590,7 @@ export function PrototypeViewer({
       } catch (e) {
         console.warn("[Bridge] Failed to send highlights:", e);
       }
-    }, 100);
+    }, 300);
     
     return () => clearTimeout(timer);
   }, [bridgeReady, activeHighlightItems, currentPageKey]);
