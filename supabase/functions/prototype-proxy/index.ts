@@ -196,6 +196,25 @@ function rewriteUrls(html: string, prototypeUrl: string, proxyBaseUrl: string): 
     }, 50);
   }, { passive: true });
 
+  // Track page navigation (for SPAs that use history API)
+  const notifyPageChange = () => {
+    send({ type: "PCD_PAGE_CHANGE", url: location.href, ts: Date.now() });
+  };
+  window.addEventListener("popstate", notifyPageChange);
+  window.addEventListener("hashchange", notifyPageChange);
+  
+  // Also intercept pushState/replaceState for SPAs
+  const origPushState = history.pushState;
+  const origReplaceState = history.replaceState;
+  history.pushState = function(...args) {
+    origPushState.apply(this, args);
+    setTimeout(notifyPageChange, 0);
+  };
+  history.replaceState = function(...args) {
+    origReplaceState.apply(this, args);
+    setTimeout(notifyPageChange, 0);
+  };
+
   // Notify parent ready
   send({ type: "PCD_IFRAME_READY", url: location.href, viewport: { w: window.innerWidth, h: window.innerHeight }, ts: Date.now() });
 })();
