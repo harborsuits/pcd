@@ -6,6 +6,21 @@ import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { PortalCommentCard } from "./PortalCommentCard";
 import { toast } from "@/hooks/use-toast";
+// Normalize page URL to a consistent key for matching
+// Uses pathname + search + hash only, strips trailing slash
+function normalizePageKey(url: string | null | undefined): string {
+  if (!url) return "/";
+  try {
+    const u = new URL(url, "http://dummy.local");
+    const path = (u.pathname || "/").replace(/\/+$/, "") || "/";
+    return `${path}${u.search || ""}${u.hash || ""}`;
+  } catch {
+    // If it's already a path or invalid, just clean it up
+    const s = (url || "/").trim();
+    return (s.replace(/\/+$/, "") || "/");
+  }
+}
+
 // Determine breakpoint from viewport width
 function getBreakpoint(width: number): string {
   if (width < 640) return "sm";
@@ -219,23 +234,19 @@ export function PrototypeViewer({
   // Filter out archived comments from main views
   const activeComments = comments.filter((c) => !c.archived_at);
   
-  // Helper to match page URLs (compare pathnames, ignore origin differences due to proxy)
-  const matchesCurrentPage = useCallback((comment: PrototypeComment) => {
-    if (!currentIframePage) return true; // Show all if we don't know current page yet
-    if (!comment.page_url) return true; // Legacy comments without page_url show on all pages
-    
-    try {
-      const currentPath = new URL(currentIframePage).pathname;
-      const commentPath = new URL(comment.page_url).pathname;
-      return currentPath === commentPath || currentPath === commentPath.replace(/\/$/, '') || currentPath.replace(/\/$/, '') === commentPath;
-    } catch {
-      // If URL parsing fails, fall back to showing the comment
-      return true;
-    }
-  }, [currentIframePage]);
+  // Normalized current page key for filtering
+  const currentPageKey = useMemo(() => normalizePageKey(currentIframePage), [currentIframePage]);
   
-  // Filter comments by current page
-  const pageComments = useMemo(() => activeComments.filter(matchesCurrentPage), [activeComments, matchesCurrentPage]);
+  // Filter comments by current page using normalized keys
+  const pageComments = useMemo(() => {
+    return activeComments.filter((comment) => {
+      if (!currentIframePage) return true; // Show all if we don't know current page yet
+      if (!comment.page_url) return true; // Legacy comments without page_url show on all pages
+      const commentKey = normalizePageKey(comment.page_url);
+      return commentKey === currentPageKey;
+    });
+  }, [activeComments, currentIframePage, currentPageKey]);
+  
   const unresolvedComments = pageComments.filter((c) => !c.resolved_at && c.status !== 'resolved' && c.status !== 'wont_do');
   const resolvedComments = pageComments.filter((c) => c.resolved_at || c.status === 'resolved' || c.status === 'wont_do');
 
@@ -304,10 +315,10 @@ export function PrototypeViewer({
 
       switch (data.type) {
         case "PCD_IFRAME_READY":
-          console.log("[Bridge] Helper ready, page:", data.url);
+          console.log("[Bridge] Helper ready, page:", data.url, "→ normalized:", normalizePageKey(data.url));
           setBridgeReady(true);
           setBridgeHealth(s => ({ ...s, helperReady: true, lastReadyAt: Date.now() }));
-          // Capture the current page URL from the iframe
+          // Capture the current page URL from the iframe (store raw, normalize on filter)
           if (data.url) {
             setCurrentIframePage(data.url);
           }
@@ -338,7 +349,8 @@ export function PrototypeViewer({
 
         case "PCD_PAGE_CHANGE": {
           // User navigated to a different page in the iframe
-          console.log("[Bridge] Page changed:", data.url);
+          const newPageKey = normalizePageKey(data.url);
+          console.log("[Bridge] Page changed:", data.url, "→ normalized:", newPageKey);
           if (data.url) {
             setCurrentIframePage(data.url);
             // Clear rect cache since elements on new page are different
@@ -1122,6 +1134,12 @@ export function PrototypeViewer({
             <Bug className="h-4 w-4" />
           </Button>
         </div>
+        {/* Current page debug pill */}
+        {currentIframePage && (
+          <div className="flex items-center gap-1 px-2 py-0.5 bg-muted/50 rounded text-xs text-muted-foreground font-mono truncate max-w-[200px]" title={`Raw: ${currentIframePage}\nNormalized: ${currentPageKey}`}>
+            📍 {currentPageKey}
+          </div>
+        )}
       </div>
 
       {/* Bridge not ready warning with copy helper button */}
