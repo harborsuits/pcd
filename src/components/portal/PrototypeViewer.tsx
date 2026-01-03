@@ -377,11 +377,16 @@ export function PrototypeViewer({
         }
 
         case "PCD_RECTS": {
-          // Batch rect response - update rectCache with all rects
+          // Batch rect response - update rectCache with all rects (keyed by comment ID)
           const rects = data.rects as Record<string, { left: number; top: number; width: number; height: number } | null>;
           console.log("[Bridge] Received PCD_RECTS:", Object.keys(rects || {}).length, "rects");
           if (rects) {
-            setRectCache(prev => ({ ...prev, ...rects }));
+            // Filter out null rects before merging
+            const validRects: typeof rects = {};
+            for (const [key, val] of Object.entries(rects)) {
+              if (val) validRects[key] = val;
+            }
+            setRectCache(prev => ({ ...prev, ...validRects }));
           }
           break;
         }
@@ -449,10 +454,10 @@ export function PrototypeViewer({
     return () => window.removeEventListener("message", handleMessage);
   }, [prototype.url, PCD_DEBUG, getIframeOrigin]);
 
-  // Request element rect from iframe
-  const requestRect = useCallback((selector: string | null, anchorId: string | null): Promise<{ left: number; top: number; width: number; height: number } | null> => {
+  // Request element rect from iframe (multi-strategy lookup with textHint fallback)
+  const requestRect = useCallback((selector: string | null, anchorId: string | null, textHint?: string | null): Promise<{ left: number; top: number; width: number; height: number } | null> => {
     return new Promise((resolve) => {
-      if (!bridgeReady || !iframeRef.current?.contentWindow || (!selector && !anchorId)) {
+      if (!bridgeReady || !iframeRef.current?.contentWindow || (!selector && !anchorId && !textHint)) {
         resolve(null);
         return;
       }
@@ -477,6 +482,8 @@ export function PrototypeViewer({
             // Pass anchor_id as both 'id' and 'anchorKey' for compatibility
             id: anchorId,
             anchorKey: anchorId,
+            // Pass textHint for text-based fallback lookup
+            textHint: textHint ?? null,
           },
           protoOrigin
         );
@@ -490,10 +497,11 @@ export function PrototypeViewer({
   const refreshRects = useCallback(async () => {
     if (!bridgeReady) return;
     
-    const anchored = unresolvedComments.filter(c => c.anchor_selector || c.anchor_id);
+    const anchored = unresolvedComments.filter(c => c.anchor_selector || c.anchor_id || c.text_hint);
     
     for (const c of anchored) {
-      const rect = await requestRect(c.anchor_selector ?? null, c.anchor_id ?? null);
+      // Pass textHint for multi-strategy fallback lookup
+      const rect = await requestRect(c.anchor_selector ?? null, c.anchor_id ?? null, c.text_hint ?? null);
       setRectCache(prev => {
         if (!rect && !prev[c.id]) return prev;
         if (rect && prev[c.id] && 
@@ -576,6 +584,7 @@ export function PrototypeViewer({
       })
       .filter((c) => !!c.anchor_id || !!c.anchor_selector) // must be pinned (check both)
       .map((c, idx) => ({
+        id: c.id, // comment ID for mapping rects back
         anchorKey: c.anchor_id,
         selector: c.anchor_selector, // semantic or structural selector
         textHint: c.text_hint, // for text-based fallback lookup
@@ -605,8 +614,9 @@ export function PrototypeViewer({
         console.log("[Bridge] Sent PCD_HIGHLIGHTS_SET:", activeHighlightItems.length, "items for page:", currentPageKey);
         
         // Step 2: Request batch rects for all anchored comments on this page
-        // Include textHint for text-based fallback lookup
+        // Include textHint for text-based fallback lookup, and ID for mapping back
         const anchors = activeHighlightItems.map(item => ({
+          id: item.id, // comment ID - will be echoed back for cache keying
           anchorKey: item.anchorKey,
           selector: item.selector,
           textHint: item.textHint, // for BugHerd-grade text-based reacquisition
