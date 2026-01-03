@@ -346,8 +346,10 @@ export function PrototypeViewer({
             // Clear any pending pin since it was for the previous page
             setPendingPin(null);
             setCommentText("");
-            // Cancel adding comment mode when navigating (optional - keeps mode but clears pending)
-            // setIsAddingComment(false);
+            // CRITICAL: Clear repin mode to prevent accidentally repinning comments to new page
+            setRepinTargetId(null);
+            // Also clear adding comment mode
+            setIsAddingComment(false);
           }
           break;
         }
