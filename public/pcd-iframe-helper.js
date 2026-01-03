@@ -27,23 +27,40 @@
     return key;
   };
 
-  // ----- Selector building (anchor-first) -----
-  const buildSelector = (el, anchorKey) => {
+  // ----- Selector building (structural path - works after page reload) -----
+  // IMPORTANT: Must build a selector that works WITHOUT data-pcd-anchor attribute
+  // because that attribute is lost when navigating away and coming back
+  const buildSelector = (el) => {
     if (!el || !(el instanceof Element)) return null;
-    if (anchorKey) return `[data-pcd-anchor="${anchorKey}"]`;
-    if (el.id) return `#${CSS.escape(el.id)}`;
-    // fallback: simple-ish path
+    
+    // Try to build a robust structural path using nth-child
     const parts = [];
     let cur = el;
-    for (let i = 0; i < 4 && cur && cur instanceof Element; i++) {
+    while (cur && cur instanceof Element && cur !== document.body && cur !== document.documentElement) {
       const tag = cur.tagName.toLowerCase();
       if (!tag) break;
-      const cls = (cur.className && typeof cur.className === "string")
-        ? cur.className.trim().split(/\s+/).slice(0, 2).map(c => `.${CSS.escape(c)}`).join("")
-        : "";
-      parts.unshift(`${tag}${cls}`);
+      
+      // Get nth-child index among siblings of same tag
+      let index = 1;
+      let sibling = cur.previousElementSibling;
+      while (sibling) {
+        if (sibling.tagName.toLowerCase() === tag) index++;
+        sibling = sibling.previousElementSibling;
+      }
+      
+      // Include stable ID if available
+      if (cur.id && /^[a-zA-Z][a-zA-Z0-9_-]*$/.test(cur.id)) {
+        parts.unshift(`#${CSS.escape(cur.id)}`);
+        break; // ID is unique, no need to go further up
+      }
+      
+      parts.unshift(`${tag}:nth-of-type(${index})`);
       cur = cur.parentElement;
+      
+      // Limit depth to avoid overly long selectors
+      if (parts.length >= 8) break;
     }
+    
     return parts.join(" > ") || null;
   };
 
@@ -86,7 +103,7 @@
 
       const anchorKey = ensureAnchorStamp(t);
       const rect = t.getBoundingClientRect();
-      const selector = buildSelector(t, anchorKey);
+      const selector = buildSelector(t);
       const { textHint, textContext } = getTextContext(t);
 
       send({
@@ -125,7 +142,7 @@
 
         const anchorKey = ensureAnchorStamp(t);
         const rect = t.getBoundingClientRect();
-        const selector = buildSelector(t, anchorKey);
+        const selector = buildSelector(t);
         const { textHint, textContext } = getTextContext(t);
 
         send({
