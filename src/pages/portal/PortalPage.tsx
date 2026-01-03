@@ -501,15 +501,15 @@ export default function PortalPage() {
         body: JSON.stringify({
           action: "repin",
           comment_id: commentId,
-          // Spread anchor data at top level (backend expects flat structure)
+          // IMPORTANT: Only update anchor position data, NOT page_url
+          // This prevents comments from being accidentally moved to a different page
           anchor_selector: anchorData.anchor_selector,
           anchor_id: anchorData.anchor_id,
           x_pct: anchorData.x_pct,
           y_pct: anchorData.y_pct,
           pin_x: anchorData.pin_x,
           pin_y: anchorData.pin_y,
-          page_path: anchorData.page_path,
-          page_url: anchorData.page_url,
+          // page_path and page_url are intentionally omitted - repin only changes anchor, not page
           breakpoint: anchorData.breakpoint,
           scroll_y: anchorData.scroll_y,
           viewport_w: anchorData.viewport_w,
@@ -523,6 +523,7 @@ export default function PortalPage() {
 
     if (res.ok) {
       // Update local state with new anchor data
+      // Update local state with new anchor data, but KEEP original page_url
       setPrototypeComments((prev) =>
         prev.map((c) => (c.id === commentId ? { 
           ...c, 
@@ -539,8 +540,7 @@ export default function PortalPage() {
           viewport_w: anchorData.viewport_w,
           viewport_h: anchorData.viewport_h,
           breakpoint: anchorData.breakpoint,
-          page_url: anchorData.page_url,
-          page_path: anchorData.page_path,
+          // page_url and page_path are intentionally NOT updated - keeps comment on original page
         } : c))
       );
       toast({ title: "Comment re-pinned successfully" });
