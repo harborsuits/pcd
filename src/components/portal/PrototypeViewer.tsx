@@ -670,35 +670,22 @@ export function PrototypeViewer({
     const overlayEl = overlayRef.current;
     if (!iframeEl || !overlayEl) return;
     
-    const iframeRect = iframeEl.getBoundingClientRect();
     const overlayRect = overlayEl.getBoundingClientRect();
     
-    // Calculate alignment offset between iframe and overlay
-    // If there's padding/margin causing misalignment, this corrects for it
-    const dx = iframeRect.left - overlayRect.left;
-    const dy = iframeRect.top - overlayRect.top;
+    // Simple pixel calculation - no dx/dy correction
+    // click.rect is iframe-viewport coords, overlay is absolute inset-0 over iframe
+    const pixelX = click.rect.left + click.rect.width / 2;
+    const pixelY = click.rect.top + click.rect.height / 2;
     
-    // click.rect is iframe-viewport coords from getBoundingClientRect inside iframe
-    // Apply dx/dy correction to convert to overlay-relative pixels
-    const pixelX = dx + click.rect.left + click.rect.width / 2;
-    const pixelY = dy + click.rect.top + click.rect.height / 2;
-    
-    // Debug dot to verify click position
-    setDebugDot({ x: pixelX, y: pixelY });
-    
-    // Only compute % for DB persistence (using overlay dimensions)
+    // Convert to % for DB persistence (relative to overlay)
     const pin_x = (pixelX / overlayRect.width) * 100;
     const pin_y = (pixelY / overlayRect.height) * 100;
     
-    console.log('[PCD Pin] ALIGNMENT:', { 
-      dx, dy,
-      iframeLeft: iframeRect.left, overlayLeft: overlayRect.left,
-      iframeTop: iframeRect.top, overlayTop: overlayRect.top,
-    });
-    console.log('[PCD Pin] Click:', { 
+    console.log('[PCD Pin] Position:', { 
       rectLeft: click.rect.left, rectTop: click.rect.top,
       pixelX, pixelY, 
       pin_x, pin_y,
+      overlayW: overlayRect.width, overlayH: overlayRect.height,
     });
 
     const anchorData: CommentAnchorData = {
