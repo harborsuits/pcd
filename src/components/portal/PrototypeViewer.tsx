@@ -673,11 +673,15 @@ export function PrototypeViewer({
     const iframeRect = iframeEl.getBoundingClientRect();
     const overlayRect = overlayEl.getBoundingClientRect();
     
-    // Use PIXEL positioning for pending pin - overlay sits exactly over iframe
+    // Calculate alignment offset between iframe and overlay
+    // If there's padding/margin causing misalignment, this corrects for it
+    const dx = iframeRect.left - overlayRect.left;
+    const dy = iframeRect.top - overlayRect.top;
+    
     // click.rect is iframe-viewport coords from getBoundingClientRect inside iframe
-    // Since overlay is absolute inset-0, these pixels ARE overlay-relative pixels
-    const pixelX = click.rect.left + click.rect.width / 2;
-    const pixelY = click.rect.top + click.rect.height / 2;
+    // Apply dx/dy correction to convert to overlay-relative pixels
+    const pixelX = dx + click.rect.left + click.rect.width / 2;
+    const pixelY = dy + click.rect.top + click.rect.height / 2;
     
     // Debug dot to verify click position
     setDebugDot({ x: pixelX, y: pixelY });
@@ -686,12 +690,15 @@ export function PrototypeViewer({
     const pin_x = (pixelX / overlayRect.width) * 100;
     const pin_y = (pixelY / overlayRect.height) * 100;
     
+    console.log('[PCD Pin] ALIGNMENT:', { 
+      dx, dy,
+      iframeLeft: iframeRect.left, overlayLeft: overlayRect.left,
+      iframeTop: iframeRect.top, overlayTop: overlayRect.top,
+    });
     console.log('[PCD Pin] Click:', { 
       rectLeft: click.rect.left, rectTop: click.rect.top,
       pixelX, pixelY, 
       pin_x, pin_y,
-      overlayW: overlayRect.width, overlayH: overlayRect.height,
-      iframeW: iframeRect.width, iframeH: iframeRect.height,
     });
 
     const anchorData: CommentAnchorData = {
