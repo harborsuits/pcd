@@ -205,6 +205,9 @@ export function PrototypeViewer({
   const [iframeViewport, setIframeViewport] = useState<{ w: number; h: number; scrollX: number; scrollY: number } | null>(null);
   const lastIframeClick = useRef<IframeClickMessage | null>(null);
   
+  // Track current iframe page URL for filtering comments by page
+  const [currentIframePage, setCurrentIframePage] = useState<string | null>(null);
+  
   // Rect cache: commentId → element rect in iframe viewport coords
   const [rectCache, setRectCache] = useState<Record<string, { left: number; top: number; width: number; height: number } | null>>({});
   const pendingRectRequests = useRef<Map<string, (rect: { left: number; top: number; width: number; height: number } | null) => void>>(new Map());
@@ -215,8 +218,26 @@ export function PrototypeViewer({
 
   // Filter out archived comments from main views
   const activeComments = comments.filter((c) => !c.archived_at);
-  const unresolvedComments = activeComments.filter((c) => !c.resolved_at && c.status !== 'resolved' && c.status !== 'wont_do');
-  const resolvedComments = activeComments.filter((c) => c.resolved_at || c.status === 'resolved' || c.status === 'wont_do');
+  
+  // Helper to match page URLs (compare pathnames, ignore origin differences due to proxy)
+  const matchesCurrentPage = useCallback((comment: PrototypeComment) => {
+    if (!currentIframePage) return true; // Show all if we don't know current page yet
+    if (!comment.page_url) return true; // Legacy comments without page_url show on all pages
+    
+    try {
+      const currentPath = new URL(currentIframePage).pathname;
+      const commentPath = new URL(comment.page_url).pathname;
+      return currentPath === commentPath || currentPath === commentPath.replace(/\/$/, '') || currentPath.replace(/\/$/, '') === commentPath;
+    } catch {
+      // If URL parsing fails, fall back to showing the comment
+      return true;
+    }
+  }, [currentIframePage]);
+  
+  // Filter comments by current page
+  const pageComments = useMemo(() => activeComments.filter(matchesCurrentPage), [activeComments, matchesCurrentPage]);
+  const unresolvedComments = pageComments.filter((c) => !c.resolved_at && c.status !== 'resolved' && c.status !== 'wont_do');
+  const resolvedComments = pageComments.filter((c) => c.resolved_at || c.status === 'resolved' || c.status === 'wont_do');
 
   // Get the actual iframe src origin (more reliable than prototype.url)
   const getIframeOrigin = useCallback(() => {
@@ -283,9 +304,13 @@ export function PrototypeViewer({
 
       switch (data.type) {
         case "PCD_IFRAME_READY":
-          console.log("[Bridge] Helper ready");
+          console.log("[Bridge] Helper ready, page:", data.url);
           setBridgeReady(true);
           setBridgeHealth(s => ({ ...s, helperReady: true, lastReadyAt: Date.now() }));
+          // Capture the current page URL from the iframe
+          if (data.url) {
+            setCurrentIframePage(data.url);
+          }
           if (PCD_DEBUG) {
             setPcdHud(s => ({ ...s, bridgeReady: true }));
           }
@@ -308,6 +333,17 @@ export function PrototypeViewer({
             scrollX: msg.scroll.x,
             scrollY: msg.scroll.y,
           });
+          break;
+        }
+
+        case "PCD_PAGE_CHANGE": {
+          // User navigated to a different page in the iframe
+          console.log("[Bridge] Page changed:", data.url);
+          if (data.url) {
+            setCurrentIframePage(data.url);
+            // Clear rect cache since elements on new page are different
+            setRectCache({});
+          }
           break;
         }
 
@@ -500,8 +536,9 @@ export function PrototypeViewer({
 
   // Build list of "active" comments that should show persistent cyan borders
   // Open/In-progress = highlighted, Resolved/Archived = not highlighted
+  // IMPORTANT: Only show highlights for comments on the current page
   const activeHighlightItems = useMemo(() => {
-    return comments
+    return pageComments
       .filter((c) => {
         const status = getEffectiveStatus(c);
         return (status === "open" || status === "in_progress") && !c.archived_at;
@@ -511,7 +548,7 @@ export function PrototypeViewer({
         anchorKey: c.anchor_id,
         label: String(idx + 1), // numbering badge
       }));
-  }, [comments]);
+  }, [pageComments]);
 
   // Send persistent highlights to iframe whenever active comments change
   useEffect(() => {
