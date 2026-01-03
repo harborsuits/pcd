@@ -567,6 +567,7 @@ export function PrototypeViewer({
   // Open/In-progress = highlighted, Resolved/Archived = not highlighted
   // IMPORTANT: Only show highlights for comments on the current page
   // Include selector for fallback (anchor attributes are lost on page reload)
+  // Include textHint for BugHerd-grade text-based element lookup fallback
   const activeHighlightItems = useMemo(() => {
     return pageComments
       .filter((c) => {
@@ -576,7 +577,8 @@ export function PrototypeViewer({
       .filter((c) => !!c.anchor_id || !!c.anchor_selector) // must be pinned (check both)
       .map((c, idx) => ({
         anchorKey: c.anchor_id,
-        selector: c.anchor_selector, // Include selector for fallback after page reload
+        selector: c.anchor_selector, // semantic or structural selector
+        textHint: c.text_hint, // for text-based fallback lookup
         label: String(idx + 1), // numbering badge
       }));
   }, [pageComments]);
@@ -603,10 +605,11 @@ export function PrototypeViewer({
         console.log("[Bridge] Sent PCD_HIGHLIGHTS_SET:", activeHighlightItems.length, "items for page:", currentPageKey);
         
         // Step 2: Request batch rects for all anchored comments on this page
-        // This populates rectCache so pins actually appear
+        // Include textHint for text-based fallback lookup
         const anchors = activeHighlightItems.map(item => ({
           anchorKey: item.anchorKey,
           selector: item.selector,
+          textHint: item.textHint, // for BugHerd-grade text-based reacquisition
         }));
         
         if (anchors.length > 0) {
@@ -649,12 +652,14 @@ export function PrototypeViewer({
     if (!selected?.anchor_id && !selected?.anchor_selector) return;
     
     // Focus the element in iframe with lock: true to prevent clicks from clearing it
+    // Include textHint for BugHerd-grade text-based fallback lookup
     try {
       iframeRef.current.contentWindow.postMessage(
         { 
           type: "PCD_FOCUS", 
           anchorKey: selected.anchor_id,
           selector: selected.anchor_selector,
+          textHint: selected.text_hint, // for text-based reacquisition
           lock: true // 🔐 Focus is locked until explicitly cleared
         },
         "*"
