@@ -343,6 +343,11 @@ export function PrototypeViewer({
             setCurrentIframePage(data.url);
             // Clear rect cache since elements on new page are different
             setRectCache({});
+            // Clear any pending pin since it was for the previous page
+            setPendingPin(null);
+            setCommentText("");
+            // Cancel adding comment mode when navigating (optional - keeps mode but clears pending)
+            // setIsAddingComment(false);
           }
           break;
         }
