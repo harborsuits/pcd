@@ -27,20 +27,62 @@
     return key;
   };
 
-  // ----- Selector building (structural path - works after page reload) -----
-  // IMPORTANT: Must build a selector that works WITHOUT data-pcd-anchor attribute
-  // because that attribute is lost when navigating away and coming back
-  const buildSelector = (el) => {
+  // =====================================================
+  // MULTI-STRATEGY SELECTOR BUILDING (BugHerd-grade)
+  // =====================================================
+  // Store MULTIPLE selector strategies so we can reacquire elements reliably
+  
+  // Build a semantic selector (ID, data-testid, aria-label, href)
+  const buildSemanticSelector = (el) => {
     if (!el || !(el instanceof Element)) return null;
     
-    // Try to build a robust structural path using nth-child
+    // Priority 1: Stable ID
+    if (el.id && /^[a-zA-Z][a-zA-Z0-9_-]*$/.test(el.id)) {
+      return `#${CSS.escape(el.id)}`;
+    }
+    
+    // Priority 2: data-testid
+    const testId = el.getAttribute("data-testid");
+    if (testId) return `[data-testid="${CSS.escape(testId)}"]`;
+    
+    // Priority 3: aria-label on interactive elements
+    const ariaLabel = el.getAttribute("aria-label");
+    if (ariaLabel && ariaLabel.length < 60) {
+      const tag = el.tagName.toLowerCase();
+      return `${tag}[aria-label="${CSS.escape(ariaLabel)}"]`;
+    }
+    
+    // Priority 4: href for links (unique enough in most pages)
+    if (el.tagName === "A" && el.href) {
+      try {
+        const path = new URL(el.href).pathname;
+        return `a[href="${CSS.escape(path)}"]`;
+      } catch {}
+    }
+    
+    // Priority 5: Button/link with unique short text
+    const tag = el.tagName.toLowerCase();
+    if ((tag === "button" || tag === "a") && el.textContent) {
+      const txt = el.textContent.trim().replace(/\s+/g, " ").slice(0, 40);
+      if (txt && txt.length >= 2 && txt.length < 40) {
+        // Will use text search fallback instead
+        return null;
+      }
+    }
+    
+    return null;
+  };
+  
+  // Build structural selector (nth-of-type path)
+  const buildStructuralSelector = (el) => {
+    if (!el || !(el instanceof Element)) return null;
+    
     const parts = [];
     let cur = el;
     while (cur && cur instanceof Element && cur !== document.body && cur !== document.documentElement) {
       const tag = cur.tagName.toLowerCase();
       if (!tag) break;
       
-      // Get nth-child index among siblings of same tag
       let index = 1;
       let sibling = cur.previousElementSibling;
       while (sibling) {
@@ -48,20 +90,23 @@
         sibling = sibling.previousElementSibling;
       }
       
-      // Include stable ID if available
       if (cur.id && /^[a-zA-Z][a-zA-Z0-9_-]*$/.test(cur.id)) {
         parts.unshift(`#${CSS.escape(cur.id)}`);
-        break; // ID is unique, no need to go further up
+        break;
       }
       
       parts.unshift(`${tag}:nth-of-type(${index})`);
       cur = cur.parentElement;
       
-      // Limit depth to avoid overly long selectors
       if (parts.length >= 8) break;
     }
     
     return parts.join(" > ") || null;
+  };
+  
+  // Combined: returns best selector (semantic first, then structural)
+  const buildSelector = (el) => {
+    return buildSemanticSelector(el) || buildStructuralSelector(el);
   };
 
   // ----- Text hint (best-effort, safe) -----
@@ -69,8 +114,126 @@
     if (!(el instanceof Element)) return { textHint: null, textContext: null };
     const txt = (el.innerText || el.textContent || "").trim().replace(/\s+/g, " ");
     const hint = txt ? txt.slice(0, 80) : el.tagName.toLowerCase();
-    return { textHint: hint || null, textContext: txt ? txt.slice(0, 240) : null };
+    // Also capture tagName for text-hint search
+    const tagName = el.tagName.toLowerCase();
+    return { 
+      textHint: hint || null, 
+      textContext: txt ? txt.slice(0, 240) : null,
+      tagName: tagName 
+    };
   };
+  
+  // =====================================================
+  // MULTI-STRATEGY ELEMENT LOOKUP (with text fallback)
+  // =====================================================
+  function __pcdFindElementMulti(anchorKey, selector, textHint) {
+    // Strategy 1: data-pcd-anchor attribute (current session)
+    if (anchorKey) {
+      try {
+        const safe = CSS.escape ? CSS.escape(String(anchorKey)) : String(anchorKey);
+        const el = document.querySelector(`[data-pcd-anchor="${safe}"]`);
+        if (el) return { el, method: "anchor" };
+      } catch {}
+    }
+    
+    // Strategy 2: Selector (semantic or structural)
+    if (selector) {
+      try {
+        const el = document.querySelector(selector);
+        if (el) {
+          ensureAnchorStamp(el); // Re-stamp for future lookups
+          return { el, method: "selector" };
+        }
+      } catch {}
+    }
+    
+    // Strategy 3: Text-hint search (buttons, links with matching text)
+    if (textHint && textHint.length >= 3) {
+      const normalized = textHint.toLowerCase().trim();
+      // Search interactive elements first
+      const candidates = document.querySelectorAll("button, a, [role='button'], input[type='submit']");
+      for (const c of candidates) {
+        const cText = (c.textContent || "").trim().replace(/\s+/g, " ").toLowerCase();
+        if (cText === normalized || cText.startsWith(normalized)) {
+          ensureAnchorStamp(c);
+          return { el: c, method: "text-hint" };
+        }
+      }
+      // Broader search: any element containing that text
+      const all = document.querySelectorAll("*");
+      for (const c of all) {
+        if (c.children.length > 3) continue; // Skip containers
+        const cText = (c.textContent || "").trim().replace(/\s+/g, " ").toLowerCase();
+        if (cText === normalized) {
+          ensureAnchorStamp(c);
+          return { el: c, method: "text-hint-broad" };
+        }
+      }
+    }
+    
+    return { el: null, method: null };
+  }
+  
+  // =====================================================
+  // REACQUIRE WITH MUTATION OBSERVER + TIMEOUT RETRY
+  // =====================================================
+  const __pcdPendingReacquire = new Map(); // anchorKey -> { resolve, observer, timeout }
+  
+  function __pcdReacquireElement(anchorKey, selector, textHint, timeoutMs = 3000) {
+    return new Promise((resolve) => {
+      // Try immediately
+      const found = __pcdFindElementMulti(anchorKey, selector, textHint);
+      if (found.el) {
+        resolve(found);
+        return;
+      }
+      
+      // Not found yet - set up MutationObserver to retry
+      const startTime = Date.now();
+      let resolved = false;
+      
+      const checkAndResolve = () => {
+        if (resolved) return;
+        const found = __pcdFindElementMulti(anchorKey, selector, textHint);
+        if (found.el) {
+          resolved = true;
+          cleanup();
+          resolve(found);
+        }
+      };
+      
+      const observer = new MutationObserver(() => {
+        checkAndResolve();
+      });
+      
+      observer.observe(document.body, {
+        childList: true,
+        subtree: true,
+        attributes: false,
+      });
+      
+      // Also poll periodically (catches cases MutationObserver misses)
+      const pollInterval = setInterval(checkAndResolve, 200);
+      
+      // Timeout - give up after timeoutMs
+      const timeout = setTimeout(() => {
+        if (!resolved) {
+          resolved = true;
+          cleanup();
+          resolve({ el: null, method: null });
+        }
+      }, timeoutMs);
+      
+      const cleanup = () => {
+        observer.disconnect();
+        clearInterval(pollInterval);
+        clearTimeout(timeout);
+        __pcdPendingReacquire.delete(anchorKey);
+      };
+      
+      __pcdPendingReacquire.set(anchorKey, { resolve, observer, timeout, cleanup });
+    });
+  }
 
   // ----- Click capture -----
   window.addEventListener(
@@ -282,32 +445,14 @@
   window.addEventListener("scroll", () => placeFocusUI(), true);
   window.addEventListener("resize", () => placeFocusUI());
 
-  function focusAnchor(anchorKey, selector) {
+  function focusAnchor(anchorKey, selector, textHint) {
     clearFocus();
     
-    let el = null;
-    try {
-      // Priority 1: data-pcd-anchor attribute (current format)
-      if (anchorKey) el = document.querySelector(`[data-pcd-anchor="${CSS.escape(anchorKey)}"]`);
-      
-      // Priority 2: Try as native HTML id (for backwards compatibility with old anchor format)
-      if (!el && anchorKey) {
-        try { el = document.getElementById(anchorKey); } catch (_) {}
-      }
-      
-      // Priority 3: Try data-anchor attribute (alternate format some helpers use)
-      if (!el && anchorKey) {
-        try { el = document.querySelector(`[data-anchor="${CSS.escape(anchorKey)}"]`); } catch (_) {}
-      }
-      
-      // Priority 4: Use selector as fallback
-      if (!el && selector) {
-        try { el = document.querySelector(selector); } catch (_) {}
-      }
-    } catch (_) {}
+    // Use multi-strategy lookup
+    const el = __pcdFindByAnchorMulti(anchorKey, selector, textHint);
     
     if (!el) {
-      console.log("[PCD Helper] Could not find element for focus:", { anchorKey, selector });
+      console.log("[PCD Helper] Could not find element for focus:", { anchorKey, selector, textHint });
       return;
     }
     
@@ -346,7 +491,7 @@
 
     if (d.type === "PCD_FOCUS") {
       focusLocked = d.lock === true; // Lock focus when Mother says so
-      focusAnchor(d.anchorKey, d.selector);
+      focusAnchor(d.anchorKey, d.selector, d.textHint);
       return;
     }
 
@@ -390,17 +535,19 @@
       return;
     }
 
-    // Batch rect request - get rects for multiple anchors at once
+    // Batch rect request - get rects for multiple anchors at once (with text-hint fallback)
     if (d.type === "PCD_GET_RECTS") {
-      const { requestId, anchors } = d; // anchors = [{ anchorKey, selector }, ...]
+      const { requestId, anchors } = d; // anchors = [{ anchorKey, selector, textHint }, ...]
       const rects = {};
       
       for (const a of (anchors || [])) {
         const anchorKey = a?.anchorKey;
         const selector = a?.selector;
+        const textHint = a?.textHint;
         if (!anchorKey) continue;
         
-        const el = __pcdFindByAnchorMulti(anchorKey, selector);
+        // Use multi-strategy lookup with text-hint fallback
+        const el = __pcdFindByAnchorMulti(anchorKey, selector, textHint);
         if (el) {
           const r = el.getBoundingClientRect();
           rects[anchorKey] = { left: r.left, top: r.top, width: r.width, height: r.height };
@@ -483,27 +630,10 @@
     entry.badge.style.display = "none";
   }
 
-  function __pcdFindByAnchorMulti(anchorKey, selector) {
-    // First try by anchor attribute
-    if (anchorKey) {
-      try {
-        const safe = (window.CSS && CSS.escape) ? CSS.escape(String(anchorKey)) : String(anchorKey);
-        const el = document.querySelector(`[data-pcd-anchor="${safe}"]`);
-        if (el) return el;
-      } catch {}
-    }
-    // Fallback to selector (after page reload, anchor attributes are gone)
-    if (selector) {
-      try {
-        const el = document.querySelector(selector);
-        if (el) {
-          // Re-stamp the anchor so future lookups work faster
-          ensureAnchorStamp(el);
-          return el;
-        }
-      } catch {}
-    }
-    return null;
+  // Legacy wrapper - uses new multi-strategy lookup
+  function __pcdFindByAnchorMulti(anchorKey, selector, textHint) {
+    const result = __pcdFindElementMulti(anchorKey, selector, textHint);
+    return result.el;
   }
 
   function __pcdUpdateAllHighlights() {
@@ -512,8 +642,8 @@
       const entry = __pcdHighlights.items.get(anchorKey);
       if (!entry) continue;
 
-      // Use both anchorKey and selector to find element
-      const el = __pcdFindByAnchorMulti(anchorKey, itemData?.selector);
+      // Use multi-strategy lookup (anchorKey, selector, textHint)
+      const el = __pcdFindByAnchorMulti(anchorKey, itemData?.selector, itemData?.textHint);
       if (!el) {
         __pcdHideHighlight(anchorKey);
         continue;
@@ -555,8 +685,11 @@
     __pcdHighlights.raf = null;
   }
 
-  function __pcdSetHighlights(items) {
-    console.log("[PCD Helper] __pcdSetHighlights called with", items?.length || 0, "items:", items);
+  // =====================================================
+  // SET HIGHLIGHTS WITH ASYNC REACQUISITION
+  // =====================================================
+  async function __pcdSetHighlights(items) {
+    console.log("[PCD Helper] __pcdSetHighlights called with", items?.length || 0, "items");
     const nextKeys = new Set();
 
     for (const it of Array.isArray(items) ? items : []) {
@@ -567,15 +700,32 @@
       }
       nextKeys.add(anchorKey);
 
-      // Store item data (including selector) for fallback element lookup
-      __pcdHighlights.itemData.set(anchorKey, { selector: it?.selector || null, label: it?.label || "" });
+      // Store item data (including selector AND textHint) for fallback lookup
+      __pcdHighlights.itemData.set(anchorKey, { 
+        selector: it?.selector || null, 
+        label: it?.label || "",
+        textHint: it?.textHint || null,
+      });
 
       const entry = __pcdEnsureHighlightUI(anchorKey);
       entry.badge.textContent = it?.label ? String(it.label) : "";
       
-      // Immediately try to find the element and log results
-      const el = __pcdFindByAnchorMulti(anchorKey, it?.selector);
-      console.log("[PCD Helper] Element lookup for", anchorKey, "selector:", it?.selector, "found:", !!el, el);
+      // Try immediate lookup
+      const found = __pcdFindElementMulti(anchorKey, it?.selector, it?.textHint);
+      if (found.el) {
+        console.log("[PCD Helper] Immediately found element for", anchorKey, "via", found.method);
+      } else {
+        // Not found - start async reacquisition with MutationObserver
+        console.log("[PCD Helper] Element not found for", anchorKey, "- starting reacquisition");
+        __pcdReacquireElement(anchorKey, it?.selector, it?.textHint, 3000)
+          .then((result) => {
+            if (result.el) {
+              console.log("[PCD Helper] Reacquired element for", anchorKey, "via", result.method);
+            } else {
+              console.log("[PCD Helper] Failed to reacquire element for", anchorKey);
+            }
+          });
+      }
     }
 
     // Hide highlights not in the new set

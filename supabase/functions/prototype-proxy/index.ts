@@ -84,9 +84,43 @@ function rewriteUrls(html: string, prototypeUrl: string, proxyBaseUrl: string): 
     return key;
   };
 
-  // Selector building (structural path - works after page reload)
-  // IMPORTANT: Must build a selector that works WITHOUT data-pcd-anchor attribute
-  const buildSelector = (el) => {
+  // =====================================================
+  // MULTI-STRATEGY SELECTOR BUILDING (BugHerd-grade)
+  // =====================================================
+  
+  // Build a semantic selector (ID, data-testid, aria-label, href)
+  const buildSemanticSelector = (el) => {
+    if (!el || !(el instanceof Element)) return null;
+    
+    // Priority 1: Stable ID
+    if (el.id && /^[a-zA-Z][a-zA-Z0-9_-]*$/.test(el.id)) {
+      return \`#\${CSS.escape(el.id)}\`;
+    }
+    
+    // Priority 2: data-testid
+    const testId = el.getAttribute("data-testid");
+    if (testId) return \`[data-testid="\${CSS.escape(testId)}"]\`;
+    
+    // Priority 3: aria-label on interactive elements
+    const ariaLabel = el.getAttribute("aria-label");
+    if (ariaLabel && ariaLabel.length < 60) {
+      const tag = el.tagName.toLowerCase();
+      return \`\${tag}[aria-label="\${CSS.escape(ariaLabel)}"]\`;
+    }
+    
+    // Priority 4: href for links
+    if (el.tagName === "A" && el.href) {
+      try {
+        const path = new URL(el.href).pathname;
+        return \`a[href="\${CSS.escape(path)}"]\`;
+      } catch {}
+    }
+    
+    return null;
+  };
+  
+  // Build structural selector (nth-of-type path)
+  const buildStructuralSelector = (el) => {
     if (!el || !(el instanceof Element)) return null;
     
     const parts = [];
@@ -95,7 +129,6 @@ function rewriteUrls(html: string, prototypeUrl: string, proxyBaseUrl: string): 
       const tag = cur.tagName.toLowerCase();
       if (!tag) break;
       
-      // Get nth-of-type index among siblings of same tag
       let index = 1;
       let sibling = cur.previousElementSibling;
       while (sibling) {
@@ -103,7 +136,6 @@ function rewriteUrls(html: string, prototypeUrl: string, proxyBaseUrl: string): 
         sibling = sibling.previousElementSibling;
       }
       
-      // Use stable ID if available
       if (cur.id && /^[a-zA-Z][a-zA-Z0-9_-]*$/.test(cur.id)) {
         parts.unshift(\`#\${CSS.escape(cur.id)}\`);
         break;
@@ -116,6 +148,11 @@ function rewriteUrls(html: string, prototypeUrl: string, proxyBaseUrl: string): 
     }
     
     return parts.join(" > ") || null;
+  };
+  
+  // Combined: returns best selector (semantic first, then structural)
+  const buildSelector = (el) => {
+    return buildSemanticSelector(el) || buildStructuralSelector(el);
   };
 
   // Text hint
