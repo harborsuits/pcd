@@ -376,6 +376,16 @@ export function PrototypeViewer({
           break;
         }
 
+        case "PCD_RECTS": {
+          // Batch rect response - update rectCache with all rects
+          const rects = data.rects as Record<string, { left: number; top: number; width: number; height: number } | null>;
+          console.log("[Bridge] Received PCD_RECTS:", Object.keys(rects || {}).length, "rects");
+          if (rects) {
+            setRectCache(prev => ({ ...prev, ...rects }));
+          }
+          break;
+        }
+
         case "PCD_HOVER": {
           // Only care when user is trying to place/re-pin
           if (!isAddingComment && !repinTargetId) return;
@@ -571,24 +581,44 @@ export function PrototypeViewer({
       }));
   }, [pageComments]);
 
-  // Send persistent highlights to iframe whenever active comments change OR bridge becomes ready
-  // The key insight: when navigating pages, iframeKey changes -> bridgeReady resets to false
-  // -> when helper script loads and responds to ping, bridgeReady becomes true again
-  // At that point we MUST re-send highlights for the current page
+  // SYNC PINS routine: runs on page change and bridge ready
+  // 1. Re-send highlights list for current page
+  // 2. Request fresh rects for all anchors (batch request)
+  // This is what makes pins "reappear" after navigating back to a page
   useEffect(() => {
     if (!bridgeReady || !iframeRef.current?.contentWindow) return;
 
     // Wait for iframe helper script to fully initialize after page load
-    // 300ms gives enough time for the helper script to inject data-pcd-anchor attributes
+    // 300ms gives enough time for the helper script to settle + re-stamp elements
     const timer = setTimeout(() => {
       try {
-        iframeRef.current?.contentWindow?.postMessage(
+        const win = iframeRef.current?.contentWindow;
+        if (!win) return;
+        
+        // Step 1: Send highlight items
+        win.postMessage(
           { __pcd: true, type: "PCD_HIGHLIGHTS_SET", items: activeHighlightItems },
           "*"
         );
         console.log("[Bridge] Sent PCD_HIGHLIGHTS_SET:", activeHighlightItems.length, "items for page:", currentPageKey);
+        
+        // Step 2: Request batch rects for all anchored comments on this page
+        // This populates rectCache so pins actually appear
+        const anchors = activeHighlightItems.map(item => ({
+          anchorKey: item.anchorKey,
+          selector: item.selector,
+        }));
+        
+        if (anchors.length > 0) {
+          const requestId = `batch-${Date.now()}`;
+          win.postMessage(
+            { __pcd: true, type: "PCD_GET_RECTS", requestId, anchors },
+            "*"
+          );
+          console.log("[Bridge] Sent PCD_GET_RECTS for", anchors.length, "anchors");
+        }
       } catch (e) {
-        console.warn("[Bridge] Failed to send highlights:", e);
+        console.warn("[Bridge] Failed to sync pins:", e);
       }
     }, 300);
     
