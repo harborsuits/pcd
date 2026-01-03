@@ -68,6 +68,7 @@ interface IframeClickMessage {
   id: string | null;
   anchorKey: string | null;
   rect: { left: number; top: number; width: number; height: number };
+  click?: { x: number; y: number };  // Actual click point in viewport coords
   scroll: { x: number; y: number };
   viewport: { w: number; h: number };
   textOffset?: number | null;
@@ -672,10 +673,9 @@ export function PrototypeViewer({
     
     const overlayRect = overlayEl.getBoundingClientRect();
     
-    // click.rect is iframe-viewport coords (0,0 = top-left of iframe content)
-    // Since overlay is absolute inset-0 over iframe, these ARE overlay coords
-    const pixelX = click.rect.left + click.rect.width / 2;
-    const pixelY = click.rect.top + click.rect.height / 2;
+    // Use actual click point if available, fallback to element center
+    const pixelX = click.click?.x ?? (click.rect.left + click.rect.width / 2);
+    const pixelY = click.click?.y ?? (click.rect.top + click.rect.height / 2);
     
     // Store NORMALIZED (0-1) coords so they survive layout changes
     const nx = pixelX / overlayRect.width;

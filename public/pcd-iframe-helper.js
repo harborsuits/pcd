@@ -95,6 +95,7 @@
         id: t.id || null,
         anchorKey,
         rect: { left: rect.left, top: rect.top, width: rect.width, height: rect.height },
+        click: { x: e.clientX, y: e.clientY },  // Actual click point in viewport coords
         viewport: { w: window.innerWidth, h: window.innerHeight },
         scroll: { x: window.scrollX, y: window.scrollY },
         textHint,
