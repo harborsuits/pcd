@@ -55,63 +55,149 @@ function rewriteUrls(html: string, prototypeUrl: string, proxyBaseUrl: string): 
     ` href=$1${proxyBaseUrl}$2$1`
   );
   
-  // Script to enable parent-to-iframe communication for pin anchoring
+  // Full PCD helper script for click capture, pin mode, and element queries
   const helperScript = `
 <script>
 (function() {
-  // Pin anchoring helper - enables same-origin DOM access for parent
+  // Prevent double init
+  if (window.__PCD_HELPER_INIT__) return;
+  window.__PCD_HELPER_INIT__ = true;
   window.__PCD_PROTOTYPE_READY = true;
   window.__PCD_PROTOTYPE_ORIGIN = "${prototypeOrigin}";
-  
-  // Notify parent that prototype is ready
-  if (window.parent !== window) {
-    window.parent.postMessage({ type: 'PCD_PROTOTYPE_READY', origin: "${prototypeOrigin}" }, '*');
-  }
-  
-  // Listen for pin queries from parent
-  window.addEventListener('message', function(e) {
-    if (e.data?.type === 'PCD_GET_ELEMENT_RECT') {
-      const { selector, id, requestId } = e.data;
+
+  let pinModeActive = false;
+  let focusLocked = false;
+
+  const send = (payload) => {
+    try {
+      window.parent?.postMessage({ __pcd: true, ...payload }, "*");
+    } catch (e) {}
+  };
+
+  // Stable anchor stamping
+  const ensureAnchorStamp = (el) => {
+    if (!(el instanceof Element)) return null;
+    const existing = el.getAttribute("data-pcd-anchor");
+    if (existing) return existing;
+    const key = "pcd_" + Math.random().toString(36).slice(2) + Date.now().toString(36);
+    el.setAttribute("data-pcd-anchor", key);
+    return key;
+  };
+
+  // Selector building
+  const buildSelector = (el, anchorKey) => {
+    if (!el || !(el instanceof Element)) return null;
+    if (anchorKey) return \`[data-pcd-anchor="\${anchorKey}"]\`;
+    if (el.id) return \`#\${CSS.escape(el.id)}\`;
+    const parts = [];
+    let cur = el;
+    for (let i = 0; i < 4 && cur && cur instanceof Element; i++) {
+      const tag = cur.tagName.toLowerCase();
+      if (!tag) break;
+      const cls = (cur.className && typeof cur.className === "string")
+        ? cur.className.trim().split(/\\s+/).slice(0, 2).map(c => \`.\${CSS.escape(c)}\`).join("")
+        : "";
+      parts.unshift(\`\${tag}\${cls}\`);
+      cur = cur.parentElement;
+    }
+    return parts.join(" > ") || null;
+  };
+
+  // Text hint
+  const getTextContext = (el) => {
+    if (!(el instanceof Element)) return { textHint: null, textContext: null };
+    const txt = (el.innerText || el.textContent || "").trim().replace(/\\s+/g, " ");
+    const hint = txt ? txt.slice(0, 80) : el.tagName.toLowerCase();
+    return { textHint: hint || null, textContext: txt ? txt.slice(0, 240) : null };
+  };
+
+  // Click capture
+  window.addEventListener("click", (e) => {
+    const t = e.target;
+    if (!(t instanceof Element)) return;
+
+    if (focusLocked) {
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
+
+    if (pinModeActive) {
+      e.preventDefault();
+      e.stopPropagation();
+      focusLocked = true;
+    }
+
+    const anchorKey = ensureAnchorStamp(t);
+    const rect = t.getBoundingClientRect();
+    const selector = buildSelector(t, anchorKey);
+    const { textHint, textContext } = getTextContext(t);
+
+    send({
+      type: "PCD_CLICK",
+      selector,
+      id: t.id || null,
+      anchorKey,
+      rect: { left: rect.left, top: rect.top, width: rect.width, height: rect.height },
+      click: { x: e.clientX, y: e.clientY },
+      viewport: { w: window.innerWidth, h: window.innerHeight },
+      scroll: { x: window.scrollX, y: window.scrollY },
+      textHint,
+      textContext,
+      ts: Date.now(),
+    });
+  }, true);
+
+  // Message handling from parent
+  window.addEventListener("message", (e) => {
+    const data = e.data;
+    if (!data) return;
+
+    if (data.type === "PCD_MODE") {
+      pinModeActive = !!data.pinMode;
+      document.body.style.cursor = pinModeActive ? "crosshair" : "";
+      if (!pinModeActive) focusLocked = false;
+    }
+
+    if (data.type === "PCD_CLEAR_FOCUS") {
+      focusLocked = false;
+    }
+
+    if (data.type === "PCD_PING") {
+      send({ type: "PCD_PONG", ts: Date.now() });
+    }
+
+    if (data.type === "PCD_GET_RECT" || data.type === "PCD_GET_ELEMENT_RECT") {
+      const { selector, anchorKey, requestId } = data;
       let rect = null;
       try {
-        const el = selector ? document.querySelector(selector) : (id ? document.getElementById(id) : null);
+        const sel = anchorKey ? \`[data-pcd-anchor="\${anchorKey}"]\` : selector;
+        const el = sel ? document.querySelector(sel) : null;
         if (el) {
           const r = el.getBoundingClientRect();
-          rect = { x: r.x, y: r.y, width: r.width, height: r.height, top: r.top, left: r.left };
+          rect = { left: r.left, top: r.top, width: r.width, height: r.height };
         }
-      } catch (err) {
-        console.warn('[PCD] Element query error:', err);
-      }
-      e.source?.postMessage({ type: 'PCD_ELEMENT_RECT', requestId, rect }, '*');
-    }
-    
-    if (e.data?.type === 'PCD_GET_SCROLL') {
-      const requestId = e.data.requestId;
-      e.source?.postMessage({ 
-        type: 'PCD_SCROLL', 
-        requestId, 
-        scrollX: window.scrollX, 
-        scrollY: window.scrollY,
-        innerWidth: window.innerWidth,
-        innerHeight: window.innerHeight
-      }, '*');
+      } catch (err) {}
+      send({ type: "PCD_RECT", requestId, rect, ts: Date.now() });
     }
   });
-  
-  // Report scroll changes to parent
+
+  // Scroll reporting
   let scrollTimeout;
-  window.addEventListener('scroll', function() {
+  window.addEventListener("scroll", () => {
     clearTimeout(scrollTimeout);
-    scrollTimeout = setTimeout(function() {
-      if (window.parent !== window) {
-        window.parent.postMessage({ 
-          type: 'PCD_SCROLL_UPDATE', 
-          scrollX: window.scrollX, 
-          scrollY: window.scrollY 
-        }, '*');
-      }
+    scrollTimeout = setTimeout(() => {
+      send({
+        type: "PCD_SCROLL",
+        viewport: { w: window.innerWidth, h: window.innerHeight },
+        scroll: { x: window.scrollX, y: window.scrollY },
+        ts: Date.now(),
+      });
     }, 50);
   }, { passive: true });
+
+  // Notify parent ready
+  send({ type: "PCD_IFRAME_READY", url: location.href, viewport: { w: window.innerWidth, h: window.innerHeight }, ts: Date.now() });
 })();
 </script>
 `;
