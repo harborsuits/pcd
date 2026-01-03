@@ -370,6 +370,30 @@
         rect: { left: r.left, top: r.top, width: r.width, height: r.height },
         ts: Date.now(),
       });
+      return;
+    }
+
+    // Batch rect request - get rects for multiple anchors at once
+    if (d.type === "PCD_GET_RECTS") {
+      const { requestId, anchors } = d; // anchors = [{ anchorKey, selector }, ...]
+      const rects = {};
+      
+      for (const a of (anchors || [])) {
+        const anchorKey = a?.anchorKey;
+        const selector = a?.selector;
+        if (!anchorKey) continue;
+        
+        const el = __pcdFindByAnchorMulti(anchorKey, selector);
+        if (el) {
+          const r = el.getBoundingClientRect();
+          rects[anchorKey] = { left: r.left, top: r.top, width: r.width, height: r.height };
+        } else {
+          rects[anchorKey] = null;
+        }
+      }
+      
+      send({ type: "PCD_RECTS", requestId, rects, ts: Date.now() });
+      return;
     }
     // ================================
     // PERSISTENT MULTI-COMMENT BORDERS
@@ -551,13 +575,58 @@
     else __pcdStopHighlightLoopIfEmpty();
   }
 
+  // ----- SPA Navigation Detection -----
+  // Many sites are SPAs that use pushState/replaceState/popstate for navigation
+  // We need to detect these and emit PCD_PAGE_CHANGE so the portal can re-sync pins
+  let lastUrl = location.href;
+
+  function checkUrlChange() {
+    if (location.href !== lastUrl) {
+      const oldUrl = lastUrl;
+      lastUrl = location.href;
+      console.log("[PCD Helper] URL changed:", oldUrl, "→", location.href);
+      send({
+        type: "PCD_PAGE_CHANGE",
+        url: location.href,
+        ts: Date.now(),
+      });
+    }
+  }
+
+  // Intercept history methods
+  const origPushState = history.pushState;
+  history.pushState = function(...args) {
+    origPushState.apply(this, args);
+    checkUrlChange();
+  };
+
+  const origReplaceState = history.replaceState;
+  history.replaceState = function(...args) {
+    origReplaceState.apply(this, args);
+    checkUrlChange();
+  };
+
+  // Listen for popstate (back/forward buttons)
+  window.addEventListener("popstate", () => {
+    checkUrlChange();
+  });
+
+  // Listen for hashchange
+  window.addEventListener("hashchange", () => {
+    checkUrlChange();
+  });
+
+  // Fallback: poll for URL changes every 500ms (catches edge cases)
+  setInterval(checkUrlChange, 500);
+
   // ----- Boot signal -----
   send({
     type: "PCD_IFRAME_READY",
+    url: location.href,
     href: location.href,
     viewport: { w: window.innerWidth, h: window.innerHeight },
     ts: Date.now(),
   });
 
-  console.log("[PCD Helper] Prototype helper initialized with multi-highlight support");
+  console.log("[PCD Helper] Prototype helper initialized with SPA detection + multi-highlight support");
 })();
