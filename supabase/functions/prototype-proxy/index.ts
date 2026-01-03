@@ -84,22 +84,37 @@ function rewriteUrls(html: string, prototypeUrl: string, proxyBaseUrl: string): 
     return key;
   };
 
-  // Selector building
-  const buildSelector = (el, anchorKey) => {
+  // Selector building (structural path - works after page reload)
+  // IMPORTANT: Must build a selector that works WITHOUT data-pcd-anchor attribute
+  const buildSelector = (el) => {
     if (!el || !(el instanceof Element)) return null;
-    if (anchorKey) return \`[data-pcd-anchor="\${anchorKey}"]\`;
-    if (el.id) return \`#\${CSS.escape(el.id)}\`;
+    
     const parts = [];
     let cur = el;
-    for (let i = 0; i < 4 && cur && cur instanceof Element; i++) {
+    while (cur && cur instanceof Element && cur !== document.body && cur !== document.documentElement) {
       const tag = cur.tagName.toLowerCase();
       if (!tag) break;
-      const cls = (cur.className && typeof cur.className === "string")
-        ? cur.className.trim().split(/\\s+/).slice(0, 2).map(c => \`.\${CSS.escape(c)}\`).join("")
-        : "";
-      parts.unshift(\`\${tag}\${cls}\`);
+      
+      // Get nth-of-type index among siblings of same tag
+      let index = 1;
+      let sibling = cur.previousElementSibling;
+      while (sibling) {
+        if (sibling.tagName.toLowerCase() === tag) index++;
+        sibling = sibling.previousElementSibling;
+      }
+      
+      // Use stable ID if available
+      if (cur.id && /^[a-zA-Z][a-zA-Z0-9_-]*$/.test(cur.id)) {
+        parts.unshift(\`#\${CSS.escape(cur.id)}\`);
+        break;
+      }
+      
+      parts.unshift(\`\${tag}:nth-of-type(\${index})\`);
       cur = cur.parentElement;
+      
+      if (parts.length >= 8) break;
     }
+    
     return parts.join(" > ") || null;
   };
 
@@ -130,7 +145,7 @@ function rewriteUrls(html: string, prototypeUrl: string, proxyBaseUrl: string): 
 
     const anchorKey = ensureAnchorStamp(t);
     const rect = t.getBoundingClientRect();
-    const selector = buildSelector(t, anchorKey);
+    const selector = buildSelector(t);
     const { textHint, textContext } = getTextContext(t);
 
     send({
