@@ -163,6 +163,66 @@ function rewriteUrls(html: string, prototypeUrl: string, proxyBaseUrl: string): 
     return { textHint: hint || null, textContext: txt ? txt.slice(0, 240) : null };
   };
 
+  // =====================================================
+  // MULTI-STRATEGY ELEMENT FINDING (BugHerd-grade reacquisition)
+  // =====================================================
+  const __pcdFindElementMulti = (anchorKey, selector, textHint) => {
+    // Strategy 1: Try data-pcd-anchor if still present (fast path for same session)
+    if (anchorKey) {
+      try {
+        const el = document.querySelector('[data-pcd-anchor="' + anchorKey + '"]');
+        if (el) {
+          return { el, method: "anchor-attr" };
+        }
+      } catch {}
+    }
+    
+    // Strategy 2: Try semantic/structural selector
+    if (selector && !selector.startsWith("[data-pcd-anchor=")) {
+      try {
+        const el = document.querySelector(selector);
+        if (el) {
+          // Re-stamp with anchor for future fast lookups
+          ensureAnchorStamp(el);
+          return { el, method: "selector" };
+        }
+      } catch {}
+    }
+    
+    // Strategy 3: Text hint search (last resort)
+    if (textHint && textHint.length >= 3 && textHint.length < 80) {
+      const normalized = textHint.trim().replace(/\\s+/g, " ").toLowerCase();
+      const clickables = document.querySelectorAll("a, button, [role=button], input[type=submit]");
+      for (const c of clickables) {
+        const cText = (c.textContent || "").trim().replace(/\\s+/g, " ").toLowerCase();
+        if (cText === normalized || cText.includes(normalized)) {
+          ensureAnchorStamp(c);
+          return { el: c, method: "text-hint" };
+        }
+      }
+      // Broader search
+      const all = document.querySelectorAll("*");
+      for (const c of all) {
+        if (c.children.length > 3) continue;
+        const cText = (c.textContent || "").trim().replace(/\\s+/g, " ").toLowerCase();
+        if (cText === normalized) {
+          ensureAnchorStamp(c);
+          return { el: c, method: "text-hint-broad" };
+        }
+      }
+    }
+    
+    return { el: null, method: null };
+  };
+  
+  // Get rect for an element using multi-strategy
+  const __pcdGetRectMulti = (anchorKey, selector, textHint) => {
+    const { el, method } = __pcdFindElementMulti(anchorKey, selector, textHint);
+    if (!el) return null;
+    const r = el.getBoundingClientRect();
+    return { left: r.left, top: r.top, width: r.width, height: r.height };
+  };
+
   // Click capture
   window.addEventListener("click", (e) => {
     const t = e.target;
@@ -219,18 +279,43 @@ function rewriteUrls(html: string, prototypeUrl: string, proxyBaseUrl: string): 
       send({ type: "PCD_PONG", ts: Date.now() });
     }
 
+    // Single rect request - uses multi-strategy lookup
     if (data.type === "PCD_GET_RECT" || data.type === "PCD_GET_ELEMENT_RECT") {
-      const { selector, anchorKey, requestId } = data;
-      let rect = null;
-      try {
-        const sel = anchorKey ? \`[data-pcd-anchor="\${anchorKey}"]\` : selector;
-        const el = sel ? document.querySelector(sel) : null;
-        if (el) {
-          const r = el.getBoundingClientRect();
-          rect = { left: r.left, top: r.top, width: r.width, height: r.height };
-        }
-      } catch (err) {}
+      const { selector, anchorKey, textHint, requestId } = data;
+      const rect = __pcdGetRectMulti(anchorKey, selector, textHint);
       send({ type: "PCD_RECT", requestId, rect, ts: Date.now() });
+    }
+    
+    // Batch rect request - for syncing all pins on page
+    if (data.type === "PCD_GET_RECTS") {
+      const { requestId, anchors } = data;
+      const rects = {};
+      for (const a of (anchors || [])) {
+        const rect = __pcdGetRectMulti(a.anchorKey, a.selector, a.textHint);
+        // Use comment ID as key (or fallback to anchorKey/selector)
+        const key = a.id || a.anchorKey || a.selector;
+        rects[key] = rect;
+      }
+      send({ type: "PCD_RECTS", requestId, rects, ts: Date.now() });
+    }
+    
+    // Focus/highlight a specific element
+    if (data.type === "PCD_FOCUS") {
+      const { anchorKey, selector, textHint } = data;
+      const { el } = __pcdFindElementMulti(anchorKey, selector, textHint);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        // Flash highlight effect
+        const orig = el.style.outline;
+        el.style.outline = "3px solid #00d4ff";
+        setTimeout(() => { el.style.outline = orig; }, 1500);
+      }
+    }
+    
+    // Highlight markers (pins) for open comments
+    if (data.type === "PCD_HIGHLIGHTS_SET") {
+      // This is handled by the overlay system in public/pcd-iframe-helper.js
+      // The proxy just ensures the message format is compatible
     }
   });
 
