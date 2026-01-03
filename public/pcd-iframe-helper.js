@@ -515,11 +515,15 @@
   }
 
   function __pcdSetHighlights(items) {
+    console.log("[PCD Helper] __pcdSetHighlights called with", items?.length || 0, "items:", items);
     const nextKeys = new Set();
 
     for (const it of Array.isArray(items) ? items : []) {
       const anchorKey = it?.anchorKey;
-      if (!anchorKey) continue;
+      if (!anchorKey) {
+        console.log("[PCD Helper] Skipping item with no anchorKey:", it);
+        continue;
+      }
       nextKeys.add(anchorKey);
 
       // Store item data (including selector) for fallback element lookup
@@ -527,6 +531,10 @@
 
       const entry = __pcdEnsureHighlightUI(anchorKey);
       entry.badge.textContent = it?.label ? String(it.label) : "";
+      
+      // Immediately try to find the element and log results
+      const el = __pcdFindByAnchorMulti(anchorKey, it?.selector);
+      console.log("[PCD Helper] Element lookup for", anchorKey, "selector:", it?.selector, "found:", !!el, el);
     }
 
     // Hide highlights not in the new set
@@ -537,6 +545,7 @@
     }
 
     __pcdHighlights.activeKeys = nextKeys;
+    console.log("[PCD Helper] Active keys now:", Array.from(nextKeys));
 
     if (__pcdHighlights.activeKeys.size > 0) __pcdStartHighlightLoop();
     else __pcdStopHighlightLoopIfEmpty();
