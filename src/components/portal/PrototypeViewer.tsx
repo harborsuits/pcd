@@ -591,7 +591,7 @@ export function PrototypeViewer({
     };
   }, []);
 
-  // Calculate pin position - uses stored pin_x/pin_y (actual click point) when available
+  // Calculate pin position - uses anchor element's current position + click offset within element
   const getPinPosition = useCallback((comment: PrototypeComment): PinPositionResult => {
     if (!bridgeReady) {
       return { kind: 'no-bridge' };
@@ -619,19 +619,20 @@ export function PrototypeViewer({
     const offsetX = iframeRect.left - overlayRect.left;
     const offsetY = iframeRect.top - overlayRect.top;
     
-    // Use stored pin_x/pin_y (percentage of viewport at save time) if available
-    // These represent the actual click point, not element center
-    // Fallback to element center for legacy pins without pin_x/pin_y
+    // Pin position strategy:
+    // - We use the element's CURRENT rect (which updates as user scrolls via rectCache refresh)
+    // - For pins with x_pct/y_pct, we calculate offset within the element
+    // - This way, pins stay anchored to their element as the page scrolls
     let pinCenterX: number;
     let pinCenterY: number;
     
-    if (comment.pin_x != null && comment.pin_y != null) {
-      // pin_x/pin_y are percentages (0-100) of the viewport
-      // Convert to current iframe viewport pixels
-      pinCenterX = (comment.pin_x / 100) * viewportW;
-      pinCenterY = (comment.pin_y / 100) * viewportH;
+    if (comment.x_pct != null && comment.y_pct != null) {
+      // x_pct/y_pct are percentages within the element (0-100)
+      // Use element's current rect + offset within element
+      pinCenterX = rect.left + (comment.x_pct / 100) * rect.width;
+      pinCenterY = rect.top + (comment.y_pct / 100) * rect.height;
     } else {
-      // Fallback: use element center for legacy pins
+      // Fallback: use element center
       pinCenterX = rect.left + rect.width / 2;
       pinCenterY = rect.top + rect.height / 2;
     }
@@ -715,8 +716,9 @@ export function PrototypeViewer({
       // Use anchorKey (the stable data-pcd-anchor stamp) for anchor_id
       anchor_id: click.anchorKey ?? click.id,
       anchor_selector: click.selector,
-      x_pct: ((click.click?.x ?? (click.rect.left + click.rect.width / 2)) / (click.viewport?.w ?? window.innerWidth)) * 100,
-      y_pct: ((click.click?.y ?? (click.rect.top + click.rect.height / 2)) / (click.viewport?.h ?? window.innerHeight)) * 100,
+      // x_pct/y_pct: percentage WITHIN the element (so pin stays anchored as element moves)
+      x_pct: ((click.click?.x ?? (click.rect.left + click.rect.width / 2)) - click.rect.left) / click.rect.width * 100,
+      y_pct: ((click.click?.y ?? (click.rect.top + click.rect.height / 2)) - click.rect.top) / click.rect.height * 100,
       text_hint: click.textHint ?? null,
       text_offset: click.textOffset ?? null,
       text_context: click.textContext ?? null,
