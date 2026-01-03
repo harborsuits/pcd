@@ -143,8 +143,8 @@ export function PrototypeViewer({
   onRefresh,
 }: PrototypeViewerProps) {
   const [isAddingComment, setIsAddingComment] = useState(false);
-  const [pendingPin, setPendingPin] = useState<{ anchorData: CommentAnchorData; pixelPos: { x: number; y: number } } | null>(null);
-  const [debugDot, setDebugDot] = useState<{ x: number; y: number } | null>(null);
+  // Store normalized (0-1) coords so pins survive layout changes (sidebar open/close)
+  const [pendingPin, setPendingPin] = useState<{ anchorData: CommentAnchorData; normPos: { nx: number; ny: number } } | null>(null);
   const [commentText, setCommentText] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -672,18 +672,22 @@ export function PrototypeViewer({
     
     const overlayRect = overlayEl.getBoundingClientRect();
     
-    // Simple pixel calculation - no dx/dy correction
-    // click.rect is iframe-viewport coords, overlay is absolute inset-0 over iframe
+    // click.rect is iframe-viewport coords (0,0 = top-left of iframe content)
+    // Since overlay is absolute inset-0 over iframe, these ARE overlay coords
     const pixelX = click.rect.left + click.rect.width / 2;
     const pixelY = click.rect.top + click.rect.height / 2;
     
-    // Convert to % for DB persistence (relative to overlay)
-    const pin_x = (pixelX / overlayRect.width) * 100;
-    const pin_y = (pixelY / overlayRect.height) * 100;
+    // Store NORMALIZED (0-1) coords so they survive layout changes
+    const nx = pixelX / overlayRect.width;
+    const ny = pixelY / overlayRect.height;
+    
+    // Convert to % for DB persistence
+    const pin_x = nx * 100;
+    const pin_y = ny * 100;
     
     console.log('[PCD Pin] Position:', { 
       rectLeft: click.rect.left, rectTop: click.rect.top,
-      pixelX, pixelY, 
+      pixelX, pixelY, nx, ny,
       pin_x, pin_y,
       overlayW: overlayRect.width, overlayH: overlayRect.height,
     });
@@ -738,7 +742,7 @@ export function PrototypeViewer({
 
     // Handle new comment
     if (!isAddingComment) return;
-    setPendingPin({ anchorData, pixelPos: { x: pixelX, y: pixelY } });
+    setPendingPin({ anchorData, normPos: { nx, ny } });
   }, [prototype.url, isAddingComment, repinTargetId, onRepinComment, refreshRects]);
 
   // Listen for iframe clicks via custom event
@@ -1137,31 +1141,24 @@ export function PrototypeViewer({
             {/* Pins - rendered in overlay using rectCache positions */}
             {unresolvedComments.map((comment, idx) => renderPin(comment, idx))}
 
-            {/* Pending pin indicator - use PIXEL position for accuracy */}
-            {pendingPin && (
-              <div
-                className="absolute w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center animate-pulse shadow-lg pointer-events-none"
-                style={{ 
-                  left: pendingPin.pixelPos.x, 
-                  top: pendingPin.pixelPos.y,
-                  transform: 'translate(-50%, -50%)'
-                }}
-              >
-                <MessageCircle className="h-3 w-3" />
-              </div>
-            )}
-
-            {/* Debug dot - red dot to verify exact click position */}
-            {debugDot && (
-              <div
-                className="absolute w-3 h-3 rounded-full bg-red-500 border-2 border-white pointer-events-none z-[999999]"
-                style={{ 
-                  left: debugDot.x, 
-                  top: debugDot.y,
-                  transform: 'translate(-50%, -50%)'
-                }}
-              />
-            )}
+            {/* Pending pin indicator - compute pixels at render time from normalized coords */}
+            {pendingPin && overlayRef.current && (() => {
+              const rect = overlayRef.current!.getBoundingClientRect();
+              const x = pendingPin.normPos.nx * rect.width;
+              const y = pendingPin.normPos.ny * rect.height;
+              return (
+                <div
+                  className="absolute w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center animate-pulse shadow-lg pointer-events-none"
+                  style={{ 
+                    left: x, 
+                    top: y,
+                    transform: 'translate(-50%, -50%)'
+                  }}
+                >
+                  <MessageCircle className="h-3 w-3" />
+                </div>
+              );
+            })()}
 
             {/* Click feedback ripple */}
             {clickFeedback && (
