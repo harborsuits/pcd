@@ -1602,8 +1602,9 @@ function CommentsSidebar({
             </p>
           ) : (
             filteredComments.map((comment, idx) => {
-              const pinStatus = getPinStatus(comment);
-              const needsAnchor = pinStatus?.kind === 'no-anchor';
+              // Check if comment actually HAS pin data saved (anchor_selector or anchor_id)
+              // This is independent of whether we can currently display it (current page, bridge status)
+              const hasPinData = !!(comment.anchor_selector || comment.anchor_id);
               const isResolved = comment.status === 'resolved' || !!comment.resolved_at || comment.status === 'wont_do';
               const isArchived = !!comment.archived_at;
               const isRepinning = repinTargetId === comment.id;
@@ -1671,7 +1672,7 @@ function CommentsSidebar({
                     </div>
                   )}
                   {/* Needs anchor badge + repin button */}
-                  {!isArchived && !isResolved && !isRepinning && needsAnchor && (
+                  {!isArchived && !isResolved && !isRepinning && !hasPinData && (
                     <div className="mb-1 flex items-center gap-1">
                       <Badge variant="outline" className="text-xs bg-amber-500/10 text-amber-600 border-amber-500/30">
                         <AlertTriangle className="h-3 w-3 mr-1" />
@@ -1694,7 +1695,7 @@ function CommentsSidebar({
                     </div>
                   )}
                   {/* Move pin button for pinned comments */}
-                  {!isArchived && !isResolved && !isRepinning && !needsAnchor && onRepin && (
+                  {!isArchived && !isResolved && !isRepinning && hasPinData && onRepin && (
                     <div className="mb-1">
                       <Button
                         variant="ghost"
