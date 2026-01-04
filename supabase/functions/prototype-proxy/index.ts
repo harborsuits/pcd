@@ -335,23 +335,33 @@ function rewriteUrls(html: string, prototypeUrl: string, proxyBaseUrl: string): 
   }, { passive: true });
 
   // Track page navigation (for SPAs that use history API)
-  const notifyPageChange = () => {
-    send({ type: "PCD_PAGE_CHANGE", url: location.href, ts: Date.now() });
+  let lastHref = location.href;
+  const emitPageChange = () => {
+    const href = location.href;
+    if (href === lastHref) return;
+    lastHref = href;
+    send({ type: "PCD_PAGE_CHANGE", url: href, ts: Date.now() });
   };
-  window.addEventListener("popstate", notifyPageChange);
-  window.addEventListener("hashchange", notifyPageChange);
   
-  // Also intercept pushState/replaceState for SPAs
+  // Intercept pushState/replaceState - use microtask so URL is updated
   const origPushState = history.pushState;
   const origReplaceState = history.replaceState;
   history.pushState = function(...args) {
-    origPushState.apply(this, args);
-    setTimeout(notifyPageChange, 0);
+    const result = origPushState.apply(this, args);
+    Promise.resolve().then(emitPageChange);
+    return result;
   };
   history.replaceState = function(...args) {
-    origReplaceState.apply(this, args);
-    setTimeout(notifyPageChange, 0);
+    const result = origReplaceState.apply(this, args);
+    Promise.resolve().then(emitPageChange);
+    return result;
   };
+  
+  window.addEventListener("popstate", () => Promise.resolve().then(emitPageChange));
+  window.addEventListener("hashchange", () => Promise.resolve().then(emitPageChange));
+  
+  // Emit initial page on load
+  setTimeout(() => { lastHref = location.href; send({ type: "PCD_PAGE_CHANGE", url: location.href, ts: Date.now() }); }, 0);
 
   // Notify parent ready
   send({ type: "PCD_IFRAME_READY", url: location.href, viewport: { w: window.innerWidth, h: window.innerHeight }, ts: Date.now() });
