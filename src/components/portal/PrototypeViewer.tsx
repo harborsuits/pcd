@@ -1,7 +1,79 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { RefreshCw, MessageCircle, X, ExternalLink, Maximize2, Minimize2, ChevronRight, ChevronLeft, AlertTriangle, Target, ChevronUp, ChevronDown, Archive, ArchiveRestore, Copy, Bug } from "lucide-react";
+import { RefreshCw, MessageCircle, X, ExternalLink, Maximize2, Minimize2, ChevronRight, ChevronLeft, AlertTriangle, Target, ChevronUp, ChevronDown, Archive, ArchiveRestore, Copy, Bug, FlaskConical } from "lucide-react";
+
+// ============ Contract Test Helpers ============
+function pcdAssert(condition: unknown, msg: string) {
+  if (!condition) throw new Error(`[PCD Contract] ${msg}`);
+}
+
+interface ContractTestOpts {
+  postToIframe: (msg: unknown) => void;
+  getActiveAnchors: () => Array<{
+    id: string;
+    anchorKey?: string | null;
+    selector?: string | null;
+    textHint?: string | null;
+  }>;
+  waitForRects: (requestId: string, timeoutMs?: number) => Promise<Record<string, unknown>>;
+}
+
+async function runPcdRectContractTest(opts: ContractTestOpts) {
+  const anchors = opts.getActiveAnchors().slice(0, 5);
+
+  pcdAssert(anchors.length > 0, "No anchors available to test (need at least 1 pinned comment on this page).");
+
+  const ids = anchors.map(a => a.id);
+  pcdAssert(ids.every(Boolean), "Anchor entries must include id (comment.id).");
+  pcdAssert(new Set(ids).size === ids.length, "Anchor ids must be unique.");
+
+  const requestId = `pcd_contract_${Date.now()}`;
+
+  opts.postToIframe({
+    __pcd: true,
+    type: "PCD_GET_RECTS",
+    requestId,
+    anchors: anchors.map(a => ({
+      id: a.id,
+      anchorKey: a.anchorKey ?? null,
+      selector: a.selector ?? null,
+      textHint: a.textHint ?? null,
+    })),
+  });
+
+  const rects = await opts.waitForRects(requestId, 2500);
+
+  pcdAssert(rects && typeof rects === "object", "PCD_RECTS.rects must be an object.");
+  for (const a of anchors) {
+    pcdAssert(
+      Object.prototype.hasOwnProperty.call(rects, a.id),
+      `Missing rect for id=${a.id}. (Expected rects keyed by comment.id)`
+    );
+    const r = rects[a.id] as { left?: number; top?: number } | null;
+    if (r !== null) {
+      pcdAssert(typeof r.left === "number", `rect.left must be number for id=${a.id}`);
+      pcdAssert(typeof r.top === "number", `rect.top must be number for id=${a.id}`);
+    }
+  }
+
+  return { ok: true, tested: anchors.length };
+}
+
+// ============ Pin Debug State Type ============
+type PinDebugState = {
+  bridgeReady: boolean;
+  currentPageKey: string;
+  lastIframeUrl?: string;
+  lastPageChangeAt?: number;
+  lastHighlightsSent?: { count: number; at: number };
+  lastRectsRequested?: { count: number; requestId: string; at: number };
+  lastRectsReceived?: { keys: number; requestId: string; at: number };
+  rectCacheKeys: number;
+  pinnedOnPage: number;
+  pinnedTotal: number;
+  lastError?: string;
+};
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { PortalCommentCard } from "./PortalCommentCard";
@@ -226,6 +298,22 @@ export function PrototypeViewer({
   // Rect cache: commentId → element rect in iframe viewport coords
   const [rectCache, setRectCache] = useState<Record<string, { left: number; top: number; width: number; height: number } | null>>({});
   const pendingRectRequests = useRef<Map<string, (rect: { left: number; top: number; width: number; height: number } | null) => void>>(new Map());
+  
+  // Contract test: pending rects promises for awaiting responses
+  const pendingRectsPromisesRef = useRef<Map<string, {
+    resolve: (rects: Record<string, unknown>) => void;
+    reject: (err: unknown) => void;
+    t: number;
+  }>>(new Map());
+  
+  // Pin debug observability state
+  const [pinDebug, setPinDebug] = useState<PinDebugState>(() => ({
+    bridgeReady: false,
+    currentPageKey: "",
+    rectCacheKeys: 0,
+    pinnedOnPage: 0,
+    pinnedTotal: 0,
+  }));
   const rectRefreshRaf = useRef<number | null>(null);
   
   // Derived bridge status
@@ -325,6 +413,12 @@ export function PrototypeViewer({
           if (PCD_DEBUG) {
             setPcdHud(s => ({ ...s, bridgeReady: true }));
           }
+          // Update pin debug observability
+          setPinDebug(d => ({
+            ...d,
+            bridgeReady: true,
+            lastIframeUrl: data.url ?? undefined,
+          }));
           break;
 
         case "PCD_CLICK": {
@@ -362,6 +456,13 @@ export function PrototypeViewer({
             setRepinTargetId(null);
             // Also clear adding comment mode
             setIsAddingComment(false);
+            // Update pin debug observability
+            setPinDebug(d => ({
+              ...d,
+              lastPageChangeAt: Date.now(),
+              currentPageKey: newPageKey,
+              rectCacheKeys: 0,
+            }));
           }
           break;
         }
@@ -378,15 +479,36 @@ export function PrototypeViewer({
 
         case "PCD_RECTS": {
           // Batch rect response - update rectCache with all rects (keyed by comment ID)
+          const requestId = data.requestId as string | undefined;
           const rects = data.rects as Record<string, { left: number; top: number; width: number; height: number } | null>;
-          console.log("[Bridge] Received PCD_RECTS:", Object.keys(rects || {}).length, "rects");
+          const rectKeys = Object.keys(rects || {}).length;
+          console.log("[Bridge] Received PCD_RECTS:", rectKeys, "rects", requestId ? `(rid=${requestId})` : "");
+          
+          // Resolve waiting contract tests (if any)
+          if (requestId && pendingRectsPromisesRef.current.has(requestId)) {
+            const pending = pendingRectsPromisesRef.current.get(requestId);
+            pendingRectsPromisesRef.current.delete(requestId);
+            pending?.resolve(rects || {});
+          }
+          
+          // Update pin debug observability
+          setPinDebug(d => ({
+            ...d,
+            lastRectsReceived: { keys: rectKeys, requestId: requestId || "batch", at: Date.now() },
+          }));
+          
           if (rects) {
             // Filter out null rects before merging
             const validRects: typeof rects = {};
             for (const [key, val] of Object.entries(rects)) {
               if (val) validRects[key] = val;
             }
-            setRectCache(prev => ({ ...prev, ...validRects }));
+            setRectCache(prev => {
+              const merged = { ...prev, ...validRects };
+              // Update rectCacheKeys after merge
+              setPinDebug(d => ({ ...d, rectCacheKeys: Object.keys(merged).length }));
+              return merged;
+            });
           }
           break;
         }
@@ -592,6 +714,32 @@ export function PrototypeViewer({
       }));
   }, [pageComments]);
 
+  // Contract test helper: await rects by requestId
+  const awaitRects = useCallback((requestId: string, timeoutMs = 2500): Promise<Record<string, unknown>> => {
+    return new Promise<Record<string, unknown>>((resolve, reject) => {
+      const t = window.setTimeout(() => {
+        pendingRectsPromisesRef.current.delete(requestId);
+        reject(new Error(`[PCD Contract] Timeout waiting for PCD_RECTS requestId=${requestId}`));
+      }, timeoutMs);
+
+      pendingRectsPromisesRef.current.set(requestId, {
+        resolve: (rects) => { window.clearTimeout(t); resolve(rects); },
+        reject: (err) => { window.clearTimeout(t); reject(err); },
+        t: Date.now(),
+      });
+    });
+  }, []);
+
+  // Helper to post message to iframe
+  const postToIframe = useCallback((msg: unknown) => {
+    if (!iframeRef.current?.contentWindow) return;
+    try {
+      iframeRef.current.contentWindow.postMessage(msg, "*");
+    } catch (e) {
+      console.warn("[Bridge] Failed to postMessage:", e);
+    }
+  }, []);
+
   // SYNC PINS routine: runs on page change and bridge ready
   // 1. Re-send highlights list for current page
   // 2. Request fresh rects for all anchors (batch request)
@@ -613,6 +761,15 @@ export function PrototypeViewer({
         );
         console.log("[Bridge] Sent PCD_HIGHLIGHTS_SET:", activeHighlightItems.length, "items for page:", currentPageKey);
         
+        // Update pin debug: highlights sent
+        setPinDebug(d => ({
+          ...d,
+          lastHighlightsSent: { count: activeHighlightItems.length, at: Date.now() },
+          pinnedOnPage: activeHighlightItems.length,
+          pinnedTotal: comments.filter(c => !!c.anchor_selector || !!c.anchor_id).length,
+          currentPageKey,
+        }));
+        
         // Step 2: Request batch rects for all anchored comments on this page
         // Include textHint for text-based fallback lookup, and ID for mapping back
         const anchors = activeHighlightItems.map(item => ({
@@ -629,14 +786,21 @@ export function PrototypeViewer({
             "*"
           );
           console.log("[Bridge] Sent PCD_GET_RECTS for", anchors.length, "anchors");
+          
+          // Update pin debug: rects requested
+          setPinDebug(d => ({
+            ...d,
+            lastRectsRequested: { count: anchors.length, requestId, at: Date.now() },
+          }));
         }
       } catch (e) {
         console.warn("[Bridge] Failed to sync pins:", e);
+        setPinDebug(d => ({ ...d, lastError: String(e) }));
       }
     }, 300);
     
     return () => clearTimeout(timer);
-  }, [bridgeReady, activeHighlightItems, currentPageKey]);
+  }, [bridgeReady, activeHighlightItems, currentPageKey, comments]);
 
   // Clear hover when leaving pin mode
   useEffect(() => {
@@ -1189,6 +1353,40 @@ export function PrototypeViewer({
           >
             <Bug className="h-4 w-4" />
           </Button>
+          {/* Contract Test Button (DEV only) */}
+          {import.meta.env.DEV && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-xs"
+              disabled={!bridgeReady || activeHighlightItems.length === 0}
+              title={!bridgeReady ? "Bridge not ready" : activeHighlightItems.length === 0 ? "No pinned comments on this page" : "Run pin contract test"}
+              onClick={async () => {
+                try {
+                  const result = await runPcdRectContractTest({
+                    postToIframe,
+                    getActiveAnchors: () => activeHighlightItems.map(i => ({
+                      id: i.id,
+                      anchorKey: i.anchorKey,
+                      selector: i.selector,
+                      textHint: i.textHint,
+                    })),
+                    waitForRects: awaitRects,
+                  });
+                  console.info("[PCD Contract] PASS", result);
+                  toast({ title: `✓ Contract PASS (tested ${result.tested})`, description: "Parent↔iframe protocol is working correctly" });
+                } catch (e: unknown) {
+                  console.error("[PCD Contract] FAIL", e);
+                  const msg = e instanceof Error ? e.message : String(e);
+                  toast({ title: "✗ Contract FAIL", description: msg, variant: "destructive" });
+                  setPinDebug(d => ({ ...d, lastError: msg }));
+                }
+              }}
+            >
+              <FlaskConical className="h-3 w-3 mr-1" />
+              Test
+            </Button>
+          )}
         </div>
         {/* Current page debug pill */}
         {currentIframePage && (
@@ -1514,6 +1712,56 @@ export function PrototypeViewer({
                 )}
               </>
             )}
+            <hr className="border-border" />
+            
+            {/* Pin Debug Observability HUD */}
+            <details className="group">
+              <summary className="cursor-pointer select-none font-medium text-[10px] flex items-center gap-1">
+                <FlaskConical className="h-2.5 w-2.5" />
+                Pin Debug HUD
+              </summary>
+              <div className="mt-2 grid gap-1.5 pl-3">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">bridgeReady:</span>
+                  <span className={pinDebug.bridgeReady ? "text-green-600" : "text-red-600"}>{String(pinDebug.bridgeReady)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">currentPageKey:</span>
+                  <span className="truncate max-w-[150px]" title={pinDebug.currentPageKey}>{pinDebug.currentPageKey || "-"}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">lastIframeUrl:</span>
+                  <span className="truncate max-w-[150px]" title={pinDebug.lastIframeUrl}>{pinDebug.lastIframeUrl?.split('/').pop() || "-"}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">pinnedOnPage / Total:</span>
+                  <span>{pinDebug.pinnedOnPage} / {pinDebug.pinnedTotal}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">rectCacheKeys:</span>
+                  <span>{pinDebug.rectCacheKeys}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">lastHighlightsSent:</span>
+                  <span>{pinDebug.lastHighlightsSent ? `${pinDebug.lastHighlightsSent.count} @ ${new Date(pinDebug.lastHighlightsSent.at).toLocaleTimeString()}` : "-"}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">lastRectsRequested:</span>
+                  <span>{pinDebug.lastRectsRequested ? `${pinDebug.lastRectsRequested.count} (${pinDebug.lastRectsRequested.requestId.slice(0, 12)}...)` : "-"}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">lastRectsReceived:</span>
+                  <span>{pinDebug.lastRectsReceived ? `${pinDebug.lastRectsReceived.keys} (${pinDebug.lastRectsReceived.requestId.slice(0, 12)}...)` : "-"}</span>
+                </div>
+                {pinDebug.lastError && (
+                  <div className="text-red-600 break-all mt-1">
+                    <span className="text-muted-foreground">lastError: </span>
+                    {pinDebug.lastError.slice(0, 100)}
+                  </div>
+                )}
+              </div>
+            </details>
+            
             <hr className="border-border" />
             <div className="flex gap-2">
               <Button
