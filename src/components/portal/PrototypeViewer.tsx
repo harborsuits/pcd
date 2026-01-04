@@ -344,28 +344,35 @@ export function PrototypeViewer({
   const currentPageKey = useMemo(() => normalizePageKey(currentIframePage), [currentIframePage]);
   
   // Filter comments by current page using normalized keys
-  // IMPORTANT: Legacy comments (missing page_url or page_url = base prototype URL) 
-  // should only show on homepage ("/"), not on every page
+  // CRITICAL: Only filter if we're receiving reliable page change events from bridge
+  // Otherwise, show ALL comments to avoid pins "disappearing" or showing on wrong pages
   const basePrototypeKey = useMemo(() => normalizePageKey(prototype?.url || ""), [prototype?.url]);
   
+  // Track if we've received a real page change from bridge (not just initialization)
+  const [hasReceivedPageChange, setHasReceivedPageChange] = useState(false);
+  
   const pageComments = useMemo(() => {
+    // If bridge isn't sending page changes, show ALL comments
+    // This is safer than filtering incorrectly
+    if (!hasReceivedPageChange || !bridgeReady) {
+      return activeComments;
+    }
+    
     return activeComments.filter((comment) => {
-      if (!currentIframePage) return true; // Show all if we don't know current page yet
-      
       const commentKey = normalizePageKey(comment.page_url || "");
       
       // Legacy comment: no page_url OR page_url matches base prototype URL
       const isLegacyComment = !comment.page_url || !commentKey || commentKey === basePrototypeKey;
       
       if (isLegacyComment) {
-        // Legacy comments only show on homepage
+        // Legacy comments only show on homepage when we have reliable page detection
         return currentPageKey === "/" || currentPageKey === "";
       }
       
       // Normal comment: match by page key
       return commentKey === currentPageKey;
     });
-  }, [activeComments, currentIframePage, currentPageKey, basePrototypeKey]);
+  }, [activeComments, currentPageKey, basePrototypeKey, hasReceivedPageChange, bridgeReady]);
   
   const unresolvedComments = pageComments.filter((c) => !c.resolved_at && c.status !== 'resolved' && c.status !== 'wont_do');
   const resolvedComments = pageComments.filter((c) => c.resolved_at || c.status === 'resolved' || c.status === 'wont_do');
@@ -479,6 +486,8 @@ export function PrototypeViewer({
           console.log("[Bridge] Page changed:", data.url, "→ normalized:", newPageKey);
           if (data.url) {
             setCurrentIframePage(data.url);
+            // Mark that we're receiving reliable page changes from bridge
+            setHasReceivedPageChange(true);
             // Clear rect cache since elements on new page are different
             setRectCache({});
             // Clear any pending pin since it was for the previous page
