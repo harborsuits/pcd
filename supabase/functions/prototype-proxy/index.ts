@@ -266,7 +266,8 @@ function rewriteUrls(html: string, prototypeUrl: string, proxyBaseUrl: string): 
     if (!data) return;
 
     if (data.type === "PCD_MODE") {
-      pinModeActive = !!data.pinMode;
+      // Accept both "mode" and "pinMode" for compatibility
+      pinModeActive = data.mode === "pin" || !!data.pinMode;
       document.body.style.cursor = pinModeActive ? "crosshair" : "";
       if (!pinModeActive) focusLocked = false;
     }
@@ -521,14 +522,26 @@ Deno.serve(async (req) => {
 
     console.log(`[prototype-proxy] Successfully proxied ${html.length} bytes`);
 
+    // CRITICAL: Return clean headers that allow iframe embedding AND script execution
+    // We must NOT forward any CSP/frame-blocking headers from the upstream response
+    // These headers are explicitly stripped:
+    // - content-security-policy (blocks inline scripts like our helper)
+    // - content-security-policy-report-only (same issue)
+    // - x-frame-options (blocks embedding)
+    // - frame-options (legacy)
+    // - permissions-policy (can restrict features)
+    // - x-content-type-options (can cause issues)
     return new Response(html, {
       status: 200,
       headers: {
         ...corsHeaders,
         "Content-Type": "text/html; charset=utf-8",
-        "Cache-Control": "no-cache",
-        // Allow iframe embedding
+        "Cache-Control": "no-cache, no-store, must-revalidate",
+        // Explicitly ALLOW iframe embedding from any origin
         "X-Frame-Options": "ALLOWALL",
+        // Override any CSP to allow our inline helper script
+        // This is intentionally permissive for the proxy use case
+        "Content-Security-Policy": "default-src * 'unsafe-inline' 'unsafe-eval' data: blob:; script-src * 'unsafe-inline' 'unsafe-eval'; style-src * 'unsafe-inline';",
       },
     });
 
