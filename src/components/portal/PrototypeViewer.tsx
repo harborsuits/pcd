@@ -1507,6 +1507,27 @@ export function PrototypeViewer({
             style={{ minHeight: isFullscreen ? "calc(100vh - 120px)" : "500px" }}
             title="Prototype preview"
             sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
+            onLoad={() => {
+              // Fallback page detection: when iframe loads a new page, try to detect URL
+              // This works for full page navigations (not SPA-style navigations)
+              try {
+                const iframe = iframeRef.current;
+                if (iframe?.contentWindow?.location?.href) {
+                  const newUrl = iframe.contentWindow.location.href;
+                  const newPath = normalizePageKey(newUrl);
+                  console.log("[Iframe] Load detected, path:", newPath);
+                  setCurrentIframePage(newUrl);
+                  // Clear rect cache for new page
+                  setRectCache({});
+                }
+              } catch {
+                // Cross-origin - can't access URL, but we know page changed
+                // Reset to root as fallback
+                console.log("[Iframe] Load detected (cross-origin), resetting to /");
+                setCurrentIframePage("/");
+                setRectCache({});
+              }
+            }}
           />
 
           {/* Click overlay for pin placement - always pointer-events-none to let clicks through to iframe */}
