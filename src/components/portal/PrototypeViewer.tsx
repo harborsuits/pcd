@@ -238,12 +238,8 @@ export function PrototypeViewer({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [iframeKey, setIframeKey] = useState(0);
   
-  // Use prototype-proxy to inject helper script for SPA page tracking
-  const iframeSrc = useMemo(() => {
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-    if (!supabaseUrl || !token) return prototype.url;
-    return `${supabaseUrl}/functions/v1/prototype-proxy/${token}/`;
-  }, [prototype.url, token]);
+  // Direct prototype URL - proxy approach has infrastructure issues
+  const iframeSrc = prototype.url;
   
   const [showCommentsSidebar, setShowCommentsSidebar] = useState(true);
   const [focusedCommentId, setFocusedCommentId] = useState<string | null>(null);
