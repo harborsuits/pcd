@@ -536,23 +536,31 @@
     }
 
     // Batch rect request - get rects for multiple anchors at once (with text-hint fallback)
+    // CRITICAL: Response must be keyed by `id` (comment ID) so parent can cache correctly!
     if (d.type === "PCD_GET_RECTS") {
-      const { requestId, anchors } = d; // anchors = [{ anchorKey, selector, textHint }, ...]
+      const { requestId, anchors } = d; // anchors = [{ id, anchorKey, selector, textHint }, ...]
       const rects = {};
       
       for (const a of (anchors || [])) {
+        // Use id as the cache key (comment UUID), not anchorKey!
+        const cacheKey = a?.id || a?.anchorKey;
         const anchorKey = a?.anchorKey;
         const selector = a?.selector;
         const textHint = a?.textHint;
-        if (!anchorKey) continue;
+        
+        // Need at least one lookup strategy
+        if (!anchorKey && !selector && !textHint) {
+          if (cacheKey) rects[cacheKey] = null;
+          continue;
+        }
         
         // Use multi-strategy lookup with text-hint fallback
         const el = __pcdFindByAnchorMulti(anchorKey, selector, textHint);
         if (el) {
           const r = el.getBoundingClientRect();
-          rects[anchorKey] = { left: r.left, top: r.top, width: r.width, height: r.height };
+          rects[cacheKey] = { left: r.left, top: r.top, width: r.width, height: r.height };
         } else {
-          rects[anchorKey] = null;
+          rects[cacheKey] = null;
         }
       }
       
