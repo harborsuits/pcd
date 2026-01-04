@@ -755,44 +755,46 @@
   // We need to detect these and emit PCD_PAGE_CHANGE so the portal can re-sync pins
   let lastUrl = location.href;
 
-  function checkUrlChange() {
-    if (location.href !== lastUrl) {
-      const oldUrl = lastUrl;
-      lastUrl = location.href;
-      console.log("[PCD Helper] URL changed:", oldUrl, "→", location.href);
-      send({
-        type: "PCD_PAGE_CHANGE",
-        url: location.href,
-        ts: Date.now(),
-      });
-    }
+  function emitPageChange() {
+    const href = location.href;
+    if (href === lastUrl) return;
+    const oldUrl = lastUrl;
+    lastUrl = href;
+    console.log("[PCD Helper] URL changed:", oldUrl, "→", href);
+    send({
+      type: "PCD_PAGE_CHANGE",
+      url: href,
+      ts: Date.now(),
+    });
   }
 
-  // Intercept history methods
+  // Intercept history methods - use microtask delay so URL is updated
   const origPushState = history.pushState;
   history.pushState = function(...args) {
-    origPushState.apply(this, args);
-    checkUrlChange();
+    const result = origPushState.apply(this, args);
+    Promise.resolve().then(emitPageChange);
+    return result;
   };
 
   const origReplaceState = history.replaceState;
   history.replaceState = function(...args) {
-    origReplaceState.apply(this, args);
-    checkUrlChange();
+    const result = origReplaceState.apply(this, args);
+    Promise.resolve().then(emitPageChange);
+    return result;
   };
 
   // Listen for popstate (back/forward buttons)
   window.addEventListener("popstate", () => {
-    checkUrlChange();
+    Promise.resolve().then(emitPageChange);
   });
 
   // Listen for hashchange
   window.addEventListener("hashchange", () => {
-    checkUrlChange();
+    Promise.resolve().then(emitPageChange);
   });
 
-  // Fallback: poll for URL changes every 500ms (catches edge cases)
-  setInterval(checkUrlChange, 500);
+  // Emit initial page on load so parent has a value
+  setTimeout(emitPageChange, 0);
 
   // ----- Boot signal -----
   send({
