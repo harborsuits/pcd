@@ -1136,9 +1136,16 @@ async function handleGetComments(
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Build query - clients should never see internal comments
+    // IMPORTANT: Include all anchor/pin fields needed for pin persistence!
     let query = supabase
       .from("prototype_comments")
-      .select("id, prototype_id, author_type, body, pin_x, pin_y, resolved_at, source_message_id, created_at, parent_comment_id, is_internal")
+      .select(`
+        id, prototype_id, author_type, body, pin_x, pin_y, 
+        resolved_at, source_message_id, created_at, parent_comment_id, is_internal,
+        status, archived_at,
+        page_url, page_path, scroll_y, viewport_w, viewport_h, breakpoint,
+        anchor_id, anchor_selector, x_pct, y_pct, text_hint, text_offset, text_context
+      `)
       .eq("project_token", token)
       .eq("is_internal", false) // Filter out internal operator notes for clients
       .order("created_at", { ascending: true });
