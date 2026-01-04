@@ -878,20 +878,8 @@ export function PrototypeViewer({
   }, []);
 
   // Calculate pin position - uses anchor element's current position + click offset within element
+  // Falls back to stored pin_x/pin_y percentages when bridge isn't available
   const getPinPosition = useCallback((comment: PrototypeComment): PinPositionResult => {
-    if (!bridgeReady) {
-      return { kind: 'no-bridge' };
-    }
-    
-    if (!comment.anchor_selector && !comment.anchor_id) {
-      return { kind: 'no-anchor' };
-    }
-    
-    const rect = rectCache[comment.id];
-    if (!rect) {
-      return { kind: 'no-anchor' };
-    }
-    
     const iframeEl = iframeRef.current;
     const overlayEl = overlayRef.current;
     if (!iframeEl || !overlayEl) return null;
@@ -905,58 +893,80 @@ export function PrototypeViewer({
     const offsetX = iframeRect.left - overlayRect.left;
     const offsetY = iframeRect.top - overlayRect.top;
     
-    // Pin position strategy:
-    // - We use the element's CURRENT rect (which updates as user scrolls via rectCache refresh)
-    // - For pins with x_pct/y_pct, we calculate offset within the element
-    // - This way, pins stay anchored to their element as the page scrolls
-    let pinCenterX: number;
-    let pinCenterY: number;
-    
-    if (comment.x_pct != null && comment.y_pct != null) {
-      // x_pct/y_pct are percentages within the element (0-100)
-      // Use element's current rect + offset within element
-      pinCenterX = rect.left + (comment.x_pct / 100) * rect.width;
-      pinCenterY = rect.top + (comment.y_pct / 100) * rect.height;
-    } else {
-      // Fallback: use element center
-      pinCenterX = rect.left + rect.width / 2;
-      pinCenterY = rect.top + rect.height / 2;
-    }
-    
-    // Check offscreen
-    const isOffscreen = pinCenterX < 0 || pinCenterY < 0 || 
-                       pinCenterX > viewportW || pinCenterY > viewportH;
-    
-    if (isOffscreen) {
-      let direction: 'up' | 'down' | 'left' | 'right';
-      if (pinCenterY < 0) direction = 'up';
-      else if (pinCenterY > viewportH) direction = 'down';
-      else if (pinCenterX < 0) direction = 'left';
-      else direction = 'right';
-      
-      let edgeLeft: number, edgeTop: number;
-      if (direction === 'up') {
-        edgeLeft = offsetX + Math.max(16, Math.min(viewportW - 16, pinCenterX));
-        edgeTop = offsetY + 16;
-      } else if (direction === 'down') {
-        edgeLeft = offsetX + Math.max(16, Math.min(viewportW - 16, pinCenterX));
-        edgeTop = offsetY + viewportH - 16;
-      } else if (direction === 'left') {
-        edgeLeft = offsetX + 16;
-        edgeTop = offsetY + Math.max(16, Math.min(viewportH - 16, pinCenterY));
-      } else {
-        edgeLeft = offsetX + viewportW - 16;
-        edgeTop = offsetY + Math.max(16, Math.min(viewportH - 16, pinCenterY));
+    // If we have bridge + rect cache, use element-anchored positioning
+    if (bridgeReady && (comment.anchor_selector || comment.anchor_id)) {
+      const rect = rectCache[comment.id];
+      if (rect) {
+        // Pin position strategy:
+        // - We use the element's CURRENT rect (which updates as user scrolls via rectCache refresh)
+        // - For pins with x_pct/y_pct, we calculate offset within the element
+        // - This way, pins stay anchored to their element as the page scrolls
+        let pinCenterX: number;
+        let pinCenterY: number;
+        
+        if (comment.x_pct != null && comment.y_pct != null) {
+          // x_pct/y_pct are percentages within the element (0-100)
+          // Use element's current rect + offset within element
+          pinCenterX = rect.left + (comment.x_pct / 100) * rect.width;
+          pinCenterY = rect.top + (comment.y_pct / 100) * rect.height;
+        } else {
+          // Fallback: use element center
+          pinCenterX = rect.left + rect.width / 2;
+          pinCenterY = rect.top + rect.height / 2;
+        }
+        
+        // Check offscreen
+        const isOffscreen = pinCenterX < 0 || pinCenterY < 0 || 
+                           pinCenterX > viewportW || pinCenterY > viewportH;
+        
+        if (isOffscreen) {
+          let direction: 'up' | 'down' | 'left' | 'right';
+          if (pinCenterY < 0) direction = 'up';
+          else if (pinCenterY > viewportH) direction = 'down';
+          else if (pinCenterX < 0) direction = 'left';
+          else direction = 'right';
+          
+          let edgeLeft: number, edgeTop: number;
+          if (direction === 'up') {
+            edgeLeft = offsetX + Math.max(16, Math.min(viewportW - 16, pinCenterX));
+            edgeTop = offsetY + 16;
+          } else if (direction === 'down') {
+            edgeLeft = offsetX + Math.max(16, Math.min(viewportW - 16, pinCenterX));
+            edgeTop = offsetY + viewportH - 16;
+          } else if (direction === 'left') {
+            edgeLeft = offsetX + 16;
+            edgeTop = offsetY + Math.max(16, Math.min(viewportH - 16, pinCenterY));
+          } else {
+            edgeLeft = offsetX + viewportW - 16;
+            edgeTop = offsetY + Math.max(16, Math.min(viewportH - 16, pinCenterY));
+          }
+          
+          return { kind: 'offscreen', direction, edgeLeft, edgeTop };
+        }
+        
+        return { 
+          kind: 'visible', 
+          left: offsetX + pinCenterX, 
+          top: offsetY + pinCenterY 
+        };
       }
-      
-      return { kind: 'offscreen', direction, edgeLeft, edgeTop };
     }
     
-    return { 
-      kind: 'visible', 
-      left: offsetX + pinCenterX, 
-      top: offsetY + pinCenterY 
-    };
+    // FALLBACK: Use stored pin_x/pin_y percentages directly
+    // This works even without bridge, showing pins at their original click positions
+    if (comment.pin_x != null && comment.pin_y != null) {
+      const pinCenterX = (comment.pin_x / 100) * viewportW;
+      const pinCenterY = (comment.pin_y / 100) * viewportH;
+      
+      return { 
+        kind: 'visible', 
+        left: offsetX + pinCenterX, 
+        top: offsetY + pinCenterY 
+      };
+    }
+    
+    // No position data available
+    return { kind: 'no-anchor' };
   }, [bridgeReady, rectCache]);
 
   // Handle iframe click via postMessage bridge
