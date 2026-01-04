@@ -238,9 +238,12 @@ export function PrototypeViewer({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [iframeKey, setIframeKey] = useState(0);
   
-  // Use direct prototype URL - the prototype must have pcd-iframe-helper.js included
-  // The prototype-proxy edge function has Content-Type issues with Supabase infrastructure
-  const iframeSrc = prototype.url;
+  // Use prototype-proxy to inject helper script for SPA page tracking
+  const iframeSrc = useMemo(() => {
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    if (!supabaseUrl || !token) return prototype.url;
+    return `${supabaseUrl}/functions/v1/prototype-proxy/${token}/`;
+  }, [prototype.url, token]);
   
   const [showCommentsSidebar, setShowCommentsSidebar] = useState(true);
   const [focusedCommentId, setFocusedCommentId] = useState<string | null>(null);
