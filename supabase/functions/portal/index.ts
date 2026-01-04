@@ -1598,6 +1598,60 @@ if (action === "resolve" || action === "unresolve") {
       );
     }
 
+    // Batch set page_url and page_path for multiple comments (reconciliation flow)
+    // This is used to fix legacy pins that have missing/wrong page associations
+    if (action === "set_page") {
+      const { comment_ids, page_url: newPageUrl, page_path: newPagePath } = body;
+
+      if (!Array.isArray(comment_ids) || comment_ids.length === 0) {
+        return new Response(
+          JSON.stringify({ error: "comment_ids array is required" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      if (!newPageUrl) {
+        return new Response(
+          JSON.stringify({ error: "page_url is required" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Verify prototype_id is provided and valid
+      if (!prototype_id) {
+        return new Response(
+          JSON.stringify({ error: "prototype_id is required" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Update all specified comments' page fields
+      const { error: updateError, count } = await supabase
+        .from("prototype_comments")
+        .update({ 
+          page_url: newPageUrl, 
+          page_path: newPagePath ?? null 
+        })
+        .in("id", comment_ids)
+        .eq("project_token", token)
+        .eq("prototype_id", prototype_id);
+
+      if (updateError) {
+        console.error("Set page error:", updateError);
+        return new Response(
+          JSON.stringify({ error: "Failed to update page associations" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      console.log(`[set_page] Updated ${count ?? comment_ids.length} comments to page: ${newPagePath}`);
+
+      return new Response(
+        JSON.stringify({ ok: true, updated: count ?? comment_ids.length }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     return new Response(
       JSON.stringify({ error: "Invalid action" }),
       { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }

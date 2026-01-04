@@ -1206,6 +1206,121 @@ export function PrototypeViewer({
     onRefresh();
   };
 
+  // Fix existing pins by reconciling them to the current page
+  // This uses the bridge to detect which pins' anchors exist on this page
+  const [reconciling, setReconciling] = useState(false);
+  
+  const fixExistingPinPageAssociations = useCallback(async () => {
+    if (!bridgeReady) {
+      toast({ title: "Bridge not ready", description: "Cannot reconcile pages without the helper script.", variant: "destructive" });
+      return;
+    }
+    if (!currentIframePage) {
+      toast({ title: "No current page", description: "Cannot determine current iframe page.", variant: "destructive" });
+      return;
+    }
+    if (!iframeRef.current?.contentWindow) {
+      toast({ title: "No iframe", variant: "destructive" });
+      return;
+    }
+
+    const baseKey = normalizePageKey(prototype.url);
+    const currentKey = normalizePageKey(currentIframePage);
+
+    // Find candidates: comments with bad/missing page info
+    // "bad" means: page_path is null OR page_url equals base prototype URL OR page_path equals base key
+    const candidates = comments.filter(c => {
+      const commentKey = normalizePageKey(c.page_url || c.page_path || "");
+      // Must have an anchor to be reconcilable
+      if (!c.anchor_selector && !c.anchor_id && !c.text_hint) return false;
+      // Check if page info is missing or equals the base prototype URL
+      return !commentKey || commentKey === baseKey || !c.page_path;
+    });
+
+    if (candidates.length === 0) {
+      toast({ title: "No pins to reconcile", description: "All anchored pins on this project already have page associations." });
+      return;
+    }
+
+    setReconciling(true);
+    
+    try {
+      // Build anchors list for PCD_GET_RECTS
+      const anchors = candidates.map(c => ({
+        id: c.id,
+        anchorKey: c.anchor_id ?? null,
+        selector: c.anchor_selector ?? null,
+        textHint: c.text_hint ?? null,
+      }));
+
+      // Send PCD_GET_RECTS request
+      const requestId = `reconcile-${Date.now()}`;
+      iframeRef.current.contentWindow.postMessage(
+        { __pcd: true, type: "PCD_GET_RECTS", requestId, anchors },
+        "*"
+      );
+
+      console.log(`[Reconcile] Sent PCD_GET_RECTS for ${anchors.length} candidates, requestId=${requestId}`);
+
+      // Wait for response
+      const rects = await awaitRects(requestId, 5000) as Record<string, { left: number; top: number; width: number; height: number } | null>;
+
+      // Find which candidates have non-null rects (i.e., their anchors exist on this page)
+      const resolvedHereIds = candidates
+        .filter(c => rects[c.id] != null)
+        .map(c => c.id);
+
+      console.log(`[Reconcile] Found ${resolvedHereIds.length} pins on this page out of ${candidates.length} candidates`);
+
+      if (resolvedHereIds.length === 0) {
+        toast({ title: "No pins found on this page", description: `Checked ${candidates.length} candidates, none have anchors visible here.` });
+        return;
+      }
+
+      // Call backend to update page fields
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/portal/${token}/comments`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "set_page",
+            prototype_id: prototype.id,
+            comment_ids: resolvedHereIds,
+            page_url: currentIframePage,
+            page_path: currentKey,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.error || "Failed to update page associations");
+      }
+
+      const result = await response.json();
+      console.log(`[Reconcile] Updated ${result.updated} comments to page: ${currentKey}`);
+
+      toast({ 
+        title: "Pins reconciled!", 
+        description: `${resolvedHereIds.length} pin(s) associated with "${currentKey}"` 
+      });
+
+      // Refresh comments to reflect changes
+      onRefresh();
+
+    } catch (e) {
+      console.error("[Reconcile] Error:", e);
+      toast({ 
+        title: "Reconciliation failed", 
+        description: e instanceof Error ? e.message : "Unknown error", 
+        variant: "destructive" 
+      });
+    } finally {
+      setReconciling(false);
+    }
+  }, [bridgeReady, currentIframePage, prototype.url, prototype.id, comments, token, awaitRects, onRefresh]);
+
   const focusComment = useCallback((comment: PrototypeComment) => {
     setFocusedCommentId(comment.id);
     setHoveredCommentId(comment.id);
@@ -1844,6 +1959,37 @@ export function PrototypeViewer({
                 )}
               </div>
             </details>
+            
+            <hr className="border-border" />
+            
+            {/* Page Reconciliation Button */}
+            <div className="space-y-2">
+              <div className="text-[10px] text-muted-foreground">
+                Current page: <span className="font-semibold text-foreground">{currentPageKey}</span>
+              </div>
+              <Button
+                variant="default"
+                size="sm"
+                className="w-full h-7 text-[10px]"
+                onClick={fixExistingPinPageAssociations}
+                disabled={!bridgeReady || reconciling}
+              >
+                {reconciling ? (
+                  <>
+                    <RefreshCw className="h-2.5 w-2.5 mr-1 animate-spin" />
+                    Reconciling...
+                  </>
+                ) : (
+                  <>
+                    <Target className="h-2.5 w-2.5 mr-1" />
+                    Fix Pins on This Page
+                  </>
+                )}
+              </Button>
+              <p className="text-[9px] text-muted-foreground leading-tight">
+                Associates legacy pins with this page if their anchors are found here.
+              </p>
+            </div>
             
             <hr className="border-border" />
             <div className="flex gap-2">
