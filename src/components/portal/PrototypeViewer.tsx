@@ -238,16 +238,10 @@ export function PrototypeViewer({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [iframeKey, setIframeKey] = useState(0);
   
-  // Use the prototype-proxy to inject our helper script for SPA page tracking
-  // The proxy rewrites URLs and injects PCD_PAGE_CHANGE detection
-  const proxyUrl = useMemo(() => {
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-    if (!supabaseUrl || !token) {
-      // Fallback to direct URL if no proxy available
-      return prototype.url;
-    }
-    return `${supabaseUrl}/functions/v1/prototype-proxy/${token}`;
-  }, [prototype.url, token]);
+  // Use direct prototype URL - the prototype must have pcd-iframe-helper.js included
+  // The prototype-proxy edge function has Content-Type issues with Supabase infrastructure
+  const iframeSrc = prototype.url;
+  
   const [showCommentsSidebar, setShowCommentsSidebar] = useState(true);
   const [focusedCommentId, setFocusedCommentId] = useState<string | null>(null);
   const [hoveredCommentId, setHoveredCommentId] = useState<string | null>(null);
@@ -393,9 +387,9 @@ export function PrototypeViewer({
     const handleMessage = (event: MessageEvent) => {
       const iframeOrigin = getIframeOrigin();
       
-      // Accept from iframe origin OR if we don't have one yet, check against proxyUrl
+      // Accept from iframe origin OR if we don't have one yet, check against iframeSrc
       const acceptedOrigin = iframeOrigin || (() => {
-        try { return new URL(proxyUrl).origin; } catch { return null; }
+        try { return new URL(iframeSrc).origin; } catch { return null; }
       })();
 
       // Update HUD with origin info
@@ -616,7 +610,7 @@ export function PrototypeViewer({
 
     window.addEventListener("message", handleMessage);
     return () => window.removeEventListener("message", handleMessage);
-  }, [proxyUrl, PCD_DEBUG, getIframeOrigin]);
+  }, [iframeSrc, PCD_DEBUG, getIframeOrigin]);
 
   // Request element rect from iframe (multi-strategy lookup with textHint fallback)
   const requestRect = useCallback((selector: string | null, anchorId: string | null, textHint?: string | null): Promise<{ left: number; top: number; width: number; height: number } | null> => {
@@ -1645,7 +1639,7 @@ export function PrototypeViewer({
           <iframe
             ref={iframeRef}
             key={iframeKey}
-            src={proxyUrl}
+            src={iframeSrc}
             className="w-full h-full border-0"
             style={{ minHeight: isFullscreen ? "calc(100vh - 120px)" : "500px" }}
             title="Prototype preview"
