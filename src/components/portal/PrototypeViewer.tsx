@@ -303,7 +303,15 @@ export function PrototypeViewer({
   const lastIframeClick = useRef<IframeClickMessage | null>(null);
   
   // Track current iframe page URL for filtering comments by page
-  const [currentIframePage, setCurrentIframePage] = useState<string | null>(null);
+  // Initialize with prototype base URL so pins filter correctly even without bridge
+  const [currentIframePage, setCurrentIframePage] = useState<string | null>(() => {
+    try {
+      const u = new URL(prototype.url);
+      return u.pathname + u.search + u.hash || "/";
+    } catch {
+      return "/";
+    }
+  });
   
   // Rect cache: commentId → element rect in iframe viewport coords
   const [rectCache, setRectCache] = useState<Record<string, { left: number; top: number; width: number; height: number } | null>>({});
@@ -952,11 +960,41 @@ export function PrototypeViewer({
       }
     }
     
-    // FALLBACK: Use stored pin_x/pin_y percentages directly
-    // This works even without bridge, showing pins at their original click positions
+    // FALLBACK: Use stored pin_x/pin_y percentages
+    // These are DOCUMENT-relative percentages (where in the full page the click was)
+    // We need to account for current scroll position to anchor pins to content
     if (comment.pin_x != null && comment.pin_y != null) {
+      // Get current scroll position from iframeViewport (updated via PCD_SCROLL messages)
+      const currentScrollY = iframeViewport?.scrollY ?? 0;
+      const storedScrollY = comment.scroll_y ?? 0;
+      const storedViewportH = comment.viewport_h ?? viewportH;
+      
+      // pin_y was saved as a % of the document at the time of pinning
+      // When user scrolls, we need to offset the pin by the scroll delta
+      const scrollDelta = currentScrollY - storedScrollY;
+      
+      // Convert pin_y from document % to current viewport position
+      // Original: pinCenterY = pin_y% of storedViewportH, relative to storedScrollY
+      // Now we need to adjust for how much user has scrolled since
       const pinCenterX = (comment.pin_x / 100) * viewportW;
-      const pinCenterY = (comment.pin_y / 100) * viewportH;
+      const pinDocumentY = (comment.pin_y / 100) * storedViewportH + storedScrollY;
+      const pinCenterY = pinDocumentY - currentScrollY;
+      
+      // Check if offscreen due to scrolling
+      const isOffscreen = pinCenterY < 0 || pinCenterY > viewportH;
+      
+      if (isOffscreen) {
+        const direction = pinCenterY < 0 ? 'up' : 'down';
+        let edgeLeft: number, edgeTop: number;
+        if (direction === 'up') {
+          edgeLeft = offsetX + Math.max(16, Math.min(viewportW - 16, pinCenterX));
+          edgeTop = offsetY + 16;
+        } else {
+          edgeLeft = offsetX + Math.max(16, Math.min(viewportW - 16, pinCenterX));
+          edgeTop = offsetY + viewportH - 16;
+        }
+        return { kind: 'offscreen', direction, edgeLeft, edgeTop };
+      }
       
       return { 
         kind: 'visible', 
@@ -967,7 +1005,7 @@ export function PrototypeViewer({
     
     // No position data available
     return { kind: 'no-anchor' };
-  }, [bridgeReady, rectCache]);
+  }, [bridgeReady, rectCache, iframeViewport]);
 
   // Handle iframe click via postMessage bridge
   const handleIframeClick = useCallback(async (click: IframeClickMessage) => {
