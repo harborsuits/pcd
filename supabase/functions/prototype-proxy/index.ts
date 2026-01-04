@@ -531,19 +531,22 @@ Deno.serve(async (req) => {
     // - frame-options (legacy)
     // - permissions-policy (can restrict features)
     // - x-content-type-options (can cause issues)
-    return new Response(html, {
-      status: 200,
-      headers: {
-        ...corsHeaders,
-        "Content-Type": "text/html; charset=utf-8",
-        "Cache-Control": "no-cache, no-store, must-revalidate",
-        // Explicitly ALLOW iframe embedding from any origin
-        "X-Frame-Options": "ALLOWALL",
-        // Override any CSP to allow our inline helper script
-        // This is intentionally permissive for the proxy use case
-        "Content-Security-Policy": "default-src * 'unsafe-inline' 'unsafe-eval' data: blob:; script-src * 'unsafe-inline' 'unsafe-eval'; style-src * 'unsafe-inline';",
-      },
-    });
+    // Create headers explicitly - do NOT spread corsHeaders which could interfere
+    const responseHeaders = new Headers();
+    responseHeaders.set("Access-Control-Allow-Origin", origin || "*");
+    responseHeaders.set("Access-Control-Allow-Headers", "authorization, x-client-info, apikey, content-type");
+    responseHeaders.set("Access-Control-Allow-Methods", "GET, OPTIONS");
+    // CRITICAL: Content-Type MUST be text/html for browser to parse
+    responseHeaders.set("Content-Type", "text/html; charset=utf-8");
+    responseHeaders.set("Cache-Control", "no-cache, no-store, must-revalidate");
+    responseHeaders.set("Pragma", "no-cache");
+    responseHeaders.set("Expires", "0");
+    // Allow iframe embedding
+    responseHeaders.set("X-Frame-Options", "ALLOWALL");
+    // Permissive CSP to allow our injected helper script
+    responseHeaders.set("Content-Security-Policy", "default-src * 'unsafe-inline' 'unsafe-eval' data: blob:; script-src * 'unsafe-inline' 'unsafe-eval'; style-src * 'unsafe-inline';");
+    
+    return new Response(html, { status: 200, headers: responseHeaders });
 
   } catch (error) {
     console.error("[prototype-proxy] Unexpected error:", error);
