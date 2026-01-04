@@ -238,17 +238,15 @@ export function PrototypeViewer({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [iframeKey, setIframeKey] = useState(0);
   
-  // Build proxy URL to ensure helper script is always injected
-  // The prototype-proxy edge function fetches the prototype HTML and injects the PCD bridge script
+  // Use direct prototype URL
+  // The prototype-proxy edge function has issues with Supabase infrastructure overriding
+  // Content-Type headers to text/plain, causing the iframe to display raw HTML.
+  // Solution: The prototype app (portalpunch-core) should have public/pcd-iframe-helper.js
+  // added directly, and include <script src="/pcd-iframe-helper.js"></script> in index.html
   const proxyUrl = useMemo(() => {
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-    if (!supabaseUrl || !token) {
-      // Fallback to direct URL if we can't build proxy URL
-      console.warn("[PrototypeViewer] Missing SUPABASE_URL or token, using direct prototype URL");
-      return prototype.url;
-    }
-    return `${supabaseUrl}/functions/v1/prototype-proxy/${token}`;
-  }, [token, prototype.url]);
+    // Use direct URL - prototype should have helper script embedded
+    return prototype.url;
+  }, [prototype.url]);
   const [showCommentsSidebar, setShowCommentsSidebar] = useState(true);
   const [focusedCommentId, setFocusedCommentId] = useState<string | null>(null);
   const [hoveredCommentId, setHoveredCommentId] = useState<string | null>(null);
