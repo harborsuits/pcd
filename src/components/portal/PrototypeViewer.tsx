@@ -1040,9 +1040,13 @@ export function PrototypeViewer({
       overlayW: overlayRect.width, overlayH: overlayRect.height,
     });
 
+    // Use current iframe page (from bridge or fallback detection) for page_url
+    // This ensures pins are correctly associated with the page they were placed on
+    const actualPageUrl = currentIframePage || prototype.url;
+    
     const anchorData: CommentAnchorData = {
-      page_url: prototype.url,
-      page_path: null,
+      page_url: actualPageUrl,
+      page_path: normalizePageKey(actualPageUrl),
       scroll_y: click.scroll?.y ?? 0,
       viewport_w: click.viewport?.w ?? window.innerWidth,
       viewport_h: click.viewport?.h ?? window.innerHeight,
@@ -1088,7 +1092,7 @@ export function PrototypeViewer({
     // Handle new comment
     if (!isAddingComment) return;
     setPendingPin({ anchorData, normPos: { nx, ny } });
-  }, [prototype.url, isAddingComment, repinTargetId, onRepinComment, refreshRects]);
+  }, [prototype.url, currentIframePage, isAddingComment, repinTargetId, onRepinComment, refreshRects]);
 
   // Listen for iframe clicks via custom event
   useEffect(() => {
