@@ -344,14 +344,28 @@ export function PrototypeViewer({
   const currentPageKey = useMemo(() => normalizePageKey(currentIframePage), [currentIframePage]);
   
   // Filter comments by current page using normalized keys
+  // IMPORTANT: Legacy comments (missing page_url or page_url = base prototype URL) 
+  // should only show on homepage ("/"), not on every page
+  const basePrototypeKey = useMemo(() => normalizePageKey(prototype?.url || ""), [prototype?.url]);
+  
   const pageComments = useMemo(() => {
     return activeComments.filter((comment) => {
       if (!currentIframePage) return true; // Show all if we don't know current page yet
-      if (!comment.page_url) return true; // Legacy comments without page_url show on all pages
-      const commentKey = normalizePageKey(comment.page_url);
+      
+      const commentKey = normalizePageKey(comment.page_url || "");
+      
+      // Legacy comment: no page_url OR page_url matches base prototype URL
+      const isLegacyComment = !comment.page_url || !commentKey || commentKey === basePrototypeKey;
+      
+      if (isLegacyComment) {
+        // Legacy comments only show on homepage
+        return currentPageKey === "/" || currentPageKey === "";
+      }
+      
+      // Normal comment: match by page key
       return commentKey === currentPageKey;
     });
-  }, [activeComments, currentIframePage, currentPageKey]);
+  }, [activeComments, currentIframePage, currentPageKey, basePrototypeKey]);
   
   const unresolvedComments = pageComments.filter((c) => !c.resolved_at && c.status !== 'resolved' && c.status !== 'wont_do');
   const resolvedComments = pageComments.filter((c) => c.resolved_at || c.status === 'resolved' || c.status === 'wont_do');
