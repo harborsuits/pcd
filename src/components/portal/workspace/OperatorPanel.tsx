@@ -25,12 +25,25 @@ import { adminFetch, getAdminKey } from "@/lib/adminFetch";
 import { StageBadge, STAGE_CONFIG, PipelineStage, getNextStage } from "@/components/operator/StageBadge";
 
 interface IntakeData {
+  // Core fields from new simplified wizard
   businessName?: string;
   businessType?: string;
   primaryGoal?: string;
+  sellType?: string;
   timeline?: string;
+  deadlineDate?: string;
+  readiness?: string;
+  involvement?: string;
+  serviceArea?: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  // Legacy fields
+  goals?: string[];
   assetsReadiness?: string;
   involvementPreference?: string;
+  websiteStatus?: string;
+  readinessAssets?: string[];
+  notes?: string;
 }
 
 interface PhaseBData {
@@ -99,7 +112,16 @@ const ASSETS_LABELS: Record<string, string> = {
   ready: "I have everything",
   some: "I have some things",
   help: "I need help",
+  need_help: "I need help",
   unsure: "Not sure yet",
+};
+
+const READINESS_LABELS: Record<string, string> = {
+  ready: "Has everything ready",
+  some: "Has some things",
+  need_help: "Needs help with assets",
+  help: "Needs help with assets",
+  unsure: "Not sure what's needed",
 };
 
 const INVOLVEMENT_LABELS: Record<string, string> = {
@@ -497,22 +519,42 @@ export function OperatorPanel({
                       <div>{GOAL_LABELS[intakeData.primaryGoal] || intakeData.primaryGoal}</div>
                     </div>
                   )}
+                  {intakeData.sellType && (
+                    <div>
+                      <div className="text-xs text-muted-foreground">Selling</div>
+                      <div className="capitalize">{intakeData.sellType.replace(/_/g, " ")}</div>
+                    </div>
+                  )}
                   {intakeData.timeline && (
                     <div>
                       <div className="text-xs text-muted-foreground">Timeline</div>
                       <div>{TIMELINE_LABELS[intakeData.timeline] || intakeData.timeline}</div>
                     </div>
                   )}
-                  {intakeData.assetsReadiness && (
+                  {/* Handle both old field name (assetsReadiness) and new (readiness) */}
+                  {(intakeData.readiness || intakeData.assetsReadiness) && (
                     <div>
                       <div className="text-xs text-muted-foreground">Assets Ready</div>
-                      <div>{ASSETS_LABELS[intakeData.assetsReadiness] || intakeData.assetsReadiness}</div>
+                      <div>{READINESS_LABELS[intakeData.readiness || intakeData.assetsReadiness || ''] || ASSETS_LABELS[intakeData.readiness || intakeData.assetsReadiness || ''] || intakeData.readiness || intakeData.assetsReadiness}</div>
                     </div>
                   )}
-                  {intakeData.involvementPreference && (
+                  {/* Handle both old field name (involvementPreference) and new (involvement) */}
+                  {(intakeData.involvement || intakeData.involvementPreference) && (
                     <div>
                       <div className="text-xs text-muted-foreground">Involvement</div>
-                      <div>{INVOLVEMENT_LABELS[intakeData.involvementPreference] || intakeData.involvementPreference}</div>
+                      <div>{INVOLVEMENT_LABELS[intakeData.involvement || intakeData.involvementPreference || ''] || intakeData.involvement || intakeData.involvementPreference}</div>
+                    </div>
+                  )}
+                  {intakeData.serviceArea && (
+                    <div>
+                      <div className="text-xs text-muted-foreground">Service Area</div>
+                      <div>{intakeData.serviceArea}</div>
+                    </div>
+                  )}
+                  {intakeData.notes && (
+                    <div>
+                      <div className="text-xs text-muted-foreground">Notes</div>
+                      <div className="text-muted-foreground whitespace-pre-wrap">{intakeData.notes}</div>
                     </div>
                   )}
                 </div>

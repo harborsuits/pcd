@@ -18,12 +18,25 @@ interface NeedsInfoItem {
 }
 
 interface IntakeData {
+  // Core fields from new simplified wizard
   businessName?: string;
   businessType?: string;
   primaryGoal?: string;
+  sellType?: string;
   timeline?: string;
+  deadlineDate?: string;
+  readiness?: string;
+  involvement?: string;
+  serviceArea?: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  // Legacy fields
+  goals?: string[];
   assetsReadiness?: string;
   involvementPreference?: string;
+  websiteStatus?: string;
+  readinessAssets?: string[];
+  notes?: string;
 }
 
 interface PhaseBData {
@@ -150,13 +163,15 @@ export default function WorkspacePage() {
 
       const data = await res.json();
       if (res.ok && data.business) {
+        // Map intake_json from API to intakeData (can be the full intake object)
+        const rawIntake = data.intake_json || {};
         setProjectInfo({
           id: data.business.id || "",
           businessName: data.business.name,
           intakeStatus: data.intake_status,
           pipelineStage: data.business.pipeline_stage || "new",
           portalStage: data.business.portal_stage || "intake",
-          intakeData: data.intake_json || null,
+          intakeData: rawIntake,
           needsInfo: data.business.needs_info || false,
           needsInfoItems: data.business.needs_info_items || [],
           needsInfoNote: data.business.needs_info_note || null,

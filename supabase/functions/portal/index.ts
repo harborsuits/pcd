@@ -300,10 +300,10 @@ Deno.serve(async (req) => {
       // We still return data so the frontend can show the auth page with business name
     }
 
-    // Fetch intake status for roadmap and Phase B data
+    // Fetch intake status for roadmap, Phase A data, and Phase B data
     const { data: intake, error: intakeError } = await supabase
       .from("project_intakes")
-      .select("intake_status, phase_b_json, phase_b_status")
+      .select("intake_status, intake_json, phase_b_json, phase_b_status")
       .eq("project_id", project.id)
       .maybeSingle();
 
@@ -386,6 +386,7 @@ Deno.serve(async (req) => {
         needs_info_note: project.needs_info_note || null,
       },
       intake_status: intake?.intake_status || null,
+      intake_json: intake?.intake_json || null,
       phase_b_status: intake?.phase_b_status || "pending",
       phase_b_data: intake?.phase_b_json || null,
       messages: (messages || []).map((m) => ({
