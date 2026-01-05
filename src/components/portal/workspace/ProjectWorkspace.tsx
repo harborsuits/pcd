@@ -8,16 +8,36 @@ import { AddFeedbackModal } from "./AddFeedbackModal";
 import { ScreenshotComposer } from "./ScreenshotComposer";
 import { CommentComposer } from "./CommentComposer";
 import { ScreenshotViewer } from "../ScreenshotViewer";
+import { OperatorPanel } from "./OperatorPanel";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { MessageCircle, Settings2 } from "lucide-react";
+import { getAdminKey } from "@/lib/adminFetch";
 import type { CommentData } from "./FeedbackCard";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
+interface IntakeData {
+  businessName?: string;
+  businessType?: string;
+  primaryGoal?: string;
+  timeline?: string;
+  assetsReadiness?: string;
+  involvementPreference?: string;
+}
 
 interface ProjectWorkspaceProps {
   token: string;
   versions: Version[];
   comments: CommentData[];
   onRefreshComments: () => void;
+  // Operator mode props
+  projectId?: string;
+  intakeStatus?: 'draft' | 'submitted' | 'approved' | null;
+  pipelineStage?: string;
+  portalStage?: string;
+  intakeData?: IntakeData | null;
+  onRefreshProject?: () => void;
 }
 
 type WorkspaceMode = 
@@ -30,6 +50,12 @@ export function ProjectWorkspace({
   versions,
   comments,
   onRefreshComments,
+  projectId,
+  intakeStatus,
+  pipelineStage,
+  portalStage,
+  intakeData,
+  onRefreshProject,
 }: ProjectWorkspaceProps) {
   const [selectedVersionId, setSelectedVersionId] = useState<string | null>(
     versions[0]?.id ?? null
@@ -38,8 +64,12 @@ export function ProjectWorkspace({
   const [showAddFeedbackModal, setShowAddFeedbackModal] = useState(false);
   const [isCapturing, setIsCapturing] = useState(false);
   const [viewingScreenshot, setViewingScreenshot] = useState<CommentData | null>(null);
+  const [rightPanelTab, setRightPanelTab] = useState<string>("feedback");
   
   const previewContainerRef = useRef<HTMLDivElement>(null);
+  
+  // Check if user has operator access
+  const isOperator = !!getAdminKey();
 
   const selectedVersion = versions.find(v => v.id === selectedVersionId) ?? versions[0];
   const versionComments = comments.filter(c => c.prototype_id === selectedVersion?.id);
@@ -325,9 +355,9 @@ export function ProjectWorkspace({
   };
 
   return (
-    <div className="h-screen flex">
-      {/* Left: Versions */}
-      <div className="w-48 flex-shrink-0 border-r border-border bg-muted/30">
+    <div className="h-full flex">
+      {/* Left: Versions (compact) */}
+      <div className="w-44 flex-shrink-0 border-r border-border bg-muted/30">
         <VersionsList
           versions={versions}
           selectedId={selectedVersionId}
@@ -353,17 +383,64 @@ export function ProjectWorkspace({
         {renderComposer()}
       </div>
 
-      {/* Right: Feedback */}
-      <div className="w-80 flex-shrink-0 border-l border-border bg-background">
-        <FeedbackPanel
-          comments={versionComments}
-          onAddFeedback={() => setShowAddFeedbackModal(true)}
-          onResolve={handleResolve}
-          onUnresolve={handleUnresolve}
-          onMarkInProgress={handleMarkInProgress}
-          onViewScreenshot={handleViewScreenshot}
-          token={token}
-        />
+      {/* Right: Feedback + Operator tabs */}
+      <div className="w-80 flex-shrink-0 border-l border-border bg-background flex flex-col">
+        {isOperator ? (
+          <Tabs value={rightPanelTab} onValueChange={setRightPanelTab} className="flex-1 flex flex-col">
+            <div className="border-b border-border px-2 pt-1">
+              <TabsList className="h-9 w-full justify-start bg-transparent gap-0 p-0">
+                <TabsTrigger
+                  value="feedback"
+                  className="text-xs data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-3 gap-1.5"
+                >
+                  <MessageCircle className="h-3 w-3" />
+                  Feedback
+                </TabsTrigger>
+                <TabsTrigger
+                  value="operator"
+                  className="text-xs data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-amber-500 rounded-none px-3 gap-1.5"
+                >
+                  <Settings2 className="h-3 w-3" />
+                  Operator
+                </TabsTrigger>
+              </TabsList>
+            </div>
+            
+            <TabsContent value="feedback" className="flex-1 mt-0 min-h-0">
+              <FeedbackPanel
+                comments={versionComments}
+                onAddFeedback={() => setShowAddFeedbackModal(true)}
+                onResolve={handleResolve}
+                onUnresolve={handleUnresolve}
+                onMarkInProgress={handleMarkInProgress}
+                onViewScreenshot={handleViewScreenshot}
+                token={token}
+              />
+            </TabsContent>
+            
+            <TabsContent value="operator" className="flex-1 mt-0 min-h-0">
+              <OperatorPanel
+                token={token}
+                projectId={projectId}
+                intakeStatus={intakeStatus ?? null}
+                pipelineStage={pipelineStage ?? "new"}
+                portalStage={portalStage ?? "intake"}
+                intakeData={intakeData}
+                onRefresh={onRefreshProject ?? (() => {})}
+              />
+            </TabsContent>
+          </Tabs>
+        ) : (
+          <FeedbackPanel
+            comments={versionComments}
+            onAddFeedback={() => setShowAddFeedbackModal(true)}
+            onResolve={handleResolve}
+            onUnresolve={handleUnresolve}
+            onMarkInProgress={handleMarkInProgress}
+            onViewScreenshot={handleViewScreenshot}
+            token={token}
+          />
+        )}
       </div>
 
       {/* Add feedback modal */}
@@ -371,7 +448,6 @@ export function ProjectWorkspace({
         open={showAddFeedbackModal}
         onOpenChange={setShowAddFeedbackModal}
         onSelectScreenshot={() => {
-          // Prompt to upload since capture likely won't work
           toast.info("Upload a screenshot to pin your feedback");
         }}
         onSelectGeneral={() => setMode({ type: "general-comment" })}
