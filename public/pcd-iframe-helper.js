@@ -280,6 +280,7 @@
         scroll: { x: window.scrollX, y: window.scrollY },
         textHint,
         textContext,
+        page: window.location.href,  // Include current page URL for robust page tracking
         ts: Date.now(),
       });
     },
