@@ -116,7 +116,7 @@ export default function OnboardingWizard() {
   const canProceed = (): boolean => {
     switch (currentStep) {
       case 0: // Basics
-        return !!intake.businessName && !!intake.businessType && !!intake.contactEmail;
+        return !!intake.businessName && !!intake.businessType && !!intake.contactEmail && !!intake.contactPhone;
       case 1: // Goal
         return !!intake.primaryGoal;
       case 2: // Timeline
@@ -253,7 +253,7 @@ export default function OnboardingWizard() {
                   onChange={(e) => setIntake(prev => ({ ...prev, contactEmail: e.target.value }))}
                 />
                 <Input
-                  placeholder="Phone (optional)"
+                  placeholder="Phone"
                   type="tel"
                   value={intake.contactPhone}
                   onChange={(e) => setIntake(prev => ({ ...prev, contactPhone: e.target.value }))}
