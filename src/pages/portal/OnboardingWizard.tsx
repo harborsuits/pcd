@@ -25,7 +25,6 @@ import {
   Package,
   Hand
 } from "lucide-react";
-import { IntakeSubmittedScreen } from "@/components/portal/IntakeSubmittedScreen";
 import { ClientLayout } from "@/components/portal/ClientLayout";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
@@ -107,7 +106,6 @@ export default function OnboardingWizard() {
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [submittedProject, setSubmittedProject] = useState<{ businessName: string; projectToken: string } | null>(null);
   
   const [intake, setIntake] = useState<IntakeData>({
     businessName: "",
@@ -195,10 +193,8 @@ export default function OnboardingWizard() {
         throw new Error(data.error || "Failed to create project");
       }
 
-      setSubmittedProject({
-        businessName: intake.businessName,
-        projectToken: data.project_token,
-      });
+      // Navigate directly to workspace with AI trial offer
+      navigate(`/w/${data.project_token}?ai_trial=start`);
     } catch (err) {
       console.error("Create project error:", err);
       toast({
@@ -470,16 +466,6 @@ export default function OnboardingWizard() {
         return null;
     }
   };
-
-  // Show success screen after submission
-  if (submittedProject) {
-    return (
-      <IntakeSubmittedScreen
-        businessName={submittedProject.businessName}
-        projectToken={submittedProject.projectToken}
-      />
-    );
-  }
 
   const CurrentStepIcon = STEPS[currentStep].icon;
   const isLastStep = currentStep === STEPS.length - 1;
