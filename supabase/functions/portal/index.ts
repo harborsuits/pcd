@@ -1266,7 +1266,10 @@ async function handleCommentAction(
           viewport_h: viewport_h ?? null,
           breakpoint: breakpoint ?? null,
           anchor_id: anchor_id ?? null,
-          anchor_selector: anchor_selector ?? null,
+          // SAFETY NET: Strip ephemeral anchor selectors at backend level
+          anchor_selector: (typeof anchor_selector === "string" && !anchor_selector.includes("data-pcd-anchor"))
+            ? anchor_selector
+            : null,
           x_pct: x_pct ?? null,
           y_pct: y_pct ?? null,
           text_hint: text_hint ?? null,
@@ -1466,8 +1469,13 @@ if (action === "resolve" || action === "unresolve") {
         );
       }
 
-      // Require at least anchor_selector or anchor_id
-      if (!anchor_selector && !anchor_id) {
+      // SAFETY NET: Filter out ephemeral selectors before validation
+      const safeAnchorSelector = (typeof anchor_selector === "string" && !anchor_selector.includes("data-pcd-anchor"))
+        ? anchor_selector
+        : null;
+      
+      // Require at least valid anchor_selector or anchor_id
+      if (!safeAnchorSelector && !anchor_id) {
         return new Response(
           JSON.stringify({ error: "anchor_selector or anchor_id required for repin" }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -1489,9 +1497,9 @@ if (action === "resolve" || action === "unresolve") {
         );
       }
 
-      // Update anchor fields
+      // Update anchor fields (use safeAnchorSelector from validation above)
       const repinData: Record<string, unknown> = {
-        anchor_selector: anchor_selector ?? null,
+        anchor_selector: safeAnchorSelector,
         anchor_id: anchor_id ?? null,
         x_pct: x_pct ?? null,
         y_pct: y_pct ?? null,
