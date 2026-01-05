@@ -1,8 +1,9 @@
-import { useParams } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import React, { useState, useEffect, useCallback } from "react";
-import { Loader2, AlertCircle, CheckCircle2, Clock, Rocket, FileText, Upload, Image, Palette, MapPin, Phone, Calendar, ClipboardList, LucideIcon, Settings2 } from "lucide-react";
+import { Loader2, AlertCircle, CheckCircle2, Clock, Rocket, FileText, Upload, Image, Palette, MapPin, Phone, Calendar, ClipboardList, LucideIcon, Settings2, Home, ExternalLink } from "lucide-react";
 import { ProjectWorkspace, type Version, type CommentData } from "@/components/portal/workspace";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { getAdminKey } from "@/lib/adminFetch";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
@@ -282,6 +283,13 @@ export default function WorkspacePage() {
         <div className="border-b border-border bg-muted/30 px-4 py-2 flex-shrink-0">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
+              <Link to="/">
+                <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground hover:text-foreground">
+                  <Home className="h-4 w-4" />
+                  <span className="hidden sm:inline">Home</span>
+                </Button>
+              </Link>
+              <div className="h-4 w-px bg-border" />
               <Badge variant="outline" className={config.colorClass}>
                 <Icon className="h-3 w-3 mr-1" />
                 {config.label}
@@ -293,10 +301,18 @@ export default function WorkspacePage() {
                 {versions.length} version{versions.length !== 1 ? "s" : ""} available
               </span>
               {isOperator && (
-                <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-200">
-                  <Settings2 className="h-3 w-3 mr-1" />
-                  Operator
-                </Badge>
+                <>
+                  <Link to={`/c/${token}`} target="_blank">
+                    <Button variant="ghost" size="sm" className="gap-1.5 text-xs">
+                      <ExternalLink className="h-3 w-3" />
+                      Client View
+                    </Button>
+                  </Link>
+                  <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-200">
+                    <Settings2 className="h-3 w-3 mr-1" />
+                    Operator
+                  </Badge>
+                </>
               )}
             </div>
           </div>
