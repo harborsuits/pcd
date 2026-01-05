@@ -9,8 +9,16 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Camera, Upload, X, Loader2, MapPin } from "lucide-react";
+import { Camera, Upload, X, Loader2, MapPin, Paperclip, FileText, Image as ImageIcon, Film, Trash2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+
+interface UploadedMedia {
+  media_id: string;
+  path: string;
+  filename: string;
+  mime_type: string;
+  size_bytes: number;
+}
 
 interface ScreenshotFeedbackModalProps {
   open: boolean;
@@ -20,11 +28,13 @@ interface ScreenshotFeedbackModalProps {
   pageUrl?: string;
   onSubmit: (data: {
     body: string;
-    screenshotPath: string;
+    screenshotMediaId?: string;
+    screenshotPath?: string;
     pinX: number;
     pinY: number;
     screenshotW: number;
     screenshotH: number;
+    attachmentMediaIds?: string[];
   }) => Promise<void>;
   captureTarget?: HTMLElement | null;
 }
@@ -46,7 +56,10 @@ export function ScreenshotFeedbackModal({
   const [commentText, setCommentText] = useState("");
   const [isCapturing, setIsCapturing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [attachments, setAttachments] = useState<UploadedMedia[]>([]);
+  const [uploadingAttachments, setUploadingAttachments] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const attachmentInputRef = useRef<HTMLInputElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
 
   const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
@@ -60,8 +73,40 @@ export function ScreenshotFeedbackModal({
       setScreenshotDimensions(null);
       setPinPosition(null);
       setCommentText("");
+      setAttachments([]);
     }
     onOpenChange(newOpen);
+  };
+
+  // Upload a file and get media record
+  const uploadFile = async (file: File): Promise<UploadedMedia | null> => {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("prototype_id", prototypeId);
+
+    try {
+      const res = await fetch(
+        `${SUPABASE_URL}/functions/v1/portal/${token}/screenshot`,
+        { method: "POST", body: formData }
+      );
+
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({}));
+        throw new Error(error.error || "Upload failed");
+      }
+
+      const data = await res.json();
+      return {
+        media_id: data.media_id,
+        path: data.path,
+        filename: data.filename || file.name,
+        mime_type: data.mime_type || file.type,
+        size_bytes: data.size_bytes || file.size,
+      };
+    } catch (error) {
+      console.error("Upload error:", error);
+      return null;
+    }
   };
 
   // Capture screenshot using html2canvas
@@ -81,7 +126,7 @@ export function ScreenshotFeedbackModal({
         useCORS: true,
         allowTaint: true,
         logging: false,
-        scale: 1, // Use 1x scale for reasonable file sizes
+        scale: 1,
         backgroundColor: "#ffffff",
       });
 
@@ -89,7 +134,6 @@ export function ScreenshotFeedbackModal({
       setScreenshotDataUrl(dataUrl);
       setScreenshotDimensions({ w: canvas.width, h: canvas.height });
 
-      // Convert to blob for upload
       canvas.toBlob((blob) => {
         if (blob) {
           setScreenshotBlob(blob);
@@ -108,7 +152,7 @@ export function ScreenshotFeedbackModal({
     }
   }, [captureTarget]);
 
-  // Handle file upload
+  // Handle screenshot file upload
   const handleFileUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -116,7 +160,7 @@ export function ScreenshotFeedbackModal({
     if (!file.type.startsWith("image/")) {
       toast({
         title: "Invalid file",
-        description: "Please upload an image file.",
+        description: "Please upload an image file for screenshot feedback.",
         variant: "destructive",
       });
       return;
@@ -127,7 +171,6 @@ export function ScreenshotFeedbackModal({
       const dataUrl = event.target?.result as string;
       setScreenshotDataUrl(dataUrl);
 
-      // Get image dimensions
       const img = new Image();
       img.onload = () => {
         setScreenshotDimensions({ w: img.width, h: img.height });
@@ -139,18 +182,59 @@ export function ScreenshotFeedbackModal({
     };
     reader.readAsDataURL(file);
 
-    // Reset input
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
   }, []);
+
+  // Handle additional attachment uploads
+  const handleAttachmentUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files?.length) return;
+
+    setUploadingAttachments(true);
+    const newAttachments: UploadedMedia[] = [];
+
+    try {
+      for (const file of Array.from(files)) {
+        const result = await uploadFile(file);
+        if (result) {
+          newAttachments.push(result);
+        } else {
+          toast({
+            title: "Upload failed",
+            description: `Could not upload ${file.name}`,
+            variant: "destructive",
+          });
+        }
+      }
+
+      setAttachments(prev => [...prev, ...newAttachments]);
+      
+      if (newAttachments.length > 0) {
+        toast({
+          title: "Files uploaded",
+          description: `${newAttachments.length} file(s) attached`,
+        });
+      }
+    } finally {
+      setUploadingAttachments(false);
+      if (attachmentInputRef.current) {
+        attachmentInputRef.current.value = "";
+      }
+    }
+  }, [prototypeId, token, SUPABASE_URL]);
+
+  // Remove attachment
+  const removeAttachment = (mediaId: string) => {
+    setAttachments(prev => prev.filter(a => a.media_id !== mediaId));
+  };
 
   // Handle pin placement click
   const handleImageClick = useCallback((e: React.MouseEvent<HTMLImageElement>) => {
     const img = e.currentTarget;
     const rect = img.getBoundingClientRect();
     
-    // Calculate click position as percentage of image dimensions
     const x = ((e.clientX - rect.left) / rect.width) * 100;
     const y = ((e.clientY - rect.top) / rect.height) * 100;
     
@@ -171,7 +255,7 @@ export function ScreenshotFeedbackModal({
 
     setIsSubmitting(true);
     try {
-      // Upload screenshot to storage
+      // Upload screenshot
       const formData = new FormData();
       formData.append("file", screenshotBlob, `screenshot-${Date.now()}.png`);
       formData.append("prototype_id", prototypeId);
@@ -185,16 +269,18 @@ export function ScreenshotFeedbackModal({
         throw new Error("Failed to upload screenshot");
       }
 
-      const { path: screenshotPath } = await uploadRes.json();
+      const uploadData = await uploadRes.json();
 
       // Submit the comment with screenshot data
       await onSubmit({
         body: commentText.trim(),
-        screenshotPath,
+        screenshotMediaId: uploadData.media_id,
+        screenshotPath: uploadData.path,
         pinX: pinPosition.x,
         pinY: pinPosition.y,
         screenshotW: screenshotDimensions?.w ?? 0,
         screenshotH: screenshotDimensions?.h ?? 0,
+        attachmentMediaIds: attachments.map(a => a.media_id),
       });
 
       toast({
@@ -213,7 +299,19 @@ export function ScreenshotFeedbackModal({
     } finally {
       setIsSubmitting(false);
     }
-  }, [screenshotBlob, pinPosition, commentText, prototypeId, token, screenshotDimensions, onSubmit, SUPABASE_URL]);
+  }, [screenshotBlob, pinPosition, commentText, prototypeId, token, screenshotDimensions, attachments, onSubmit, SUPABASE_URL]);
+
+  const formatSize = (bytes: number) => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
+  const getFileIcon = (mimeType: string) => {
+    if (mimeType.startsWith("image/")) return <ImageIcon className="h-4 w-4" />;
+    if (mimeType.startsWith("video/")) return <Film className="h-4 w-4" />;
+    return <FileText className="h-4 w-4" />;
+  };
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -287,7 +385,6 @@ export function ScreenshotFeedbackModal({
                 onClick={step === "pin" ? handleImageClick : undefined}
               />
               
-              {/* Pin marker */}
               {pinPosition && (
                 <div
                   className="absolute pointer-events-none"
@@ -315,6 +412,65 @@ export function ScreenshotFeedbackModal({
                 className="min-h-[100px]"
                 autoFocus
               />
+
+              {/* Attachments section */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => attachmentInputRef.current?.click()}
+                    disabled={uploadingAttachments}
+                  >
+                    {uploadingAttachments ? (
+                      <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                    ) : (
+                      <Paperclip className="h-4 w-4 mr-1" />
+                    )}
+                    Attach Files
+                  </Button>
+                  <span className="text-xs text-muted-foreground">
+                    Images, videos, PDFs supported
+                  </span>
+                </div>
+
+                <input
+                  ref={attachmentInputRef}
+                  type="file"
+                  multiple
+                  accept="image/*,video/*,application/pdf,.doc,.docx,.txt"
+                  className="hidden"
+                  onChange={handleAttachmentUpload}
+                />
+
+                {/* Attachment list */}
+                {attachments.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {attachments.map((att) => (
+                      <div
+                        key={att.media_id}
+                        className="flex items-center gap-2 px-2 py-1 bg-muted rounded-md text-sm"
+                      >
+                        {getFileIcon(att.mime_type)}
+                        <span className="max-w-[120px] truncate">{att.filename}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {formatSize(att.size_bytes)}
+                        </span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-5 w-5 p-0"
+                          onClick={() => removeAttachment(att.media_id)}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
               
               <div className="flex items-center gap-2">
                 <Button
