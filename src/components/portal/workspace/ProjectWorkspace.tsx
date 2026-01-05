@@ -28,6 +28,34 @@ interface IntakeData {
   involvementPreference?: string;
 }
 
+interface PhaseBData {
+  logoStatus?: "uploaded" | "create" | "help" | "" | null;
+  brandColors?: string | null;
+  colorPreference?: "pick_for_me" | "custom" | "" | null;
+  businessDescription?: string | null;
+  services?: string | null;
+  serviceArea?: string | null;
+  differentiators?: string | null;
+  faq?: string | null;
+  primaryGoal?: "book" | "quote" | "call" | "portfolio" | "learn" | "visit" | "" | null;
+  photosPlan?: "upload" | "generate" | "none" | "help" | "" | null;
+  photosUploaded?: number | null;
+  generatedPhotoSubjects?: string | null;
+  generatedPhotoStyle?: "realistic" | "studio" | "lifestyle" | "minimal" | "" | null;
+  generatedPhotoNotes?: string | null;
+  placeholderOk?: boolean | null;
+  googleReviewsLink?: string | null;
+  certifications?: string | null;
+  hasBeforeAfter?: "yes" | "coming_soon" | "no" | "" | null;
+  vibe?: "modern" | "classic" | "luxury" | "bold" | "minimal" | "cozy" | "" | null;
+  tone?: "professional" | "friendly" | "direct" | "playful" | "" | null;
+  exampleSites?: string | null;
+  mustInclude?: string | null;
+  mustAvoid?: string | null;
+  contentNeedsHelp?: boolean;
+  styleNeedsHelp?: boolean;
+}
+
 interface ProjectWorkspaceProps {
   token: string;
   versions: Version[];
@@ -39,6 +67,8 @@ interface ProjectWorkspaceProps {
   pipelineStage?: string;
   portalStage?: string;
   intakeData?: IntakeData | null;
+  phaseBStatus?: 'pending' | 'in_progress' | 'complete' | null;
+  phaseBData?: PhaseBData | null;
   onRefreshProject?: () => void;
   // Force client mode - disables operator UI even if admin_key exists
   forceClientMode?: boolean;
@@ -59,6 +89,8 @@ export function ProjectWorkspace({
   pipelineStage,
   portalStage,
   intakeData,
+  phaseBStatus,
+  phaseBData,
   onRefreshProject,
   forceClientMode = false,
 }: ProjectWorkspaceProps) {
@@ -440,6 +472,8 @@ export function ProjectWorkspace({
                 pipelineStage={pipelineStage ?? "new"}
                 portalStage={portalStage ?? "intake"}
                 intakeData={intakeData}
+                phaseBStatus={phaseBStatus}
+                phaseBData={phaseBData}
                 onRefresh={onRefreshProject ?? (() => {})}
               />
             </TabsContent>

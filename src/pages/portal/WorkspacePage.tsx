@@ -25,6 +25,34 @@ interface IntakeData {
   involvementPreference?: string;
 }
 
+interface PhaseBData {
+  logoStatus?: "uploaded" | "create" | "help" | "" | null;
+  brandColors?: string | null;
+  colorPreference?: "pick_for_me" | "custom" | "" | null;
+  businessDescription?: string | null;
+  services?: string | null;
+  serviceArea?: string | null;
+  differentiators?: string | null;
+  faq?: string | null;
+  primaryGoal?: "book" | "quote" | "call" | "portfolio" | "learn" | "visit" | "" | null;
+  photosPlan?: "upload" | "generate" | "none" | "help" | "" | null;
+  photosUploaded?: number | null;
+  generatedPhotoSubjects?: string | null;
+  generatedPhotoStyle?: "realistic" | "studio" | "lifestyle" | "minimal" | "" | null;
+  generatedPhotoNotes?: string | null;
+  placeholderOk?: boolean | null;
+  googleReviewsLink?: string | null;
+  certifications?: string | null;
+  hasBeforeAfter?: "yes" | "coming_soon" | "no" | "" | null;
+  vibe?: "modern" | "classic" | "luxury" | "bold" | "minimal" | "cozy" | "" | null;
+  tone?: "professional" | "friendly" | "direct" | "playful" | "" | null;
+  exampleSites?: string | null;
+  mustInclude?: string | null;
+  mustAvoid?: string | null;
+  contentNeedsHelp?: boolean;
+  styleNeedsHelp?: boolean;
+}
+
 interface ProjectInfo {
   id: string;
   businessName: string;
@@ -35,6 +63,8 @@ interface ProjectInfo {
   needsInfo: boolean;
   needsInfoItems: NeedsInfoItem[];
   needsInfoNote: string | null;
+  phaseBStatus: 'pending' | 'in_progress' | 'complete' | null;
+  phaseBData: PhaseBData | null;
 }
 
 // Status banner configuration
@@ -115,6 +145,8 @@ export default function WorkspacePage() {
           needsInfo: data.business.needs_info || false,
           needsInfoItems: data.business.needs_info_items || [],
           needsInfoNote: data.business.needs_info_note || null,
+          phaseBStatus: data.phase_b_status || null,
+          phaseBData: data.phase_b_data || null,
         });
       }
     } catch (err) {
@@ -375,6 +407,8 @@ export default function WorkspacePage() {
           pipelineStage={projectInfo?.pipelineStage}
           portalStage={projectInfo?.portalStage}
           intakeData={projectInfo?.intakeData}
+          phaseBStatus={projectInfo?.phaseBStatus}
+          phaseBData={projectInfo?.phaseBData}
           onRefreshProject={fetchProjectInfo}
         />
       </div>

@@ -33,6 +33,34 @@ interface IntakeData {
   involvementPreference?: string;
 }
 
+interface PhaseBData {
+  logoStatus?: "uploaded" | "create" | "help" | "" | null;
+  brandColors?: string | null;
+  colorPreference?: "pick_for_me" | "custom" | "" | null;
+  businessDescription?: string | null;
+  services?: string | null;
+  serviceArea?: string | null;
+  differentiators?: string | null;
+  faq?: string | null;
+  primaryGoal?: "book" | "quote" | "call" | "portfolio" | "learn" | "visit" | "" | null;
+  photosPlan?: "upload" | "generate" | "none" | "help" | "" | null;
+  photosUploaded?: number | null;
+  generatedPhotoSubjects?: string | null;
+  generatedPhotoStyle?: "realistic" | "studio" | "lifestyle" | "minimal" | "" | null;
+  generatedPhotoNotes?: string | null;
+  placeholderOk?: boolean | null;
+  googleReviewsLink?: string | null;
+  certifications?: string | null;
+  hasBeforeAfter?: "yes" | "coming_soon" | "no" | "" | null;
+  vibe?: "modern" | "classic" | "luxury" | "bold" | "minimal" | "cozy" | "" | null;
+  tone?: "professional" | "friendly" | "direct" | "playful" | "" | null;
+  exampleSites?: string | null;
+  mustInclude?: string | null;
+  mustAvoid?: string | null;
+  contentNeedsHelp?: boolean;
+  styleNeedsHelp?: boolean;
+}
+
 interface DiscoveryItem {
   id: string;
   key: string;
@@ -48,6 +76,8 @@ interface OperatorPanelProps {
   pipelineStage: string;
   portalStage: string;
   intakeData?: IntakeData | null;
+  phaseBStatus?: 'pending' | 'in_progress' | 'complete' | null;
+  phaseBData?: PhaseBData | null;
   onRefresh: () => void;
 }
 
@@ -96,9 +126,12 @@ export function OperatorPanel({
   pipelineStage,
   portalStage,
   intakeData,
+  phaseBStatus,
+  phaseBData,
   onRefresh,
 }: OperatorPanelProps) {
   const [intakeOpen, setIntakeOpen] = useState(true);
+  const [phaseBOpen, setPhaseBOpen] = useState(true);
   const [notesOpen, setNotesOpen] = useState(false);
   const [discoveryOpen, setDiscoveryOpen] = useState(true);
   const [newNote, setNewNote] = useState("");
@@ -487,6 +520,109 @@ export function OperatorPanel({
                 <div className="text-center py-4 text-sm text-muted-foreground">
                   <AlertCircle className="h-4 w-4 mx-auto mb-2 opacity-50" />
                   No intake data yet
+                </div>
+              )}
+            </CollapsibleContent>
+          </Collapsible>
+
+          {/* Phase B Status */}
+          <Collapsible open={phaseBOpen} onOpenChange={setPhaseBOpen}>
+            <CollapsibleTrigger asChild>
+              <Button variant="ghost" size="sm" className="w-full justify-between p-2 h-auto">
+                <span className="flex items-center gap-2 text-xs font-medium">
+                  <Sparkles className="h-3 w-3" />
+                  Phase B (Execution Details)
+                  {phaseBStatus === 'complete' && (
+                    <Badge variant="secondary" className="ml-1 h-4 text-xs px-1 bg-green-500/10 text-green-600 border-green-200">
+                      Complete
+                    </Badge>
+                  )}
+                  {phaseBStatus === 'in_progress' && (
+                    <Badge variant="secondary" className="ml-1 h-4 text-xs px-1 bg-amber-500/10 text-amber-600 border-amber-200">
+                      In Progress
+                    </Badge>
+                  )}
+                  {(!phaseBStatus || phaseBStatus === 'pending') && (
+                    <Badge variant="secondary" className="ml-1 h-4 text-xs px-1">
+                      Not Started
+                    </Badge>
+                  )}
+                </span>
+                {phaseBOpen ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="pt-2">
+              {(!phaseBStatus || phaseBStatus === 'pending') && !phaseBData ? (
+                <div className="text-center py-4 text-sm bg-muted/50 rounded-lg border border-dashed">
+                  <Clock className="h-5 w-5 mx-auto mb-2 text-muted-foreground opacity-50" />
+                  <p className="text-muted-foreground font-medium">Phase B not started yet</p>
+                  <p className="text-xs text-muted-foreground mt-1">Awaiting client input after intake approval</p>
+                </div>
+              ) : (
+                <div className="space-y-2 text-sm bg-background rounded-lg p-3 border">
+                  {/* Brand & Identity */}
+                  <div>
+                    <div className="text-xs text-muted-foreground font-medium mb-1">Brand & Identity</div>
+                    <div className="flex flex-wrap gap-1">
+                      {phaseBData?.logoStatus === 'uploaded' && <Badge variant="secondary" className="text-xs"><Image className="h-3 w-3 mr-1" />Logo uploaded</Badge>}
+                      {phaseBData?.logoStatus === 'create' && <Badge variant="outline" className="text-xs">Logo needed</Badge>}
+                      {phaseBData?.logoStatus === 'help' && <Badge variant="outline" className="text-xs bg-blue-500/10 text-blue-600 border-blue-200">Need help with logo</Badge>}
+                      {phaseBData?.brandColors && <Badge variant="outline" className="text-xs font-mono">{phaseBData.brandColors}</Badge>}
+                      {phaseBData?.colorPreference === 'pick_for_me' && <Badge variant="outline" className="text-xs">Pick colors for me</Badge>}
+                      {!phaseBData?.logoStatus && !phaseBData?.brandColors && !phaseBData?.colorPreference && (
+                        <span className="text-xs text-muted-foreground italic">Not provided</span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Content */}
+                  <div>
+                    <div className="text-xs text-muted-foreground font-medium mb-1">Website Content</div>
+                    {phaseBData?.contentNeedsHelp ? (
+                      <Badge variant="outline" className="text-xs bg-blue-500/10 text-blue-600 border-blue-200">Client needs help with content</Badge>
+                    ) : (
+                      <div className="flex flex-wrap gap-1">
+                        {phaseBData?.businessDescription && <Badge variant="secondary" className="text-xs">Description ✓</Badge>}
+                        {phaseBData?.services && <Badge variant="secondary" className="text-xs">Services ✓</Badge>}
+                        {phaseBData?.serviceArea && <Badge variant="secondary" className="text-xs">Service area ✓</Badge>}
+                        {!phaseBData?.businessDescription && !phaseBData?.services && !phaseBData?.serviceArea && (
+                          <span className="text-xs text-muted-foreground italic">Not provided</span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Photos */}
+                  <div>
+                    <div className="text-xs text-muted-foreground font-medium mb-1">Photos & Proof</div>
+                    <div className="flex flex-wrap gap-1">
+                      {phaseBData?.photosPlan === 'upload' && <Badge variant="secondary" className="text-xs"><Upload className="h-3 w-3 mr-1" />{phaseBData.photosUploaded || 0} photos</Badge>}
+                      {phaseBData?.photosPlan === 'generate' && <Badge variant="outline" className="text-xs bg-purple-500/10 text-purple-600 border-purple-200"><Sparkles className="h-3 w-3 mr-1" />AI photos</Badge>}
+                      {phaseBData?.photosPlan === 'none' && <Badge variant="outline" className="text-xs">Placeholders OK</Badge>}
+                      {phaseBData?.photosPlan === 'help' && <Badge variant="outline" className="text-xs bg-blue-500/10 text-blue-600 border-blue-200">Need help with photos</Badge>}
+                      {phaseBData?.googleReviewsLink && <Badge variant="secondary" className="text-xs">Reviews linked</Badge>}
+                      {phaseBData?.certifications && <Badge variant="secondary" className="text-xs">Certifications</Badge>}
+                      {!phaseBData?.photosPlan && !phaseBData?.googleReviewsLink && !phaseBData?.certifications && (
+                        <span className="text-xs text-muted-foreground italic">Not provided</span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Style */}
+                  <div>
+                    <div className="text-xs text-muted-foreground font-medium mb-1">Style & Preferences</div>
+                    {phaseBData?.styleNeedsHelp ? (
+                      <Badge variant="outline" className="text-xs bg-blue-500/10 text-blue-600 border-blue-200">Just pick something good</Badge>
+                    ) : (
+                      <div className="flex flex-wrap gap-1">
+                        {phaseBData?.vibe && <Badge variant="outline" className="text-xs capitalize">{phaseBData.vibe}</Badge>}
+                        {phaseBData?.tone && <Badge variant="outline" className="text-xs capitalize">{phaseBData.tone}</Badge>}
+                        {!phaseBData?.vibe && !phaseBData?.tone && (
+                          <span className="text-xs text-muted-foreground italic">Not provided</span>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </CollapsibleContent>
