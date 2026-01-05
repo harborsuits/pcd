@@ -136,8 +136,8 @@
       } catch {}
     }
     
-    // Strategy 2: Selector (semantic or structural)
-    if (selector) {
+    // Strategy 2: Selector (but SKIP if it's just a data-pcd-anchor selector - those are ephemeral)
+    if (selector && !selector.includes("data-pcd-anchor")) {
       try {
         const el = document.querySelector(selector);
         if (el) {
@@ -147,34 +147,57 @@
       } catch {}
     }
     
-    // Strategy 3: Text-hint search (any element with matching text)
-    if (textHint && textHint.length >= 3) {
-      const normalized = textHint.toLowerCase().trim().slice(0, 80); // Truncate for matching
+    // Strategy 3: Text-hint search (AGGRESSIVE - this is our main fallback)
+    if (textHint && textHint.length >= 2) {
+      const normalized = textHint.toLowerCase().trim().replace(/\s+/g, " ");
+      const searchTerms = normalized.slice(0, 60); // First 60 chars for matching
+      const firstWord = normalized.split(" ")[0];
       
-      // Search all potential text-containing elements
-      const candidates = document.querySelectorAll("h1, h2, h3, h4, h5, h6, p, span, a, button, li, td, th, label, [role='button'], [role='heading']");
-      for (const c of candidates) {
-        // Get only direct text, not nested children text
-        const directText = Array.from(c.childNodes)
-          .filter(n => n.nodeType === Node.TEXT_NODE)
-          .map(n => n.textContent)
-          .join("")
-          .trim()
-          .replace(/\s+/g, " ");
-        const fullText = (c.textContent || "").trim().replace(/\s+/g, " ");
+      // Search ALL elements, not just a limited set
+      const allElements = document.querySelectorAll("*");
+      let bestMatch = null;
+      let bestScore = 0;
+      
+      for (const c of allElements) {
+        // Skip containers with too many children (probably wrapper divs)
+        if (c.children.length > 10) continue;
+        // Skip script, style, meta, etc.
+        const tag = c.tagName.toLowerCase();
+        if (["script", "style", "meta", "link", "head", "html", "body"].includes(tag)) continue;
         
-        // Match against start of text (text hints are often truncated)
-        const directLower = directText.toLowerCase();
+        const fullText = (c.textContent || "").trim().replace(/\s+/g, " ");
+        if (!fullText || fullText.length < 2) continue;
+        
         const fullLower = fullText.toLowerCase();
         
-        if (directLower && directLower.startsWith(normalized.slice(0, 40))) {
+        // Exact match (highest priority)
+        if (fullLower === normalized) {
           ensureAnchorStamp(c);
-          return { el: c, method: "text-hint-direct" };
+          return { el: c, method: "text-exact" };
         }
-        if (fullLower === normalized || fullLower.startsWith(normalized.slice(0, 40))) {
-          ensureAnchorStamp(c);
-          return { el: c, method: "text-hint" };
+        
+        // Starts with search terms
+        if (fullLower.startsWith(searchTerms)) {
+          const score = 100 - c.children.length; // Prefer leaf nodes
+          if (score > bestScore) {
+            bestScore = score;
+            bestMatch = c;
+          }
         }
+        
+        // Contains first word and is a reasonable size
+        if (fullLower.includes(firstWord) && fullText.length < 200) {
+          const score = 50 - c.children.length;
+          if (score > bestScore) {
+            bestScore = score;
+            bestMatch = c;
+          }
+        }
+      }
+      
+      if (bestMatch) {
+        ensureAnchorStamp(bestMatch);
+        return { el: bestMatch, method: "text-hint" };
       }
     }
     

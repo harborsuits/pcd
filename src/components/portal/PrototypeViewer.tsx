@@ -1052,24 +1052,26 @@ export function PrototypeViewer({
     }
     
     // FALLBACK: Use stored pin_x/pin_y percentages
-    // These are DOCUMENT-relative percentages (where in the full page the click was)
-    // We need to account for current scroll position to anchor pins to content
+    // pin_x/pin_y are viewport percentages at click time - need to convert to document position
+    // then adjust for current scroll to keep pin anchored to content
     if (comment.pin_x != null && comment.pin_y != null) {
-      // Get current scroll position from iframeViewport (updated via PCD_SCROLL messages)
+      // Get current scroll from iframeViewport (updated via PCD_SCROLL messages)
       const currentScrollY = iframeViewport?.scrollY ?? 0;
       const storedScrollY = comment.scroll_y ?? 0;
       const storedViewportH = comment.viewport_h ?? viewportH;
       
-      // pin_y was saved as a % of the document at the time of pinning
-      // When user scrolls, we need to offset the pin by the scroll delta
-      const scrollDelta = currentScrollY - storedScrollY;
+      // Step 1: Compute where in the DOCUMENT the pin was placed
+      // pin_y% of storedViewportH gives viewport-relative position at click time
+      // Adding storedScrollY converts to document position
+      const pinViewportYAtClick = (comment.pin_y / 100) * storedViewportH;
+      const pinDocumentY = pinViewportYAtClick + storedScrollY;
       
-      // Convert pin_y from document % to current viewport position
-      // Original: pinCenterY = pin_y% of storedViewportH, relative to storedScrollY
-      // Now we need to adjust for how much user has scrolled since
-      const pinCenterX = (comment.pin_x / 100) * viewportW;
-      const pinDocumentY = (comment.pin_y / 100) * storedViewportH + storedScrollY;
+      // Step 2: Convert document position back to current viewport position
+      // Subtract current scroll to get where this document position now appears
       const pinCenterY = pinDocumentY - currentScrollY;
+      
+      // X is simpler - just scale to current viewport width
+      const pinCenterX = (comment.pin_x / 100) * viewportW;
       
       // Check if offscreen due to scrolling
       const isOffscreen = pinCenterY < 0 || pinCenterY > viewportH;
