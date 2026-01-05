@@ -21,7 +21,7 @@ import {
   FolderOpen, Loader2, Clock,
   MessageSquare, ExternalLink, ChevronRight, Sparkles, Eye, ArrowRight,
   CheckCircle2, Circle, AlertCircle, Bell, LayoutGrid, List, Mail, ChevronDown,
-  FileText, Palette, Camera, Brush, ImagePlus, Link2, Award, Image
+  FileText, Palette, Camera, Brush, ImagePlus, Link2, Award, Image, Archive, ArchiveRestore
 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -121,6 +121,7 @@ interface Project {
   unread_count: number;
   quote_count: number;
   has_claim: boolean;
+  is_archived: boolean;
 }
 
 type ViewMode = "list" | "kanban";
@@ -408,6 +409,7 @@ export function ProjectsTab() {
   const [phaseBProject, setPhaseBProject] = useState<Project | null>(null);
   const [pipelineFilter, setPipelineFilter] = useState<PipelineFilter>("all");
   const [serviceTypeFilter, setServiceTypeFilter] = useState<ServiceTypeFilter>("all");
+  const [showArchived, setShowArchived] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>("list");
   const { setCurrentProjectToken, setCurrentProjectName, registerCloseProject } = useOperatorContext();
   const queryClient = useQueryClient();
@@ -427,9 +429,10 @@ export function ProjectsTab() {
 
   // Fetch all projects with intake data
   const { data: projectsData, isLoading, refetch } = useQuery({
-    queryKey: ["admin-projects"],
+    queryKey: ["admin-projects", showArchived],
     queryFn: async () => {
-      const res = await adminFetch("/admin/projects");
+      const url = showArchived ? "/admin/projects?includeArchived=true" : "/admin/projects";
+      const res = await adminFetch(url);
       if (!res.ok) throw new Error("Failed to fetch projects");
       return res.json() as Promise<{ projects: Project[] }>;
     },
@@ -480,7 +483,29 @@ export function ProjectsTab() {
     onError: (error: Error) => toast.error(error.message),
   });
 
-  // Handle advance to next stage
+  // Mutation to archive a project
+  const archiveMutation = useMutation({
+    mutationFn: async ({ token, unarchive }: { token: string; unarchive?: boolean }) => {
+      const endpoint = unarchive 
+        ? `/admin/projects/${token}/unarchive` 
+        : `/admin/projects/${token}/archive`;
+      const res = await adminFetch(endpoint, { method: "POST" });
+      if (!res.ok) throw new Error("Failed to update archive status");
+      return res.json();
+    },
+    onSuccess: (_, variables) => {
+      toast.success(variables.unarchive ? "Project restored" : "Project archived");
+      queryClient.invalidateQueries({ queryKey: ["admin-projects"] });
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
+  // Handle archive/unarchive
+  const handleArchive = (e: React.MouseEvent, project: Project) => {
+    e.stopPropagation();
+    archiveMutation.mutate({ token: project.project_token, unarchive: project.is_archived });
+  };
+
   const handleAdvanceStage = (e: React.MouseEvent, project: Project) => {
     e.stopPropagation();
     const nextStage = getNextStage(project.pipeline_stage);
@@ -673,25 +698,36 @@ export function ProjectsTab() {
         {/* Filters row */}
         {viewMode === "list" && (
           <div className="border-b">
-            {/* Service type filter */}
-            <div className="flex items-center gap-2 px-4 py-2 border-b bg-muted/30">
-              <span className="text-xs text-muted-foreground">Type:</span>
-              {SERVICE_TYPE_FILTERS.map((filter) => (
-                <Button
-                  key={filter.value}
-                  variant={serviceTypeFilter === filter.value ? "secondary" : "ghost"}
-                  size="sm"
-                  className="h-7 text-xs"
-                  onClick={() => setServiceTypeFilter(filter.value)}
-                >
-                  {filter.label}
-                  {serviceTypeCounts[filter.value] > 0 && filter.value !== "all" && (
-                    <span className="ml-1 text-muted-foreground">
-                      ({serviceTypeCounts[filter.value]})
-                    </span>
-                  )}
-                </Button>
-              ))}
+            {/* Service type filter + Archive toggle */}
+            <div className="flex items-center justify-between gap-2 px-4 py-2 border-b bg-muted/30">
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">Type:</span>
+                {SERVICE_TYPE_FILTERS.map((filter) => (
+                  <Button
+                    key={filter.value}
+                    variant={serviceTypeFilter === filter.value ? "secondary" : "ghost"}
+                    size="sm"
+                    className="h-7 text-xs"
+                    onClick={() => setServiceTypeFilter(filter.value)}
+                  >
+                    {filter.label}
+                    {serviceTypeCounts[filter.value] > 0 && filter.value !== "all" && (
+                      <span className="ml-1 text-muted-foreground">
+                        ({serviceTypeCounts[filter.value]})
+                      </span>
+                    )}
+                  </Button>
+                ))}
+              </div>
+              <Button
+                variant={showArchived ? "secondary" : "ghost"}
+                size="sm"
+                className="h-7 text-xs gap-1"
+                onClick={() => setShowArchived(!showArchived)}
+              >
+                <Archive className="h-3 w-3" />
+                {showArchived ? "Hide Archived" : "Show Archived"}
+              </Button>
             </div>
             
             {/* Pipeline stage tabs */}
@@ -768,6 +804,12 @@ export function ProjectsTab() {
                         )}
                         <ServiceTypeBadge serviceType={project.service_type} showIcon={true} />
                         <StageBadge stage={project.pipeline_stage} />
+                        {project.is_archived && (
+                          <Badge variant="outline" className="text-xs gap-1 text-muted-foreground border-muted-foreground/50">
+                            <Archive className="h-3 w-3" />
+                            Archived
+                          </Badge>
+                        )}
                       </div>
                       
                       {/* Row 2: Demo request badge (mobile: own row) */}
@@ -968,6 +1010,21 @@ export function ProjectsTab() {
                       >
                         <ExternalLink className="h-3 w-3" />
                         <span className="hidden md:inline">Workspace</span>
+                      </Button>
+                      {/* Archive/Unarchive button */}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className={`gap-1 text-xs h-7 px-2 ${project.is_archived ? 'text-green-600 hover:text-green-700' : 'text-muted-foreground hover:text-destructive'}`}
+                        disabled={archiveMutation.isPending}
+                        onClick={(e) => handleArchive(e, project)}
+                        title={project.is_archived ? "Restore project" : "Archive project"}
+                      >
+                        {project.is_archived ? (
+                          <ArchiveRestore className="h-3 w-3" />
+                        ) : (
+                          <Archive className="h-3 w-3" />
+                        )}
                       </Button>
                       <ChevronRight className="h-4 w-4 text-muted-foreground" />
                     </div>

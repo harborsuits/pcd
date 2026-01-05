@@ -389,6 +389,20 @@ Deno.serve(async (req) => {
     return handleApproveIntakeByToken(req, token);
   }
 
+  // Route: POST /admin/projects/:token/archive - Archive a project
+  if (subPath.match(/^projects\/[^\/]+\/archive$/) && req.method === "POST") {
+    const parts = subPath.split("/");
+    const token = parts[1];
+    return handleArchiveProject(req, token);
+  }
+
+  // Route: POST /admin/projects/:token/unarchive - Unarchive a project
+  if (subPath.match(/^projects\/[^\/]+\/unarchive$/) && req.method === "POST") {
+    const parts = subPath.split("/");
+    const token = parts[1];
+    return handleUnarchiveProject(req, token);
+  }
+
   return new Response(
     JSON.stringify({ error: "Not found" }),
     { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -1367,12 +1381,16 @@ async function handleProjects(req: Request): Promise<Response> {
   if (authError) return authError;
 
   try {
-    console.log("Fetching all projects for operator...");
+    // Check for includeArchived query param
+    const url = new URL(req.url);
+    const includeArchived = url.searchParams.get("includeArchived") === "true";
+    
+    console.log(`Fetching projects for operator (includeArchived: ${includeArchived})...`);
 
     const supabase = getSupabaseClient();
 
-    // Fetch all projects with their intake data
-    const { data: projects, error: projectsError } = await supabase
+    // Build query - conditionally filter archived
+    let query = supabase
       .from("projects")
       .select(`
         id,
@@ -1394,10 +1412,17 @@ async function handleProjects(req: Request): Promise<Response> {
         notes,
         owner_user_id,
         created_at,
-        updated_at
+        updated_at,
+        deleted_at
       `)
-      .is("deleted_at", null)
       .order("created_at", { ascending: false });
+    
+    // Only filter out archived if not including them
+    if (!includeArchived) {
+      query = query.is("deleted_at", null);
+    }
+
+    const { data: projects, error: projectsError } = await query;
 
     if (projectsError) {
       console.error("Projects fetch error:", projectsError);
@@ -1408,7 +1433,7 @@ async function handleProjects(req: Request): Promise<Response> {
     }
 
     // Fetch intake data for all projects
-    const projectIds = (projects || []).map(p => p.id);
+    const projectIds = (projects || []).map((p: { id: string }) => p.id);
     let intakesMap: Record<string, unknown> = {};
     let unreadCountsMap: Record<string, number> = {};
     let quoteCountsMap: Record<string, number> = {};
@@ -1471,12 +1496,13 @@ async function handleProjects(req: Request): Promise<Response> {
     }
 
     // Combine projects with their intakes, unread counts, and inquiry data
-    const projectsWithIntakes = (projects || []).map(project => ({
+    const projectsWithIntakes = (projects || []).map((project: { id: string; status: string; deleted_at: string | null }) => ({
       ...project,
       intake: intakesMap[project.id] || null,
       unread_count: unreadCountsMap[project.id] || 0,
       quote_count: quoteCountsMap[project.id] || 0,
       has_claim: hasClaimMap[project.id] || project.status === "interested" || project.status === "client",
+      is_archived: !!project.deleted_at,
     }));
 
     console.log(`Projects fetched: ${projectsWithIntakes.length}`);
@@ -4607,6 +4633,104 @@ async function handleAddMilestoneNote(req: Request, token: string, milestoneId: 
 
   } catch (error) {
     console.error("Add milestone note error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+}
+
+// POST /admin/projects/:token/archive - Archive a project (soft delete)
+async function handleArchiveProject(req: Request, token: string): Promise<Response> {
+  const authError = validateAdminKey(req);
+  if (authError) return authError;
+
+  if (!isValidToken(token)) {
+    return new Response(
+      JSON.stringify({ error: "Invalid token" }),
+      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  try {
+    console.log(`Archiving project: ${token.slice(0, 8)}...`);
+
+    const supabase = getSupabaseClient();
+
+    const { data: project, error: updateError } = await supabase
+      .from("projects")
+      .update({ deleted_at: new Date().toISOString() })
+      .eq("project_token", token)
+      .is("deleted_at", null)
+      .select("id, business_name")
+      .single();
+
+    if (updateError || !project) {
+      console.error("Archive error:", updateError);
+      return new Response(
+        JSON.stringify({ error: "Project not found or already archived" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log(`Project archived: ${project.business_name}`);
+
+    return new Response(
+      JSON.stringify({ ok: true, message: "Project archived" }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+
+  } catch (error) {
+    console.error("Archive project error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+}
+
+// POST /admin/projects/:token/unarchive - Unarchive a project
+async function handleUnarchiveProject(req: Request, token: string): Promise<Response> {
+  const authError = validateAdminKey(req);
+  if (authError) return authError;
+
+  if (!isValidToken(token)) {
+    return new Response(
+      JSON.stringify({ error: "Invalid token" }),
+      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  try {
+    console.log(`Unarchiving project: ${token.slice(0, 8)}...`);
+
+    const supabase = getSupabaseClient();
+
+    const { data: project, error: updateError } = await supabase
+      .from("projects")
+      .update({ deleted_at: null })
+      .eq("project_token", token)
+      .not("deleted_at", "is", null)
+      .select("id, business_name")
+      .single();
+
+    if (updateError || !project) {
+      console.error("Unarchive error:", updateError);
+      return new Response(
+        JSON.stringify({ error: "Project not found or not archived" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log(`Project unarchived: ${project.business_name}`);
+
+    return new Response(
+      JSON.stringify({ ok: true, message: "Project restored" }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+
+  } catch (error) {
+    console.error("Unarchive project error:", error);
     return new Response(
       JSON.stringify({ error: "Internal server error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
