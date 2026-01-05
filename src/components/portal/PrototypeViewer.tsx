@@ -161,6 +161,7 @@ interface IframeClickMessage {
   textOffset?: number | null;
   textContext?: string | null;
   textHint?: string | null;
+  url?: string;  // Current page URL from helper (for page-specific pins)
   ts: number;
 }
 
@@ -355,12 +356,17 @@ export function PrototypeViewer({
     return activeComments.filter((comment) => {
       const commentKey = normalizePageKey(comment.page_url || "");
       
-      // Legacy comment: no page_url OR page_url matches base prototype URL
-      const isLegacyComment = !comment.page_url || !commentKey || commentKey === basePrototypeKey;
+      // Legacy comment: no page_url OR page_url is exactly the base prototype URL (no path)
+      // These are pins created before page tracking was fixed
+      const isLegacyComment = !comment.page_url || 
+        !commentKey || 
+        commentKey === "/" ||
+        commentKey === basePrototypeKey;
       
       if (isLegacyComment) {
-        // Legacy comments only show on homepage when we have reliable page detection
-        return currentPageKey === "/" || currentPageKey === "";
+        // Legacy comments: show on ALL pages until they're reconciled
+        // This prevents pins from "disappearing" when navigating
+        return true;
       }
       
       // Normal comment: match by page key
@@ -455,13 +461,22 @@ export function PrototypeViewer({
           break;
 
         case "PCD_CLICK": {
-          const msg = data as IframeClickMessage;
-          console.log("[Bridge] Click:", msg.selector, msg.anchorKey, "page:", (data as any).page);
+          // Demo sites may send page URL as "url", "page", or "href" - check all
+          const clickPage = 
+            (typeof (data as any).url === "string" ? (data as any).url : "") ||
+            (typeof (data as any).page === "string" ? (data as any).page : "") ||
+            (typeof (data as any).href === "string" ? (data as any).href : "");
+          
+          // Build a proper typed message with url included
+          const msg: IframeClickMessage = {
+            ...(data as IframeClickMessage),
+            url: clickPage || undefined,  // Ensure url is set
+          };
+          
+          console.log("[Bridge] Click:", msg.selector, msg.anchorKey, "page:", clickPage);
           lastIframeClick.current = msg;
           
-          // Fallback: also update current page from click if helper sends it
-          // This makes page tracking robust even if PCD_PAGE_CHANGE was missed
-          const clickPage = typeof (data as any).page === "string" ? (data as any).page : "";
+          // Update current page from click - makes page tracking robust
           if (clickPage) {
             setCurrentIframePage(clickPage);
             setHasReceivedPageChange(true);
@@ -1066,9 +1081,10 @@ export function PrototypeViewer({
       overlayW: overlayRect.width, overlayH: overlayRect.height,
     });
 
-    // Use current iframe page (from bridge or fallback detection) for page_url
-    // This ensures pins are correctly associated with the page they were placed on
-    const actualPageUrl = currentIframePage || prototype.url;
+    // Use page URL from click message (most accurate), fall back to tracked state, then prototype base
+    // The click message includes the exact URL at the moment of click
+    const actualPageUrl = click.url || currentIframePage || prototype.url;
+    console.log('[PCD Pin] Page URL:', actualPageUrl, '(from click.url:', click.url, ', currentIframePage:', currentIframePage, ')');
     
     const anchorData: CommentAnchorData = {
       page_url: actualPageUrl,
