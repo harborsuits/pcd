@@ -68,10 +68,10 @@ const SELL_TYPE_OPTIONS = [
 
 // Timeline - confidence gauge
 const TIMELINE_OPTIONS = [
-  { id: "exploring", label: "Just exploring", description: "No rush, planning ahead" },
-  { id: "soon", label: "In the next 1–2 months", description: "Ready to get started" },
-  { id: "asap", label: "ASAP", description: "Need this quickly" },
-  { id: "deadline", label: "I have a specific deadline", description: "Time-sensitive" },
+  { id: "exploring", label: "Actively researching", description: "Evaluating options, no rush yet" },
+  { id: "soon", label: "In the next 1–2 months", description: "Ready to kick things off soon" },
+  { id: "asap", label: "ASAP", description: "High priority — we'll fast-track your project" },
+  { id: "deadline", label: "I have a specific deadline", description: "Event, launch, or date driving this" },
 ];
 
 // Readiness - what they have
@@ -98,6 +98,7 @@ interface IntakeData {
   primaryGoal: string;
   sellType: string;
   timeline: string;
+  deadlineDate: string;
   readiness: string;
   involvement: string;
 }
@@ -117,6 +118,7 @@ export default function OnboardingWizard() {
     primaryGoal: "",
     sellType: "",
     timeline: "",
+    deadlineDate: "",
     readiness: "",
     involvement: "",
   });
@@ -134,6 +136,9 @@ export default function OnboardingWizard() {
         }
         return !!intake.primaryGoal;
       case 2: // Timeline
+        if (intake.timeline === "deadline") {
+          return !!intake.timeline && !!intake.deadlineDate;
+        }
         return !!intake.timeline;
       case 3: // Readiness
         return !!intake.readiness;
@@ -345,10 +350,10 @@ export default function OnboardingWizard() {
           <div className="space-y-6">
             <div className="space-y-3">
               <Label className="text-base">When are you hoping to have something live?</Label>
-              <p className="text-sm text-muted-foreground">This helps us plan — no commitment yet.</p>
+              <p className="text-sm text-muted-foreground">This helps us prioritize and plan — no commitment yet.</p>
               <RadioGroup
                 value={intake.timeline}
-                onValueChange={(value) => setIntake(prev => ({ ...prev, timeline: value }))}
+                onValueChange={(value) => setIntake(prev => ({ ...prev, timeline: value, deadlineDate: value !== "deadline" ? "" : prev.deadlineDate }))}
                 className="space-y-3"
               >
                 {TIMELINE_OPTIONS.map((opt) => (
@@ -359,7 +364,7 @@ export default function OnboardingWizard() {
                         ? "border-primary bg-primary/5" 
                         : "border-border hover:border-muted-foreground/30"
                     }`}
-                    onClick={() => setIntake(prev => ({ ...prev, timeline: opt.id }))}
+                    onClick={() => setIntake(prev => ({ ...prev, timeline: opt.id, deadlineDate: opt.id !== "deadline" ? "" : prev.deadlineDate }))}
                   >
                     <RadioGroupItem value={opt.id} id={`timeline-${opt.id}`} className="mt-0.5" />
                     <div className="flex-1">
@@ -372,6 +377,20 @@ export default function OnboardingWizard() {
                 ))}
               </RadioGroup>
             </div>
+
+            {/* Conditional: Deadline date picker */}
+            {intake.timeline === "deadline" && (
+              <div className="space-y-3 pt-2 border-t">
+                <Label className="text-base">When is your deadline?</Label>
+                <Input
+                  type="date"
+                  value={intake.deadlineDate}
+                  onChange={(e) => setIntake(prev => ({ ...prev, deadlineDate: e.target.value }))}
+                  min={new Date().toISOString().split('T')[0]}
+                  className="max-w-xs"
+                />
+              </div>
+            )}
           </div>
         );
 
