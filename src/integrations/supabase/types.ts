@@ -866,6 +866,7 @@ export type Database = {
           portal_stage_changed_at: string | null
           portal_stage_changed_by: string | null
           project_token: string
+          service_type: string
           source: string
           source_demo_token: string | null
           state: string | null
@@ -897,6 +898,7 @@ export type Database = {
           portal_stage_changed_at?: string | null
           portal_stage_changed_by?: string | null
           project_token: string
+          service_type?: string
           source?: string
           source_demo_token?: string | null
           state?: string | null
@@ -928,6 +930,7 @@ export type Database = {
           portal_stage_changed_at?: string | null
           portal_stage_changed_by?: string | null
           project_token?: string
+          service_type?: string
           source?: string
           source_demo_token?: string | null
           state?: string | null
