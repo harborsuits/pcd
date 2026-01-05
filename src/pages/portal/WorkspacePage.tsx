@@ -5,6 +5,7 @@ import { ProjectWorkspace, type Version, type CommentData } from "@/components/p
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { getAdminKey } from "@/lib/adminFetch";
+import { supabase } from "@/integrations/supabase/client";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -86,6 +87,10 @@ export default function WorkspacePage() {
     if (!token) return;
 
     try {
+      // Get user session for auth
+      const { data: { session } } = await supabase.auth.getSession();
+      const authToken = session?.access_token || SUPABASE_ANON_KEY;
+      
       const res = await fetch(
         `${SUPABASE_URL}/functions/v1/portal/${token}`,
         {
@@ -93,7 +98,7 @@ export default function WorkspacePage() {
           headers: {
             "Content-Type": "application/json",
             apikey: SUPABASE_ANON_KEY,
-            Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+            Authorization: `Bearer ${authToken}`,
           },
         }
       );
@@ -122,6 +127,9 @@ export default function WorkspacePage() {
     if (!token) return;
     
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const authToken = session?.access_token || SUPABASE_ANON_KEY;
+      
       const res = await fetch(
         `${SUPABASE_URL}/functions/v1/portal/${token}/prototypes`,
         {
@@ -129,7 +137,7 @@ export default function WorkspacePage() {
           headers: {
             "Content-Type": "application/json",
             apikey: SUPABASE_ANON_KEY,
-            Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+            Authorization: `Bearer ${authToken}`,
           },
         }
       );
@@ -151,6 +159,9 @@ export default function WorkspacePage() {
     if (!token) return;
 
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const authToken = session?.access_token || SUPABASE_ANON_KEY;
+      
       const res = await fetch(
         `${SUPABASE_URL}/functions/v1/portal/${token}/comments`,
         {
@@ -158,7 +169,7 @@ export default function WorkspacePage() {
           headers: {
             "Content-Type": "application/json",
             apikey: SUPABASE_ANON_KEY,
-            Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+            Authorization: `Bearer ${authToken}`,
           },
         }
       );
