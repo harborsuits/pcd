@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef } from "react";
+import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import html2canvas from "html2canvas";
 import { VersionsList, type Version } from "./VersionsList";
@@ -10,7 +11,8 @@ import { CommentComposer } from "./CommentComposer";
 import { ScreenshotViewer } from "../ScreenshotViewer";
 import { OperatorPanel } from "./OperatorPanel";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MessageCircle, Settings2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { MessageCircle, Settings2, Home } from "lucide-react";
 import { getAdminKey } from "@/lib/adminFetch";
 import type { CommentData } from "./FeedbackCard";
 
@@ -361,7 +363,15 @@ export function ProjectWorkspace({
   return (
     <div className="h-full flex">
       {/* Left: Versions (compact) */}
-      <div className="w-44 flex-shrink-0 border-r border-border bg-muted/30">
+      <div className="w-44 flex-shrink-0 border-r border-border bg-muted/30 flex flex-col">
+        <div className="p-2 border-b border-border">
+          <Link to="/">
+            <Button variant="ghost" size="sm" className="w-full justify-start gap-2 text-muted-foreground hover:text-foreground">
+              <Home className="h-4 w-4" />
+              Home
+            </Button>
+          </Link>
+        </div>
         <VersionsList
           versions={versions}
           selectedId={selectedVersionId}
