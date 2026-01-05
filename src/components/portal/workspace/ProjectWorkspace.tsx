@@ -20,12 +20,25 @@ const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
 interface IntakeData {
+  // Core fields from new simplified wizard
   businessName?: string;
   businessType?: string;
   primaryGoal?: string;
+  sellType?: string;
   timeline?: string;
+  deadlineDate?: string;
+  readiness?: string;
+  involvement?: string;
+  serviceArea?: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  // Legacy fields
+  goals?: string[];
   assetsReadiness?: string;
   involvementPreference?: string;
+  websiteStatus?: string;
+  readinessAssets?: string[];
+  notes?: string;
 }
 
 interface PhaseBData {
