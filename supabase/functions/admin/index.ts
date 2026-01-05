@@ -347,6 +347,48 @@ Deno.serve(async (req) => {
     return handleAddMilestoneNote(req, token, milestoneId);
   }
 
+  // Route: POST /admin/projects/:token/request-info
+  if (subPath.match(/^projects\/[^\/]+\/request-info$/) && req.method === "POST") {
+    const parts = subPath.split("/");
+    const token = parts[1];
+    return handleRequestInfo(req, token);
+  }
+
+  // Route: DELETE /admin/projects/:token/request-info (clear request)
+  if (subPath.match(/^projects\/[^\/]+\/request-info$/) && req.method === "DELETE") {
+    const parts = subPath.split("/");
+    const token = parts[1];
+    return handleClearRequestInfo(req, token);
+  }
+
+  // Route: GET /admin/discovery/:token
+  if (subPath.match(/^discovery\/[^\/]+$/) && req.method === "GET") {
+    const token = subPath.replace("discovery/", "");
+    return handleGetDiscovery(req, token);
+  }
+
+  // Route: POST /admin/discovery/:token/seed
+  if (subPath.match(/^discovery\/[^\/]+\/seed$/) && req.method === "POST") {
+    const parts = subPath.split("/");
+    const token = parts[1];
+    return handleSeedDiscovery(req, token);
+  }
+
+  // Route: PATCH /admin/discovery/:token/:key
+  if (subPath.match(/^discovery\/[^\/]+\/[^\/]+$/) && req.method === "PATCH") {
+    const parts = subPath.split("/");
+    const token = parts[1];
+    const key = parts[2];
+    return handleToggleDiscoveryItem(req, token, key);
+  }
+
+  // Route: POST /admin/projects/:token/intake/approve
+  if (subPath.match(/^projects\/[^\/]+\/intake\/approve$/) && req.method === "POST") {
+    const parts = subPath.split("/");
+    const token = parts[1];
+    return handleApproveIntakeByToken(req, token);
+  }
+
   return new Response(
     JSON.stringify({ error: "Not found" }),
     { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -4167,6 +4209,336 @@ async function handleDeleteMilestone(req: Request, token: string, milestoneId: s
 
   } catch (error) {
     console.error("Delete milestone error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+}
+
+// =====================
+// REQUEST INFO HANDLERS
+// =====================
+
+// POST /admin/projects/:token/request-info
+async function handleRequestInfo(req: Request, token: string): Promise<Response> {
+  const authError = validateAdminKey(req);
+  if (authError) return authError;
+
+  if (!isValidToken(token)) {
+    return new Response(
+      JSON.stringify({ error: "Invalid token" }),
+      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  try {
+    const body = await req.json();
+    const { items, note } = body;
+
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      return new Response(
+        JSON.stringify({ error: "Items array required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const supabase = getSupabaseClient();
+
+    const { data: project, error: updateError } = await supabase
+      .from("projects")
+      .update({
+        needs_info: true,
+        needs_info_items: items,
+        needs_info_note: note?.trim() || null,
+      })
+      .eq("project_token", token)
+      .is("deleted_at", null)
+      .select("id, business_name")
+      .single();
+
+    if (updateError) throw updateError;
+
+    console.log(`Request info set for ${token}: ${items.length} items`);
+
+    return new Response(
+      JSON.stringify({ ok: true, project }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+
+  } catch (error) {
+    console.error("Request info error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+}
+
+// DELETE /admin/projects/:token/request-info
+async function handleClearRequestInfo(req: Request, token: string): Promise<Response> {
+  const authError = validateAdminKey(req);
+  if (authError) return authError;
+
+  if (!isValidToken(token)) {
+    return new Response(
+      JSON.stringify({ error: "Invalid token" }),
+      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  try {
+    const supabase = getSupabaseClient();
+
+    const { error: updateError } = await supabase
+      .from("projects")
+      .update({
+        needs_info: false,
+        needs_info_items: [],
+        needs_info_note: null,
+      })
+      .eq("project_token", token)
+      .is("deleted_at", null);
+
+    if (updateError) throw updateError;
+
+    return new Response(
+      JSON.stringify({ ok: true }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+
+  } catch (error) {
+    console.error("Clear request info error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+}
+
+// =====================
+// DISCOVERY HANDLERS
+// =====================
+
+const DEFAULT_DISCOVERY_ITEMS = [
+  { key: "primary_cta", label: "Confirm primary goal + CTA" },
+  { key: "logo_colors", label: "Collect logo + brand colors" },
+  { key: "photos", label: "Collect photos" },
+  { key: "services", label: "Confirm services list" },
+  { key: "service_area", label: "Confirm service area" },
+  { key: "contact", label: "Confirm contact info" },
+  { key: "booking", label: "Booking link / scheduling decision" },
+  { key: "ai_receptionist", label: "AI receptionist: yes/no + call routing" },
+  { key: "tone", label: "Preferred tone (formal/casual)" },
+  { key: "inspiration", label: "Competitors/inspiration noted" },
+];
+
+// GET /admin/discovery/:token
+async function handleGetDiscovery(req: Request, token: string): Promise<Response> {
+  const authError = validateAdminKey(req);
+  if (authError) return authError;
+
+  if (!isValidToken(token)) {
+    return new Response(
+      JSON.stringify({ error: "Invalid token" }),
+      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  try {
+    const supabase = getSupabaseClient();
+
+    const { data: items, error } = await supabase
+      .from("project_discovery_checklist")
+      .select("*")
+      .eq("project_token", token)
+      .order("created_at", { ascending: true });
+
+    if (error) throw error;
+
+    return new Response(
+      JSON.stringify({ items: items || [] }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+
+  } catch (error) {
+    console.error("Get discovery error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+}
+
+// POST /admin/discovery/:token/seed
+async function handleSeedDiscovery(req: Request, token: string): Promise<Response> {
+  const authError = validateAdminKey(req);
+  if (authError) return authError;
+
+  if (!isValidToken(token)) {
+    return new Response(
+      JSON.stringify({ error: "Invalid token" }),
+      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  try {
+    const supabase = getSupabaseClient();
+
+    // Get project ID
+    const { data: project, error: projectError } = await supabase
+      .from("projects")
+      .select("id")
+      .eq("project_token", token)
+      .is("deleted_at", null)
+      .single();
+
+    if (projectError || !project) {
+      return new Response(
+        JSON.stringify({ error: "Project not found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Insert default items (upsert to avoid duplicates)
+    const itemsToInsert = DEFAULT_DISCOVERY_ITEMS.map((item) => ({
+      project_id: project.id,
+      project_token: token,
+      key: item.key,
+      label: item.label,
+      checked: false,
+    }));
+
+    const { data: items, error: insertError } = await supabase
+      .from("project_discovery_checklist")
+      .upsert(itemsToInsert, { onConflict: "project_id,key" })
+      .select();
+
+    if (insertError) throw insertError;
+
+    return new Response(
+      JSON.stringify({ items }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+
+  } catch (error) {
+    console.error("Seed discovery error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+}
+
+// PATCH /admin/discovery/:token/:key
+async function handleToggleDiscoveryItem(req: Request, token: string, key: string): Promise<Response> {
+  const authError = validateAdminKey(req);
+  if (authError) return authError;
+
+  if (!isValidToken(token)) {
+    return new Response(
+      JSON.stringify({ error: "Invalid token" }),
+      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  try {
+    const body = await req.json();
+    const { checked } = body;
+
+    if (typeof checked !== "boolean") {
+      return new Response(
+        JSON.stringify({ error: "Checked boolean required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const supabase = getSupabaseClient();
+
+    const { data: item, error: updateError } = await supabase
+      .from("project_discovery_checklist")
+      .update({
+        checked,
+        checked_at: checked ? new Date().toISOString() : null,
+        checked_by: checked ? "operator" : null,
+      })
+      .eq("project_token", token)
+      .eq("key", key)
+      .select()
+      .single();
+
+    if (updateError) throw updateError;
+
+    return new Response(
+      JSON.stringify({ item }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+
+  } catch (error) {
+    console.error("Toggle discovery item error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+}
+
+// POST /admin/projects/:token/intake/approve
+async function handleApproveIntakeByToken(req: Request, token: string): Promise<Response> {
+  const authError = validateAdminKey(req);
+  if (authError) return authError;
+
+  if (!isValidToken(token)) {
+    return new Response(
+      JSON.stringify({ error: "Invalid token" }),
+      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  try {
+    const supabase = getSupabaseClient();
+
+    // Find intake by token
+    const { data: project, error: projectError } = await supabase
+      .from("projects")
+      .select("id")
+      .eq("project_token", token)
+      .is("deleted_at", null)
+      .single();
+
+    if (projectError || !project) {
+      return new Response(
+        JSON.stringify({ error: "Project not found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Update intake status
+    const { data: intake, error: intakeError } = await supabase
+      .from("project_intakes")
+      .update({ intake_status: "approved" })
+      .eq("project_id", project.id)
+      .select()
+      .single();
+
+    if (intakeError) throw intakeError;
+
+    // Also update project pipeline stage if it's still new
+    await supabase
+      .from("projects")
+      .update({ pipeline_stage: "intake_approved" })
+      .eq("id", project.id)
+      .in("pipeline_stage", ["new", "quote_requested", "claimed"]);
+
+    console.log(`Intake approved for token ${token}`);
+
+    return new Response(
+      JSON.stringify({ ok: true, intake }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+
+  } catch (error) {
+    console.error("Approve intake by token error:", error);
     return new Response(
       JSON.stringify({ error: "Internal server error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }

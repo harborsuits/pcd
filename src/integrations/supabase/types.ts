@@ -651,6 +651,50 @@ export type Database = {
           },
         ]
       }
+      project_discovery_checklist: {
+        Row: {
+          checked: boolean
+          checked_at: string | null
+          checked_by: string | null
+          created_at: string
+          id: string
+          key: string
+          label: string
+          project_id: string
+          project_token: string
+        }
+        Insert: {
+          checked?: boolean
+          checked_at?: string | null
+          checked_by?: string | null
+          created_at?: string
+          id?: string
+          key: string
+          label: string
+          project_id: string
+          project_token: string
+        }
+        Update: {
+          checked?: boolean
+          checked_at?: string | null
+          checked_by?: string | null
+          created_at?: string
+          id?: string
+          key?: string
+          label?: string
+          project_id?: string
+          project_token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_discovery_checklist_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_intakes: {
         Row: {
           created_at: string
@@ -812,6 +856,9 @@ export type Database = {
           email_verified: boolean
           final_approved_at: string | null
           id: string
+          needs_info: boolean | null
+          needs_info_items: Json | null
+          needs_info_note: string | null
           notes: string | null
           owner_user_id: string | null
           pipeline_stage: string
@@ -840,6 +887,9 @@ export type Database = {
           email_verified?: boolean
           final_approved_at?: string | null
           id?: string
+          needs_info?: boolean | null
+          needs_info_items?: Json | null
+          needs_info_note?: string | null
           notes?: string | null
           owner_user_id?: string | null
           pipeline_stage?: string
@@ -868,6 +918,9 @@ export type Database = {
           email_verified?: boolean
           final_approved_at?: string | null
           id?: string
+          needs_info?: boolean | null
+          needs_info_items?: Json | null
+          needs_info_note?: string | null
           notes?: string | null
           owner_user_id?: string | null
           pipeline_stage?: string

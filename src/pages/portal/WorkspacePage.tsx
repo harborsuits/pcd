@@ -1,6 +1,6 @@
 import { useParams } from "react-router-dom";
-import { useState, useEffect, useCallback } from "react";
-import { Loader2, AlertCircle, CheckCircle2, Clock, Rocket, FileText, Eye, EyeOff, ExternalLink } from "lucide-react";
+import React, { useState, useEffect, useCallback } from "react";
+import { Loader2, AlertCircle, CheckCircle2, Clock, Rocket, FileText, Eye, EyeOff, ExternalLink, Upload, Image, Palette, MapPin, Phone, Calendar, ClipboardList, LucideIcon } from "lucide-react";
 import { ProjectWorkspace, type Version, type CommentData } from "@/components/portal/workspace";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,12 @@ import { getAdminKey } from "@/lib/adminFetch";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
+interface NeedsInfoItem {
+  key: string;
+  label: string;
+  required?: boolean;
+}
 
 interface IntakeData {
   businessName?: string;
@@ -26,6 +32,9 @@ interface ProjectInfo {
   pipelineStage: string;
   portalStage: string;
   intakeData: IntakeData | null;
+  needsInfo: boolean;
+  needsInfoItems: NeedsInfoItem[];
+  needsInfoNote: string | null;
 }
 
 // Status banner configuration
@@ -100,6 +109,9 @@ export default function WorkspacePage() {
           pipelineStage: data.business.pipeline_stage || "new",
           portalStage: data.business.portal_stage || "intake",
           intakeData: data.intake_json || null,
+          needsInfo: data.business.needs_info || false,
+          needsInfoItems: data.business.needs_info_items || [],
+          needsInfoNote: data.business.needs_info_note || null,
         });
       }
     } catch (err) {
@@ -281,6 +293,17 @@ export default function WorkspacePage() {
   const config = getStatusConfig(projectInfo?.intakeStatus || "approved");
   const Icon = config.Icon;
 
+  // Icon mapping for info items
+  const INFO_ICONS: Record<string, LucideIcon> = {
+    logo: Palette,
+    photos: Image,
+    services: ClipboardList,
+    service_area: MapPin,
+    contact: Phone,
+    booking: Calendar,
+    brand_colors: Palette,
+  };
+
   return (
     <div className="h-screen flex flex-col">
       {/* Status banner */}
@@ -312,6 +335,39 @@ export default function WorkspacePage() {
                   </span>
                 </Button>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Action Needed Banner (client-facing) */}
+      {projectInfo?.needsInfo && projectInfo.needsInfoItems.length > 0 && (
+        <div className="border-b border-amber-200 bg-amber-50 dark:bg-amber-950/30 px-4 py-3 flex-shrink-0">
+          <div className="max-w-4xl mx-auto">
+            <div className="flex items-start gap-3">
+              <div className="h-8 w-8 rounded-full bg-amber-500/20 flex items-center justify-center flex-shrink-0">
+                <AlertCircle className="h-4 w-4 text-amber-600" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="font-semibold text-amber-800 dark:text-amber-300">Action Needed</h3>
+                <p className="text-sm text-amber-700 dark:text-amber-400 mb-3">
+                  {projectInfo.needsInfoNote || "We need a couple things before we can continue building."}
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {projectInfo.needsInfoItems.map((item) => {
+                    const ItemIcon = INFO_ICONS[item.key] || Upload;
+                    return (
+                      <div
+                        key={item.key}
+                        className="flex items-center gap-2 bg-white dark:bg-background border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-1.5 text-sm"
+                      >
+                        <ItemIcon className="h-3.5 w-3.5 text-amber-600" />
+                        <span>{item.label}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           </div>
         </div>
