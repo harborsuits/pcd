@@ -3,13 +3,23 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { 
   ChevronDown, ChevronUp, CheckCircle2, Circle, Clock, Rocket, 
   FileText, MessageSquare, ExternalLink, Send, AlertCircle,
-  Eye, EyeOff, StickyNote, ArrowRight
+  Eye, EyeOff, StickyNote, ArrowRight, ClipboardList, HelpCircle,
+  Upload, Image, Palette, MapPin, Phone, Calendar, Bot, Sparkles
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { adminFetch, getAdminKey } from "@/lib/adminFetch";
 import { StageBadge, STAGE_CONFIG, PipelineStage, getNextStage } from "@/components/operator/StageBadge";
@@ -21,6 +31,14 @@ interface IntakeData {
   timeline?: string;
   assetsReadiness?: string;
   involvementPreference?: string;
+}
+
+interface DiscoveryItem {
+  id: string;
+  key: string;
+  label: string;
+  checked: boolean;
+  checked_at: string | null;
 }
 
 interface OperatorPanelProps {
@@ -60,6 +78,17 @@ const INVOLVEMENT_LABELS: Record<string, string> = {
   handle: "Just handle it for me",
 };
 
+// Common request info items
+const REQUEST_INFO_OPTIONS = [
+  { key: "logo", label: "Upload your logo", icon: Palette },
+  { key: "photos", label: "Upload 5-10 photos", icon: Image },
+  { key: "services", label: "Confirm services list", icon: ClipboardList },
+  { key: "service_area", label: "Confirm service area", icon: MapPin },
+  { key: "contact", label: "Confirm contact details", icon: Phone },
+  { key: "booking", label: "Booking/scheduling link", icon: Calendar },
+  { key: "brand_colors", label: "Brand colors", icon: Palette },
+];
+
 export function OperatorPanel({
   token,
   projectId,
@@ -71,7 +100,11 @@ export function OperatorPanel({
 }: OperatorPanelProps) {
   const [intakeOpen, setIntakeOpen] = useState(true);
   const [notesOpen, setNotesOpen] = useState(false);
+  const [discoveryOpen, setDiscoveryOpen] = useState(true);
   const [newNote, setNewNote] = useState("");
+  const [requestInfoOpen, setRequestInfoOpen] = useState(false);
+  const [selectedInfoItems, setSelectedInfoItems] = useState<string[]>([]);
+  const [infoNote, setInfoNote] = useState("");
   const queryClient = useQueryClient();
 
   // Fetch internal notes
@@ -81,6 +114,17 @@ export function OperatorPanel({
       const res = await adminFetch(`/admin/projects/${token}/notes`);
       if (!res.ok) return { notes: [] };
       return res.json() as Promise<{ notes: Array<{ id: string; content: string; created_at: string; created_by?: string }> }>;
+    },
+    enabled: !!getAdminKey(),
+  });
+
+  // Fetch discovery checklist
+  const { data: discoveryData, refetch: refetchDiscovery } = useQuery({
+    queryKey: ["discovery-checklist", token],
+    queryFn: async () => {
+      const res = await adminFetch(`/admin/discovery/${token}`);
+      if (!res.ok) return { items: [] };
+      return res.json() as Promise<{ items: DiscoveryItem[] }>;
     },
     enabled: !!getAdminKey(),
   });
@@ -139,6 +183,62 @@ export function OperatorPanel({
     onError: (err: Error) => toast.error(err.message),
   });
 
+  // Seed discovery checklist
+  const seedDiscoveryMutation = useMutation({
+    mutationFn: async () => {
+      const res = await adminFetch(`/admin/discovery/${token}/seed`, {
+        method: "POST",
+      });
+      if (!res.ok) throw new Error("Failed to create checklist");
+      return res.json();
+    },
+    onSuccess: () => {
+      toast.success("Discovery checklist created");
+      refetchDiscovery();
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  // Toggle discovery item
+  const toggleDiscoveryMutation = useMutation({
+    mutationFn: async ({ key, checked }: { key: string; checked: boolean }) => {
+      const res = await adminFetch(`/admin/discovery/${token}/${key}`, {
+        method: "PATCH",
+        body: JSON.stringify({ checked }),
+      });
+      if (!res.ok) throw new Error("Failed to update item");
+      return res.json();
+    },
+    onSuccess: () => {
+      refetchDiscovery();
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  // Request info mutation
+  const requestInfoMutation = useMutation({
+    mutationFn: async () => {
+      const items = selectedInfoItems.map((key) => {
+        const opt = REQUEST_INFO_OPTIONS.find((o) => o.key === key);
+        return { key, label: opt?.label || key, required: true };
+      });
+      const res = await adminFetch(`/admin/projects/${token}/request-info`, {
+        method: "POST",
+        body: JSON.stringify({ items, note: infoNote }),
+      });
+      if (!res.ok) throw new Error("Failed to request info");
+      return res.json();
+    },
+    onSuccess: () => {
+      toast.success("Info requested from client");
+      setRequestInfoOpen(false);
+      setSelectedInfoItems([]);
+      setInfoNote("");
+      onRefresh();
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
   const handleApproveIntake = useCallback(() => {
     approveIntakeMutation.mutate();
   }, [approveIntakeMutation]);
@@ -156,7 +256,9 @@ export function OperatorPanel({
   }, [newNote, addNoteMutation]);
 
   const notes = notesData?.notes || [];
+  const discoveryItems = discoveryData?.items || [];
   const nextStage = getNextStage(pipelineStage);
+  const checkedCount = discoveryItems.filter((i) => i.checked).length;
 
   return (
     <div className="h-full flex flex-col bg-muted/20">
@@ -225,6 +327,60 @@ export function OperatorPanel({
                 </Button>
               )}
 
+              {/* Request Info button */}
+              <Dialog open={requestInfoOpen} onOpenChange={setRequestInfoOpen}>
+                <DialogTrigger asChild>
+                  <Button size="sm" variant="outline" className="gap-1">
+                    <HelpCircle className="h-3 w-3" />
+                    Request Info
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Request Info from Client</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      {REQUEST_INFO_OPTIONS.map((opt) => (
+                        <label
+                          key={opt.key}
+                          className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 cursor-pointer"
+                        >
+                          <Checkbox
+                            checked={selectedInfoItems.includes(opt.key)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setSelectedInfoItems([...selectedInfoItems, opt.key]);
+                              } else {
+                                setSelectedInfoItems(selectedInfoItems.filter((k) => k !== opt.key));
+                              }
+                            }}
+                          />
+                          <opt.icon className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-sm">{opt.label}</span>
+                        </label>
+                      ))}
+                    </div>
+                    <Textarea
+                      placeholder="Optional message to client..."
+                      value={infoNote}
+                      onChange={(e) => setInfoNote(e.target.value)}
+                      className="min-h-[60px]"
+                    />
+                  </div>
+                  <DialogFooter>
+                    <Button
+                      onClick={() => requestInfoMutation.mutate()}
+                      disabled={selectedInfoItems.length === 0 || requestInfoMutation.isPending}
+                      className="gap-1"
+                    >
+                      <Send className="h-3 w-3" />
+                      Send Request
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+
               <Button 
                 size="sm" 
                 variant="ghost"
@@ -232,10 +388,63 @@ export function OperatorPanel({
                 className="gap-1"
               >
                 <ExternalLink className="h-3 w-3" />
-                Open Portal
+                Portal
               </Button>
             </div>
           </div>
+
+          {/* Discovery Checklist */}
+          <Collapsible open={discoveryOpen} onOpenChange={setDiscoveryOpen}>
+            <CollapsibleTrigger asChild>
+              <Button variant="ghost" size="sm" className="w-full justify-between p-2 h-auto">
+                <span className="flex items-center gap-2 text-xs font-medium">
+                  <ClipboardList className="h-3 w-3" />
+                  Discovery Checklist
+                  {discoveryItems.length > 0 && (
+                    <Badge variant="secondary" className="ml-1 h-4 text-xs px-1">
+                      {checkedCount}/{discoveryItems.length}
+                    </Badge>
+                  )}
+                </span>
+                {discoveryOpen ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="pt-2">
+              {discoveryItems.length === 0 ? (
+                <div className="text-center py-4">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => seedDiscoveryMutation.mutate()}
+                    disabled={seedDiscoveryMutation.isPending}
+                    className="gap-1"
+                  >
+                    <Sparkles className="h-3 w-3" />
+                    Create Checklist
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-1 bg-background rounded-lg p-2 border">
+                  {discoveryItems.map((item) => (
+                    <label
+                      key={item.id}
+                      className="flex items-center gap-2 p-1.5 rounded hover:bg-muted/50 cursor-pointer text-sm"
+                    >
+                      <Checkbox
+                        checked={item.checked}
+                        onCheckedChange={(checked) => {
+                          toggleDiscoveryMutation.mutate({ key: item.key, checked: !!checked });
+                        }}
+                      />
+                      <span className={item.checked ? "line-through text-muted-foreground" : ""}>
+                        {item.label}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              )}
+            </CollapsibleContent>
+          </Collapsible>
 
           {/* Intake Summary */}
           <Collapsible open={intakeOpen} onOpenChange={setIntakeOpen}>

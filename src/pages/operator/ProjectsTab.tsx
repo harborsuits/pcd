@@ -904,16 +904,18 @@ export function ProjectsTab() {
                           <span className="hidden md:inline">Preview Demo</span>
                         </Button>
                       )}
+                      {/* Workspace button */}
                       <Button
-                        variant="ghost"
+                        variant="outline"
                         size="sm"
-                        className="opacity-0 group-hover:opacity-100 transition-opacity hidden sm:flex"
+                        className="gap-1 text-xs h-7 px-2 hidden sm:flex"
                         onClick={(e) => {
                           e.stopPropagation();
-                          window.open(`/p/${project.project_token}`, "_blank");
+                          window.open(`/w/${project.project_token}`, "_blank");
                         }}
                       >
-                        <ExternalLink className="h-4 w-4" />
+                        <ExternalLink className="h-3 w-3" />
+                        <span className="hidden md:inline">Workspace</span>
                       </Button>
                       <ChevronRight className="h-4 w-4 text-muted-foreground" />
                     </div>
