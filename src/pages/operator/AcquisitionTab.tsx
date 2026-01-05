@@ -132,11 +132,11 @@ export function AcquisitionTab() {
   
   const queryClient = useQueryClient();
 
-  // Fetch leads with demos
+  // Fetch all leads (demos are filtered client-side)
   const { data: leadsData, isLoading: leadsLoading } = useQuery({
     queryKey: ["ops-leads"],
     queryFn: async () => {
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/leads?no_website=true&limit=100`, {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/leads?limit=200`, {
         headers: getAuthHeaders(),
       });
       if (!res.ok) throw new Error("Failed to fetch leads");
