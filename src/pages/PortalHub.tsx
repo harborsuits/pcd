@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, Lock, Mail, ArrowRight, ExternalLink, Sparkles, User as UserIcon, RefreshCw, Plus } from "lucide-react";
+import { Loader2, Lock, Mail, ArrowRight, ExternalLink, Sparkles, User as UserIcon, RefreshCw, Plus, Archive } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/hooks/use-toast";
 import type { User, Session } from "@supabase/supabase-js";
@@ -587,12 +587,41 @@ export default function PortalHub() {
               {portals.map((portal) => (
                 <BrandCard key={portal.project_token} className="flex items-center justify-between hover:border-accent/50 transition-colors">
                   <h3 className="font-serif text-lg font-bold">{portal.business_name}</h3>
-                  <Button asChild variant="outline" size="sm" className="group">
-                    <Link to={`/p/${portal.project_token}`}>
-                      Open Portal
-                      <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
-                    </Link>
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={async () => {
+                        if (!confirm(`Archive "${portal.business_name}"? It will be hidden from your list.`)) return;
+                        try {
+                          const res = await fetch(`${SUPABASE_URL}/functions/v1/portal/${portal.project_token}/archive`, {
+                            method: "POST",
+                            headers: {
+                              "apikey": SUPABASE_ANON_KEY,
+                              "Authorization": `Bearer ${session?.access_token}`,
+                            },
+                          });
+                          if (res.ok) {
+                            setPortals(prev => prev.filter(p => p.project_token !== portal.project_token));
+                            toast({ title: "Project archived" });
+                          } else {
+                            toast({ title: "Failed to archive", variant: "destructive" });
+                          }
+                        } catch {
+                          toast({ title: "Failed to archive", variant: "destructive" });
+                        }
+                      }}
+                      className="text-muted-foreground hover:text-foreground"
+                    >
+                      <Archive className="h-4 w-4" />
+                    </Button>
+                    <Button asChild variant="outline" size="sm" className="group">
+                      <Link to={`/p/${portal.project_token}`}>
+                        Open Portal
+                        <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                      </Link>
+                    </Button>
+                  </div>
                 </BrandCard>
               ))}
             </div>
