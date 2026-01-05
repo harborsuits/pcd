@@ -1150,8 +1150,13 @@ export function PrototypeViewer({
       viewport_h: click.viewport?.h ?? window.innerHeight,
       breakpoint: getBreakpoint(click.viewport?.w ?? window.innerWidth),
       // Use anchorKey (the stable data-pcd-anchor stamp) for anchor_id
+      // Use anchorKey (the stable data-pcd-anchor stamp) for anchor_id
       anchor_id: click.anchorKey ?? click.id,
-      anchor_selector: click.selector,
+      // SAFETY NET: Never store ephemeral data-pcd-anchor selectors
+      // These are session-only and useless after reload
+      anchor_selector: (click.selector && !String(click.selector).includes("data-pcd-anchor"))
+        ? String(click.selector)
+        : null,
       // x_pct/y_pct: percentage WITHIN the element (so pin stays anchored as element moves)
       x_pct: ((click.click?.x ?? (click.rect.left + click.rect.width / 2)) - click.rect.left) / click.rect.width * 100,
       y_pct: ((click.click?.y ?? (click.rect.top + click.rect.height / 2)) - click.rect.top) / click.rect.height * 100,
