@@ -322,6 +322,9 @@ export function PrototypeViewer({
   // Ref to hold current activeHighlightItems for use in message handler (avoids dependency issues)
   const activeHighlightItemsRef = useRef<Array<{ id: string; anchorKey: string | null; selector: string | null; textHint: string | null }>>([]);
   
+  // Throttle scroll-based rect requests to avoid flooding the bridge
+  const lastScrollRectRequestRef = useRef<number>(0);
+  
   // Pin debug observability state
   const [pinDebug, setPinDebug] = useState<PinDebugState>(() => ({
     bridgeReady: false,
@@ -507,19 +510,23 @@ export function PrototypeViewer({
             scrollY: msg.scroll.y,
           });
           // CRITICAL: Request fresh rects on scroll so pins re-anchor to elements' NEW positions
-          // Without this, pins use stale rectCache and appear to "drift"
-          const items = activeHighlightItemsRef.current;
-          if (iframeRef.current?.contentWindow && items.length > 0) {
-            const anchors = items.map(item => ({
-              id: item.id,
-              anchorKey: item.anchorKey,
-              selector: item.selector,
-              textHint: item.textHint,
-            }));
-            iframeRef.current.contentWindow.postMessage(
-              { __pcd: true, type: "PCD_GET_RECTS", requestId: `scroll-${Date.now()}`, anchors },
-              "*"
-            );
+          // Throttle to max once per 100ms to avoid flooding the bridge
+          const now = Date.now();
+          if (now - lastScrollRectRequestRef.current >= 100) {
+            lastScrollRectRequestRef.current = now;
+            const items = activeHighlightItemsRef.current;
+            if (iframeRef.current?.contentWindow && items.length > 0) {
+              const anchors = items.map(item => ({
+                id: item.id,
+                anchorKey: item.anchorKey,
+                selector: item.selector,
+                textHint: item.textHint,
+              }));
+              iframeRef.current.contentWindow.postMessage(
+                { __pcd: true, type: "PCD_GET_RECTS", requestId: `scroll-${now}`, anchors },
+                "*"
+              );
+            }
           }
           break;
         }
