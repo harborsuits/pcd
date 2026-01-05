@@ -1389,6 +1389,16 @@ async function handleProjects(req: Request): Promise<Response> {
 
     const supabase = getSupabaseClient();
 
+    // First, get all demo project IDs from leads table to exclude them
+    const { data: demoLeads } = await supabase
+      .from("leads")
+      .select("demo_project_id")
+      .not("demo_project_id", "is", null);
+    
+    const demoProjectIds = (demoLeads || [])
+      .map((l: { demo_project_id: string | null }) => l.demo_project_id)
+      .filter((id): id is string => id !== null);
+
     // Build query - conditionally filter archived
     let query = supabase
       .from("projects")
@@ -1422,7 +1432,7 @@ async function handleProjects(req: Request): Promise<Response> {
       query = query.is("deleted_at", null);
     }
 
-    const { data: projects, error: projectsError } = await query;
+    const { data: allProjects, error: projectsError } = await query;
 
     if (projectsError) {
       console.error("Projects fetch error:", projectsError);
@@ -1431,6 +1441,11 @@ async function handleProjects(req: Request): Promise<Response> {
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    // Filter out demo projects (those linked to leads)
+    const projects = (allProjects || []).filter(
+      (p: { id: string }) => !demoProjectIds.includes(p.id)
+    );
 
     // Fetch intake data for all projects
     const projectIds = (projects || []).map((p: { id: string }) => p.id);
