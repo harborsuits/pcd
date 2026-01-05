@@ -33,6 +33,10 @@ interface PortalCommentCardProps {
     resolution_note?: string | null;
     resolved_by?: string | null;
     archived_at?: string | null;
+    // Screenshot feedback fields
+    screenshot_path?: string | null;
+    screenshot_w?: number | null;
+    screenshot_h?: number | null;
   };
   index: number;
   onResolve: (id: string) => void;
@@ -40,6 +44,7 @@ interface PortalCommentCardProps {
   onMarkInProgress?: (id: string) => void;
   onEdit?: (id: string, newBody: string) => Promise<void>;
   onArchive?: (id: string) => Promise<void>;
+  onViewScreenshot?: (comment: PortalCommentCardProps["comment"]) => void;
 }
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
@@ -53,6 +58,7 @@ export function PortalCommentCard({
   onMarkInProgress,
   onEdit,
   onArchive,
+  onViewScreenshot,
 }: PortalCommentCardProps) {
   const [showAttachments, setShowAttachments] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -349,6 +355,36 @@ export function PortalCommentCard({
         <p className={`text-sm mb-2 ${isResolved ? "text-muted-foreground" : ""}`}>
           {comment.body}
         </p>
+      )}
+
+      {/* Screenshot thumbnail */}
+      {comment.screenshot_path && (
+        <div className="mb-2">
+          <button
+            onClick={() => onViewScreenshot?.(comment)}
+            className="relative group w-full max-w-[200px] rounded-lg overflow-hidden border border-border hover:border-primary transition-colors"
+          >
+            <img
+              src={`${SUPABASE_URL}/storage/v1/object/public/project-media/${comment.screenshot_path}`}
+              alt="Screenshot feedback"
+              className="w-full h-auto object-cover"
+            />
+            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+              <span className="text-white text-xs font-medium">View Screenshot</span>
+            </div>
+            {/* Pin marker preview */}
+            {comment.pin_x !== null && comment.pin_y !== null && (
+              <div
+                className="absolute w-3 h-3 bg-primary rounded-full border-2 border-white shadow-md"
+                style={{
+                  left: `${comment.pin_x}%`,
+                  top: `${comment.pin_y}%`,
+                  transform: "translate(-50%, -50%)",
+                }}
+              />
+            )}
+          </button>
+        </div>
       )}
       
       {/* Resolution note if present */}

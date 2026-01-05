@@ -63,6 +63,7 @@ Deno.serve(async (req) => {
   const prototypesIdx = pathParts.indexOf("prototypes");
   const commentsIdx = pathParts.indexOf("comments");
   const attachmentsIdx = pathParts.indexOf("attachments");
+  const screenshotIdx = pathParts.indexOf("screenshot");
   const approveFinalIdx = pathParts.indexOf("approve-final");
   const milestonesIdx = pathParts.indexOf("milestones");
   const phaseBIdx = pathParts.indexOf("phase-b");
@@ -97,6 +98,12 @@ Deno.serve(async (req) => {
     if (req.method === "POST") {
       return handleUploadCommentAttachment(req, token, commentId, corsHeaders);
     }
+  }
+
+  // POST /portal/:token/screenshot - Upload a screenshot for feedback
+  if (screenshotIdx > portalIdx && req.method === "POST") {
+    const token = pathParts[portalIdx + 1];
+    return handleScreenshotUpload(req, token, corsHeaders);
   }
 
   // GET /portal/:token/comments - Get comments for prototype
@@ -1177,6 +1184,98 @@ async function handleGetComments(
   }
 }
 
+// POST /portal/:token/screenshot - Upload a screenshot for feedback
+async function handleScreenshotUpload(
+  req: Request,
+  token: string,
+  corsHeaders: Record<string, string>
+): Promise<Response> {
+  try {
+    if (!token || !isValidToken(token)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid token" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Verify project exists
+    const { data: project, error: projectError } = await supabase
+      .from("projects")
+      .select("id")
+      .eq("project_token", token)
+      .is("deleted_at", null)
+      .maybeSingle();
+
+    if (projectError || !project) {
+      return new Response(
+        JSON.stringify({ error: "Project not found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Parse multipart form data
+    const formData = await req.formData();
+    const file = formData.get("file") as File | null;
+    const prototypeId = formData.get("prototype_id") as string | null;
+
+    if (!file) {
+      return new Response(
+        JSON.stringify({ error: "No file provided" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Validate file is an image
+    if (!file.type.startsWith("image/")) {
+      return new Response(
+        JSON.stringify({ error: "File must be an image" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Generate storage path
+    const uuid = crypto.randomUUID();
+    const ext = file.name.split(".").pop() || "png";
+    const storagePath = prototypeId 
+      ? `${token}/screenshots/${prototypeId}/${uuid}.${ext}`
+      : `${token}/screenshots/${uuid}.${ext}`;
+
+    // Upload to storage
+    const arrayBuffer = await file.arrayBuffer();
+    const { error: uploadError } = await supabase.storage
+      .from("project-media")
+      .upload(storagePath, arrayBuffer, {
+        contentType: file.type,
+        upsert: false,
+      });
+
+    if (uploadError) {
+      console.error("Screenshot upload error:", uploadError);
+      return new Response(
+        JSON.stringify({ error: "Failed to upload screenshot" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log(`Screenshot uploaded: ${storagePath}`);
+
+    return new Response(
+      JSON.stringify({ ok: true, path: storagePath }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  } catch (error) {
+    console.error("Screenshot upload error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+}
+
 // POST /portal/:token/comments - Create, resolve, or unresolve comment
 async function handleCommentAction(
   req: Request,
@@ -1216,6 +1315,10 @@ async function handleCommentAction(
       // Text-range anchoring
       text_offset,
       text_context,
+      // Screenshot feedback fields
+      screenshot_path,
+      screenshot_w,
+      screenshot_h,
     } = body;
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -1275,6 +1378,10 @@ async function handleCommentAction(
           text_hint: text_hint ?? null,
           text_offset: text_offset ?? null,
           text_context: text_context ?? null,
+          // Screenshot feedback fields
+          screenshot_path: screenshot_path ?? null,
+          screenshot_w: screenshot_w ?? null,
+          screenshot_h: screenshot_h ?? null,
         })
         .select()
         .single();

@@ -963,6 +963,9 @@ export type Database = {
           resolution_note: string | null
           resolved_at: string | null
           resolved_by: string | null
+          screenshot_h: number | null
+          screenshot_path: string | null
+          screenshot_w: number | null
           scroll_y: number | null
           source_message_id: string | null
           status: string
@@ -994,6 +997,9 @@ export type Database = {
           resolution_note?: string | null
           resolved_at?: string | null
           resolved_by?: string | null
+          screenshot_h?: number | null
+          screenshot_path?: string | null
+          screenshot_w?: number | null
           scroll_y?: number | null
           source_message_id?: string | null
           status?: string
@@ -1025,6 +1031,9 @@ export type Database = {
           resolution_note?: string | null
           resolved_at?: string | null
           resolved_by?: string | null
+          screenshot_h?: number | null
+          screenshot_path?: string | null
+          screenshot_w?: number | null
           scroll_y?: number | null
           source_message_id?: string | null
           status?: string
