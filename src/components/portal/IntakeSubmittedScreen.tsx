@@ -61,7 +61,7 @@ export function IntakeSubmittedScreen({ businessName, projectToken }: IntakeSubm
 
         {/* CTA */}
         <Button 
-          onClick={() => navigate(`/p/${projectToken}`)}
+          onClick={() => navigate(`/w/${projectToken}`)}
           className="w-full"
           size="lg"
         >
