@@ -18,16 +18,23 @@ import {
 } from "lucide-react";
 
 interface IntakeData {
+  // NEW simplified wizard fields
   businessName?: string;
   businessType?: string;
   serviceArea?: string;
   contactEmail?: string;
   contactPhone?: string;
+  primaryGoal?: string;
+  sellType?: string;
+  timeline?: string;
+  deadlineDate?: string;
+  readiness?: string;
+  involvement?: string;
+  // Legacy fields from old wizard
   goals?: string[];
   websiteStatus?: string;
   hasWebsite?: boolean;
   websiteUrl?: string;
-  timeline?: string;
   readinessAssets?: string[];
   styleVibe?: string;
   selectedDemo?: string;
@@ -36,7 +43,6 @@ interface IntakeData {
   hoursType?: string;
   budgetRange?: string;
   notes?: string;
-  // Legacy fields
   colorPreset?: string;
   contactName?: string;
 }
@@ -60,15 +66,38 @@ const BUSINESS_TYPE_LABELS: Record<string, string> = {
 };
 
 const GOAL_LABELS: Record<string, string> = {
+  // New wizard goals
+  leads: "Get more calls / leads",
+  sell: "Sell products or services online",
+  professional: "Look more professional",
+  unsure: "Not sure yet — guide me",
+  // Legacy goals
   calls: "Get more phone calls",
   booking: "Online booking / scheduling",
-  professional: "Improve credibility",
-  sell: "Sell products/services online",
-  automate: "Automate inquiries/follow-ups",
-  unsure: "Not sure yet",
   reviews: "Better reviews",
   payments: "Take payments",
   automations: "Automations",
+  automate: "Automate inquiries/follow-ups",
+};
+
+const SELL_TYPE_LABELS: Record<string, string> = {
+  services: "Services",
+  physical: "Physical products",
+  digital: "Digital products",
+  unsure: "Not sure yet",
+};
+
+const READINESS_LABELS_NEW: Record<string, string> = {
+  ready: "Has everything ready",
+  some: "Has some things",
+  need_help: "Needs help with assets",
+  unsure: "Not sure what's needed",
+};
+
+const INVOLVEMENT_LABELS: Record<string, string> = {
+  hands_on: "Wants to be hands-on",
+  options: "Wants curated options",
+  handle_it: "Just handle it",
 };
 
 const WEBSITE_STATUS_LABELS: Record<string, string> = {
@@ -165,6 +194,9 @@ export function IntakeOverviewPanel({ intake, intakeCreatedAt, intakeStatus, onA
   const status = intakeStatus || 'submitted';
   const { label, variant, color } = statusConfig[status];
 
+  // Detect if this is the new simplified wizard format
+  const isNewFormat = !!(intake.primaryGoal && !intake.goals);
+
   return (
     <ScrollArea className="flex-1">
       <div className="p-4 space-y-5">
@@ -196,12 +228,25 @@ export function IntakeOverviewPanel({ intake, intakeCreatedAt, intakeStatus, onA
             {intake.businessName && <p className="font-medium">{intake.businessName}</p>}
             {intake.businessType && <p className="text-muted-foreground">{BUSINESS_TYPE_LABELS[intake.businessType] || intake.businessType}</p>}
             {intake.serviceArea && <p className="text-muted-foreground flex items-center gap-1"><MapPin className="h-3 w-3" />{intake.serviceArea}</p>}
-            {intake.contactEmail && <p className="text-muted-foreground">{intake.contactEmail} · {intake.contactPhone}</p>}
+            {intake.contactEmail && <p className="text-muted-foreground">{intake.contactEmail}{intake.contactPhone ? ` · ${intake.contactPhone}` : ''}</p>}
             {intake.websiteUrl && <a href={intake.websiteUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1"><Globe className="h-3 w-3" />{intake.websiteUrl}</a>}
           </div>
         </Section>
 
-        {intake.goals && intake.goals.length > 0 && (
+        {/* New format: Primary Goal */}
+        {isNewFormat && intake.primaryGoal && (
+          <Section icon={Target} title="Goal">
+            <div className="space-y-2">
+              <Badge variant="secondary" className="text-xs">{GOAL_LABELS[intake.primaryGoal] || intake.primaryGoal}</Badge>
+              {intake.sellType && (
+                <p className="text-xs text-muted-foreground">Selling: {SELL_TYPE_LABELS[intake.sellType] || intake.sellType}</p>
+              )}
+            </div>
+          </Section>
+        )}
+
+        {/* Legacy format: Goals array */}
+        {!isNewFormat && intake.goals && intake.goals.length > 0 && (
           <Section icon={Target} title="Goals">
             <div className="flex flex-wrap gap-1.5">
               {intake.goals.map((goal) => <Badge key={goal} variant="secondary" className="text-xs">{GOAL_LABELS[goal] || goal}</Badge>)}
@@ -212,10 +257,15 @@ export function IntakeOverviewPanel({ intake, intakeCreatedAt, intakeStatus, onA
 
         {intake.timeline && (
           <Section icon={Clock} title="Timeline">
-            <p className={`text-sm ${intake.timeline === 'rush' ? 'text-warning font-medium' : ''}`}>
-              {intake.timeline === 'rush' && <AlertTriangle className="h-3 w-3 inline mr-1" />}
-              {TIMELINE_LABELS[intake.timeline] || intake.timeline}
-            </p>
+            <div className="space-y-1">
+              <p className={`text-sm ${intake.timeline === 'asap' ? 'text-amber-600 font-medium' : ''}`}>
+                {intake.timeline === 'asap' && <AlertTriangle className="h-3 w-3 inline mr-1" />}
+                {TIMELINE_LABELS[intake.timeline] || intake.timeline}
+              </p>
+              {intake.deadlineDate && (
+                <p className="text-xs text-muted-foreground">Deadline: {intake.deadlineDate}</p>
+              )}
+            </div>
           </Section>
         )}
 
@@ -225,11 +275,26 @@ export function IntakeOverviewPanel({ intake, intakeCreatedAt, intakeStatus, onA
           </Section>
         )}
 
-        {intake.readinessAssets && intake.readinessAssets.length > 0 && (
+        {/* New format: Readiness */}
+        {isNewFormat && intake.readiness && (
+          <Section icon={Package} title="Readiness">
+            <Badge variant="outline" className="text-xs">{READINESS_LABELS_NEW[intake.readiness] || intake.readiness}</Badge>
+          </Section>
+        )}
+
+        {/* Legacy format: Readiness assets */}
+        {!isNewFormat && intake.readinessAssets && intake.readinessAssets.length > 0 && (
           <Section icon={Package} title="Assets Ready">
             <div className="flex flex-wrap gap-1.5">
               {intake.readinessAssets.map((asset) => <Badge key={asset} variant="outline" className="text-xs">{READINESS_LABELS[asset] || asset}</Badge>)}
             </div>
+          </Section>
+        )}
+
+        {/* New format: Involvement */}
+        {isNewFormat && intake.involvement && (
+          <Section icon={Cog} title="Involvement">
+            <Badge variant="outline" className="text-xs">{INVOLVEMENT_LABELS[intake.involvement] || intake.involvement}</Badge>
           </Section>
         )}
 
