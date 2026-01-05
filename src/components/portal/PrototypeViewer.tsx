@@ -239,8 +239,12 @@ export function PrototypeViewer({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [iframeKey, setIframeKey] = useState(0);
   
-  // Direct prototype URL - proxy approach has infrastructure issues
-  const iframeSrc = prototype.url;
+  // Use prototype-proxy to inject working helper script with multi-strategy element finding
+  // The proxy injects a helper that uses semantic selectors + text hints for stable anchoring
+  const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "";
+  const iframeSrc = SUPABASE_URL 
+    ? `${SUPABASE_URL}/functions/v1/prototype-proxy/${token}`
+    : prototype.url; // Fallback to direct URL if no Supabase URL
   
   const [showCommentsSidebar, setShowCommentsSidebar] = useState(true);
   const [focusedCommentId, setFocusedCommentId] = useState<string | null>(null);
