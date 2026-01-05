@@ -1,4 +1,4 @@
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useSearchParams, useNavigate } from "react-router-dom";
 import React, { useState, useEffect, useCallback } from "react";
 import { Loader2, AlertCircle, CheckCircle2, Clock, Rocket, FileText, Upload, Image, Palette, MapPin, Phone, Calendar, ClipboardList, LucideIcon, Settings2, Home, ExternalLink } from "lucide-react";
 import { ProjectWorkspace, type Version, type CommentData } from "@/components/portal/workspace";
@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { getAdminKey } from "@/lib/adminFetch";
 import { supabase } from "@/integrations/supabase/client";
+import { AITrialModal } from "@/components/portal/AITrialModal";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -103,14 +104,28 @@ function getStatusConfig(status: string | null) {
 
 export default function WorkspacePage() {
   const { token } = useParams<{ token: string }>();
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [versions, setVersions] = useState<Version[]>([]);
   const [comments, setComments] = useState<CommentData[]>([]);
   const [projectInfo, setProjectInfo] = useState<ProjectInfo | null>(null);
+  
+  // AI Trial modal state
+  const [showAITrialModal, setShowAITrialModal] = useState(false);
 
   // Check if user has operator access
   const isOperator = !!getAdminKey();
+  
+  // Handle ai_trial query param
+  useEffect(() => {
+    if (searchParams.get("ai_trial") === "start") {
+      setShowAITrialModal(true);
+      // Remove the query param from URL without reload
+      navigate(`/w/${token}`, { replace: true });
+    }
+  }, [searchParams, token, navigate]);
 
   // Fetch project info
   const fetchProjectInfo = useCallback(async () => {
@@ -412,6 +427,13 @@ export default function WorkspacePage() {
           onRefreshProject={fetchProjectInfo}
         />
       </div>
+
+      {/* AI Trial Modal */}
+      <AITrialModal
+        open={showAITrialModal}
+        onClose={() => setShowAITrialModal(false)}
+        businessName={projectInfo?.businessName || "your business"}
+      />
     </div>
   );
 }
