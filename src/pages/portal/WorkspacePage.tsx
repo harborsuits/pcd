@@ -1,17 +1,31 @@
 import { useParams } from "react-router-dom";
 import { useState, useEffect, useCallback } from "react";
-import { Loader2, AlertCircle, CheckCircle2, Clock, Rocket, FileText } from "lucide-react";
+import { Loader2, AlertCircle, CheckCircle2, Clock, Rocket, FileText, Eye, EyeOff, ExternalLink } from "lucide-react";
 import { ProjectWorkspace, type Version, type CommentData } from "@/components/portal/workspace";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { OperatorPanel } from "@/components/portal/workspace/OperatorPanel";
+import { getAdminKey } from "@/lib/adminFetch";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
+interface IntakeData {
+  businessName?: string;
+  businessType?: string;
+  primaryGoal?: string;
+  timeline?: string;
+  assetsReadiness?: string;
+  involvementPreference?: string;
+}
+
 interface ProjectInfo {
+  id: string;
   businessName: string;
   intakeStatus: 'draft' | 'submitted' | 'approved' | null;
   pipelineStage: string;
   portalStage: string;
+  intakeData: IntakeData | null;
 }
 
 // Status banner configuration
@@ -55,6 +69,10 @@ export default function WorkspacePage() {
   const [versions, setVersions] = useState<Version[]>([]);
   const [comments, setComments] = useState<CommentData[]>([]);
   const [projectInfo, setProjectInfo] = useState<ProjectInfo | null>(null);
+  const [operatorMode, setOperatorMode] = useState(false);
+  
+  // Check if user has operator access (has admin key)
+  const isOperator = !!getAdminKey();
 
   // Fetch project info
   const fetchProjectInfo = useCallback(async () => {
@@ -76,10 +94,12 @@ export default function WorkspacePage() {
       const data = await res.json();
       if (res.ok && data.business) {
         setProjectInfo({
+          id: data.business.id || "",
           businessName: data.business.name,
           intakeStatus: data.intake_status,
           pipelineStage: data.business.pipeline_stage || "new",
           portalStage: data.business.portal_stage || "intake",
+          intakeData: data.intake_json || null,
         });
       }
     } catch (err) {
@@ -178,48 +198,80 @@ export default function WorkspacePage() {
                 </Badge>
                 <span className="text-sm font-medium">{projectInfo.businessName}</span>
               </div>
+              {/* Operator toggle */}
+              {isOperator && (
+                <Button
+                  variant={operatorMode ? "secondary" : "ghost"}
+                  size="sm"
+                  onClick={() => setOperatorMode(!operatorMode)}
+                  className="gap-1"
+                >
+                  {operatorMode ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+                  <span className="hidden sm:inline">
+                    {operatorMode ? "Exit Operator" : "Operator"}
+                  </span>
+                </Button>
+              )}
             </div>
           </div>
         )}
 
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-center max-w-md px-4">
-            {error ? (
-              <>
-                <AlertCircle className="h-12 w-12 mx-auto mb-4 text-destructive" />
-                <h2 className="text-xl font-bold mb-2">{error}</h2>
-                <p className="text-muted-foreground">
-                  Please check your link and try again.
-                </p>
-              </>
-            ) : (
-              <>
-                <div className="h-16 w-16 mx-auto mb-4 rounded-full bg-primary/10 flex items-center justify-center">
-                  <Icon className="h-8 w-8 text-primary" />
-                </div>
-                <h2 className="text-xl font-bold mb-2">
-                  {projectInfo?.intakeStatus === "approved" 
-                    ? "We're Building Your Site" 
-                    : "Your Preview is Coming Soon"}
-                </h2>
-                <p className="text-muted-foreground mb-4">
-                  {config.hint}
-                </p>
-                {projectInfo?.intakeStatus === "submitted" && (
-                  <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-                    <CheckCircle2 className="h-4 w-4 text-green-500" />
-                    Intake submitted successfully
+        <div className="flex-1 flex">
+          {/* Main content */}
+          <div className="flex-1 flex items-center justify-center">
+            <div className="text-center max-w-md px-4">
+              {error ? (
+                <>
+                  <AlertCircle className="h-12 w-12 mx-auto mb-4 text-destructive" />
+                  <h2 className="text-xl font-bold mb-2">{error}</h2>
+                  <p className="text-muted-foreground">
+                    Please check your link and try again.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <div className="h-16 w-16 mx-auto mb-4 rounded-full bg-primary/10 flex items-center justify-center">
+                    <Icon className="h-8 w-8 text-primary" />
                   </div>
-                )}
-                {projectInfo?.intakeStatus === "approved" && (
-                  <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-                    <CheckCircle2 className="h-4 w-4 text-green-500" />
-                    Intake approved — build in progress
-                  </div>
-                )}
-              </>
-            )}
+                  <h2 className="text-xl font-bold mb-2">
+                    {projectInfo?.intakeStatus === "approved" 
+                      ? "We're Building Your Site" 
+                      : "Your Preview is Coming Soon"}
+                  </h2>
+                  <p className="text-muted-foreground mb-4">
+                    {config.hint}
+                  </p>
+                  {projectInfo?.intakeStatus === "submitted" && (
+                    <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                      <CheckCircle2 className="h-4 w-4 text-green-500" />
+                      Intake submitted successfully
+                    </div>
+                  )}
+                  {projectInfo?.intakeStatus === "approved" && (
+                    <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                      <CheckCircle2 className="h-4 w-4 text-green-500" />
+                      Intake approved — build in progress
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
           </div>
+
+          {/* Operator panel */}
+          {isOperator && operatorMode && projectInfo && (
+            <div className="w-72 border-l border-border flex-shrink-0">
+              <OperatorPanel
+                token={token!}
+                projectId={projectInfo.id}
+                intakeStatus={projectInfo.intakeStatus}
+                pipelineStage={projectInfo.pipelineStage}
+                portalStage={projectInfo.portalStage}
+                intakeData={projectInfo.intakeData}
+                onRefresh={fetchProjectInfo}
+              />
+            </div>
+          )}
         </div>
       </div>
     );
@@ -242,21 +294,54 @@ export default function WorkspacePage() {
               </Badge>
               <span className="text-sm font-medium">{projectInfo.businessName}</span>
             </div>
-            <span className="text-xs text-muted-foreground">
-              {versions.length} version{versions.length !== 1 ? "s" : ""} available
-            </span>
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-muted-foreground">
+                {versions.length} version{versions.length !== 1 ? "s" : ""} available
+              </span>
+              {/* Operator toggle */}
+              {isOperator && (
+                <Button
+                  variant={operatorMode ? "secondary" : "ghost"}
+                  size="sm"
+                  onClick={() => setOperatorMode(!operatorMode)}
+                  className="gap-1"
+                >
+                  {operatorMode ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+                  <span className="hidden sm:inline">
+                    {operatorMode ? "Exit Operator" : "Operator"}
+                  </span>
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       )}
 
-      {/* Workspace */}
-      <div className="flex-1 min-h-0">
-        <ProjectWorkspace
-          token={token!}
-          versions={versions}
-          comments={comments}
-          onRefreshComments={fetchComments}
-        />
+      {/* Workspace + Operator Panel */}
+      <div className="flex-1 min-h-0 flex">
+        <div className="flex-1 min-w-0">
+          <ProjectWorkspace
+            token={token!}
+            versions={versions}
+            comments={comments}
+            onRefreshComments={fetchComments}
+          />
+        </div>
+
+        {/* Operator panel */}
+        {isOperator && operatorMode && projectInfo && (
+          <div className="w-72 border-l border-border flex-shrink-0">
+            <OperatorPanel
+              token={token!}
+              projectId={projectInfo.id}
+              intakeStatus={projectInfo.intakeStatus}
+              pipelineStage={projectInfo.pipelineStage}
+              portalStage={projectInfo.portalStage}
+              intakeData={projectInfo.intakeData}
+              onRefresh={fetchProjectInfo}
+            />
+          </div>
+        )}
       </div>
     </div>
   );
