@@ -147,26 +147,33 @@
       } catch {}
     }
     
-    // Strategy 3: Text-hint search (buttons, links with matching text)
+    // Strategy 3: Text-hint search (any element with matching text)
     if (textHint && textHint.length >= 3) {
-      const normalized = textHint.toLowerCase().trim();
-      // Search interactive elements first
-      const candidates = document.querySelectorAll("button, a, [role='button'], input[type='submit']");
+      const normalized = textHint.toLowerCase().trim().slice(0, 80); // Truncate for matching
+      
+      // Search all potential text-containing elements
+      const candidates = document.querySelectorAll("h1, h2, h3, h4, h5, h6, p, span, a, button, li, td, th, label, [role='button'], [role='heading']");
       for (const c of candidates) {
-        const cText = (c.textContent || "").trim().replace(/\s+/g, " ").toLowerCase();
-        if (cText === normalized || cText.startsWith(normalized)) {
+        // Get only direct text, not nested children text
+        const directText = Array.from(c.childNodes)
+          .filter(n => n.nodeType === Node.TEXT_NODE)
+          .map(n => n.textContent)
+          .join("")
+          .trim()
+          .replace(/\s+/g, " ");
+        const fullText = (c.textContent || "").trim().replace(/\s+/g, " ");
+        
+        // Match against start of text (text hints are often truncated)
+        const directLower = directText.toLowerCase();
+        const fullLower = fullText.toLowerCase();
+        
+        if (directLower && directLower.startsWith(normalized.slice(0, 40))) {
+          ensureAnchorStamp(c);
+          return { el: c, method: "text-hint-direct" };
+        }
+        if (fullLower === normalized || fullLower.startsWith(normalized.slice(0, 40))) {
           ensureAnchorStamp(c);
           return { el: c, method: "text-hint" };
-        }
-      }
-      // Broader search: any element containing that text
-      const all = document.querySelectorAll("*");
-      for (const c of all) {
-        if (c.children.length > 3) continue; // Skip containers
-        const cText = (c.textContent || "").trim().replace(/\s+/g, " ").toLowerCase();
-        if (cText === normalized) {
-          ensureAnchorStamp(c);
-          return { el: c, method: "text-hint-broad" };
         }
       }
     }
