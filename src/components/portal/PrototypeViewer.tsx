@@ -319,6 +319,9 @@ export function PrototypeViewer({
     t: number;
   }>>(new Map());
   
+  // Ref to hold current activeHighlightItems for use in message handler (avoids dependency issues)
+  const activeHighlightItemsRef = useRef<Array<{ id: string; anchorKey: string | null; selector: string | null; textHint: string | null }>>([]);
+  
   // Pin debug observability state
   const [pinDebug, setPinDebug] = useState<PinDebugState>(() => ({
     bridgeReady: false,
@@ -503,6 +506,21 @@ export function PrototypeViewer({
             scrollX: msg.scroll.x,
             scrollY: msg.scroll.y,
           });
+          // CRITICAL: Request fresh rects on scroll so pins re-anchor to elements' NEW positions
+          // Without this, pins use stale rectCache and appear to "drift"
+          const items = activeHighlightItemsRef.current;
+          if (iframeRef.current?.contentWindow && items.length > 0) {
+            const anchors = items.map(item => ({
+              id: item.id,
+              anchorKey: item.anchorKey,
+              selector: item.selector,
+              textHint: item.textHint,
+            }));
+            iframeRef.current.contentWindow.postMessage(
+              { __pcd: true, type: "PCD_GET_RECTS", requestId: `scroll-${Date.now()}`, anchors },
+              "*"
+            );
+          }
           break;
         }
 
@@ -792,6 +810,11 @@ export function PrototypeViewer({
         label: String(idx + 1), // numbering badge
       }));
   }, [visibleComments]);
+  
+  // Keep ref in sync with activeHighlightItems so scroll handler can access current list
+  useEffect(() => {
+    activeHighlightItemsRef.current = activeHighlightItems;
+  }, [activeHighlightItems]);
 
   // Contract test helper: await rects by requestId
   const awaitRects = useCallback((requestId: string, timeoutMs = 2500): Promise<Record<string, unknown>> => {
