@@ -68,6 +68,7 @@ Deno.serve(async (req) => {
   const milestonesIdx = pathParts.indexOf("milestones");
   const phaseBIdx = pathParts.indexOf("phase-b");
   const helpRequestIdx = pathParts.indexOf("help-request");
+  const archiveIdx = pathParts.indexOf("archive");
   
   if (reviewIdx > portalIdx && req.method === "POST") {
     const token = pathParts[portalIdx + 1];
@@ -175,6 +176,12 @@ Deno.serve(async (req) => {
   if (helpRequestIdx > portalIdx && req.method === "POST") {
     const token = pathParts[portalIdx + 1];
     return handleHelpRequest(req, token, corsHeaders);
+  }
+
+  // POST /portal/:token/archive - Archive a project (soft delete)
+  if (archiveIdx > portalIdx && req.method === "POST") {
+    const token = pathParts[portalIdx + 1];
+    return handleArchiveProject(req, token, corsHeaders);
   }
 
   if (req.method !== "GET") {
@@ -818,6 +825,93 @@ async function handleMyProjects(
     );
   } catch (error) {
     console.error("My projects error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+}
+
+// POST /portal/:token/archive - Archive a project (soft delete by owner)
+async function handleArchiveProject(
+  req: Request,
+  token: string,
+  corsHeaders: Record<string, string>
+): Promise<Response> {
+  try {
+    if (!token || !isValidToken(token)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid token" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Extract user from JWT
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Verify JWT and get user
+    const jwt = authHeader.replace("Bearer ", "");
+    const { data: { user }, error: authError } = await supabase.auth.getUser(jwt);
+
+    if (authError || !user) {
+      return new Response(
+        JSON.stringify({ error: "Invalid or expired token" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Check that user owns this project
+    const { data: project, error: projectError } = await supabase
+      .from("projects")
+      .select("id, owner_user_id")
+      .eq("project_token", token)
+      .is("deleted_at", null)
+      .single();
+
+    if (projectError || !project) {
+      return new Response(
+        JSON.stringify({ error: "Project not found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (project.owner_user_id !== user.id) {
+      return new Response(
+        JSON.stringify({ error: "You do not own this project" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Archive the project (soft delete)
+    const { error: updateError } = await supabase
+      .from("projects")
+      .update({ deleted_at: new Date().toISOString() })
+      .eq("id", project.id);
+
+    if (updateError) {
+      console.error("Archive project error:", updateError);
+      return new Response(
+        JSON.stringify({ error: "Failed to archive project" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    return new Response(
+      JSON.stringify({ success: true }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  } catch (error) {
+    console.error("Archive project error:", error);
     return new Response(
       JSON.stringify({ error: "Internal server error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
