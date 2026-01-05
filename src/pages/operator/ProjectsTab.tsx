@@ -28,7 +28,18 @@ import { toast } from "sonner";
 import { ProjectWorkSurface } from "./ProjectWorkSurface";
 import { adminFetch } from "@/lib/adminFetch";
 import { useOperatorContext } from "./OperatorLayout";
-import { StageBadge, PIPELINE_FILTERS, PipelineFilter, getNextStage, STAGE_CONFIG, PipelineStage } from "@/components/operator/StageBadge";
+import { 
+  StageBadge, 
+  ServiceTypeBadge,
+  PIPELINE_FILTERS, 
+  SERVICE_TYPE_FILTERS,
+  PipelineFilter, 
+  ServiceTypeFilter,
+  getNextStage, 
+  STAGE_CONFIG, 
+  PipelineStage,
+  ServiceType 
+} from "@/components/operator/StageBadge";
 import { KanbanBoard, KanbanProject } from "@/components/operator/KanbanBoard";
 
 interface PhaseBData {
@@ -92,6 +103,7 @@ interface Project {
   project_token: string;
   status: string;
   pipeline_stage: string | null;
+  service_type: ServiceType;
   source_demo_token: string | null;
   contact_name: string | null;
   contact_phone: string | null;
@@ -395,6 +407,7 @@ export function ProjectsTab() {
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [phaseBProject, setPhaseBProject] = useState<Project | null>(null);
   const [pipelineFilter, setPipelineFilter] = useState<PipelineFilter>("all");
+  const [serviceTypeFilter, setServiceTypeFilter] = useState<ServiceTypeFilter>("all");
   const [viewMode, setViewMode] = useState<ViewMode>("list");
   const { setCurrentProjectToken, setCurrentProjectName, registerCloseProject } = useOperatorContext();
   const queryClient = useQueryClient();
@@ -560,6 +573,7 @@ export function ProjectsTab() {
       contact_name: p.contact_name,
       contact_email: p.contact_email,
       pipeline_stage: (p.pipeline_stage || "new") as PipelineStage,
+      service_type: (p.service_type || "website") as ServiceType,
       phase_b_status: p.intake?.phase_b_status,
       phase_b_progress: getPhaseBProgress(p.intake),
     }));
@@ -569,14 +583,17 @@ export function ProjectsTab() {
   const needsNudge = (project: Project): boolean => {
     const status = project.intake?.phase_b_status;
     return status !== "complete" && 
-      ["new", "quote_requested", "claimed", "contacted"].includes(project.pipeline_stage || "new");
+      ["new", "discovery", "build"].includes(project.pipeline_stage || "new");
   };
 
-  // Filter projects by pipeline stage
+  // Filter projects by pipeline stage and service type
   const filteredProjects = useMemo(() => {
-    if (pipelineFilter === "all") return projects;
-    return projects.filter(p => p.pipeline_stage === pipelineFilter);
-  }, [projects, pipelineFilter]);
+    return projects.filter(p => {
+      const matchesPipeline = pipelineFilter === "all" || p.pipeline_stage === pipelineFilter;
+      const matchesServiceType = serviceTypeFilter === "all" || p.service_type === serviceTypeFilter;
+      return matchesPipeline && matchesServiceType;
+    });
+  }, [projects, pipelineFilter, serviceTypeFilter]);
 
   // Count by pipeline stage for tab badges
   const stageCounts = useMemo(() => {
@@ -584,6 +601,16 @@ export function ProjectsTab() {
     projects.forEach(p => {
       const stage = p.pipeline_stage || "new";
       counts[stage] = (counts[stage] || 0) + 1;
+    });
+    return counts;
+  }, [projects]);
+
+  // Count by service type for filter badges
+  const serviceTypeCounts = useMemo(() => {
+    const counts: Record<string, number> = { all: projects.length };
+    projects.forEach(p => {
+      const type = p.service_type || "website";
+      counts[type] = (counts[type] || 0) + 1;
     });
     return counts;
   }, [projects]);
@@ -643,27 +670,51 @@ export function ProjectsTab() {
         </div>
       </CardHeader>
       <CardContent className="p-0">
-        {/* Pipeline filter tabs - only shown in list view */}
+        {/* Filters row */}
         {viewMode === "list" && (
-          <div className="border-b overflow-x-auto scrollbar-hide">
-            <Tabs value={pipelineFilter} onValueChange={(v) => setPipelineFilter(v as PipelineFilter)}>
-              <TabsList className="inline-flex justify-start h-auto p-0 bg-transparent min-w-max px-4">
-                {PIPELINE_FILTERS.map((filter) => (
-                  <TabsTrigger
-                    key={filter.value}
-                    value={filter.value}
-                    className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-3 py-2 text-sm whitespace-nowrap"
-                  >
-                    {filter.label}
-                    {stageCounts[filter.value] > 0 && (
-                      <span className="ml-1.5 text-xs text-muted-foreground">
-                        ({stageCounts[filter.value]})
-                      </span>
-                    )}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-            </Tabs>
+          <div className="border-b">
+            {/* Service type filter */}
+            <div className="flex items-center gap-2 px-4 py-2 border-b bg-muted/30">
+              <span className="text-xs text-muted-foreground">Type:</span>
+              {SERVICE_TYPE_FILTERS.map((filter) => (
+                <Button
+                  key={filter.value}
+                  variant={serviceTypeFilter === filter.value ? "secondary" : "ghost"}
+                  size="sm"
+                  className="h-7 text-xs"
+                  onClick={() => setServiceTypeFilter(filter.value)}
+                >
+                  {filter.label}
+                  {serviceTypeCounts[filter.value] > 0 && filter.value !== "all" && (
+                    <span className="ml-1 text-muted-foreground">
+                      ({serviceTypeCounts[filter.value]})
+                    </span>
+                  )}
+                </Button>
+              ))}
+            </div>
+            
+            {/* Pipeline stage tabs */}
+            <div className="overflow-x-auto scrollbar-hide">
+              <Tabs value={pipelineFilter} onValueChange={(v) => setPipelineFilter(v as PipelineFilter)}>
+                <TabsList className="inline-flex justify-start h-auto p-0 bg-transparent min-w-max px-4">
+                  {PIPELINE_FILTERS.map((filter) => (
+                    <TabsTrigger
+                      key={filter.value}
+                      value={filter.value}
+                      className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-3 py-2 text-sm whitespace-nowrap"
+                    >
+                      {filter.label}
+                      {stageCounts[filter.value] > 0 && (
+                        <span className="ml-1.5 text-xs text-muted-foreground">
+                          ({stageCounts[filter.value]})
+                        </span>
+                      )}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+              </Tabs>
+            </div>
           </div>
         )}
 
@@ -705,7 +756,7 @@ export function ProjectsTab() {
                 >
                   <div className="flex items-start justify-between gap-2 sm:gap-4">
                     <div className="flex-1 min-w-0">
-                      {/* Row 1: Name + location + stage */}
+                      {/* Row 1: Name + location + type + stage */}
                       <div className="flex items-center gap-1.5 sm:gap-2 mb-1 flex-wrap">
                         <span className="font-medium text-sm sm:text-base truncate max-w-[180px] sm:max-w-none">
                           {project.business_name}
@@ -715,6 +766,7 @@ export function ProjectsTab() {
                             {project.city}{project.state ? `, ${project.state}` : ""}
                           </span>
                         )}
+                        <ServiceTypeBadge serviceType={project.service_type} showIcon={true} />
                         <StageBadge stage={project.pipeline_stage} />
                       </div>
                       

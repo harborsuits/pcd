@@ -23,7 +23,7 @@ import {
   User,
   Building2
 } from "lucide-react";
-import { STAGE_CONFIG, PipelineStage, STAGE_ORDER } from "@/components/operator/StageBadge";
+import { STAGE_CONFIG, PipelineStage, STAGE_ORDER, ServiceType, SERVICE_TYPE_CONFIG } from "@/components/operator/StageBadge";
 
 export interface KanbanProject {
   id: string;
@@ -32,6 +32,7 @@ export interface KanbanProject {
   contact_name: string | null;
   contact_email: string | null;
   pipeline_stage: PipelineStage;
+  service_type: ServiceType;
   phase_b_status?: "pending" | "in_progress" | "complete" | null;
   phase_b_progress?: { completed: number; total: number };
 }
@@ -78,12 +79,17 @@ function ProjectCard({ project, isDragging, onOpenWorkSurface, onOpenPortal }: P
                 <Building2 className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                 {project.business_name}
               </p>
-              {project.contact_name && (
-                <p className="text-xs text-muted-foreground mt-0.5 truncate flex items-center gap-1">
-                  <User className="h-3 w-3" />
-                  {project.contact_name}
-                </p>
-              )}
+              <div className="flex items-center gap-1.5 mt-0.5">
+                {project.contact_name && (
+                  <span className="text-xs text-muted-foreground truncate flex items-center gap-1">
+                    <User className="h-3 w-3" />
+                    {project.contact_name}
+                  </span>
+                )}
+                <span className="text-xs" title={SERVICE_TYPE_CONFIG[project.service_type]?.label}>
+                  {SERVICE_TYPE_CONFIG[project.service_type]?.icon || "🌐"}
+                </span>
+              </div>
             </div>
           </div>
 
@@ -223,9 +229,8 @@ export function KanbanBoard({
     for (const stage of STAGE_ORDER) {
       map[stage] = [];
     }
-    // Also add terminal stages
-    map["won"] = [];
-    map["lost"] = [];
+    // Also add terminal stage
+    map["closed"] = [];
     
     for (const project of projects) {
       const stage = project.pipeline_stage || "new";
@@ -265,8 +270,8 @@ export function KanbanBoard({
 
   const activeProject = activeId ? projects.find((p) => p.token === activeId) : null;
 
-  // Show all stages except lost at the end
-  const visibleStages: PipelineStage[] = [...STAGE_ORDER, "won", "lost"];
+  // Show all stages including closed
+  const visibleStages: PipelineStage[] = [...STAGE_ORDER, "closed"];
 
   return (
     <DndContext
