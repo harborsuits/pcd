@@ -15,6 +15,7 @@ import PortalHub from "./pages/PortalHub";
 import OnboardingWizard from "./pages/portal/OnboardingWizard";
 import OperatorLayout from "./pages/operator/OperatorLayout";
 import WorkspacePage from "./pages/portal/WorkspacePage";
+import ClientWorkspacePage from "./pages/portal/ClientWorkspacePage";
 import RooferDemo from "./pages/demos/RooferDemo";
 import RestaurantDemo from "./pages/demos/RestaurantDemo";
 import SalonDemo from "./pages/demos/SalonDemo";
@@ -53,6 +54,7 @@ const App = () => (
           {/* Public Token Routes */}
           <Route path="/d/:token/:slug" element={<DemoPage />} />
           <Route path="/p/:token" element={<PortalPage />} />
+          <Route path="/c/:token" element={<ClientWorkspacePage />} />
           <Route path="/w/:token" element={<WorkspacePage />} />
 
           {/* Operator Console (unified hub) */}

@@ -38,6 +38,8 @@ interface ProjectWorkspaceProps {
   portalStage?: string;
   intakeData?: IntakeData | null;
   onRefreshProject?: () => void;
+  // Force client mode - disables operator UI even if admin_key exists
+  forceClientMode?: boolean;
 }
 
 type WorkspaceMode = 
@@ -56,6 +58,7 @@ export function ProjectWorkspace({
   portalStage,
   intakeData,
   onRefreshProject,
+  forceClientMode = false,
 }: ProjectWorkspaceProps) {
   const [selectedVersionId, setSelectedVersionId] = useState<string | null>(
     versions[0]?.id ?? null
@@ -69,7 +72,8 @@ export function ProjectWorkspace({
   const previewContainerRef = useRef<HTMLDivElement>(null);
   
   // Check if user has operator access
-  const isOperator = !!getAdminKey();
+  // forceClientMode overrides admin_key - used for /c/:token client-only route
+  const isOperator = !forceClientMode && !!getAdminKey();
 
   const selectedVersion = versions.find(v => v.id === selectedVersionId) ?? versions[0];
   const versionComments = comments.filter(c => c.prototype_id === selectedVersion?.id);
