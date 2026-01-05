@@ -631,9 +631,21 @@ export function PrototypeViewer({
         }
 
         case "PCD_PONG": {
-          // Bridge health check response - update lastPongAt timestamp
+          // Bridge health check response - if we get pong, bridge is definitely alive
           console.log("[Bridge] Pong received");
-          setBridgeHealth(s => ({ ...s, lastPongAt: Date.now() }));
+          setBridgeHealth(s => ({ ...s, helperReady: true, lastPongAt: Date.now() }));
+          // CRITICAL: If we receive a pong, the bridge IS working - set it ready!
+          // This handles cases where PCD_HELPER_READY was missed (race condition, SPA nav, etc.)
+          if (!bridgeReady) {
+            console.log("[Bridge] Setting bridgeReady=true from PONG (was false)");
+            setBridgeReady(true);
+            setPinDebug(d => ({ ...d, bridgeReady: true }));
+          }
+          // Also capture page URL from pong if available
+          if (data.url && !currentIframePage) {
+            setCurrentIframePage(data.url);
+            setHasReceivedPageChange(true);
+          }
           break;
         }
       }
@@ -641,7 +653,7 @@ export function PrototypeViewer({
 
     window.addEventListener("message", handleMessage);
     return () => window.removeEventListener("message", handleMessage);
-  }, [iframeSrc, PCD_DEBUG, getIframeOrigin]);
+  }, [iframeSrc, PCD_DEBUG, getIframeOrigin, bridgeReady, currentIframePage]);
 
   // Request element rect from iframe (multi-strategy lookup with textHint fallback)
   const requestRect = useCallback((selector: string | null, anchorId: string | null, textHint?: string | null): Promise<{ left: number; top: number; width: number; height: number } | null> => {
