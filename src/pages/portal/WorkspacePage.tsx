@@ -263,8 +263,22 @@ export default function WorkspacePage() {
     );
   }
 
-  if (error || versions.length === 0) {
-    // Show a "waiting for preview" state if no versions but project exists
+  if (error) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-background">
+        <div className="text-center max-w-md px-4">
+          <AlertCircle className="h-12 w-12 mx-auto mb-4 text-destructive" />
+          <h2 className="text-xl font-bold mb-2">{error}</h2>
+          <p className="text-muted-foreground">
+            Please check your link and try again.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Client Portal Home - shown when no versions exist yet (post-intake)
+  if (versions.length === 0) {
     const config = getStatusConfig(projectInfo?.intakeStatus || "submitted");
     const Icon = config.Icon;
 
@@ -291,45 +305,91 @@ export default function WorkspacePage() {
           </div>
         )}
 
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-center max-w-md px-4">
-            {error ? (
-              <>
-                <AlertCircle className="h-12 w-12 mx-auto mb-4 text-destructive" />
-                <h2 className="text-xl font-bold mb-2">{error}</h2>
+        <div className="flex-1 overflow-y-auto">
+          <div className="max-w-lg mx-auto px-4 py-12">
+            {/* Success confirmation card */}
+            <div className="bg-card border border-border rounded-xl p-6 text-center mb-6">
+              <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-green-500/10 text-green-600 mb-5">
+                <CheckCircle2 className="h-7 w-7" />
+              </div>
+
+              <h2 className="font-serif text-2xl font-bold mb-2">
+                We've got what we need
+              </h2>
+              <p className="text-muted-foreground mb-6">
+                We're reviewing your intake and preparing next steps.
+                <br />
+                <span className="text-foreground/80">Nothing else needed from you right now.</span>
+              </p>
+
+              {/* What happens next */}
+              <div className="bg-muted/40 rounded-lg p-4 text-left text-sm">
                 <p className="text-muted-foreground">
-                  Please check your link and try again.
+                  <span className="font-medium text-foreground">What happens next:</span>{" "}
+                  We'll have your first preview ready within 24–48 hours. You'll get a notification when it's time to review.
                 </p>
-              </>
-            ) : (
-              <>
-                <div className="h-16 w-16 mx-auto mb-4 rounded-full bg-primary/10 flex items-center justify-center">
-                  <Icon className="h-8 w-8 text-primary" />
+              </div>
+
+              {projectInfo?.intakeStatus === "submitted" && (
+                <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground mt-4">
+                  <CheckCircle2 className="h-4 w-4 text-green-500" />
+                  Intake submitted successfully
                 </div>
-                <h2 className="text-xl font-bold mb-2">
-                  {projectInfo?.intakeStatus === "approved" 
-                    ? "We're Building Your Site" 
-                    : "Your Preview is Coming Soon"}
-                </h2>
-                <p className="text-muted-foreground mb-4">
-                  {config.hint}
-                </p>
-                {projectInfo?.intakeStatus === "submitted" && (
-                  <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-                    <CheckCircle2 className="h-4 w-4 text-green-500" />
-                    Intake submitted successfully
-                  </div>
-                )}
-                {projectInfo?.intakeStatus === "approved" && (
-                  <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-                    <CheckCircle2 className="h-4 w-4 text-green-500" />
-                    Intake approved — build in progress
-                  </div>
-                )}
-              </>
-            )}
+              )}
+              {projectInfo?.intakeStatus === "approved" && (
+                <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground mt-4">
+                  <CheckCircle2 className="h-4 w-4 text-green-500" />
+                  Intake approved — build in progress
+                </div>
+              )}
+            </div>
+
+            {/* AI Receptionist Trial Offer */}
+            <div className="bg-card border border-border rounded-xl p-5">
+              <div className="flex items-start gap-4">
+                <div className="flex-shrink-0 w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Phone className="h-5 w-5 text-primary" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-muted-foreground mb-2">
+                    While we're setting things up…
+                  </p>
+                  <h3 className="font-medium mb-1">
+                    Try our AI receptionist free for a week
+                  </h3>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    It answers calls, captures leads, and follows up automatically — no setup stress, no commitment.
+                  </p>
+                  
+                  <Button 
+                    onClick={() => setShowAITrialModal(true)}
+                    className="w-full"
+                    size="sm"
+                  >
+                    <Rocket className="mr-2 h-4 w-4" />
+                    Try it free for a week
+                  </Button>
+                  
+                  <p className="text-xs text-muted-foreground mt-3 text-center">
+                    Totally optional. If you don't like it, we'll turn it off.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer note */}
+            <p className="text-center text-xs text-muted-foreground mt-6">
+              Questions? Just reply to any email from us.
+            </p>
           </div>
         </div>
+
+        {/* AI Trial Modal */}
+        <AITrialModal
+          open={showAITrialModal}
+          onClose={() => setShowAITrialModal(false)}
+          businessName={projectInfo?.businessName || "your business"}
+        />
       </div>
     );
   }
