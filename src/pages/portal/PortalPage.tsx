@@ -374,6 +374,46 @@ export default function PortalPage() {
     }
   }
 
+  async function handleAddScreenshotComment(data: {
+    body: string;
+    screenshotPath: string;
+    pinX: number;
+    pinY: number;
+    screenshotW: number;
+    screenshotH: number;
+  }) {
+    if (!token || prototypes.length === 0) return;
+
+    const res = await fetch(
+      `${SUPABASE_URL}/functions/v1/portal/${token}/comments`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": SUPABASE_ANON_KEY,
+          "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({
+          action: "create",
+          prototype_id: prototypes[0].id,
+          body: data.body,
+          pin_x: data.pinX,
+          pin_y: data.pinY,
+          author_type: "client",
+          screenshot_path: data.screenshotPath,
+          screenshot_w: data.screenshotW,
+          screenshot_h: data.screenshotH,
+        }),
+      }
+    );
+
+    const response = await res.json();
+    if (res.ok && response.comment) {
+      setPrototypeComments((prev) => [...prev, response.comment]);
+      toast({ title: "Screenshot feedback added", description: "Your feedback has been saved." });
+    }
+  }
+
   async function handleResolveComment(commentId: string) {
     if (!token) return;
 
@@ -1364,6 +1404,7 @@ export default function PortalPage() {
               comments={prototypeComments}
               token={token!}
               onAddComment={handleAddComment}
+              onAddScreenshotComment={handleAddScreenshotComment}
               onResolveComment={handleResolveComment}
               onUnresolveComment={handleUnresolveComment}
               onMarkInProgress={handleMarkInProgress}

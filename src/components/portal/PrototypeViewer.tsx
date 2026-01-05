@@ -1,7 +1,8 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { RefreshCw, MessageCircle, X, ExternalLink, Maximize2, Minimize2, ChevronRight, ChevronLeft, AlertTriangle, Target, ChevronUp, ChevronDown, Archive, ArchiveRestore, Copy, Bug, FlaskConical } from "lucide-react";
+import { RefreshCw, MessageCircle, X, ExternalLink, Maximize2, Minimize2, ChevronRight, ChevronLeft, AlertTriangle, Target, ChevronUp, ChevronDown, Archive, ArchiveRestore, Copy, Bug, FlaskConical, Camera } from "lucide-react";
+import { ScreenshotFeedbackModal } from "./ScreenshotFeedbackModal";
 
 // ============ Contract Test Helpers ============
 function pcdAssert(condition: unknown, msg: string) {
@@ -130,6 +131,10 @@ export interface PrototypeComment {
   text_offset?: number | null;
   text_context?: string | null;
   archived_at?: string | null;
+  // Screenshot feedback fields
+  screenshot_path?: string | null;
+  screenshot_w?: number | null;
+  screenshot_h?: number | null;
 }
 
 function getEffectiveStatus(c: PrototypeComment): CommentStatus {
@@ -207,6 +212,14 @@ interface PrototypeViewerProps {
   comments: PrototypeComment[];
   token: string;
   onAddComment: (body: string, pinX: number, pinY: number, anchorData?: CommentAnchorData) => Promise<void>;
+  onAddScreenshotComment?: (data: {
+    body: string;
+    screenshotPath: string;
+    pinX: number;
+    pinY: number;
+    screenshotW: number;
+    screenshotH: number;
+  }) => Promise<void>;
   onResolveComment: (commentId: string) => Promise<void>;
   onUnresolveComment: (commentId: string) => Promise<void>;
   onMarkInProgress?: (commentId: string) => Promise<void>;
@@ -222,6 +235,7 @@ export function PrototypeViewer({
   comments,
   token,
   onAddComment,
+  onAddScreenshotComment,
   onResolveComment,
   onUnresolveComment,
   onMarkInProgress,
@@ -253,6 +267,7 @@ export function PrototypeViewer({
   const [selectedCommentId, setSelectedCommentId] = useState<string | null>(null);
   const [repinTargetId, setRepinTargetId] = useState<string | null>(null);
   const [clickFeedback, setClickFeedback] = useState<{ x: number; y: number } | null>(null);
+  const [showScreenshotModal, setShowScreenshotModal] = useState(false);
   const [showDebugDrawer, setShowDebugDrawer] = useState(false);
   
   // Hover state for pin preview tooltip
@@ -1608,6 +1623,15 @@ export function PrototypeViewer({
             <MessageCircle className="h-4 w-4 mr-1" />
             {isAddingComment ? "Cancel" : "Add Comment"}
           </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowScreenshotModal(true)}
+            title="Take a screenshot and add pinned feedback"
+          >
+            <Camera className="h-4 w-4 mr-1" />
+            Screenshot Feedback
+          </Button>
           <Button variant="outline" size="sm" onClick={handleRefresh}>
             <RefreshCw className="h-4 w-4" />
           </Button>
@@ -2143,6 +2167,21 @@ export function PrototypeViewer({
           </div>
         </div>
       )}
+
+      {/* Screenshot Feedback Modal */}
+      <ScreenshotFeedbackModal
+        open={showScreenshotModal}
+        onOpenChange={setShowScreenshotModal}
+        prototypeId={prototype.id}
+        token={token}
+        pageUrl={currentIframePage ?? undefined}
+        captureTarget={iframeRef.current}
+        onSubmit={async (data) => {
+          if (onAddScreenshotComment) {
+            await onAddScreenshotComment(data);
+          }
+        }}
+      />
     </div>
   );
 }
