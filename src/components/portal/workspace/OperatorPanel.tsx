@@ -261,15 +261,7 @@ export function OperatorPanel({
   const checkedCount = discoveryItems.filter((i) => i.checked).length;
 
   return (
-    <div className="h-full flex flex-col bg-muted/20">
-      {/* Header */}
-      <div className="p-3 border-b border-border bg-amber-50 dark:bg-amber-950/30">
-        <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400">
-          <Eye className="h-4 w-4" />
-          <span className="text-sm font-medium">Operator Mode</span>
-        </div>
-      </div>
-
+    <div className="h-full flex flex-col">
       <ScrollArea className="flex-1">
         <div className="p-3 space-y-3">
           {/* Status + Stage */}
