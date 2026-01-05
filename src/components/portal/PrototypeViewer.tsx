@@ -374,8 +374,14 @@ export function PrototypeViewer({
     });
   }, [activeComments, currentPageKey, basePrototypeKey, hasReceivedPageChange, bridgeReady]);
   
-  const unresolvedComments = pageComments.filter((c) => !c.resolved_at && c.status !== 'resolved' && c.status !== 'wont_do');
-  const resolvedComments = pageComments.filter((c) => c.resolved_at || c.status === 'resolved' || c.status === 'wont_do');
+  // Debug toggle: show ALL pins regardless of page (for troubleshooting)
+  const [showAllPinsDebug, setShowAllPinsDebug] = useState(false);
+  
+  // Use debug toggle to bypass page filtering
+  const visibleComments = showAllPinsDebug ? activeComments : pageComments;
+  
+  const unresolvedComments = visibleComments.filter((c) => !c.resolved_at && c.status !== 'resolved' && c.status !== 'wont_do');
+  const resolvedComments = visibleComments.filter((c) => c.resolved_at || c.status === 'resolved' || c.status === 'wont_do');
 
   // Get the actual iframe src origin (more reliable than prototype.url)
   const getIframeOrigin = useCallback(() => {
@@ -754,11 +760,11 @@ export function PrototypeViewer({
 
   // Build list of "active" comments that should show persistent cyan borders
   // Open/In-progress = highlighted, Resolved/Archived = not highlighted
-  // IMPORTANT: Only show highlights for comments on the current page
+  // IMPORTANT: Only show highlights for comments that pass current visibility filter
   // Include selector for fallback (anchor attributes are lost on page reload)
   // Include textHint for BugHerd-grade text-based element lookup fallback
   const activeHighlightItems = useMemo(() => {
-    return pageComments
+    return visibleComments
       .filter((c) => {
         const status = getEffectiveStatus(c);
         return (status === "open" || status === "in_progress") && !c.archived_at;
@@ -771,7 +777,7 @@ export function PrototypeViewer({
         textHint: c.text_hint, // for text-based fallback lookup
         label: String(idx + 1), // numbering badge
       }));
-  }, [pageComments]);
+  }, [visibleComments]);
 
   // Contract test helper: await rects by requestId
   const awaitRects = useCallback((requestId: string, timeoutMs = 2500): Promise<Record<string, unknown>> => {
@@ -2004,6 +2010,26 @@ export function PrototypeViewer({
             
             <hr className="border-border" />
             
+            {/* Debug: Show All Pins Toggle */}
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] text-muted-foreground">Show all pins (debug)</span>
+              <Button
+                variant={showAllPinsDebug ? "default" : "outline"}
+                size="sm"
+                className="h-5 text-[9px] px-2"
+                onClick={() => setShowAllPinsDebug(!showAllPinsDebug)}
+              >
+                {showAllPinsDebug ? "ON" : "OFF"}
+              </Button>
+            </div>
+            {showAllPinsDebug && (
+              <p className="text-[9px] text-amber-600 leading-tight">
+                ⚠️ Showing ALL pins regardless of page. Turn off to see normal filtering.
+              </p>
+            )}
+            
+            <hr className="border-border" />
+            
             {/* Page Reconciliation Button */}
             <div className="space-y-2">
               <div className="text-[10px] text-muted-foreground">
@@ -2024,12 +2050,12 @@ export function PrototypeViewer({
                 ) : (
                   <>
                     <Target className="h-2.5 w-2.5 mr-1" />
-                    Fix Pins on This Page
+                    Assign Visible Pins to This Page
                   </>
                 )}
               </Button>
               <p className="text-[9px] text-muted-foreground leading-tight">
-                Associates legacy pins with this page if their anchors are found here.
+                Updates pins whose anchors are found on this page: sets page_url &amp; page_key to current route.
               </p>
             </div>
             
