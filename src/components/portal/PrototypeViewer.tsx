@@ -447,13 +447,15 @@ export function PrototypeViewer({
       }
 
       switch (data.type) {
-        case "PCD_IFRAME_READY":
+        case "PCD_HELPER_READY":  // Helper sends this (not PCD_IFRAME_READY)
+        case "PCD_IFRAME_READY":  // Keep for backwards compatibility
           console.log("[Bridge] Helper ready, page:", data.url, "→ normalized:", normalizePageKey(data.url));
           setBridgeReady(true);
           setBridgeHealth(s => ({ ...s, helperReady: true, lastReadyAt: Date.now() }));
           // Capture the current page URL from the iframe (store raw, normalize on filter)
           if (data.url) {
             setCurrentIframePage(data.url);
+            setHasReceivedPageChange(true);  // Mark as receiving page info
           }
           if (PCD_DEBUG) {
             setPcdHud(s => ({ ...s, bridgeReady: true }));
