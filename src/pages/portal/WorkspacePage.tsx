@@ -278,7 +278,8 @@ export default function WorkspacePage() {
   }
 
   // Client Portal Home - shown when no versions exist yet (post-intake)
-  if (versions.length === 0) {
+  // Only show this client-facing screen if NOT an operator
+  if (versions.length === 0 && !isOperator) {
     const config = getStatusConfig(projectInfo?.intakeStatus || "submitted");
     const Icon = config.Icon;
 
@@ -295,12 +296,6 @@ export default function WorkspacePage() {
                 </Badge>
                 <span className="text-sm font-medium">{projectInfo.businessName}</span>
               </div>
-              {isOperator && (
-                <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-200">
-                  <Settings2 className="h-3 w-3 mr-1" />
-                  Operator
-                </Badge>
-              )}
             </div>
           </div>
         )}
