@@ -30,7 +30,7 @@ const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 // Phase B Data Structure - Updated for content-focused intake
 export interface PhaseBData {
   // Card 1: Brand & Identity
-  logoStatus: "uploaded" | "create" | "";
+  logoStatus: "uploaded" | "create" | "help" | "";
   brandColors: string;
   colorPreference: "pick_for_me" | "custom" | "";
 
@@ -41,9 +41,10 @@ export interface PhaseBData {
   differentiators: string;
   faq: string;
   primaryGoal: "book" | "quote" | "call" | "portfolio" | "learn" | "visit" | "";
+  contentNeedsHelp: boolean;
 
   // Card 3: Photos & Proof
-  photosPlan: "upload" | "generate" | "none" | "";
+  photosPlan: "upload" | "generate" | "none" | "help" | "";
   photosUploaded: number;
   // For "generate" path
   generatedPhotoSubjects: string;
@@ -62,6 +63,7 @@ export interface PhaseBData {
   exampleSites: string;
   mustInclude: string;
   mustAvoid: string;
+  styleNeedsHelp: boolean;
 
   // Legacy fields (kept for backward compat, not shown in UI)
   tagline: string;
@@ -82,6 +84,7 @@ const DEFAULT_DATA: PhaseBData = {
   differentiators: "",
   faq: "",
   primaryGoal: "",
+  contentNeedsHelp: false,
   photosPlan: "",
   photosUploaded: 0,
   generatedPhotoSubjects: "",
@@ -96,6 +99,7 @@ const DEFAULT_DATA: PhaseBData = {
   exampleSites: "",
   mustInclude: "",
   mustAvoid: "",
+  styleNeedsHelp: false,
   // Legacy
   tagline: "",
   socialLinks: "",
@@ -141,6 +145,7 @@ const PHOTOS_PLAN_OPTIONS = [
   { id: "upload", label: "Yes, I'll upload them", icon: "✅" },
   { id: "generate", label: "No — create images for me", icon: "🪄" },
   { id: "none", label: "No photos for now", icon: "🚫" },
+  { id: "help", label: "I'll need help with this", icon: "🤝" },
 ];
 
 const GENERATED_PHOTO_STYLE_OPTIONS = [
@@ -159,7 +164,17 @@ interface CardProps {
   children: React.ReactNode;
 }
 
-function IntakeCard({ title, icon, isComplete, isExpanded, onToggle, children }: CardProps) {
+interface CardProps {
+  title: string;
+  icon: React.ReactNode;
+  isComplete: boolean;
+  isAssisted?: boolean;
+  isExpanded: boolean;
+  onToggle: () => void;
+  children: React.ReactNode;
+}
+
+function IntakeCard({ title, icon, isComplete, isAssisted, isExpanded, onToggle, children }: CardProps) {
   return (
     <div className="border border-border rounded-lg overflow-hidden bg-card">
       <button
@@ -169,6 +184,8 @@ function IntakeCard({ title, icon, isComplete, isExpanded, onToggle, children }:
         <div className="flex items-center gap-3">
           {isComplete ? (
             <CheckCircle2 className="h-5 w-5 text-green-500" />
+          ) : isAssisted ? (
+            <CheckCircle2 className="h-5 w-5 text-blue-500" />
           ) : (
             <Circle className="h-5 w-5 text-muted-foreground" />
           )}
@@ -179,6 +196,11 @@ function IntakeCard({ title, icon, isComplete, isExpanded, onToggle, children }:
           {isComplete && (
             <span className="text-xs text-green-600 bg-green-500/10 px-2 py-0.5 rounded-full">
               Complete
+            </span>
+          )}
+          {isAssisted && !isComplete && (
+            <span className="text-xs text-blue-600 bg-blue-500/10 px-2 py-0.5 rounded-full">
+              We'll help
             </span>
           )}
           {isExpanded ? (
@@ -231,9 +253,12 @@ export function PhaseBIntake({
     setData(prev => ({ ...prev, photosUploaded: filesCount }));
   }, [filesCount]);
 
-  // Check card completion status
-  const isCard1Complete = (data.logoStatus === "uploaded" || data.logoStatus === "create");
+  // Check card completion status (includes "we'll help" as valid)
+  const isCard1Complete = data.logoStatus === "uploaded" || data.logoStatus === "create";
+  const isCard1Assisted = data.logoStatus === "help";
+  
   const isCard2Complete = !!data.businessDescription.trim() && !!data.services.trim() && !!data.primaryGoal;
+  const isCard2Assisted = data.contentNeedsHelp;
   
   // Card 3 completion depends on the photos plan
   const isCard3Complete = (() => {
@@ -242,11 +267,21 @@ export function PhaseBIntake({
     if (data.photosPlan === "none") return data.placeholderOk === true;
     return false;
   })();
+  const isCard3Assisted = data.photosPlan === "help";
+  
   const isCard4Complete = !!data.vibe && !!data.tone;
+  const isCard4Assisted = data.styleNeedsHelp;
 
-  const completedCards = [isCard1Complete, isCard2Complete, isCard3Complete, isCard4Complete].filter(Boolean).length;
-  const allComplete = completedCards === 4;
-  const progressPercent = (completedCards / 4) * 100;
+  // Count complete OR assisted cards
+  const cardsDone = [
+    isCard1Complete || isCard1Assisted,
+    isCard2Complete || isCard2Assisted,
+    isCard3Complete || isCard3Assisted,
+    isCard4Complete || isCard4Assisted
+  ].filter(Boolean).length;
+  
+  const allReady = cardsDone === 4;
+  const progressPercent = (cardsDone / 4) * 100;
 
   // Auto-save on data change (debounced)
   const saveData = useCallback(async (newData: PhaseBData) => {
@@ -280,7 +315,7 @@ export function PhaseBIntake({
   }, [onDataChange, saveData]);
 
   const handleSubmit = async () => {
-    if (!allComplete) return;
+    if (!allReady) return;
     
     setSubmitting(true);
     try {
@@ -365,9 +400,11 @@ export function PhaseBIntake({
     <div className="space-y-6">
       {/* Header */}
       <div className="space-y-2">
-        <h2 className="font-serif text-xl font-bold">Let's prepare your first draft</h2>
+        <h2 className="font-serif text-xl font-bold">Let's get what we need</h2>
         <p className="text-sm text-muted-foreground">
-          Complete these sections so we can start designing. You can do them in any order.
+          We'll build the first version using what you provide here.
+          <br />
+          <span className="text-foreground/70">You can do this all at once or come back later.</span>
         </p>
       </div>
 
@@ -375,7 +412,7 @@ export function PhaseBIntake({
       <div className="space-y-2">
         <div className="flex items-center justify-between text-sm">
           <span className="text-muted-foreground">
-            {completedCards} of 4 sections complete
+            {cardsDone} of 4 sections ready
           </span>
           {saving && (
             <span className="text-xs text-muted-foreground flex items-center gap-1">
@@ -393,6 +430,7 @@ export function PhaseBIntake({
           title="Brand & Identity"
           icon={<Palette className="h-4 w-4" />}
           isComplete={isCard1Complete}
+          isAssisted={isCard1Assisted}
           isExpanded={expandedCard === 0}
           onToggle={() => setExpandedCard(expandedCard === 0 ? null : 0)}
         >
@@ -403,7 +441,7 @@ export function PhaseBIntake({
               <RadioGroup
                 value={data.logoStatus}
                 onValueChange={(v) => updateData({ logoStatus: v as PhaseBData["logoStatus"] })}
-                className="flex gap-4"
+                className="space-y-2"
               >
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="uploaded" id="logo-have" />
@@ -415,6 +453,12 @@ export function PhaseBIntake({
                   <RadioGroupItem value="create" id="logo-create" />
                   <Label htmlFor="logo-create" className="cursor-pointer text-sm">
                     No, create one for me
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="help" id="logo-help" />
+                  <Label htmlFor="logo-help" className="cursor-pointer text-sm text-blue-600">
+                    I'll need help with this
                   </Label>
                 </div>
               </RadioGroup>
@@ -458,10 +502,30 @@ export function PhaseBIntake({
           title="Website Content"
           icon={<FileText className="h-4 w-4" />}
           isComplete={isCard2Complete}
+          isAssisted={isCard2Assisted}
           isExpanded={expandedCard === 1}
           onToggle={() => setExpandedCard(expandedCard === 1 ? null : 1)}
         >
           <div className="space-y-4 pt-4">
+            {/* Need help toggle */}
+            {!isCard2Complete && (
+              <div className="flex items-start space-x-2 p-3 rounded-lg bg-blue-500/5 border border-blue-500/20">
+                <Checkbox
+                  id="content-help"
+                  checked={data.contentNeedsHelp}
+                  onCheckedChange={(checked) => updateData({ contentNeedsHelp: checked === true })}
+                />
+                <div className="grid gap-1 leading-none">
+                  <Label htmlFor="content-help" className="cursor-pointer text-sm text-blue-700 dark:text-blue-400">
+                    I'll need help writing this
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    We'll draft content based on your business — you can review and edit later.
+                  </p>
+                </div>
+              </div>
+            )}
+
             {/* Primary goal */}
             <div className="space-y-2">
               <Label>What should visitors do on your website?</Label>
@@ -556,6 +620,7 @@ export function PhaseBIntake({
           title="Photos & Proof"
           icon={<ImageIcon className="h-4 w-4" />}
           isComplete={isCard3Complete}
+          isAssisted={isCard3Assisted}
           isExpanded={expandedCard === 2}
           onToggle={() => setExpandedCard(expandedCard === 2 ? null : 2)}
         >
@@ -691,7 +756,14 @@ export function PhaseBIntake({
               </div>
             )}
 
-            {/* Separator */}
+            {/* Path D: Need help */}
+            {data.photosPlan === "help" && (
+              <div className="p-3 rounded-lg bg-blue-500/5 border border-blue-500/20">
+                <p className="text-sm text-blue-700 dark:text-blue-400">
+                  No worries — we'll reach out to discuss options and help you get what you need.
+                </p>
+              </div>
+            )}
             {data.photosPlan && (
               <div className="border-t border-border pt-4 space-y-4">
                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Trust signals (optional)</p>
@@ -747,10 +819,30 @@ export function PhaseBIntake({
           title="Style & Preferences"
           icon={<Sparkles className="h-4 w-4" />}
           isComplete={isCard4Complete}
+          isAssisted={isCard4Assisted}
           isExpanded={expandedCard === 3}
           onToggle={() => setExpandedCard(expandedCard === 3 ? null : 3)}
         >
           <div className="space-y-4 pt-4">
+            {/* Need help toggle */}
+            {!isCard4Complete && (
+              <div className="flex items-start space-x-2 p-3 rounded-lg bg-blue-500/5 border border-blue-500/20">
+                <Checkbox
+                  id="style-help"
+                  checked={data.styleNeedsHelp}
+                  onCheckedChange={(checked) => updateData({ styleNeedsHelp: checked === true })}
+                />
+                <div className="grid gap-1 leading-none">
+                  <Label htmlFor="style-help" className="cursor-pointer text-sm text-blue-700 dark:text-blue-400">
+                    Just pick something good for me
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    We'll choose a style that fits your industry and brand.
+                  </p>
+                </div>
+              </div>
+            )}
+
             {/* Vibe */}
             <div className="space-y-2">
               <Label>Pick a vibe</Label>
@@ -842,7 +934,7 @@ export function PhaseBIntake({
       </div>
 
       {/* Submit Button */}
-      {allComplete ? (
+      {allReady ? (
         <Button
           onClick={handleSubmit}
           disabled={submitting}
@@ -862,9 +954,10 @@ export function PhaseBIntake({
           )}
         </Button>
       ) : (
-        <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50 text-sm text-muted-foreground">
-          <AlertCircle className="h-4 w-4 shrink-0" />
-          <span>Complete all 4 sections above to unlock your first draft.</span>
+        <div className="p-4 rounded-lg bg-muted/30 border border-border text-sm text-center">
+          <p className="text-muted-foreground">
+            Fill in or mark "we'll help" on each section above to continue.
+          </p>
         </div>
       )}
 
