@@ -456,8 +456,17 @@ export function PrototypeViewer({
 
         case "PCD_CLICK": {
           const msg = data as IframeClickMessage;
-          console.log("[Bridge] Click:", msg.selector, msg.anchorKey);
+          console.log("[Bridge] Click:", msg.selector, msg.anchorKey, "page:", (data as any).page);
           lastIframeClick.current = msg;
+          
+          // Fallback: also update current page from click if helper sends it
+          // This makes page tracking robust even if PCD_PAGE_CHANGE was missed
+          const clickPage = typeof (data as any).page === "string" ? (data as any).page : "";
+          if (clickPage) {
+            setCurrentIframePage(clickPage);
+            setHasReceivedPageChange(true);
+          }
+          
           // Dispatch custom event so handleIframeClick can pick it up
           window.dispatchEvent(new CustomEvent("pcd-iframe-click", { detail: msg }));
           break;
