@@ -52,10 +52,18 @@ const BUSINESS_TYPES = [
 
 // Primary goal - single choice, high-signal
 const PRIMARY_GOALS = [
-  { id: "leads", label: "Get more calls / leads", description: "Drive inquiries and bookings" },
-  { id: "sell", label: "Sell products or services online", description: "E-commerce or service payments" },
-  { id: "professional", label: "Look more professional", description: "Credibility and trust" },
-  { id: "unsure", label: "Not sure yet — guide me", description: "We'll figure it out together" },
+  { id: "leads", label: "Get more calls / leads", description: "Your site will be built around contact forms, click-to-call, and booking" },
+  { id: "sell", label: "Sell products or services online", description: "We'll set up payments, checkout, and product/service listings" },
+  { id: "professional", label: "Look more professional", description: "Focus on credibility, portfolio, and trust signals" },
+  { id: "unsure", label: "Not sure yet — guide me", description: "We'll figure out what works best for your business" },
+];
+
+// What they're selling - only shown if "sell" is selected
+const SELL_TYPE_OPTIONS = [
+  { id: "services", label: "Services", description: "Appointments, consultations, packages" },
+  { id: "physical", label: "Physical products", description: "Items you ship or deliver" },
+  { id: "digital", label: "Digital products", description: "Downloads, courses, subscriptions" },
+  { id: "unsure", label: "Not sure yet", description: "We'll help you decide" },
 ];
 
 // Timeline - confidence gauge
@@ -88,6 +96,7 @@ interface IntakeData {
   contactEmail: string;
   contactPhone: string;
   primaryGoal: string;
+  sellType: string;
   timeline: string;
   readiness: string;
   involvement: string;
@@ -106,6 +115,7 @@ export default function OnboardingWizard() {
     contactEmail: "",
     contactPhone: "",
     primaryGoal: "",
+    sellType: "",
     timeline: "",
     readiness: "",
     involvement: "",
@@ -118,6 +128,10 @@ export default function OnboardingWizard() {
       case 0: // Basics
         return !!intake.businessName && !!intake.businessType && !!intake.contactEmail && !!intake.contactPhone;
       case 1: // Goal
+        // If they selected "sell", require sellType too
+        if (intake.primaryGoal === "sell") {
+          return !!intake.primaryGoal && !!intake.sellType;
+        }
         return !!intake.primaryGoal;
       case 2: // Timeline
         return !!intake.timeline;
@@ -269,10 +283,10 @@ export default function OnboardingWizard() {
           <div className="space-y-6">
             <div className="space-y-3">
               <Label className="text-base">What's the main purpose of this website?</Label>
-              <p className="text-sm text-muted-foreground">Pick the one that matters most — we'll discuss details later.</p>
+              <p className="text-sm text-muted-foreground">This shapes everything — layout, calls-to-action, and features we prioritize.</p>
               <RadioGroup
                 value={intake.primaryGoal}
-                onValueChange={(value) => setIntake(prev => ({ ...prev, primaryGoal: value }))}
+                onValueChange={(value) => setIntake(prev => ({ ...prev, primaryGoal: value, sellType: value === "sell" ? prev.sellType : "" }))}
                 className="space-y-3"
               >
                 {PRIMARY_GOALS.map((goal) => (
@@ -283,7 +297,7 @@ export default function OnboardingWizard() {
                         ? "border-primary bg-primary/5" 
                         : "border-border hover:border-muted-foreground/30"
                     }`}
-                    onClick={() => setIntake(prev => ({ ...prev, primaryGoal: goal.id }))}
+                    onClick={() => setIntake(prev => ({ ...prev, primaryGoal: goal.id, sellType: goal.id === "sell" ? prev.sellType : "" }))}
                   >
                     <RadioGroupItem value={goal.id} id={`goal-${goal.id}`} className="mt-0.5" />
                     <div className="flex-1">
@@ -296,6 +310,32 @@ export default function OnboardingWizard() {
                 ))}
               </RadioGroup>
             </div>
+
+            {/* Follow-up for "sell" option */}
+            {intake.primaryGoal === "sell" && (
+              <div className="space-y-3 pt-2 border-t">
+                <Label className="text-base">What will you be selling?</Label>
+                <div className="grid grid-cols-2 gap-3">
+                  {SELL_TYPE_OPTIONS.map((opt) => {
+                    const isSelected = intake.sellType === opt.id;
+                    return (
+                      <button
+                        key={opt.id}
+                        onClick={() => setIntake(prev => ({ ...prev, sellType: opt.id }))}
+                        className={`p-3 rounded-lg border-2 text-left transition-all ${
+                          isSelected 
+                            ? "border-primary bg-primary/5" 
+                            : "border-border hover:border-muted-foreground/30"
+                        }`}
+                      >
+                        <div className="font-medium text-sm">{opt.label}</div>
+                        <div className="text-xs text-muted-foreground">{opt.description}</div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         );
 
