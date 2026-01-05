@@ -1013,17 +1013,23 @@ export function ProjectsTab() {
                       </Button>
                       {/* Archive/Unarchive button */}
                       <Button
-                        variant="ghost"
+                        variant="outline"
                         size="sm"
-                        className={`gap-1 text-xs h-7 px-2 ${project.is_archived ? 'text-green-600 hover:text-green-700' : 'text-muted-foreground hover:text-destructive'}`}
+                        className={`gap-1 text-xs h-7 px-2 ${project.is_archived ? 'text-green-600 border-green-300 hover:bg-green-50' : 'text-muted-foreground hover:text-destructive hover:border-destructive'}`}
                         disabled={archiveMutation.isPending}
                         onClick={(e) => handleArchive(e, project)}
                         title={project.is_archived ? "Restore project" : "Archive project"}
                       >
                         {project.is_archived ? (
-                          <ArchiveRestore className="h-3 w-3" />
+                          <>
+                            <ArchiveRestore className="h-3 w-3" />
+                            <span className="hidden sm:inline">Restore</span>
+                          </>
                         ) : (
-                          <Archive className="h-3 w-3" />
+                          <>
+                            <Archive className="h-3 w-3" />
+                            <span className="hidden sm:inline">Archive</span>
+                          </>
                         )}
                       </Button>
                       <ChevronRight className="h-4 w-4 text-muted-foreground" />
