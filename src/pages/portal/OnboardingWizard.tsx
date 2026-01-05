@@ -66,14 +66,12 @@ const BUSINESS_TYPES = [
   { id: "other", label: "Other", icon: Users, description: "Something else" },
 ];
 
-// Primary goals (multi-select)
+// Primary goals (multi-select) - streamlined, removed duplicates with Features
 const GOALS = [
-  { id: "calls", label: "Get more phone calls" },
-  { id: "booking", label: "Online booking / scheduling" },
-  { id: "professional", label: "Improve credibility / look professional" },
+  { id: "calls", label: "Get more phone calls / leads" },
+  { id: "professional", label: "Look more professional & credible" },
   { id: "sell", label: "Sell products or services online" },
-  { id: "automate", label: "Automate inquiries or follow-ups" },
-  { id: "unsure", label: "Not sure yet" },
+  { id: "automate", label: "Automate customer communication" },
 ];
 
 // Website status
@@ -117,17 +115,13 @@ const STYLE_DEMOS = [
   { id: "simple-service", title: "Simple Service", subtitle: "No-frills & trustworthy", styleVibe: "simple" },
 ];
 
-// Functionality options - including AI Receptionist tiers
+// Functionality options - streamlined
 const FUNCTIONALITY_OPTIONS = [
   { id: "contact", label: "Contact form", icon: MessageSquare },
   { id: "booking", label: "Online booking / appointments", icon: Calendar },
-  { id: "faq", label: "FAQ / information pages", icon: HelpCircle },
-  { id: "payments", label: "Payments", icon: CreditCard },
-  { id: "afterhours", label: "After-hours handling", icon: Clock },
-  { id: "ai_basic", label: "AI Receptionist – Basic", icon: Bot, description: "Auto-replies + missed call follow-up + basic routing" },
-  { id: "ai_diligent", label: "AI Receptionist – Diligent", icon: Zap, description: "Smarter handling + qualifying questions + follow-ups + escalation rules" },
-  { id: "simple", label: "Simple informational site", icon: Building2 },
-  { id: "unsure", label: "Not sure yet", icon: HelpCircle },
+  { id: "payments", label: "Accept payments online", icon: CreditCard },
+  { id: "ai_receptionist", label: "AI Receptionist", icon: Bot, description: "Auto-replies, missed call handling, lead qualification" },
+  { id: "simple", label: "Just a simple info site", icon: Building2 },
 ];
 
 // Hours options
