@@ -1400,6 +1400,7 @@ async function handleProjects(req: Request): Promise<Response> {
       .filter((id): id is string => id !== null);
 
     // Build query - conditionally filter archived
+    // Exclude lead_engine_bulk projects (those are demo/outreach projects)
     let query = supabase
       .from("projects")
       .select(`
@@ -1425,6 +1426,7 @@ async function handleProjects(req: Request): Promise<Response> {
         updated_at,
         deleted_at
       `)
+      .neq("source", "lead_engine_bulk")
       .order("created_at", { ascending: false });
     
     // Only filter out archived if not including them
