@@ -132,6 +132,7 @@ export interface PrototypeComment {
   text_context?: string | null;
   archived_at?: string | null;
   // Screenshot feedback fields
+  screenshot_media_id?: string | null;
   screenshot_path?: string | null;
   screenshot_w?: number | null;
   screenshot_h?: number | null;
@@ -214,11 +215,13 @@ interface PrototypeViewerProps {
   onAddComment: (body: string, pinX: number, pinY: number, anchorData?: CommentAnchorData) => Promise<void>;
   onAddScreenshotComment?: (data: {
     body: string;
-    screenshotPath: string;
+    screenshotMediaId?: string;
+    screenshotPath?: string;
     pinX: number;
     pinY: number;
     screenshotW: number;
     screenshotH: number;
+    attachmentMediaIds?: string[];
   }) => Promise<void>;
   onResolveComment: (commentId: string) => Promise<void>;
   onUnresolveComment: (commentId: string) => Promise<void>;

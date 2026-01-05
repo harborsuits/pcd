@@ -964,6 +964,7 @@ export type Database = {
           resolved_at: string | null
           resolved_by: string | null
           screenshot_h: number | null
+          screenshot_media_id: string | null
           screenshot_path: string | null
           screenshot_w: number | null
           scroll_y: number | null
@@ -998,6 +999,7 @@ export type Database = {
           resolved_at?: string | null
           resolved_by?: string | null
           screenshot_h?: number | null
+          screenshot_media_id?: string | null
           screenshot_path?: string | null
           screenshot_w?: number | null
           scroll_y?: number | null
@@ -1032,6 +1034,7 @@ export type Database = {
           resolved_at?: string | null
           resolved_by?: string | null
           screenshot_h?: number | null
+          screenshot_media_id?: string | null
           screenshot_path?: string | null
           screenshot_w?: number | null
           scroll_y?: number | null
@@ -1058,6 +1061,13 @@ export type Database = {
             columns: ["prototype_id"]
             isOneToOne: false
             referencedRelation: "prototypes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prototype_comments_screenshot_media_id_fkey"
+            columns: ["screenshot_media_id"]
+            isOneToOne: false
+            referencedRelation: "prototype_comment_media"
             referencedColumns: ["id"]
           },
           {

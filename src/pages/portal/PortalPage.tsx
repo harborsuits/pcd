@@ -376,11 +376,13 @@ export default function PortalPage() {
 
   async function handleAddScreenshotComment(data: {
     body: string;
-    screenshotPath: string;
+    screenshotMediaId?: string;
+    screenshotPath?: string;
     pinX: number;
     pinY: number;
     screenshotW: number;
     screenshotH: number;
+    attachmentMediaIds?: string[];
   }) {
     if (!token || prototypes.length === 0) return;
 
@@ -400,9 +402,11 @@ export default function PortalPage() {
           pin_x: data.pinX,
           pin_y: data.pinY,
           author_type: "client",
+          screenshot_media_id: data.screenshotMediaId,
           screenshot_path: data.screenshotPath,
           screenshot_w: data.screenshotW,
           screenshot_h: data.screenshotH,
+          attachment_media_ids: data.attachmentMediaIds,
         }),
       }
     );

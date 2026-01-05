@@ -1144,6 +1144,7 @@ async function handleGetComments(
 
     // Build query - clients should never see internal comments
     // IMPORTANT: Include all anchor/pin fields needed for pin persistence!
+    // Include screenshot_media_id and legacy screenshot_path for backwards compatibility
     let query = supabase
       .from("prototype_comments")
       .select(`
@@ -1151,7 +1152,8 @@ async function handleGetComments(
         resolved_at, source_message_id, created_at, parent_comment_id, is_internal,
         status, archived_at,
         page_url, page_path, scroll_y, viewport_w, viewport_h, breakpoint,
-        anchor_id, anchor_selector, x_pct, y_pct, text_hint, text_offset, text_context
+        anchor_id, anchor_selector, x_pct, y_pct, text_hint, text_offset, text_context,
+        screenshot_path, screenshot_w, screenshot_h, screenshot_media_id
       `)
       .eq("project_token", token)
       .eq("is_internal", false) // Filter out internal operator notes for clients
@@ -1171,8 +1173,37 @@ async function handleGetComments(
       );
     }
 
+    // For comments with screenshot_media_id, fetch the media record to get the storage path
+    const commentsWithScreenshots = comments?.filter(c => c.screenshot_media_id) || [];
+    let screenshotMediaMap: Record<string, { storage_path: string }> = {};
+    
+    if (commentsWithScreenshots.length > 0) {
+      const mediaIds = commentsWithScreenshots.map(c => c.screenshot_media_id);
+      const { data: mediaRecords } = await supabase
+        .from("prototype_comment_media")
+        .select("id, storage_path")
+        .in("id", mediaIds);
+      
+      if (mediaRecords) {
+        screenshotMediaMap = Object.fromEntries(
+          mediaRecords.map(m => [m.id, { storage_path: m.storage_path }])
+        );
+      }
+    }
+
+    // Merge screenshot paths from media records into comments
+    const enrichedComments = (comments || []).map(c => {
+      if (c.screenshot_media_id && screenshotMediaMap[c.screenshot_media_id]) {
+        return {
+          ...c,
+          screenshot_path: screenshotMediaMap[c.screenshot_media_id].storage_path,
+        };
+      }
+      return c;
+    });
+
     return new Response(
-      JSON.stringify({ comments: comments || [] }),
+      JSON.stringify({ comments: enrichedComments }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
@@ -1185,6 +1216,7 @@ async function handleGetComments(
 }
 
 // POST /portal/:token/screenshot - Upload a screenshot for feedback
+// Now creates a prototype_comment_media record and returns media_id
 async function handleScreenshotUpload(
   req: Request,
   token: string,
@@ -1221,6 +1253,9 @@ async function handleScreenshotUpload(
     const formData = await req.formData();
     const file = formData.get("file") as File | null;
     const prototypeId = formData.get("prototype_id") as string | null;
+    // comment_id is optional - if provided, we link the media to an existing comment
+    // If not provided, this is a "pre-upload" before comment creation
+    const commentId = formData.get("comment_id") as string | null;
 
     if (!file) {
       return new Response(
@@ -1229,20 +1264,42 @@ async function handleScreenshotUpload(
       );
     }
 
-    // Validate file is an image
-    if (!file.type.startsWith("image/")) {
+    // Validate file type - allow images, videos, and documents
+    const allowedTypes = [
+      "image/", "video/", 
+      "application/pdf", 
+      "application/msword", 
+      "application/vnd.openxmlformats-officedocument",
+      "text/plain"
+    ];
+    const isAllowed = allowedTypes.some(t => file.type.startsWith(t) || file.type === t);
+    
+    if (!isAllowed) {
       return new Response(
-        JSON.stringify({ error: "File must be an image" }),
+        JSON.stringify({ error: "File type not allowed. Supported: images, videos, PDFs, documents" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Size limits: images 20MB, videos 250MB, docs 50MB
+    const maxSize = file.type.startsWith("video/") ? 250 * 1024 * 1024 
+      : file.type.startsWith("image/") ? 20 * 1024 * 1024 
+      : 50 * 1024 * 1024;
+    
+    if (file.size > maxSize) {
+      return new Response(
+        JSON.stringify({ error: `File too large. Max: ${Math.round(maxSize / 1024 / 1024)}MB` }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     // Generate storage path
     const uuid = crypto.randomUUID();
-    const ext = file.name.split(".").pop() || "png";
+    const ext = file.name.split(".").pop() || "bin";
+    const folder = file.type.startsWith("image/") ? "screenshots" : "attachments";
     const storagePath = prototypeId 
-      ? `${token}/screenshots/${prototypeId}/${uuid}.${ext}`
-      : `${token}/screenshots/${uuid}.${ext}`;
+      ? `${token}/${folder}/${prototypeId}/${uuid}.${ext}`
+      : `${token}/${folder}/${uuid}.${ext}`;
 
     // Upload to storage
     const arrayBuffer = await file.arrayBuffer();
@@ -1254,21 +1311,56 @@ async function handleScreenshotUpload(
       });
 
     if (uploadError) {
-      console.error("Screenshot upload error:", uploadError);
+      console.error("Media upload error:", uploadError);
       return new Response(
-        JSON.stringify({ error: "Failed to upload screenshot" }),
+        JSON.stringify({ error: "Failed to upload file" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    console.log(`Screenshot uploaded: ${storagePath}`);
+    // Create prototype_comment_media record
+    // Note: comment_id can be a placeholder UUID for pre-upload (will be updated after comment creation)
+    const placeholderCommentId = commentId || "00000000-0000-0000-0000-000000000000";
+    
+    const { data: mediaRecord, error: mediaError } = await supabase
+      .from("prototype_comment_media")
+      .insert({
+        prototype_id: prototypeId || "00000000-0000-0000-0000-000000000000", // placeholder if not provided
+        project_token: token,
+        comment_id: placeholderCommentId,
+        storage_path: storagePath,
+        filename: file.name,
+        mime_type: file.type,
+        size_bytes: file.size,
+        uploader_type: "client",
+      })
+      .select("id, storage_path, filename, mime_type, size_bytes")
+      .single();
+
+    if (mediaError) {
+      console.error("Media record error:", mediaError);
+      // Still return success with path for backwards compatibility
+      return new Response(
+        JSON.stringify({ ok: true, path: storagePath }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log(`Media uploaded: ${storagePath}, media_id: ${mediaRecord.id}`);
 
     return new Response(
-      JSON.stringify({ ok: true, path: storagePath }),
+      JSON.stringify({ 
+        ok: true, 
+        path: storagePath,
+        media_id: mediaRecord.id,
+        filename: mediaRecord.filename,
+        mime_type: mediaRecord.mime_type,
+        size_bytes: mediaRecord.size_bytes,
+      }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
-    console.error("Screenshot upload error:", error);
+    console.error("Media upload error:", error);
     return new Response(
       JSON.stringify({ error: "Internal server error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -1315,10 +1407,13 @@ async function handleCommentAction(
       // Text-range anchoring
       text_offset,
       text_context,
-      // Screenshot feedback fields
+      // Screenshot feedback fields (legacy path + new media_id)
       screenshot_path,
       screenshot_w,
       screenshot_h,
+      screenshot_media_id,
+      // Attachment media IDs (for multi-file attachments)
+      attachment_media_ids,
     } = body;
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -1378,7 +1473,8 @@ async function handleCommentAction(
           text_hint: text_hint ?? null,
           text_offset: text_offset ?? null,
           text_context: text_context ?? null,
-          // Screenshot feedback fields
+          // Screenshot feedback fields - prefer media_id, fallback to legacy path
+          screenshot_media_id: screenshot_media_id ?? null,
           screenshot_path: screenshot_path ?? null,
           screenshot_w: screenshot_w ?? null,
           screenshot_h: screenshot_h ?? null,
@@ -1394,13 +1490,43 @@ async function handleCommentAction(
         );
       }
 
+      // Update attachment media records to point to this comment
+      if (comment && Array.isArray(attachment_media_ids) && attachment_media_ids.length > 0) {
+        const { error: linkError } = await supabase
+          .from("prototype_comment_media")
+          .update({ 
+            comment_id: comment.id,
+            prototype_id: prototype_id,
+          })
+          .in("id", attachment_media_ids)
+          .eq("project_token", token);
+        
+        if (linkError) {
+          console.error("Failed to link attachments:", linkError);
+        }
+      }
+
+      // Also update the screenshot media record if using new approach
+      if (comment && screenshot_media_id) {
+        await supabase
+          .from("prototype_comment_media")
+          .update({ 
+            comment_id: comment.id,
+            prototype_id: prototype_id,
+          })
+          .eq("id", screenshot_media_id)
+          .eq("project_token", token);
+      }
+
       // Send Telegram notification for new comment
       const telegramBotToken = Deno.env.get("TELEGRAM_BOT_TOKEN");
       const telegramChatId = Deno.env.get("TELEGRAM_CHAT_ID");
       if (telegramBotToken && telegramChatId) {
+        const attachmentCount = (attachment_media_ids?.length || 0) + (screenshot_media_id ? 1 : 0);
         const msg = `💬 <b>New Prototype Comment</b>\n` +
           `• <b>From:</b> ${author_type || "client"}\n` +
           `• <b>Comment:</b> ${commentBody.slice(0, 100)}${commentBody.length > 100 ? "..." : ""}\n` +
+          (attachmentCount > 0 ? `• <b>Attachments:</b> ${attachmentCount}\n` : "") +
           `• <b>Token:</b> <code>${token.slice(0, 12)}...</code>`;
 
         try {
