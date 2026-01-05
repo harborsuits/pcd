@@ -209,8 +209,10 @@ export function computeRoadmapSteps({
 }): RoadmapStep[] {
   const isCompleted = projectStatus === 'completed' || portalStage === 'launched';
   const isFinalApproved = !!finalApprovedAt || portalStage === 'launched';
-  const intakeComplete = intakeStatus === 'approved' || intakeStatus === 'submitted';
-  const intakeReviewed = intakeStatus === 'approved';
+  // Intake is only truly complete when approved (reviewed), not just submitted
+  const intakeSubmitted = intakeStatus === 'submitted';
+  const intakeApproved = intakeStatus === 'approved';
+  const intakeComplete = intakeApproved; // Only approved counts as complete
   
   // If portalStage is set, use it as the authoritative current step
   const stageOrder = ['intake', 'build', 'preview', 'revisions', 'final', 'launched'];
@@ -225,19 +227,21 @@ export function computeRoadmapSteps({
     return 'upcoming';
   };
   
-  // Inferred status (used when portalStage not set)
-  const inferredIntakeStatus: RoadmapStep['status'] = intakeComplete ? 'completed' : 'current';
+  // Intake status: submitted = still current (under review), approved = completed
+  const inferredIntakeStatus: RoadmapStep['status'] = intakeApproved 
+    ? 'completed' 
+    : (intakeSubmitted ? 'current' : 'current'); // current until approved
   
   const intakeStep: RoadmapStep = {
     id: 'intake',
     label: 'Intake',
-    description: intakeReviewed 
+    description: intakeApproved 
       ? 'Your project brief has been received and reviewed.' 
-      : intakeStatus === 'submitted'
-        ? 'We\'re reviewing your project details.'
+      : intakeSubmitted
+        ? 'We\'ve received your intake — we\'ll reach out soon to schedule a discovery call.'
         : 'Tell us what you need.',
     status: getStepStatus('intake', inferredIntakeStatus),
-    meta: intakeStatus === 'submitted' && !intakeReviewed ? 'Under review' : undefined,
+    meta: intakeSubmitted && !intakeApproved ? 'Under Review' : undefined,
   };
 
   // Step 2: Build

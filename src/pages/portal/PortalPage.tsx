@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, FileText, CreditCard, AlertCircle, Home, Download, Image as ImageIcon, Upload, Eye, X, LogOut, ChevronDown, Paperclip, Bell, BellOff, MessageCircle } from "lucide-react";
+import { Loader2, FileText, CreditCard, AlertCircle, Home, Download, Image as ImageIcon, Upload, Eye, X, LogOut, ChevronDown, Paperclip, Bell, BellOff, MessageCircle, Clock } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/hooks/use-toast";
 import { proxyMediaUrl, isImageType, getFileIcon } from "@/lib/media";
@@ -1355,6 +1355,26 @@ export default function PortalPage() {
 
       {/* Main Content */}
       <div className="space-y-6 pb-24">
+
+        {/* Intake Submitted Status Banner - Show when intake is submitted but not yet approved */}
+        {data.intake_status === 'submitted' && (
+          <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 sm:p-6">
+            <div className="flex items-start gap-4">
+              <div className="flex-shrink-0 w-10 h-10 rounded-full bg-amber-500/20 flex items-center justify-center">
+                <Clock className="h-5 w-5 text-amber-600" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="font-semibold text-foreground">Intake Under Review</h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  We've received your project details. Our team will review and reach out within 24-48 hours to schedule a discovery call.
+                </p>
+                <p className="text-xs text-muted-foreground mt-2">
+                  In the meantime, you can upload any additional assets below.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Project Roadmap */}
         <BrandCard variant="muted">
