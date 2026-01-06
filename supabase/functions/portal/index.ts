@@ -1788,6 +1788,14 @@ async function handleCommentAction(
         );
       }
 
+      // Validate comment body: must be string with max 5000 chars
+      if (typeof commentBody !== "string" || commentBody.length > 5000) {
+        return new Response(
+          JSON.stringify({ error: "Comment body must be a string with max 5000 characters" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
       // Client comments are never internal
       const { data: comment, error: insertError } = await supabase
         .from("prototype_comments")
@@ -2645,6 +2653,128 @@ async function handlePhaseB(
     const body = await req.json();
     const { data: phaseBData, action } = body;
 
+    // Validate action
+    if (action && !["save", "complete"].includes(action)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid action" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Validate phaseBData structure - must be object, with reasonable size limits
+    if (phaseBData !== undefined && phaseBData !== null) {
+      if (typeof phaseBData !== "object" || Array.isArray(phaseBData)) {
+        return new Response(
+          JSON.stringify({ error: "Invalid phase B data format" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      
+      // Check for excessively large payload (max 50KB when stringified)
+      const jsonSize = JSON.stringify(phaseBData).length;
+      if (jsonSize > 50000) {
+        return new Response(
+          JSON.stringify({ error: "Phase B data exceeds maximum size" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Validate specific string fields have reasonable lengths
+      const stringFields = [
+        "brandColors", "businessDescription", "services", "serviceArea",
+        "differentiators", "faq", "generatedPhotoSubjects", "generatedPhotoNotes",
+        "googleReviewsLink", "certifications", "exampleSites", "mustInclude",
+        "mustAvoid", "tagline", "socialLinks", "dislikes"
+      ];
+      
+      for (const field of stringFields) {
+        if (field in phaseBData) {
+          const val = phaseBData[field];
+          if (val !== undefined && val !== null && (typeof val !== "string" || val.length > 5000)) {
+            return new Response(
+              JSON.stringify({ error: `Field ${field} must be a string with max 5000 characters` }),
+              { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
+        }
+      }
+
+      // Validate enum fields have valid values
+      const enumValidations: Record<string, string[]> = {
+        logoStatus: ["", "uploaded", "create", "help"],
+        colorPreference: ["", "pick_for_me", "custom"],
+        primaryGoal: ["", "book", "quote", "call", "portfolio", "learn", "visit"],
+        photosPlan: ["", "upload", "generate", "none", "help"],
+        generatedPhotoStyle: ["", "realistic", "studio", "lifestyle", "minimal"],
+        hasBeforeAfter: ["", "yes", "coming_soon", "no"],
+        vibe: ["", "modern", "classic", "luxury", "bold", "minimal", "cozy"],
+        tone: ["", "professional", "friendly", "direct", "playful"],
+        primaryCta: ["", "call", "book", "form", "quote"],
+      };
+
+      for (const [field, validValues] of Object.entries(enumValidations)) {
+        if (field in phaseBData) {
+          const val = phaseBData[field];
+          if (val !== undefined && val !== null && !validValues.includes(val)) {
+            return new Response(
+              JSON.stringify({ error: `Invalid value for ${field}` }),
+              { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
+        }
+      }
+
+      // Validate boolean fields
+      const booleanFields = ["contentNeedsHelp", "placeholderOk", "styleNeedsHelp"];
+      for (const field of booleanFields) {
+        if (field in phaseBData) {
+          const val = phaseBData[field];
+          if (val !== undefined && val !== null && typeof val !== "boolean") {
+            return new Response(
+              JSON.stringify({ error: `Field ${field} must be a boolean` }),
+              { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
+        }
+      }
+
+      // Validate array fields
+      const arrayFields = ["pages", "features"];
+      for (const field of arrayFields) {
+        if (field in phaseBData) {
+          const val = phaseBData[field];
+          if (val !== undefined && val !== null) {
+            if (!Array.isArray(val) || val.length > 50) {
+              return new Response(
+                JSON.stringify({ error: `Field ${field} must be an array with max 50 items` }),
+                { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+              );
+            }
+            // Validate each item is a string
+            for (const item of val) {
+              if (typeof item !== "string" || item.length > 500) {
+                return new Response(
+                  JSON.stringify({ error: `Items in ${field} must be strings with max 500 characters` }),
+                  { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+                );
+              }
+            }
+          }
+        }
+      }
+
+      // Validate numeric field
+      if ("photosUploaded" in phaseBData) {
+        const val = phaseBData.photosUploaded;
+        if (val !== undefined && val !== null && (typeof val !== "number" || val < 0 || val > 1000)) {
+          return new Response(
+            JSON.stringify({ error: "photosUploaded must be a number between 0 and 1000" }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+      }
+    }
+
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
@@ -2883,13 +3013,23 @@ async function handleHelpRequest(
     }
 
     const body = await req.json();
-    const { type } = body; // "call" or "chat"
+    const { type, message } = body; // "call" or "chat", optional message
 
     if (!type || !["call", "chat"].includes(type)) {
       return new Response(
         JSON.stringify({ error: "Invalid request type" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
+    }
+
+    // Validate optional message field if present
+    if (message !== undefined && message !== null) {
+      if (typeof message !== "string" || message.length > 2000) {
+        return new Response(
+          JSON.stringify({ error: "Message must be a string with max 2000 characters" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
