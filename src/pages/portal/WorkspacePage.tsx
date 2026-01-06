@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { AIReceptionistSetup } from "@/components/portal/AIReceptionistSetup";
 import { SessionExpiredModal } from "@/components/portal/SessionExpiredModal";
 import { useSessionExpiry, storeAuthReturnPath } from "@/hooks/useSessionExpiry";
+import { QuickWinsChecklist } from "@/components/portal/QuickWinsChecklist";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -401,6 +402,13 @@ export default function WorkspacePage() {
                 </div>
               )}
             </div>
+
+            {/* Quick Wins Checklist - optional tasks to speed up project */}
+            <QuickWinsChecklist
+              projectToken={token || ""}
+              onNavigate={(path) => navigate(path)}
+              onSkip={() => {}} // Just collapse, no extra action needed
+            />
 
             {/* AI Receptionist Trial Offer */}
             <div className="bg-card border border-border rounded-xl p-5">
