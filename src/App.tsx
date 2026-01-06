@@ -68,6 +68,13 @@ const App = () => (
           <Route path="/_ops-x7k9" element={<Navigate to="/operator" replace />} />
           <Route path="/admin" element={<Navigate to="/operator" replace />} />
           <Route path="/admin/*" element={<Navigate to="/operator" replace />} />
+          
+          {/* Squarespace legacy URL redirects */}
+          <Route path="/web-services" element={<Navigate to="/what-we-build" replace />} />
+          <Route path="/services" element={<Navigate to="/what-we-build" replace />} />
+          <Route path="/web-design-studio" element={<Navigate to="/what-we-build" replace />} />
+          <Route path="/web-design" element={<Navigate to="/what-we-build" replace />} />
+          <Route path="/studio" element={<Navigate to="/what-we-build" replace />} />
 
           {/* Catch-all */}
           <Route path="*" element={<NotFound />} />
