@@ -1,8 +1,6 @@
 import { Link } from "react-router-dom";
 import { useMemo, lazy, Suspense } from "react";
 import { ArrowRight, MessageSquare, FolderOpen, Sparkles, Shield, Smartphone, CreditCard, LogIn, Globe, CalendarCheck, Zap, Bot, Clock, CheckCircle, Phone, Brain, Clock3, Calendar } from "lucide-react";
-import { HeroVideoPlayer } from "@/components/ui/hero-video";
-import smartFollowUpVideo from "@/assets/videos/smart-follow-up.mp4";
 import { Button } from "@/components/ui/button";
 import { LiquidButton } from "@/components/ui/liquid-glass-button";
 import { GlowCard } from "@/components/ui/spotlight-card";
@@ -186,12 +184,15 @@ const Index = () => {
 
           <div className="max-w-6xl mx-auto grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
             <div>
-              <HeroVideoPlayer
-                src={smartFollowUpVideo}
-                autoPlay={true}
-                loop={true}
-                muted={true}
-              />
+              <div className="relative aspect-video rounded-2xl overflow-hidden shadow-2xl border border-accent/20">
+                <iframe
+                  src="https://www.youtube.com/embed/9A8WrDvIyQA"
+                  title="AI Receptionist Demo"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                  className="absolute inset-0 w-full h-full"
+                />
+              </div>
             </div>
             
             <div className="space-y-4">
