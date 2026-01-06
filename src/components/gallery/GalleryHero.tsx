@@ -4,6 +4,7 @@ import * as React from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { cn } from "@/lib/utils"
 import { Link } from "react-router-dom"
+import { ArrowLeft } from "lucide-react"
 
 type NavItem = { label: string; href: string }
 
@@ -96,12 +97,19 @@ export function GalleryHero({
       {/* Sticky nav */}
       <header className="fixed inset-x-0 top-0 z-50">
         <nav className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
+          {/* Back to PCD button */}
           <Link
             to="/"
-            className="text-xl font-semibold tracking-tight text-white mix-blend-difference opacity-60 hover:opacity-100 transition-opacity"
+            className="group flex items-center gap-2 rounded-full border border-white/20 bg-white/5 px-4 py-2 text-sm font-medium text-white/80 backdrop-blur-sm transition-all hover:border-white/40 hover:bg-white/10 hover:text-white"
           >
-            {brand}
+            <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
+            <span className="hidden sm:inline">Pleasant Cove Design</span>
+            <span className="sm:hidden">PCD</span>
           </Link>
+
+          <span className="text-xl font-semibold tracking-tight text-white mix-blend-difference opacity-60">
+            {brand}
+          </span>
 
           <button
             onClick={() => setOpen((v) => !v)}
