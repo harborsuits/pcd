@@ -959,6 +959,41 @@ export function ProjectsTab() {
                     
                     {/* Actions - simplified on mobile */}
                     <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+                      {/* Archive/Unarchive button - FIRST for visibility */}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className={`gap-1 text-xs h-7 px-2 ${project.is_archived ? 'text-green-600 border-green-300 hover:bg-green-50' : 'text-muted-foreground hover:text-destructive hover:border-destructive'}`}
+                        disabled={archiveMutation.isPending}
+                        onClick={(e) => handleArchive(e, project)}
+                        title={project.is_archived ? "Restore project" : "Archive project"}
+                      >
+                        {project.is_archived ? (
+                          <>
+                            <ArchiveRestore className="h-3 w-3" />
+                            <span className="hidden sm:inline">Restore</span>
+                          </>
+                        ) : (
+                          <>
+                            <Archive className="h-3 w-3" />
+                            <span className="hidden sm:inline">Archive</span>
+                          </>
+                        )}
+                      </Button>
+                      {/* Permanent delete button - only for archived projects */}
+                      {project.is_archived && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-1 text-xs h-7 px-2 text-destructive border-destructive/50 hover:bg-destructive hover:text-destructive-foreground"
+                          disabled={deleteMutation.isPending}
+                          onClick={(e) => handleDelete(e, project)}
+                          title="Permanently delete project"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                          <span className="hidden sm:inline">Delete</span>
+                        </Button>
+                      )}
                       {/* Nudge dropdown - show when Phase B incomplete */}
                       {needsNudge(project) && (
                         <DropdownMenu>
@@ -1052,41 +1087,6 @@ export function ProjectsTab() {
                         <ExternalLink className="h-3 w-3" />
                         <span className="hidden md:inline">Workspace</span>
                       </Button>
-                      {/* Archive/Unarchive button */}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className={`gap-1 text-xs h-7 px-2 ${project.is_archived ? 'text-green-600 border-green-300 hover:bg-green-50' : 'text-muted-foreground hover:text-destructive hover:border-destructive'}`}
-                        disabled={archiveMutation.isPending}
-                        onClick={(e) => handleArchive(e, project)}
-                        title={project.is_archived ? "Restore project" : "Archive project"}
-                      >
-                        {project.is_archived ? (
-                          <>
-                            <ArchiveRestore className="h-3 w-3" />
-                            <span className="hidden sm:inline">Restore</span>
-                          </>
-                        ) : (
-                          <>
-                            <Archive className="h-3 w-3" />
-                            <span className="hidden sm:inline">Archive</span>
-                          </>
-                        )}
-                      </Button>
-                      {/* Permanent delete button - only for archived projects */}
-                      {project.is_archived && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="gap-1 text-xs h-7 px-2 text-destructive border-destructive/50 hover:bg-destructive hover:text-destructive-foreground"
-                          disabled={deleteMutation.isPending}
-                          onClick={(e) => handleDelete(e, project)}
-                          title="Permanently delete project"
-                        >
-                          <Trash2 className="h-3 w-3" />
-                          <span className="hidden sm:inline">Delete</span>
-                        </Button>
-                      )}
                       <ChevronRight className="h-4 w-4 text-muted-foreground" />
                     </div>
                   </div>
