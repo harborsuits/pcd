@@ -3055,12 +3055,39 @@ async function handleWhoami(
       );
     }
 
-    // Get admin key from header
-    const adminKey = req.headers.get("x-admin-key");
-    const expectedAdminKey = Deno.env.get("ADMIN_KEY");
+    // Verify operator status via JWT auth and admin role
+    let isOperator = false;
+    const authHeader = req.headers.get("Authorization");
     
-    // Validate admin key if provided
-    const isOperator = !!(adminKey && expectedAdminKey && adminKey === expectedAdminKey);
+    if (authHeader?.startsWith("Bearer ")) {
+      const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+      const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+      
+      const supabaseWithAuth = createClient(supabaseUrl, supabaseAnonKey, {
+        global: { headers: { Authorization: authHeader } }
+      });
+      
+      const jwtToken = authHeader.replace("Bearer ", "");
+      const { data: claimsData, error: claimsError } = await supabaseWithAuth.auth.getClaims(jwtToken);
+      
+      if (!claimsError && claimsData?.claims) {
+        const userId = claimsData.claims.sub as string;
+        
+        // Check admin role using service client
+        const supabaseUrl2 = Deno.env.get("SUPABASE_URL")!;
+        const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+        const serviceClient = createClient(supabaseUrl2, supabaseServiceKey);
+        
+        const { data: roleData } = await serviceClient
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", userId)
+          .eq("role", "admin")
+          .maybeSingle();
+        
+        isOperator = !!roleData;
+      }
+    }
 
     // Also verify the project token is valid
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;

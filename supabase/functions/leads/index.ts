@@ -2,7 +2,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-admin-key",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
 Deno.serve(async (req) => {
@@ -68,27 +68,66 @@ Deno.serve(async (req) => {
   );
 });
 
-// Validate admin key helper
-function validateAdminKey(req: Request): Response | null {
-  const adminKey = req.headers.get("x-admin-key");
-  const expectedKey = Deno.env.get("ADMIN_KEY");
-
-  if (!expectedKey) {
-    console.error("ADMIN_KEY not configured");
+// Validate admin access via JWT and role check
+async function validateAdminKey(req: Request): Promise<Response | null> {
+  const authHeader = req.headers.get("Authorization");
+  
+  if (!authHeader?.startsWith("Bearer ")) {
+    console.log("Missing or invalid Authorization header");
     return new Response(
-      JSON.stringify({ error: "Server configuration error" }),
+      JSON.stringify({ error: "Unauthorized", message: "Missing authentication token" }),
+      { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+  
+  // Create client with user's auth header to validate JWT
+  const supabaseWithAuth = createClient(supabaseUrl, supabaseAnonKey, {
+    global: { headers: { Authorization: authHeader } }
+  });
+
+  const token = authHeader.replace("Bearer ", "");
+  const { data: claimsData, error: claimsError } = await supabaseWithAuth.auth.getClaims(token);
+
+  if (claimsError || !claimsData?.claims) {
+    console.log("Invalid JWT token:", claimsError?.message);
+    return new Response(
+      JSON.stringify({ error: "Unauthorized", message: "Invalid or expired token" }),
+      { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  const userId = claimsData.claims.sub as string;
+  const email = claimsData.claims.email as string || "unknown";
+
+  // Check if user has admin role using service client
+  const supabase = getSupabaseClient();
+  const { data: roleData, error: roleError } = await supabase
+    .from("user_roles")
+    .select("role")
+    .eq("user_id", userId)
+    .eq("role", "admin")
+    .maybeSingle();
+
+  if (roleError) {
+    console.error("Role check error:", roleError);
+    return new Response(
+      JSON.stringify({ error: "Server error", message: "Failed to verify permissions" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 
-  if (!adminKey || adminKey !== expectedKey) {
-    console.log("Invalid or missing admin key");
+  if (!roleData) {
+    console.log(`User ${userId} (${email}) attempted admin access without admin role`);
     return new Response(
-      JSON.stringify({ error: "Unauthorized" }),
+      JSON.stringify({ error: "Forbidden", message: "Admin access required" }),
       { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 
+  console.log(`Admin authenticated: ${email} (${userId})`);
   return null; // Valid
 }
 
@@ -294,7 +333,7 @@ function computeLeadScore(place: {
 
 // POST /leads/search - Search Google Places and upsert leads
 async function handleSearch(req: Request): Promise<Response> {
-  const authError = validateAdminKey(req);
+  const authError = await validateAdminKey(req);
   if (authError) return authError;
 
   try {
@@ -531,7 +570,7 @@ async function handleSearch(req: Request): Promise<Response> {
 
 // POST /leads/search-and-generate - Full pipeline: search → filter no-website → enrich → generate demos
 async function handleSearchAndGenerate(req: Request): Promise<Response> {
-  const authError = validateAdminKey(req);
+  const authError = await validateAdminKey(req);
   if (authError) return authError;
 
   try {
@@ -961,7 +1000,7 @@ async function handleSearchAndGenerate(req: Request): Promise<Response> {
 
 // GET /leads - List leads with optional filters
 async function handleListLeads(req: Request): Promise<Response> {
-  const authError = validateAdminKey(req);
+  const authError = await validateAdminKey(req);
   if (authError) return authError;
 
   try {
@@ -1015,7 +1054,7 @@ async function handleListLeads(req: Request): Promise<Response> {
 
 // PATCH /leads/:id - Update lead status (skip, etc.)
 async function handleUpdateLead(req: Request, leadId: string): Promise<Response> {
-  const authError = validateAdminKey(req);
+  const authError = await validateAdminKey(req);
   if (authError) return authError;
 
   try {
@@ -1141,7 +1180,7 @@ function generateToken(): string {
 
 // POST /leads/:id/generate-demo - Generate demo for a lead (supports force regeneration)
 async function handleGenerateDemo(req: Request, leadId: string): Promise<Response> {
-  const authError = validateAdminKey(req);
+  const authError = await validateAdminKey(req);
   if (authError) return authError;
 
   const supabase = getSupabaseClient();
@@ -1661,7 +1700,7 @@ async function handleRequestDemo(req: Request): Promise<Response> {
 
 // ==================== CLEAR DEMOS HANDLER ====================
 async function handleClearDemos(req: Request): Promise<Response> {
-  const authError = validateAdminKey(req);
+  const authError = await validateAdminKey(req);
   if (authError) return authError;
 
   try {
@@ -1701,7 +1740,7 @@ async function handleClearDemos(req: Request): Promise<Response> {
 
 // ==================== REVIEW DEMO HANDLER ====================
 async function handleReviewDemo(req: Request, leadId: string): Promise<Response> {
-  const authError = validateAdminKey(req);
+  const authError = await validateAdminKey(req);
   if (authError) return authError;
 
   try {

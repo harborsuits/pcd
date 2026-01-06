@@ -1,67 +1,55 @@
+import { supabase } from "@/integrations/supabase/client";
+
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 
 export class AdminAuthError extends Error {
-  constructor(message: string = "Admin key invalid. Please re-enter your admin key.") {
+  constructor(message: string = "Admin authentication required. Please log in.") {
     super(message);
     this.name = "AdminAuthError";
   }
 }
 
-// Storage mode management
-const STORAGE_MODE_KEY = "admin_key_storage_mode";
-type StorageMode = "local" | "session";
-
-function getStorageMode(): StorageMode {
-  const v = (localStorage.getItem(STORAGE_MODE_KEY) as StorageMode | null) ?? "local";
-  return v === "session" ? "session" : "local";
+// Get current session token for admin requests
+async function getAuthToken(): Promise<string | null> {
+  const { data: { session } } = await supabase.auth.getSession();
+  return session?.access_token || null;
 }
 
-export function setAdminKeyStorageMode(mode: StorageMode): void {
-  localStorage.setItem(STORAGE_MODE_KEY, mode);
+// Check if user has admin role
+export async function checkAdminRole(): Promise<boolean> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.user?.id) return false;
+  
+  const { data, error } = await supabase
+    .from("user_roles")
+    .select("role")
+    .eq("user_id", session.user.id)
+    .eq("role", "admin")
+    .maybeSingle();
+  
+  if (error || !data) return false;
+  return true;
 }
 
-export function getAdminKeyStorageMode(): StorageMode {
-  return getStorageMode();
+// Get current user email
+export async function getAdminEmail(): Promise<string | null> {
+  const { data: { session } } = await supabase.auth.getSession();
+  return session?.user?.email || null;
 }
 
-function getStorage(): Storage {
-  return getStorageMode() === "session" ? sessionStorage : localStorage;
-}
-
-export function getAdminKey(): string | null {
-  return getStorage().getItem("admin_key");
-}
-
-export function setAdminKey(key: string): void {
-  getStorage().setItem("admin_key", key);
-  localStorage.setItem("admin_key_set_at", String(Date.now()));
-}
-
-export function clearAdminKey(): void {
-  // Clear from both to be safe
-  localStorage.removeItem("admin_key");
-  sessionStorage.removeItem("admin_key");
-  localStorage.removeItem("admin_key_set_at");
-}
-
-export function getKeySetAt(): number | null {
-  const ts = localStorage.getItem("admin_key_set_at");
-  return ts ? Number(ts) : null;
-}
-
-export function getLast401At(): number | null {
-  const ts = localStorage.getItem("admin_last_401_at");
-  return ts ? Number(ts) : null;
-}
-
+// Admin fetch with JWT authentication
 export async function adminFetch(path: string, init: RequestInit = {}): Promise<Response> {
-  const adminKey = getAdminKey() || "";
+  const token = await getAuthToken();
+  
+  if (!token) {
+    throw new AdminAuthError("Not logged in. Please sign in to continue.");
+  }
   
   // Don't set Content-Type for FormData - browser will set it with boundary
   const isFormData = init.body instanceof FormData;
   const headers: Record<string, string> = {
     ...(init.headers as Record<string, string> || {}),
-    "x-admin-key": adminKey,
+    "Authorization": `Bearer ${token}`,
   };
   
   if (!isFormData && init.body) {
@@ -74,10 +62,57 @@ export async function adminFetch(path: string, init: RequestInit = {}): Promise<
   });
 
   if (res.status === 401) {
-    localStorage.setItem("admin_last_401_at", String(Date.now()));
-    clearAdminKey();
-    throw new AdminAuthError();
+    // Try to refresh the session
+    const { data: { session: newSession }, error } = await supabase.auth.refreshSession();
+    
+    if (error || !newSession) {
+      throw new AdminAuthError("Session expired. Please log in again.");
+    }
+    
+    // Retry with new token
+    headers["Authorization"] = `Bearer ${newSession.access_token}`;
+    return fetch(`${SUPABASE_URL}/functions/v1${path}`, {
+      ...init,
+      headers,
+    });
+  }
+
+  if (res.status === 403) {
+    throw new AdminAuthError("Access denied. Admin privileges required.");
   }
 
   return res;
+}
+
+// Sign in with email/password
+export async function signInAdmin(email: string, password: string): Promise<{ success: boolean; error?: string }> {
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  });
+  
+  if (error) {
+    return { success: false, error: error.message };
+  }
+  
+  // Verify admin role
+  const isAdmin = await checkAdminRole();
+  if (!isAdmin) {
+    await supabase.auth.signOut();
+    return { success: false, error: "Access denied. Admin privileges required." };
+  }
+  
+  return { success: true };
+}
+
+// Sign out
+export async function signOutAdmin(): Promise<void> {
+  await supabase.auth.signOut();
+}
+
+// Check if currently authenticated as admin
+export async function isAuthenticatedAdmin(): Promise<boolean> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) return false;
+  return await checkAdminRole();
 }

@@ -20,7 +20,7 @@ function isAllowedOrigin(origin: string | null): boolean {
 function getCorsHeaders(origin: string | null): Record<string, string> {
   return {
     "Access-Control-Allow-Origin": origin || "*",
-    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-admin-key",
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
   };
 }
@@ -105,11 +105,55 @@ function getSupabaseClient() {
   return createClient(supabaseUrl, supabaseServiceKey);
 }
 
-// Validate admin key for operator endpoints
-function validateAdminKey(req: Request): boolean {
-  const adminKey = req.headers.get("x-admin-key");
-  const expectedKey = Deno.env.get("ADMIN_KEY");
-  return !!expectedKey && adminKey === expectedKey;
+// Validate admin access via JWT and role check for operator endpoints
+async function validateAdminKey(req: Request): Promise<boolean> {
+  const authHeader = req.headers.get("Authorization");
+  
+  if (!authHeader?.startsWith("Bearer ")) {
+    console.log("Missing or invalid Authorization header");
+    return false;
+  }
+
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+  
+  // Create client with user's auth header to validate JWT
+  const supabaseWithAuth = createClient(supabaseUrl, supabaseAnonKey, {
+    global: { headers: { Authorization: authHeader } }
+  });
+
+  const token = authHeader.replace("Bearer ", "");
+  const { data: claimsData, error: claimsError } = await supabaseWithAuth.auth.getClaims(token);
+
+  if (claimsError || !claimsData?.claims) {
+    console.log("Invalid JWT token:", claimsError?.message);
+    return false;
+  }
+
+  const userId = claimsData.claims.sub as string;
+  const email = claimsData.claims.email as string || "unknown";
+
+  // Check if user has admin role using service client
+  const supabase = getSupabaseClient();
+  const { data: roleData, error: roleError } = await supabase
+    .from("user_roles")
+    .select("role")
+    .eq("user_id", userId)
+    .eq("role", "admin")
+    .maybeSingle();
+
+  if (roleError) {
+    console.error("Role check error:", roleError);
+    return false;
+  }
+
+  if (!roleData) {
+    console.log(`User ${userId} (${email}) attempted admin access without admin role`);
+    return false;
+  }
+
+  console.log(`Admin authenticated: ${email} (${userId})`);
+  return true;
 }
 
 // GET /messages/:token - Fetch messages for operator (admin key required)
@@ -119,8 +163,8 @@ async function handleGetMessages(
   corsHeaders: Record<string, string>
 ): Promise<Response> {
   try {
-    // Require admin key for reading messages
-    if (!validateAdminKey(req)) {
+    // Require admin auth for reading messages
+    if (!await validateAdminKey(req)) {
       return new Response(
         JSON.stringify({ error: "Unauthorized" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }

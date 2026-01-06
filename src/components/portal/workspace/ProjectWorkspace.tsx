@@ -13,7 +13,7 @@ import { OperatorPanel } from "./OperatorPanel";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { MessageCircle, Settings2, Home } from "lucide-react";
-import { getAdminKey } from "@/lib/adminFetch";
+import { isAuthenticatedAdmin } from "@/lib/adminFetch";
 import type { CommentData } from "./FeedbackCard";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
@@ -115,12 +115,24 @@ export function ProjectWorkspace({
   const [isCapturing, setIsCapturing] = useState(false);
   const [viewingScreenshot, setViewingScreenshot] = useState<CommentData | null>(null);
   const [rightPanelTab, setRightPanelTab] = useState<string>("feedback");
+  const [isOperatorChecked, setIsOperatorChecked] = useState(false);
+  const [isOperator, setIsOperator] = useState(false);
   
   const previewContainerRef = useRef<HTMLDivElement>(null);
   
-  // Check if user has operator access
-  // forceClientMode overrides admin_key - used for /c/:token client-only route
-  const isOperator = !forceClientMode && !!getAdminKey();
+  // Check if user has operator access asynchronously
+  // forceClientMode overrides operator check - used for /c/:token client-only route
+  useState(() => {
+    if (forceClientMode) {
+      setIsOperator(false);
+      setIsOperatorChecked(true);
+    } else {
+      isAuthenticatedAdmin().then(result => {
+        setIsOperator(result);
+        setIsOperatorChecked(true);
+      });
+    }
+  });
 
   const selectedVersion = versions.find(v => v.id === selectedVersionId) ?? versions[0];
   const versionComments = comments.filter(c => c.prototype_id === selectedVersion?.id);
