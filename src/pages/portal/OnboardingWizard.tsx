@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -106,6 +106,7 @@ export default function OnboardingWizard() {
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [authChecking, setAuthChecking] = useState(true);
   
   const [intake, setIntake] = useState<IntakeData>({
     businessName: "",
@@ -120,6 +121,39 @@ export default function OnboardingWizard() {
     readiness: "",
     involvement: "",
   });
+
+  // Auth guard: redirect if no session
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast({
+          title: "Please sign in",
+          description: "You need to be logged in to start a new project.",
+          variant: "destructive",
+        });
+        navigate("/portal", { replace: true });
+        return;
+      }
+      setAuthChecking(false);
+    };
+    
+    checkAuth();
+    
+    // Also listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!session && !authChecking) {
+        toast({
+          title: "Session expired",
+          description: "Please sign in again to continue.",
+          variant: "destructive",
+        });
+        navigate("/portal", { replace: true });
+      }
+    });
+    
+    return () => subscription.unsubscribe();
+  }, [navigate, authChecking]);
 
   const stepProgress = ((currentStep + 1) / STEPS.length) * 100;
 
@@ -469,6 +503,21 @@ export default function OnboardingWizard() {
 
   const CurrentStepIcon = STEPS[currentStep].icon;
   const isLastStep = currentStep === STEPS.length - 1;
+
+  // Show loading state while checking auth
+  if (authChecking) {
+    return (
+      <ClientLayout
+        title="New Project"
+        subtitle="Checking authentication..."
+        maxWidth="md"
+      >
+        <div className="flex items-center justify-center min-h-[300px]">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      </ClientLayout>
+    );
+  }
 
   return (
     <ClientLayout
