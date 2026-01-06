@@ -12,6 +12,16 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -21,7 +31,7 @@ import {
   FolderOpen, Loader2, Clock,
   MessageSquare, ExternalLink, ChevronRight, Sparkles, Eye, ArrowRight,
   CheckCircle2, Circle, AlertCircle, Bell, LayoutGrid, List, Mail, ChevronDown,
-  FileText, Palette, Camera, Brush, ImagePlus, Link2, Award, Image, Archive, ArchiveRestore
+  FileText, Palette, Camera, Brush, ImagePlus, Link2, Award, Image, Archive, ArchiveRestore, Trash2
 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -407,6 +417,7 @@ function PhaseBModal({
 export function ProjectsTab() {
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [phaseBProject, setPhaseBProject] = useState<Project | null>(null);
+  const [deleteConfirmProject, setDeleteConfirmProject] = useState<Project | null>(null);
   const [pipelineFilter, setPipelineFilter] = useState<PipelineFilter>("all");
   const [serviceTypeFilter, setServiceTypeFilter] = useState<ServiceTypeFilter>("all");
   const [showArchived, setShowArchived] = useState(false);
@@ -500,10 +511,40 @@ export function ProjectsTab() {
     onError: (error: Error) => toast.error(error.message),
   });
 
+  // Mutation to permanently delete an archived project
+  const deleteMutation = useMutation({
+    mutationFn: async ({ token }: { token: string }) => {
+      const res = await adminFetch(`/admin/projects/${token}/permanent`, { method: "DELETE" });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Failed to delete project");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      toast.success("Project permanently deleted");
+      setDeleteConfirmProject(null);
+      queryClient.invalidateQueries({ queryKey: ["admin-projects"] });
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
   // Handle archive/unarchive
   const handleArchive = (e: React.MouseEvent, project: Project) => {
     e.stopPropagation();
     archiveMutation.mutate({ token: project.project_token, unarchive: project.is_archived });
+  };
+
+  // Handle permanent delete (only for archived projects)
+  const handleDelete = (e: React.MouseEvent, project: Project) => {
+    e.stopPropagation();
+    setDeleteConfirmProject(project);
+  };
+
+  const confirmDelete = () => {
+    if (deleteConfirmProject) {
+      deleteMutation.mutate({ token: deleteConfirmProject.project_token });
+    }
   };
 
   const handleAdvanceStage = (e: React.MouseEvent, project: Project) => {
@@ -1032,6 +1073,20 @@ export function ProjectsTab() {
                           </>
                         )}
                       </Button>
+                      {/* Permanent delete button - only for archived projects */}
+                      {project.is_archived && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-1 text-xs h-7 px-2 text-destructive border-destructive/50 hover:bg-destructive hover:text-destructive-foreground"
+                          disabled={deleteMutation.isPending}
+                          onClick={(e) => handleDelete(e, project)}
+                          title="Permanently delete project"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                          <span className="hidden sm:inline">Delete</span>
+                        </Button>
+                      )}
                       <ChevronRight className="h-4 w-4 text-muted-foreground" />
                     </div>
                   </div>
@@ -1049,6 +1104,28 @@ export function ProjectsTab() {
         open={!!phaseBProject} 
         onOpenChange={(open) => !open && setPhaseBProject(null)} 
       />
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!deleteConfirmProject} onOpenChange={(open) => !open && setDeleteConfirmProject(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Permanently delete project?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete <strong>{deleteConfirmProject?.business_name}</strong> and all associated data including messages, files, prototypes, and comments. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={deleteMutation.isPending}
+            >
+              {deleteMutation.isPending ? "Deleting..." : "Delete Forever"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }

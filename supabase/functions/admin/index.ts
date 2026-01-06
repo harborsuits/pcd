@@ -403,6 +403,13 @@ Deno.serve(async (req) => {
     return handleUnarchiveProject(req, token);
   }
 
+  // Route: DELETE /admin/projects/:token/permanent - Permanently delete an archived project
+  if (subPath.match(/^projects\/[^\/]+\/permanent$/) && req.method === "DELETE") {
+    const parts = subPath.split("/");
+    const token = parts[1];
+    return handlePermanentDeleteProject(req, token);
+  }
+
   return new Response(
     JSON.stringify({ error: "Not found" }),
     { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -4748,6 +4755,136 @@ async function handleUnarchiveProject(req: Request, token: string): Promise<Resp
 
   } catch (error) {
     console.error("Unarchive project error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+}
+
+// DELETE /admin/projects/:token/permanent - Permanently delete an archived project
+async function handlePermanentDeleteProject(req: Request, token: string): Promise<Response> {
+  const authError = validateAdminKey(req);
+  if (authError) return authError;
+
+  if (!isValidToken(token)) {
+    return new Response(
+      JSON.stringify({ error: "Invalid token" }),
+      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  try {
+    console.log(`Permanently deleting project: ${token.slice(0, 8)}...`);
+
+    const supabase = getSupabaseClient();
+
+    // First verify the project exists and is archived
+    const { data: project, error: fetchError } = await supabase
+      .from("projects")
+      .select("id, business_name, deleted_at")
+      .eq("project_token", token)
+      .single();
+
+    if (fetchError || !project) {
+      console.error("Project not found:", fetchError);
+      return new Response(
+        JSON.stringify({ error: "Project not found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Only allow deletion of archived projects
+    if (!project.deleted_at) {
+      return new Response(
+        JSON.stringify({ error: "Project must be archived before permanent deletion" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const projectId = project.id;
+
+    // Delete all related records in order (respecting foreign keys)
+    // 1. Delete prototype comment media
+    await supabase.from("prototype_comment_media").delete().eq("project_token", token);
+    
+    // 2. Delete prototype comments
+    await supabase.from("prototype_comments").delete().eq("project_token", token);
+    
+    // 3. Delete prototypes
+    await supabase.from("prototypes").delete().eq("project_token", token);
+    
+    // 4. Delete milestone notes
+    await supabase.from("milestone_notes").delete().eq("project_token", token);
+    
+    // 5. Delete milestones
+    await supabase.from("project_milestones").delete().eq("project_token", token);
+    
+    // 6. Delete checklist items
+    await supabase.from("project_checklist_items").delete().eq("project_token", token);
+    
+    // 7. Delete discovery checklist
+    await supabase.from("project_discovery_checklist").delete().eq("project_token", token);
+    
+    // 8. Delete messages
+    await supabase.from("messages").delete().eq("project_token", token);
+    
+    // 9. Delete files
+    await supabase.from("files").delete().eq("project_token", token);
+    
+    // 10. Delete project media
+    await supabase.from("project_media").delete().eq("project_token", token);
+    
+    // 11. Delete review items
+    await supabase.from("review_items").delete().eq("project_token", token);
+    
+    // 12. Delete notifications
+    await supabase.from("notification_events").delete().eq("project_token", token);
+    
+    // 13. Delete outreach events
+    await supabase.from("outreach_events").delete().eq("project_token", token);
+    
+    // 14. Delete push subscriptions
+    await supabase.from("push_subscriptions").delete().eq("project_token", token);
+    
+    // 15. Delete payments
+    await supabase.from("payments").delete().eq("project_token", token);
+    
+    // 16. Delete operator notes
+    await supabase.from("operator_notes").delete().eq("project_token", token);
+    
+    // 17. Delete admin notes
+    await supabase.from("admin_notes").delete().eq("project_token", token);
+    
+    // 18. Delete demos
+    await supabase.from("demos").delete().eq("project_token", token);
+    
+    // 19. Delete project intakes (by project_id)
+    await supabase.from("project_intakes").delete().eq("project_id", projectId);
+    
+    // 20. Finally delete the project itself
+    const { error: deleteError } = await supabase
+      .from("projects")
+      .delete()
+      .eq("project_token", token);
+
+    if (deleteError) {
+      console.error("Delete project error:", deleteError);
+      return new Response(
+        JSON.stringify({ error: "Failed to delete project" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log(`Project permanently deleted: ${project.business_name}`);
+
+    return new Response(
+      JSON.stringify({ ok: true, message: "Project permanently deleted" }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+
+  } catch (error) {
+    console.error("Permanent delete project error:", error);
     return new Response(
       JSON.stringify({ error: "Internal server error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
