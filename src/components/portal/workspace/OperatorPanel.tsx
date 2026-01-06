@@ -21,7 +21,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { adminFetch, getAdminKey } from "@/lib/adminFetch";
+import { adminFetch, isAuthenticatedAdmin } from "@/lib/adminFetch";
 import { StageBadge, STAGE_CONFIG, PipelineStage, getNextStage } from "@/components/operator/StageBadge";
 
 interface IntakeData {
@@ -170,7 +170,7 @@ export function OperatorPanel({
       if (!res.ok) return { notes: [] };
       return res.json() as Promise<{ notes: Array<{ id: string; content: string; created_at: string; created_by?: string }> }>;
     },
-    enabled: !!getAdminKey(),
+    enabled: true, // Will fail gracefully via adminFetch if not authenticated
   });
 
   // Fetch discovery checklist
@@ -181,7 +181,7 @@ export function OperatorPanel({
       if (!res.ok) return { items: [] };
       return res.json() as Promise<{ items: DiscoveryItem[] }>;
     },
-    enabled: !!getAdminKey(),
+    enabled: true, // Will fail gracefully via adminFetch if not authenticated
   });
 
   // Approve intake mutation

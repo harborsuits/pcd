@@ -2,7 +2,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-admin-key",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
 Deno.serve(async (req) => {
@@ -44,26 +44,67 @@ Deno.serve(async (req) => {
   );
 });
 
-function validateAdminKey(req: Request): Response | null {
-  const adminKey = req.headers.get("x-admin-key");
-  const expectedKey = Deno.env.get("ADMIN_KEY");
-
-  if (!expectedKey) {
-    console.error("ADMIN_KEY not configured");
+// Validate admin access via JWT and role check
+async function validateAdminKey(req: Request): Promise<Response | null> {
+  const authHeader = req.headers.get("Authorization");
+  
+  if (!authHeader?.startsWith("Bearer ")) {
+    console.log("Missing or invalid Authorization header");
     return new Response(
-      JSON.stringify({ error: "Server configuration error" }),
+      JSON.stringify({ error: "Unauthorized", message: "Missing authentication token" }),
+      { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+  
+  // Create client with user's auth header to validate JWT
+  const supabaseWithAuth = createClient(supabaseUrl, supabaseAnonKey, {
+    global: { headers: { Authorization: authHeader } }
+  });
+
+  const token = authHeader.replace("Bearer ", "");
+  const { data: claimsData, error: claimsError } = await supabaseWithAuth.auth.getClaims(token);
+
+  if (claimsError || !claimsData?.claims) {
+    console.log("Invalid JWT token:", claimsError?.message);
+    return new Response(
+      JSON.stringify({ error: "Unauthorized", message: "Invalid or expired token" }),
+      { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  const userId = claimsData.claims.sub as string;
+  const email = claimsData.claims.email as string || "unknown";
+
+  // Check if user has admin role using service client
+  const supabase = getSupabaseClient();
+  const { data: roleData, error: roleError } = await supabase
+    .from("user_roles")
+    .select("role")
+    .eq("user_id", userId)
+    .eq("role", "admin")
+    .maybeSingle();
+
+  if (roleError) {
+    console.error("Role check error:", roleError);
+    return new Response(
+      JSON.stringify({ error: "Server error", message: "Failed to verify permissions" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 
-  if (!adminKey || adminKey !== expectedKey) {
+  if (!roleData) {
+    console.log(`User ${userId} (${email}) attempted admin access without admin role`);
     return new Response(
-      JSON.stringify({ error: "Unauthorized" }),
+      JSON.stringify({ error: "Forbidden", message: "Admin access required" }),
       { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 
-  return null;
+  console.log(`Admin authenticated: ${email} (${userId})`);
+  return null; // Valid
 }
 
 function getSupabaseClient() {
@@ -82,7 +123,7 @@ const smsTemplates: Record<string, (name: string, demoUrl: string) => string> = 
 
 // POST /outreach/queue - Queue leads for outreach
 async function handleQueue(req: Request): Promise<Response> {
-  const authError = validateAdminKey(req);
+  const authError = await validateAdminKey(req);
   if (authError) return authError;
 
   try {
@@ -211,7 +252,7 @@ async function handleQueue(req: Request): Promise<Response> {
 
 // GET /outreach/events - List outreach events
 async function handleListEvents(req: Request): Promise<Response> {
-  const authError = validateAdminKey(req);
+  const authError = await validateAdminKey(req);
   if (authError) return authError;
 
   try {
@@ -265,7 +306,7 @@ async function handleListEvents(req: Request): Promise<Response> {
 
 // PATCH /outreach/events/:id - Update event status
 async function handleUpdateEvent(req: Request, eventId: string): Promise<Response> {
-  const authError = validateAdminKey(req);
+  const authError = await validateAdminKey(req);
   if (authError) return authError;
 
   try {
@@ -340,7 +381,7 @@ async function handleUpdateEvent(req: Request, eventId: string): Promise<Respons
 
 // POST /outreach/suppress - Add phone to suppression list
 async function handleSuppress(req: Request): Promise<Response> {
-  const authError = validateAdminKey(req);
+  const authError = await validateAdminKey(req);
   if (authError) return authError;
 
   try {

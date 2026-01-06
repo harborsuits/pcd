@@ -4,7 +4,7 @@ import { Loader2, AlertCircle, CheckCircle2, Clock, Rocket, FileText, Upload, Im
 import { ProjectWorkspace, type Version, type CommentData } from "@/components/portal/workspace";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { getAdminKey } from "@/lib/adminFetch";
+import { isAuthenticatedAdmin } from "@/lib/adminFetch";
 import { supabase } from "@/integrations/supabase/client";
 import { AIReceptionistSetup } from "@/components/portal/AIReceptionistSetup";
 import { SessionExpiredModal } from "@/components/portal/SessionExpiredModal";
@@ -145,9 +145,18 @@ export default function WorkspacePage() {
       return;
     }
     
-    const adminKey = getAdminKey();
-    if (!adminKey) {
-      // No admin key in storage, definitely not an operator
+    // Check if user is authenticated as admin
+    const isAdmin = await isAuthenticatedAdmin();
+    if (!isAdmin) {
+      // Not authenticated as admin
+      setIsOperator(false);
+      setOperatorCheckDone(true);
+      return;
+    }
+    
+    // Get the session token for the API call
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) {
       setIsOperator(false);
       setOperatorCheckDone(true);
       return;
@@ -161,7 +170,7 @@ export default function WorkspacePage() {
           headers: {
             "Content-Type": "application/json",
             apikey: SUPABASE_ANON_KEY,
-            "x-admin-key": adminKey,
+            "Authorization": `Bearer ${session.access_token}`,
           },
         }
       );
