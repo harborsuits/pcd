@@ -416,40 +416,129 @@ Deno.serve(async (req) => {
   );
 });
 
-// Validate admin key helper
-function validateAdminKey(req: Request): Response | null {
-  const adminKey = req.headers.get("x-admin-key");
-  const expectedKey = Deno.env.get("ADMIN_KEY");
-
-  if (!expectedKey) {
-    console.error("ADMIN_KEY not configured");
-    return new Response(
-      JSON.stringify({ error: "Server configuration error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
-  }
-
-  if (!adminKey || adminKey !== expectedKey) {
-    console.log("Invalid or missing admin key");
-    return new Response(
-      JSON.stringify({ error: "Unauthorized" }),
-      { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
-  }
-
-  return null; // Valid
+// Admin authentication context
+interface AdminAuthContext {
+  userId: string;
+  email: string;
 }
 
-// Get Supabase client helper
+// Get Supabase client helper (service role for admin operations)
 function getSupabaseClient() {
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   return createClient(supabaseUrl, supabaseServiceKey);
 }
 
+// Validate admin access via JWT and role check
+async function validateAdminAuth(req: Request): Promise<{ error: Response | null; context: AdminAuthContext | null }> {
+  const authHeader = req.headers.get("Authorization");
+  
+  if (!authHeader?.startsWith("Bearer ")) {
+    console.log("Missing or invalid Authorization header");
+    return {
+      error: new Response(
+        JSON.stringify({ error: "Unauthorized", message: "Missing authentication token" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      ),
+      context: null
+    };
+  }
+
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+  
+  // Create client with user's auth header to validate JWT
+  const supabaseWithAuth = createClient(supabaseUrl, supabaseAnonKey, {
+    global: { headers: { Authorization: authHeader } }
+  });
+
+  const token = authHeader.replace("Bearer ", "");
+  const { data: claimsData, error: claimsError } = await supabaseWithAuth.auth.getClaims(token);
+
+  if (claimsError || !claimsData?.claims) {
+    console.log("Invalid JWT token:", claimsError?.message);
+    return {
+      error: new Response(
+        JSON.stringify({ error: "Unauthorized", message: "Invalid or expired token" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      ),
+      context: null
+    };
+  }
+
+  const userId = claimsData.claims.sub as string;
+  const email = claimsData.claims.email as string || "unknown";
+
+  // Check if user has admin role using service client
+  const supabase = getSupabaseClient();
+  const { data: roleData, error: roleError } = await supabase
+    .from("user_roles")
+    .select("role")
+    .eq("user_id", userId)
+    .eq("role", "admin")
+    .maybeSingle();
+
+  if (roleError) {
+    console.error("Role check error:", roleError);
+    return {
+      error: new Response(
+        JSON.stringify({ error: "Server error", message: "Failed to verify permissions" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      ),
+      context: null
+    };
+  }
+
+  if (!roleData) {
+    console.log(`User ${userId} (${email}) attempted admin access without admin role`);
+    return {
+      error: new Response(
+        JSON.stringify({ error: "Forbidden", message: "Admin access required" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      ),
+      context: null
+    };
+  }
+
+  console.log(`Admin authenticated: ${email} (${userId})`);
+  return { error: null, context: { userId, email } };
+}
+
+// Backward-compatible wrapper - returns Response | null like old validateAdminKey
+async function validateAdminKey(req: Request): Promise<Response | null> {
+  const { error } = await validateAdminAuth(req);
+  return error;
+}
+
+// Log admin action for audit trail
+async function logAdminAction(
+  context: AdminAuthContext,
+  action: string,
+  resourceType?: string,
+  resourceId?: string,
+  metadata?: Record<string, unknown>,
+  ipAddress?: string
+): Promise<void> {
+  try {
+    const supabase = getSupabaseClient();
+    await supabase.from("admin_audit_log").insert({
+      user_id: context.userId,
+      user_email: context.email,
+      action,
+      resource_type: resourceType,
+      resource_id: resourceId,
+      metadata: metadata || {},
+      ip_address: ipAddress,
+    });
+  } catch (err) {
+    console.error("Failed to log admin action:", err);
+    // Don't fail the request if audit logging fails
+  }
+}
+
 // GET /admin/inbox - List projects with last message and unread count using RPC
 async function handleInbox(req: Request): Promise<Response> {
-  const authError = validateAdminKey(req);
+  const authError = await validateAdminKey(req);
   if (authError) return authError;
 
   try {
@@ -507,7 +596,7 @@ async function handleInbox(req: Request): Promise<Response> {
 
 // POST /admin/messages/reply
 async function handleMessagesReply(req: Request): Promise<Response> {
-  const authError = validateAdminKey(req);
+  const authError = await validateAdminKey(req);
   if (authError) return authError;
 
   try {
@@ -621,7 +710,7 @@ async function handleMessagesReply(req: Request): Promise<Response> {
 
 // POST /admin/messages/mark-read - Mark client messages as read
 async function handleMarkRead(req: Request): Promise<Response> {
-  const authError = validateAdminKey(req);
+  const authError = await validateAdminKey(req);
   if (authError) return authError;
 
   try {
@@ -707,7 +796,7 @@ async function handleMarkRead(req: Request): Promise<Response> {
 
 // GET /admin/notes/:token - Get notes for a project
 async function handleGetNotes(req: Request, token: string): Promise<Response> {
-  const authError = validateAdminKey(req);
+  const authError = await validateAdminKey(req);
   if (authError) return authError;
 
   if (!isValidToken(token)) {
@@ -769,7 +858,7 @@ async function handleGetNotes(req: Request, token: string): Promise<Response> {
 
 // POST /admin/notes/:token - Create a note
 async function handleCreateNote(req: Request, token: string): Promise<Response> {
-  const authError = validateAdminKey(req);
+  const authError = await validateAdminKey(req);
   if (authError) return authError;
 
   if (!isValidToken(token)) {
@@ -861,7 +950,7 @@ async function handleCreateNote(req: Request, token: string): Promise<Response> 
 
 // PATCH /admin/notes/:token/:noteId - Update a note
 async function handleUpdateNote(req: Request, token: string, noteId: string): Promise<Response> {
-  const authError = validateAdminKey(req);
+  const authError = await validateAdminKey(req);
   if (authError) return authError;
 
   if (!isValidToken(token)) {
@@ -935,7 +1024,7 @@ async function handleUpdateNote(req: Request, token: string, noteId: string): Pr
 
 // DELETE /admin/notes/:token/:noteId - Soft delete a note
 async function handleDeleteNote(req: Request, token: string, noteId: string): Promise<Response> {
-  const authError = validateAdminKey(req);
+  const authError = await validateAdminKey(req);
   if (authError) return authError;
 
   if (!isValidToken(token)) {
@@ -999,7 +1088,7 @@ async function handleDeleteNote(req: Request, token: string, noteId: string): Pr
 
 // GET /admin/checklist/:token - Get checklist items for a project
 async function handleGetChecklist(req: Request, token: string): Promise<Response> {
-  const authError = validateAdminKey(req);
+  const authError = await validateAdminKey(req);
   if (authError) return authError;
 
   if (!isValidToken(token)) {
@@ -1058,7 +1147,7 @@ async function handleGetChecklist(req: Request, token: string): Promise<Response
 
 // POST /admin/checklist/:token - Create a checklist item
 async function handleCreateChecklistItem(req: Request, token: string): Promise<Response> {
-  const authError = validateAdminKey(req);
+  const authError = await validateAdminKey(req);
   if (authError) return authError;
 
   if (!isValidToken(token)) {
@@ -1151,7 +1240,7 @@ async function handleCreateChecklistItem(req: Request, token: string): Promise<R
 
 // PATCH /admin/checklist/:token/:itemId - Update a checklist item
 async function handleUpdateChecklistItem(req: Request, token: string, itemId: string): Promise<Response> {
-  const authError = validateAdminKey(req);
+  const authError = await validateAdminKey(req);
   if (authError) return authError;
 
   if (!isValidToken(token)) {
@@ -1236,7 +1325,7 @@ async function handleUpdateChecklistItem(req: Request, token: string, itemId: st
 
 // DELETE /admin/checklist/:token/:itemId - Delete a checklist item
 async function handleDeleteChecklistItem(req: Request, token: string, itemId: string): Promise<Response> {
-  const authError = validateAdminKey(req);
+  const authError = await validateAdminKey(req);
   if (authError) return authError;
 
   if (!isValidToken(token)) {
@@ -1295,7 +1384,7 @@ async function handleDeleteChecklistItem(req: Request, token: string, itemId: st
 
 // POST /admin/checklist/:token/defaults - Add default checklist items
 async function handleAddDefaultChecklist(req: Request, token: string): Promise<Response> {
-  const authError = validateAdminKey(req);
+  const authError = await validateAdminKey(req);
   if (authError) return authError;
 
   if (!isValidToken(token)) {
@@ -1384,7 +1473,7 @@ async function handleAddDefaultChecklist(req: Request, token: string): Promise<R
 
 // GET /admin/projects - List all projects with intake data
 async function handleProjects(req: Request): Promise<Response> {
-  const authError = validateAdminKey(req);
+  const authError = await validateAdminKey(req);
   if (authError) return authError;
 
   try {
@@ -1547,7 +1636,7 @@ async function handleProjects(req: Request): Promise<Response> {
 
 // PATCH /admin/projects/:token/status - Update project status
 async function handleUpdateProjectStatus(req: Request, token: string): Promise<Response> {
-  const authError = validateAdminKey(req);
+  const authError = await validateAdminKey(req);
   if (authError) return authError;
 
   if (!isValidToken(token)) {
@@ -1614,7 +1703,7 @@ async function handleUpdateProjectStatus(req: Request, token: string): Promise<R
 
 // PATCH /admin/projects/:token/stage - Update pipeline stage with audit trail
 async function handleUpdatePipelineStage(req: Request, token: string): Promise<Response> {
-  const authError = validateAdminKey(req);
+  const authError = await validateAdminKey(req);
   if (authError) return authError;
 
   if (!isValidToken(token)) {
@@ -1826,7 +1915,7 @@ async function handleUpdatePipelineStage(req: Request, token: string): Promise<R
 
 // PATCH /admin/projects/:token/portal-stage - Update portal stage (client-facing workflow)
 async function handleUpdatePortalStage(req: Request, token: string): Promise<Response> {
-  const authError = validateAdminKey(req);
+  const authError = await validateAdminKey(req);
   if (authError) return authError;
 
   if (!isValidToken(token)) {
@@ -1940,7 +2029,7 @@ async function handleUpdatePortalStage(req: Request, token: string): Promise<Res
 
 // POST /admin/projects/:token/nudge - Send reminder to client
 async function handleNudge(req: Request, token: string): Promise<Response> {
-  const authError = validateAdminKey(req);
+  const authError = await validateAdminKey(req);
   if (authError) return authError;
 
   if (!isValidToken(token)) {
@@ -2233,7 +2322,7 @@ async function sendNudgeEmail({
 
 // PATCH /admin/intake/:intakeId/approve - Approve an intake
 async function handleApproveIntake(req: Request, intakeId: string): Promise<Response> {
-  const authError = validateAdminKey(req);
+  const authError = await validateAdminKey(req);
   if (authError) return authError;
 
   if (!intakeId) {
@@ -2305,7 +2394,7 @@ async function handleApproveIntake(req: Request, intakeId: string): Promise<Resp
 
 
 async function handleGetPrototypes(req: Request, token: string): Promise<Response> {
-  const authError = validateAdminKey(req);
+  const authError = await validateAdminKey(req);
   if (authError) return authError;
 
   if (!isValidToken(token)) {
@@ -2366,7 +2455,7 @@ async function handleGetPrototypes(req: Request, token: string): Promise<Respons
 
 // POST /admin/prototypes/:token - Create a prototype
 async function handleCreatePrototype(req: Request, token: string): Promise<Response> {
-  const authError = validateAdminKey(req);
+  const authError = await validateAdminKey(req);
   if (authError) return authError;
 
   if (!isValidToken(token)) {
@@ -2461,7 +2550,7 @@ async function handleCreatePrototype(req: Request, token: string): Promise<Respo
 
 // PATCH /admin/prototypes/:token/:prototypeId - Update a prototype
 async function handleUpdatePrototype(req: Request, token: string, prototypeId: string): Promise<Response> {
-  const authError = validateAdminKey(req);
+  const authError = await validateAdminKey(req);
   if (authError) return authError;
 
   if (!isValidToken(token)) {
@@ -2534,7 +2623,7 @@ async function handleUpdatePrototype(req: Request, token: string, prototypeId: s
 
 // DELETE /admin/prototypes/:token/:prototypeId - Delete a prototype
 async function handleDeletePrototype(req: Request, token: string, prototypeId: string): Promise<Response> {
-  const authError = validateAdminKey(req);
+  const authError = await validateAdminKey(req);
   if (authError) return authError;
 
   if (!isValidToken(token)) {
@@ -2581,7 +2670,7 @@ async function handleDeletePrototype(req: Request, token: string, prototypeId: s
 
 // GET /admin/comments/:token - Get comments for a project
 async function handleGetComments(req: Request, token: string): Promise<Response> {
-  const authError = validateAdminKey(req);
+  const authError = await validateAdminKey(req);
   if (authError) return authError;
 
   if (!isValidToken(token)) {
@@ -2626,7 +2715,7 @@ async function handleGetComments(req: Request, token: string): Promise<Response>
 
 // POST /admin/comments/:token - Create a comment (for "Turn into comment" feature)
 async function handleCreateComment(req: Request, token: string): Promise<Response> {
-  const authError = validateAdminKey(req);
+  const authError = await validateAdminKey(req);
   if (authError) return authError;
 
   if (!isValidToken(token)) {
@@ -2708,7 +2797,7 @@ async function handleCreateComment(req: Request, token: string): Promise<Respons
 
 // PATCH /admin/comments/:token/:commentId - Update a comment (resolve/unresolve)
 async function handleUpdateComment(req: Request, token: string, commentId: string): Promise<Response> {
-  const authError = validateAdminKey(req);
+  const authError = await validateAdminKey(req);
   if (authError) return authError;
 
   if (!isValidToken(token)) {
@@ -2803,7 +2892,7 @@ async function handleUpdateComment(req: Request, token: string, commentId: strin
 
 // GET /admin/media/:token - List media for a project
 async function handleGetMedia(req: Request, token: string): Promise<Response> {
-  const authError = validateAdminKey(req);
+  const authError = await validateAdminKey(req);
   if (authError) return authError;
 
   if (!isValidToken(token)) {
@@ -2876,7 +2965,7 @@ async function handleGetMedia(req: Request, token: string): Promise<Response> {
 
 // POST /admin/media/:token - Create a media record after upload
 async function handleCreateMedia(req: Request, token: string): Promise<Response> {
-  const authError = validateAdminKey(req);
+  const authError = await validateAdminKey(req);
   if (authError) return authError;
 
   if (!isValidToken(token)) {
@@ -3036,7 +3125,7 @@ async function handleCreateMedia(req: Request, token: string): Promise<Response>
 
 // DELETE /admin/media/:token/:mediaId - Delete a media item
 async function handleDeleteMedia(req: Request, token: string, mediaId: string): Promise<Response> {
-  const authError = validateAdminKey(req);
+  const authError = await validateAdminKey(req);
   if (authError) return authError;
 
   if (!isValidToken(token)) {
@@ -3109,7 +3198,7 @@ async function handleDeleteMedia(req: Request, token: string, mediaId: string): 
 
 // GET /admin/comments/:token/:commentId/attachments - Get attachments for a comment
 async function handleGetCommentAttachments(req: Request, token: string, commentId: string): Promise<Response> {
-  const authError = validateAdminKey(req);
+  const authError = await validateAdminKey(req);
   if (authError) return authError;
 
   if (!isValidToken(token)) {
@@ -3188,7 +3277,7 @@ async function handleGetCommentAttachments(req: Request, token: string, commentI
 
 // POST /admin/comments/:token/:commentId/attachments - Upload attachment for a comment
 async function handleUploadCommentAttachment(req: Request, token: string, commentId: string): Promise<Response> {
-  const authError = validateAdminKey(req);
+  const authError = await validateAdminKey(req);
   if (authError) return authError;
 
   if (!isValidToken(token)) {
@@ -3307,7 +3396,7 @@ async function handleUploadCommentAttachment(req: Request, token: string, commen
 
 // DELETE /admin/comments/:token/:commentId/attachments/:attachmentId - Delete an attachment
 async function handleDeleteCommentAttachment(req: Request, token: string, commentId: string, attachmentId: string): Promise<Response> {
-  const authError = validateAdminKey(req);
+  const authError = await validateAdminKey(req);
   if (authError) return authError;
 
   if (!isValidToken(token)) {
@@ -3380,7 +3469,7 @@ async function handleDeleteCommentAttachment(req: Request, token: string, commen
 
 // POST /admin/projects/:token/launch-complete - Mark project as launched
 async function handleLaunchComplete(req: Request, token: string): Promise<Response> {
-  const authError = validateAdminKey(req);
+  const authError = await validateAdminKey(req);
   if (authError) return authError;
 
   if (!isValidToken(token)) {
@@ -3491,7 +3580,7 @@ async function handleLaunchComplete(req: Request, token: string): Promise<Respon
 
 // POST /admin/notifications/test - Send a test email
 async function handleTestEmail(req: Request): Promise<Response> {
-  const authError = validateAdminKey(req);
+  const authError = await validateAdminKey(req);
   if (authError) return authError;
 
   try {
@@ -3617,7 +3706,7 @@ async function handleTestEmail(req: Request): Promise<Response> {
 
 // GET /admin/accounts - List all auth users with linked projects
 async function handleGetAccounts(req: Request): Promise<Response> {
-  const authError = validateAdminKey(req);
+  const authError = await validateAdminKey(req);
   if (authError) return authError;
 
   try {
@@ -3699,7 +3788,7 @@ async function handleGetAccounts(req: Request): Promise<Response> {
 
 // PATCH /admin/accounts/:userId - Update user email
 async function handleUpdateAccount(req: Request, userId: string): Promise<Response> {
-  const authError = validateAdminKey(req);
+  const authError = await validateAdminKey(req);
   if (authError) return authError;
 
   try {
@@ -3772,7 +3861,7 @@ async function handleUpdateAccount(req: Request, userId: string): Promise<Respon
 
 // DELETE /admin/accounts/:userId - Delete auth user
 async function handleDeleteAccount(req: Request, userId: string): Promise<Response> {
-  const authError = validateAdminKey(req);
+  const authError = await validateAdminKey(req);
   if (authError) return authError;
 
   try {
@@ -3824,7 +3913,7 @@ async function handleDeleteAccount(req: Request, userId: string): Promise<Respon
 
 // POST /admin/accounts/clear-test - Delete all non-operator test accounts
 async function handleClearTestAccounts(req: Request): Promise<Response> {
-  const authError = validateAdminKey(req);
+  const authError = await validateAdminKey(req);
   if (authError) return authError;
 
   try {
@@ -3935,7 +4024,7 @@ const DEFAULT_MILESTONE_ITEMS = MILESTONE_TEMPLATES.growth;
 
 // GET /admin/milestones/:token
 async function handleGetMilestones(req: Request, token: string): Promise<Response> {
-  const authError = validateAdminKey(req);
+  const authError = await validateAdminKey(req);
   if (authError) return authError;
 
   if (!isValidToken(token)) {
@@ -4010,7 +4099,7 @@ async function handleGetMilestones(req: Request, token: string): Promise<Respons
 
 // POST /admin/milestones/:token
 async function handleCreateMilestone(req: Request, token: string): Promise<Response> {
-  const authError = validateAdminKey(req);
+  const authError = await validateAdminKey(req);
   if (authError) return authError;
 
   if (!isValidToken(token)) {
@@ -4090,7 +4179,7 @@ async function handleCreateMilestone(req: Request, token: string): Promise<Respo
 
 // POST /admin/milestones/:token/defaults
 async function handleAddDefaultMilestones(req: Request, token: string): Promise<Response> {
-  const authError = validateAdminKey(req);
+  const authError = await validateAdminKey(req);
   if (authError) return authError;
 
   if (!isValidToken(token)) {
@@ -4164,7 +4253,7 @@ async function handleAddDefaultMilestones(req: Request, token: string): Promise<
 
 // PATCH /admin/milestones/:token/:milestoneId
 async function handleUpdateMilestone(req: Request, token: string, milestoneId: string): Promise<Response> {
-  const authError = validateAdminKey(req);
+  const authError = await validateAdminKey(req);
   if (authError) return authError;
 
   if (!isValidToken(token)) {
@@ -4232,7 +4321,7 @@ async function handleUpdateMilestone(req: Request, token: string, milestoneId: s
 
 // DELETE /admin/milestones/:token/:milestoneId
 async function handleDeleteMilestone(req: Request, token: string, milestoneId: string): Promise<Response> {
-  const authError = validateAdminKey(req);
+  const authError = await validateAdminKey(req);
   if (authError) return authError;
 
   if (!isValidToken(token)) {
@@ -4273,7 +4362,7 @@ async function handleDeleteMilestone(req: Request, token: string, milestoneId: s
 
 // POST /admin/projects/:token/request-info
 async function handleRequestInfo(req: Request, token: string): Promise<Response> {
-  const authError = validateAdminKey(req);
+  const authError = await validateAdminKey(req);
   if (authError) return authError;
 
   if (!isValidToken(token)) {
@@ -4328,7 +4417,7 @@ async function handleRequestInfo(req: Request, token: string): Promise<Response>
 
 // DELETE /admin/projects/:token/request-info
 async function handleClearRequestInfo(req: Request, token: string): Promise<Response> {
-  const authError = validateAdminKey(req);
+  const authError = await validateAdminKey(req);
   if (authError) return authError;
 
   if (!isValidToken(token)) {
@@ -4386,7 +4475,7 @@ const DEFAULT_DISCOVERY_ITEMS = [
 
 // GET /admin/discovery/:token
 async function handleGetDiscovery(req: Request, token: string): Promise<Response> {
-  const authError = validateAdminKey(req);
+  const authError = await validateAdminKey(req);
   if (authError) return authError;
 
   if (!isValidToken(token)) {
@@ -4423,7 +4512,7 @@ async function handleGetDiscovery(req: Request, token: string): Promise<Response
 
 // POST /admin/discovery/:token/seed
 async function handleSeedDiscovery(req: Request, token: string): Promise<Response> {
-  const authError = validateAdminKey(req);
+  const authError = await validateAdminKey(req);
   if (authError) return authError;
 
   if (!isValidToken(token)) {
@@ -4483,7 +4572,7 @@ async function handleSeedDiscovery(req: Request, token: string): Promise<Respons
 
 // PATCH /admin/discovery/:token/:key
 async function handleToggleDiscoveryItem(req: Request, token: string, key: string): Promise<Response> {
-  const authError = validateAdminKey(req);
+  const authError = await validateAdminKey(req);
   if (authError) return authError;
 
   if (!isValidToken(token)) {
@@ -4536,7 +4625,7 @@ async function handleToggleDiscoveryItem(req: Request, token: string, key: strin
 
 // POST /admin/projects/:token/intake/approve
 async function handleApproveIntakeByToken(req: Request, token: string): Promise<Response> {
-  const authError = validateAdminKey(req);
+  const authError = await validateAdminKey(req);
   if (authError) return authError;
 
   if (!isValidToken(token)) {
@@ -4599,7 +4688,7 @@ async function handleApproveIntakeByToken(req: Request, token: string): Promise<
 
 // POST /admin/milestones/:token/:milestoneId/notes
 async function handleAddMilestoneNote(req: Request, token: string, milestoneId: string): Promise<Response> {
-  const authError = validateAdminKey(req);
+  const authError = await validateAdminKey(req);
   if (authError) return authError;
 
   if (!isValidToken(token)) {
@@ -4666,7 +4755,7 @@ async function handleAddMilestoneNote(req: Request, token: string, milestoneId: 
 
 // POST /admin/projects/:token/archive - Archive a project (soft delete)
 async function handleArchiveProject(req: Request, token: string): Promise<Response> {
-  const authError = validateAdminKey(req);
+  const authError = await validateAdminKey(req);
   if (authError) return authError;
 
   if (!isValidToken(token)) {
@@ -4722,7 +4811,7 @@ async function handleArchiveProject(req: Request, token: string): Promise<Respon
 
 // POST /admin/projects/:token/unarchive - Unarchive a project
 async function handleUnarchiveProject(req: Request, token: string): Promise<Response> {
-  const authError = validateAdminKey(req);
+  const authError = await validateAdminKey(req);
   if (authError) return authError;
 
   if (!isValidToken(token)) {
@@ -4778,7 +4867,7 @@ async function handleUnarchiveProject(req: Request, token: string): Promise<Resp
 
 // DELETE /admin/projects/:token/permanent - Permanently delete an archived project
 async function handlePermanentDeleteProject(req: Request, token: string): Promise<Response> {
-  const authError = validateAdminKey(req);
+  const authError = await validateAdminKey(req);
   if (authError) return authError;
 
   if (!isValidToken(token)) {
