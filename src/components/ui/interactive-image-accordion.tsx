@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
 import rooferImage from '@/assets/demos/roofer-hero.jpeg';
 import galleryCoverVideo from '@/assets/demos/gallery-cover.mp4';
+import salonCoverVideo from '@/assets/demos/salon-cover.mp4';
 
 interface AccordionItemData {
   id: number;
@@ -107,7 +108,7 @@ const defaultItems: AccordionItemData[] = [
     id: 3,
     category: 'Personal Care',
     title: 'Salon',
-    imageUrl: 'https://images.unsplash.com/photo-1560066984-138dadb4c035?w=800&auto=format&fit=crop',
+    videoUrl: salonCoverVideo,
     demoUrl: '/demos/salon',
   },
   {
