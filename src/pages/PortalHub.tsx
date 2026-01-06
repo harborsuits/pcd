@@ -12,6 +12,7 @@ import type { User, Session } from "@supabase/supabase-js";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { ClientLayout } from "@/components/portal/ClientLayout";
 import { BrandCard, BrandCardHeader, BrandCardContent } from "@/components/portal/BrandCard";
+import { FcGoogle } from "react-icons/fc";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -199,6 +200,24 @@ export default function PortalHub() {
       }
     } catch {
       toast({ title: "Failed to restore", variant: "destructive" });
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setError(null);
+    setInfo(null);
+    setLoading(true);
+
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/portal`,
+      },
+    });
+
+    if (error) {
+      setError(error.message);
+      setLoading(false);
     }
   };
 
@@ -763,6 +782,32 @@ export default function PortalHub() {
           </TabsList>
 
           <TabsContent value="login">
+            {/* Google Sign-In */}
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full mb-4 h-11 border-border bg-background hover:bg-muted"
+              onClick={handleGoogleSignIn}
+              disabled={loading}
+            >
+              {loading ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <FcGoogle className="mr-2 h-5 w-5" />
+              )}
+              Continue with Google
+            </Button>
+
+            {/* Divider */}
+            <div className="relative my-4">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t border-border" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-card px-2 text-muted-foreground">or continue with email</span>
+              </div>
+            </div>
+
             {showForgotPassword ? (
               <form onSubmit={handleForgotPassword} className="space-y-4">
                 <div className="space-y-2">
@@ -873,6 +918,32 @@ export default function PortalHub() {
           </TabsContent>
 
           <TabsContent value="signup">
+            {/* Google Sign-In */}
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full mb-4 h-11 border-border bg-background hover:bg-muted"
+              onClick={handleGoogleSignIn}
+              disabled={loading}
+            >
+              {loading ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <FcGoogle className="mr-2 h-5 w-5" />
+              )}
+              Continue with Google
+            </Button>
+
+            {/* Divider */}
+            <div className="relative my-4">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t border-border" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-card px-2 text-muted-foreground">or continue with email</span>
+              </div>
+            </div>
+
             <form onSubmit={handleSignup} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="signup-name">Full Name</Label>
