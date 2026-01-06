@@ -210,7 +210,7 @@ const Index = () => {
           </div>
           
           <p className="text-center text-sm text-muted-foreground mt-6">
-            Need something else? <Link to="/get-demo" className="text-accent hover:underline">Tell us what you're looking for →</Link>
+            Need something else? <Link to="/get-demo?service=other" className="text-accent hover:underline">Tell us what you're looking for →</Link>
           </p>
         </div>
       </section>
