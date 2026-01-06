@@ -420,7 +420,6 @@ export function ProjectsTab() {
   const [deleteConfirmProject, setDeleteConfirmProject] = useState<Project | null>(null);
   const [pipelineFilter, setPipelineFilter] = useState<PipelineFilter>("all");
   const [serviceTypeFilter, setServiceTypeFilter] = useState<ServiceTypeFilter>("all");
-  const [showArchived, setShowArchived] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>("list");
   const { setCurrentProjectToken, setCurrentProjectName, registerCloseProject } = useOperatorContext();
   const queryClient = useQueryClient();
@@ -438,12 +437,11 @@ export function ProjectsTab() {
     };
   }, [selectedProject, setCurrentProjectToken, setCurrentProjectName, registerCloseProject]);
 
-  // Fetch all projects with intake data
+  // Fetch all projects with intake data - always include archived for proper filtering
   const { data: projectsData, isLoading, refetch } = useQuery({
-    queryKey: ["admin-projects", showArchived],
+    queryKey: ["admin-projects"],
     queryFn: async () => {
-      const url = showArchived ? "/admin/projects?includeArchived=true" : "/admin/projects";
-      const res = await adminFetch(url);
+      const res = await adminFetch("/admin/projects?includeArchived=true");
       if (!res.ok) throw new Error("Failed to fetch projects");
       return res.json() as Promise<{ projects: Project[] }>;
     },
@@ -514,12 +512,14 @@ export function ProjectsTab() {
       return res.json();
     },
     onSuccess: (_, variables) => {
-      toast.success(variables.unarchive ? "Project restored" : "Project archived");
+      const message = variables.unarchive ? "Restored to active projects" : "Moved to Archived";
+      toast.success(message);
+      // Hard refetch to sync UI
       queryClient.invalidateQueries({ queryKey: ["admin-projects"] });
     },
     onError: (error: Error) => {
       toast.error(error.message);
-      // Refetch to sync UI state in case of stale data
+      // Hard refetch to sync UI state in case of stale data
       queryClient.invalidateQueries({ queryKey: ["admin-projects"] });
     },
   });
@@ -668,16 +668,24 @@ export function ProjectsTab() {
   // Filter projects by pipeline stage and service type
   const filteredProjects = useMemo(() => {
     return projects.filter(p => {
+      // Handle "archived" as a special filter
+      if (pipelineFilter === "archived") {
+        return p.is_archived && (serviceTypeFilter === "all" || p.service_type === serviceTypeFilter);
+      }
+      // For non-archived filters, exclude archived projects
+      if (p.is_archived) return false;
       const matchesPipeline = pipelineFilter === "all" || p.pipeline_stage === pipelineFilter;
       const matchesServiceType = serviceTypeFilter === "all" || p.service_type === serviceTypeFilter;
       return matchesPipeline && matchesServiceType;
     });
   }, [projects, pipelineFilter, serviceTypeFilter]);
 
-  // Count by pipeline stage for tab badges
+  // Count by pipeline stage for tab badges (exclude archived from stage counts)
   const stageCounts = useMemo(() => {
-    const counts: Record<string, number> = { all: projects.length };
-    projects.forEach(p => {
+    const activeProjects = projects.filter(p => !p.is_archived);
+    const archivedCount = projects.filter(p => p.is_archived).length;
+    const counts: Record<string, number> = { all: activeProjects.length, archived: archivedCount };
+    activeProjects.forEach(p => {
       const stage = p.pipeline_stage || "new";
       counts[stage] = (counts[stage] || 0) + 1;
     });
@@ -773,15 +781,6 @@ export function ProjectsTab() {
                   </Button>
                 ))}
               </div>
-              <Button
-                variant={showArchived ? "secondary" : "ghost"}
-                size="sm"
-                className="h-7 text-xs gap-1"
-                onClick={() => setShowArchived(!showArchived)}
-              >
-                <Archive className="h-3 w-3" />
-                {showArchived ? "Hide Archived" : "Show Archived"}
-              </Button>
             </div>
             
             {/* Pipeline stage tabs */}

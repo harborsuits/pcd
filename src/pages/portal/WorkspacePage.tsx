@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { getAdminKey } from "@/lib/adminFetch";
 import { supabase } from "@/integrations/supabase/client";
-import { AITrialModal } from "@/components/portal/AITrialModal";
+import { AIReceptionistSetup } from "@/components/portal/AIReceptionistSetup";
 import { SessionExpiredModal } from "@/components/portal/SessionExpiredModal";
 import { useSessionExpiry, storeAuthReturnPath } from "@/hooks/useSessionExpiry";
 
@@ -442,10 +442,30 @@ export default function WorkspacePage() {
           </div>
         </div>
 
-        {/* AI Trial Modal */}
-        <AITrialModal
+        {/* AI Receptionist Setup Wizard */}
+        <AIReceptionistSetup
           open={showAITrialModal}
           onClose={() => setShowAITrialModal(false)}
+          onComplete={async (data) => {
+            try {
+              const res = await fetch(
+                `${SUPABASE_URL}/functions/v1/portal/${token}/ai-trial`,
+                {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                    apikey: SUPABASE_ANON_KEY,
+                  },
+                  body: JSON.stringify({ action: "setup_complete", setupData: data }),
+                }
+              );
+              if (!res.ok) {
+                console.error("AI trial setup failed:", await res.text());
+              }
+            } catch (err) {
+              console.error("AI trial setup error:", err);
+            }
+          }}
           businessName={projectInfo?.businessName || "your business"}
         />
 
@@ -567,10 +587,30 @@ export default function WorkspacePage() {
         />
       </div>
 
-      {/* AI Trial Modal */}
-      <AITrialModal
+      {/* AI Receptionist Setup Wizard */}
+      <AIReceptionistSetup
         open={showAITrialModal}
         onClose={() => setShowAITrialModal(false)}
+        onComplete={async (data) => {
+          try {
+            const res = await fetch(
+              `${SUPABASE_URL}/functions/v1/portal/${token}/ai-trial`,
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  apikey: SUPABASE_ANON_KEY,
+                },
+                body: JSON.stringify({ action: "setup_complete", setupData: data }),
+              }
+            );
+            if (!res.ok) {
+              console.error("AI trial setup failed:", await res.text());
+            }
+          } catch (err) {
+            console.error("AI trial setup error:", err);
+          }
+        }}
         businessName={projectInfo?.businessName || "your business"}
       />
 

@@ -695,6 +695,30 @@ export type Database = {
           },
         ]
       }
+      project_events: {
+        Row: {
+          created_at: string
+          event_name: string
+          id: string
+          metadata: Json | null
+          project_token: string
+        }
+        Insert: {
+          created_at?: string
+          event_name: string
+          id?: string
+          metadata?: Json | null
+          project_token: string
+        }
+        Update: {
+          created_at?: string
+          event_name?: string
+          id?: string
+          metadata?: Json | null
+          project_token?: string
+        }
+        Relationships: []
+      }
       project_intakes: {
         Row: {
           created_at: string
@@ -845,6 +869,7 @@ export type Database = {
       projects: {
         Row: {
           address: string | null
+          ai_trial_status: string | null
           business_name: string
           business_slug: string
           city: string | null
@@ -877,6 +902,7 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          ai_trial_status?: string | null
           business_name: string
           business_slug: string
           city?: string | null
@@ -909,6 +935,7 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          ai_trial_status?: string | null
           business_name?: string
           business_slug?: string
           city?: string | null
