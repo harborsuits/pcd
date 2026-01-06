@@ -5,10 +5,113 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// ============================================================================
+// INPUT VALIDATION UTILITIES
+// ============================================================================
+
 // Token validation: alphanumeric + hyphens, 12-128 chars
 function isValidToken(token: string): boolean {
   return /^[a-zA-Z0-9\-_]{12,128}$/.test(token);
 }
+
+// Validate email format
+function isValidEmail(email: string): boolean {
+  // Simple but effective email regex - not too strict
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && email.length <= 255;
+}
+
+// Validate phone format (loose - just check it's reasonable)
+function isValidPhone(phone: string): boolean {
+  // Remove common formatting chars and check length
+  const cleaned = phone.replace(/[\s\-\.\(\)\+]/g, "");
+  return /^\d{7,15}$/.test(cleaned);
+}
+
+// Sanitize and limit string length
+function sanitizeString(str: string | undefined | null, maxLength: number): string {
+  if (!str || typeof str !== "string") return "";
+  return str.trim().slice(0, maxLength);
+}
+
+// Validate required fields with length limits
+interface ValidationResult {
+  valid: boolean;
+  error?: string;
+}
+
+function validateClaimInput(body: Record<string, unknown>): ValidationResult {
+  const name = body.name as string | undefined;
+  const phone = body.phone as string | undefined;
+  const email = body.email as string | undefined;
+  const notes = body.notes as string | undefined;
+
+  // At least one contact method required
+  if (!phone && !email) {
+    return { valid: false, error: "Phone or email required" };
+  }
+
+  // Validate name if provided (max 100 chars)
+  if (name && (typeof name !== "string" || name.length > 100)) {
+    return { valid: false, error: "Name must be under 100 characters" };
+  }
+
+  // Validate email format if provided
+  if (email && !isValidEmail(email)) {
+    return { valid: false, error: "Invalid email format" };
+  }
+
+  // Validate phone format if provided  
+  if (phone && !isValidPhone(phone)) {
+    return { valid: false, error: "Invalid phone format" };
+  }
+
+  // Validate notes length (max 2000 chars)
+  if (notes && (typeof notes !== "string" || notes.length > 2000)) {
+    return { valid: false, error: "Notes must be under 2000 characters" };
+  }
+
+  return { valid: true };
+}
+
+function validateQuoteInput(body: Record<string, unknown>): ValidationResult {
+  const name = body.name as string | undefined;
+  const phone = body.phone as string | undefined;
+  const email = body.email as string | undefined;
+  const service = body.service as string | undefined;
+  const message = body.message as string | undefined;
+
+  // Required fields
+  if (!name || !phone || !email) {
+    return { valid: false, error: "Name, phone, and email are required" };
+  }
+
+  // Validate lengths
+  if (typeof name !== "string" || name.length > 100) {
+    return { valid: false, error: "Name must be under 100 characters" };
+  }
+
+  if (!isValidEmail(email)) {
+    return { valid: false, error: "Invalid email format" };
+  }
+
+  if (!isValidPhone(phone)) {
+    return { valid: false, error: "Invalid phone format" };
+  }
+
+  if (service && (typeof service !== "string" || service.length > 200)) {
+    return { valid: false, error: "Service must be under 200 characters" };
+  }
+
+  if (message && (typeof message !== "string" || message.length > 2000)) {
+    return { valid: false, error: "Message must be under 2000 characters" };
+  }
+
+  return { valid: true };
+}
+
+// ============================================================================
+// UTILITY FUNCTIONS
+// ============================================================================
 
 // Generate a URL-safe token
 function generateToken(): string {
@@ -222,11 +325,12 @@ Deno.serve(async (req) => {
 async function handleClaim(req: Request): Promise<Response> {
   try {
     const body = await req.json();
-    const { project_token, name, phone, email, notes } = body;
+    const { project_token } = body;
 
-    if (!project_token || (!phone && !email)) {
+    // Validate project_token
+    if (!project_token) {
       return new Response(
-        JSON.stringify({ error: "project_token and at least phone or email required" }),
+        JSON.stringify({ error: "Project token required" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -237,6 +341,21 @@ async function handleClaim(req: Request): Promise<Response> {
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    // Validate input fields with length/format checks
+    const validation = validateClaimInput(body);
+    if (!validation.valid) {
+      return new Response(
+        JSON.stringify({ error: validation.error }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Sanitize inputs
+    const name = sanitizeString(body.name as string, 100);
+    const phone = sanitizeString(body.phone as string, 20);
+    const email = sanitizeString(body.email as string, 255);
+    const notes = sanitizeString(body.notes as string, 2000);
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -627,11 +746,11 @@ async function handleGetDemo(req: Request): Promise<Response> {
 async function handleQuoteRequest(req: Request): Promise<Response> {
   try {
     const body = await req.json();
-    const { project_token, name, phone, email, service, message } = body;
+    const { project_token } = body;
 
     if (!project_token) {
       return new Response(
-        JSON.stringify({ error: "project_token required" }),
+        JSON.stringify({ error: "Project token required" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -643,18 +762,27 @@ async function handleQuoteRequest(req: Request): Promise<Response> {
       );
     }
 
-    if (!name || !phone || !email) {
+    // Validate input fields with length/format checks
+    const validation = validateQuoteInput(body);
+    if (!validation.valid) {
       return new Response(
-        JSON.stringify({ error: "name, phone, and email are required" }),
+        JSON.stringify({ error: validation.error }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    // Sanitize inputs
+    const name = sanitizeString(body.name as string, 100);
+    const phone = sanitizeString(body.phone as string, 20);
+    const email = sanitizeString(body.email as string, 255);
+    const service = sanitizeString(body.service as string, 200);
+    const message = sanitizeString(body.message as string, 2000);
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    console.log(`Quote request for demo ${project_token} from ${name}`);
+    console.log(`Quote request for demo ${project_token.slice(0, 8)}...`);
 
     // Find the DEMO project (this is the demo they're viewing, not their prospect project)
     const { data: demoProject, error: projectError } = await supabase
