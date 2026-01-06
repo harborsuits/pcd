@@ -53,12 +53,14 @@ export function IntakeSubmittedScreen({ businessName, projectToken }: IntakeSubm
           <span className="text-foreground/80">Nothing else needed from you right now.</span>
         </p>
 
-        {/* What happens next - minimal */}
-        <div className="bg-muted/40 rounded-lg p-4 mb-6 text-left text-sm">
-          <p className="text-muted-foreground">
-            <span className="font-medium text-foreground">What happens next:</span>{" "}
-            We'll have your first preview ready within 24–48 hours. You'll get a notification when it's time to review.
-          </p>
+        {/* What happens next - clear expectations */}
+        <div className="bg-muted/40 rounded-lg p-4 mb-6 text-left text-sm space-y-2">
+          <p className="font-medium text-foreground">What happens next:</p>
+          <ul className="text-muted-foreground space-y-1.5 list-none">
+            <li>• A member of our team will finalize your setup</li>
+            <li>• You'll get a notification when your first preview is ready (usually 24–48 hours)</li>
+            <li>• You can track progress and make changes right here in your portal</li>
+          </ul>
         </div>
 
         {/* Go to portal */}

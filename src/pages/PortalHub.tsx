@@ -505,8 +505,8 @@ export default function PortalHub() {
     return (
       <>
         <SEOHead
-          title="Client Portal"
-          description="Log in to your client portal to track projects, send messages, and share files with Pleasant Cove Design."
+          title="Client Portal | Pleasant Cove Design"
+          description="Start a demo, set up your project, or access your active work — all in one place."
           path="/portal"
         />
         <ClientLayout
@@ -605,8 +605,8 @@ export default function PortalHub() {
           path="/portal"
         />
         <ClientLayout
-          title="Your Portals"
-          subtitle={`Logged in as ${user.email}`}
+          title="Your Projects"
+          subtitle={<span className="text-muted-foreground">Logged in as {user.email}</span>}
           maxWidth="2xl"
           rightSlot={
             <Button variant="ghost" size="sm" onClick={handleLogout}>
@@ -785,13 +785,13 @@ export default function PortalHub() {
   return (
     <>
       <SEOHead
-        title="Client Portal"
-        description="Log in to your client portal to track projects, send messages, and share files with Pleasant Cove Design."
+        title="Client Portal | Pleasant Cove Design"
+        description="Start a demo, set up your project, or access your active work — all in one place."
         path="/portal"
       />
       <ClientLayout
         title="Client Portal"
-        subtitle={mode === "login" ? "Log in to access your project portal" : "Create an account to get started"}
+        subtitle={<span className="text-muted-foreground">For demos, onboarding, and active clients</span>}
         maxWidth="md"
         centered
       >

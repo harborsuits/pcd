@@ -194,22 +194,9 @@ const GetDemo = () => {
               </p>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="expectations">What are you hoping we can help with?</Label>
-              <Textarea
-                id="expectations"
-                placeholder="e.g. More leads, better online presence, handling calls when I'm busy..."
-                value={formData.expectations}
-                onChange={(e) => setFormData({ ...formData, expectations: e.target.value })}
-                disabled={isLoading}
-                rows={3}
-                className="resize-none"
-              />
-            </div>
-
-            {/* Demo Type Selection */}
-            <div className="space-y-3 pt-2">
-              <Label>What would you like to see in your demo? *</Label>
+            {/* Demo Type Selection - Moved up for clarity */}
+            <div className="space-y-3 pt-2 border-t border-border mt-2">
+              <Label className="text-base font-medium">What do you need? *</Label>
               <RadioGroup
                 value={formData.demoType}
                 onValueChange={(value: DemoType) => setFormData({ 
@@ -223,21 +210,34 @@ const GetDemo = () => {
               >
                 <div className="flex items-center space-x-3 p-3 rounded-lg border border-border hover:bg-secondary/50 transition-colors cursor-pointer">
                   <RadioGroupItem value="website" id="website-demo" />
-                  <Label htmlFor="website-demo" className="cursor-pointer font-normal flex-1">A website demo</Label>
+                  <Label htmlFor="website-demo" className="cursor-pointer font-normal flex-1">A website</Label>
                 </div>
                 <div className="flex items-center space-x-3 p-3 rounded-lg border border-border hover:bg-secondary/50 transition-colors cursor-pointer">
                   <RadioGroupItem value="receptionist" id="receptionist-demo" />
-                  <Label htmlFor="receptionist-demo" className="cursor-pointer font-normal flex-1">An AI receptionist demo</Label>
+                  <Label htmlFor="receptionist-demo" className="cursor-pointer font-normal flex-1">An AI receptionist</Label>
                 </div>
                 <div className="flex items-center space-x-3 p-3 rounded-lg border border-border hover:bg-secondary/50 transition-colors cursor-pointer">
                   <RadioGroupItem value="both" id="both-demo" />
-                  <Label htmlFor="both-demo" className="cursor-pointer font-normal flex-1">Both working together</Label>
+                  <Label htmlFor="both-demo" className="cursor-pointer font-normal flex-1">Both — website + receptionist</Label>
                 </div>
                 <div className="flex items-center space-x-3 p-3 rounded-lg border border-border hover:bg-secondary/50 transition-colors cursor-pointer">
                   <RadioGroupItem value="recommend" id="recommend-demo" />
-                  <Label htmlFor="recommend-demo" className="cursor-pointer font-normal flex-1">Not sure — show me what you recommend</Label>
+                  <Label htmlFor="recommend-demo" className="cursor-pointer font-normal flex-1">Not sure — recommend something</Label>
                 </div>
               </RadioGroup>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="expectations">What are you hoping we can help with?</Label>
+              <Textarea
+                id="expectations"
+                placeholder="e.g. More leads, better online presence, handling calls when I'm busy..."
+                value={formData.expectations}
+                onChange={(e) => setFormData({ ...formData, expectations: e.target.value })}
+                disabled={isLoading}
+                rows={3}
+                className="resize-none"
+              />
             </div>
 
             {/* Conditional: Website Style */}
