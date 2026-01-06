@@ -86,9 +86,22 @@ const INVOLVEMENT_OPTIONS = [
 
 // Photo readiness options
 const PHOTO_OPTIONS = [
-  { id: "have_photos", label: "I have photos ready", description: "Will upload after submitting" },
-  { id: "need_photos", label: "I need photos taken or sourced", description: "We can help with this" },
-  { id: "generate", label: "Generate professional images for me", description: "AI-powered, industry-matched" },
+  { id: "have_photos", label: "I have photos ready to upload", description: "Portfolio, team, or workspace images" },
+  { id: "need_photos", label: "I need photos taken or sourced", description: "We can help coordinate this" },
+  { id: "generate", label: "Generate professional images for me", description: "AI-powered, industry-matched visuals" },
+];
+
+// Brand color options - allows "choose for me"
+const BRAND_COLOR_OPTIONS = [
+  { id: "have_colors", label: "I have specific colors", description: "Enter your brand colors below" },
+  { id: "choose_for_me", label: "Choose colors for me", description: "We'll pick something professional" },
+];
+
+// Logo options
+const LOGO_OPTIONS = [
+  { id: "have_logo", label: "Yes, I have a logo", description: "I'll upload it after submitting" },
+  { id: "no_logo", label: "No logo yet", description: "Use text-based branding for now" },
+  { id: "create_logo", label: "I need a logo created", description: "We can help with this" },
 ];
 
 interface IntakeData {
@@ -102,8 +115,9 @@ interface IntakeData {
   timeline: string;
   deadlineDate: string;
   involvement: string;
-  // Assets - all optional
-  hasLogo: boolean;
+  // Assets - REQUIRED for building
+  logoStatus: string;
+  brandColorChoice: string;
   brandColors: string;
   servicesList: string;
   photoReadiness: string;
@@ -126,8 +140,9 @@ export default function OnboardingWizard() {
     timeline: "",
     deadlineDate: "",
     involvement: "",
-    // Assets - all optional
-    hasLogo: false,
+    // Assets - REQUIRED
+    logoStatus: "",
+    brandColorChoice: "",
     brandColors: "",
     servicesList: "",
     photoReadiness: "",
@@ -171,7 +186,7 @@ export default function OnboardingWizard() {
   const canProceed = (): boolean => {
     switch (currentStep) {
       case 0: // Basics
-        return !!intake.businessName && !!intake.businessType && !!intake.contactEmail && !!intake.contactPhone;
+        return !!intake.businessName && !!intake.businessType && !!intake.serviceArea && !!intake.contactEmail && !!intake.contactPhone;
       case 1: // Goal
         // If they selected "sell", require sellType too
         if (intake.primaryGoal === "sell") {
@@ -185,8 +200,12 @@ export default function OnboardingWizard() {
         return !!intake.timeline;
       case 3: // Involvement/Style
         return !!intake.involvement;
-      case 4: // Assets - all optional, always can proceed
-        return true;
+      case 4: // Assets - ALL REQUIRED
+        const hasLogo = !!intake.logoStatus;
+        const hasColors = intake.brandColorChoice === "choose_for_me" || (intake.brandColorChoice === "have_colors" && !!intake.brandColors.trim());
+        const hasServices = !!intake.servicesList.trim();
+        const hasPhotos = !!intake.photoReadiness;
+        return hasLogo && hasColors && hasServices && hasPhotos;
       case 5: // Review - always can proceed
         return true;
       default:
@@ -473,12 +492,12 @@ export default function OnboardingWizard() {
           </div>
         );
 
-      // STEP 5: ASSETS (all optional)
+      // STEP 5: ASSETS (REQUIRED)
       case 4:
         return (
           <div className="space-y-6">
             <p className="text-sm text-muted-foreground">
-              These help us build faster — but everything here is optional. Skip what you don't have ready.
+              We need this info to build your site. Answer each question — it only takes a minute.
             </p>
 
             {/* Logo */}
@@ -488,19 +507,34 @@ export default function OnboardingWizard() {
                   <Upload className="h-5 w-5 text-primary" />
                 </div>
                 <div className="flex-1">
-                  <Label className="font-medium">Do you have a logo?</Label>
-                  <p className="text-sm text-muted-foreground">We can work with or without one</p>
+                  <Label className="font-medium">Do you have a logo? <span className="text-destructive">*</span></Label>
                 </div>
-                <Checkbox
-                  checked={intake.hasLogo}
-                  onCheckedChange={(checked) => setIntake(prev => ({ ...prev, hasLogo: !!checked }))}
-                />
               </div>
-              {intake.hasLogo && (
-                <p className="text-xs text-muted-foreground ml-13 pl-13">
-                  Great! You'll be able to upload it after submitting.
-                </p>
-              )}
+              <RadioGroup
+                value={intake.logoStatus}
+                onValueChange={(value) => setIntake(prev => ({ ...prev, logoStatus: value }))}
+                className="space-y-2"
+              >
+                {LOGO_OPTIONS.map((opt) => (
+                  <div 
+                    key={opt.id} 
+                    className={`flex items-center space-x-3 p-3 rounded-lg border transition-all cursor-pointer ${
+                      intake.logoStatus === opt.id 
+                        ? "border-primary bg-primary/5" 
+                        : "border-border hover:border-muted-foreground/30"
+                    }`}
+                    onClick={() => setIntake(prev => ({ ...prev, logoStatus: opt.id }))}
+                  >
+                    <RadioGroupItem value={opt.id} id={`logo-${opt.id}`} />
+                    <div className="flex-1">
+                      <Label htmlFor={`logo-${opt.id}`} className="cursor-pointer text-sm font-medium">
+                        {opt.label}
+                      </Label>
+                      <p className="text-xs text-muted-foreground">{opt.description}</p>
+                    </div>
+                  </div>
+                ))}
+              </RadioGroup>
             </div>
 
             {/* Brand Colors */}
@@ -510,15 +544,42 @@ export default function OnboardingWizard() {
                   <Palette className="h-5 w-5 text-primary" />
                 </div>
                 <div className="flex-1">
-                  <Label className="font-medium">Brand colors</Label>
-                  <p className="text-sm text-muted-foreground">Any colors you want us to use?</p>
+                  <Label className="font-medium">Brand colors <span className="text-destructive">*</span></Label>
                 </div>
               </div>
-              <Input
-                placeholder="e.g. Navy blue and gold, or #1a365d"
-                value={intake.brandColors}
-                onChange={(e) => setIntake(prev => ({ ...prev, brandColors: e.target.value }))}
-              />
+              <RadioGroup
+                value={intake.brandColorChoice}
+                onValueChange={(value) => setIntake(prev => ({ ...prev, brandColorChoice: value, brandColors: value === "choose_for_me" ? "" : prev.brandColors }))}
+                className="space-y-2"
+              >
+                {BRAND_COLOR_OPTIONS.map((opt) => (
+                  <div 
+                    key={opt.id} 
+                    className={`flex items-center space-x-3 p-3 rounded-lg border transition-all cursor-pointer ${
+                      intake.brandColorChoice === opt.id 
+                        ? "border-primary bg-primary/5" 
+                        : "border-border hover:border-muted-foreground/30"
+                    }`}
+                    onClick={() => setIntake(prev => ({ ...prev, brandColorChoice: opt.id, brandColors: opt.id === "choose_for_me" ? "" : prev.brandColors }))}
+                  >
+                    <RadioGroupItem value={opt.id} id={`color-${opt.id}`} />
+                    <div className="flex-1">
+                      <Label htmlFor={`color-${opt.id}`} className="cursor-pointer text-sm font-medium">
+                        {opt.label}
+                      </Label>
+                      <p className="text-xs text-muted-foreground">{opt.description}</p>
+                    </div>
+                  </div>
+                ))}
+              </RadioGroup>
+              {intake.brandColorChoice === "have_colors" && (
+                <Input
+                  placeholder="e.g. Navy blue and gold, or #1a365d"
+                  value={intake.brandColors}
+                  onChange={(e) => setIntake(prev => ({ ...prev, brandColors: e.target.value }))}
+                  className="mt-2"
+                />
+              )}
             </div>
 
             {/* Services List */}
@@ -528,26 +589,26 @@ export default function OnboardingWizard() {
                   <Briefcase className="h-5 w-5 text-primary" />
                 </div>
                 <div className="flex-1">
-                  <Label className="font-medium">Services or products</Label>
-                  <p className="text-sm text-muted-foreground">What do you offer?</p>
+                  <Label className="font-medium">Services or products you offer <span className="text-destructive">*</span></Label>
+                  <p className="text-sm text-muted-foreground">List everything you want featured on your site</p>
                 </div>
               </div>
               <Textarea
-                placeholder="e.g. Residential plumbing, drain cleaning, water heater installation..."
+                placeholder="e.g. Residential plumbing, drain cleaning, water heater installation, emergency repairs..."
                 value={intake.servicesList}
                 onChange={(e) => setIntake(prev => ({ ...prev, servicesList: e.target.value }))}
-                rows={3}
+                rows={4}
               />
             </div>
 
             {/* Photos */}
             <div className="p-4 rounded-lg border-2 border-border space-y-3">
-              <div className="flex items-center gap-3 mb-2">
+              <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
                   <ImageIcon className="h-5 w-5 text-primary" />
                 </div>
                 <div className="flex-1">
-                  <Label className="font-medium">Photos of your work</Label>
+                  <Label className="font-medium">Photos for your website <span className="text-destructive">*</span></Label>
                   <p className="text-sm text-muted-foreground">Portfolio, team, or workspace images</p>
                 </div>
               </div>
@@ -633,12 +694,12 @@ export default function OnboardingWizard() {
               <div className="p-4 rounded-lg bg-muted/50 space-y-2">
                 <h3 className="font-medium flex items-center gap-2">
                   <Palette className="h-4 w-4 text-primary" />
-                  Assets
+                  Assets & Brand
                 </h3>
                 <div className="text-sm space-y-1">
-                  <p><span className="text-muted-foreground">Has logo:</span> {intake.hasLogo ? "Yes" : "No"}</p>
-                  <p><span className="text-muted-foreground">Brand colors:</span> {intake.brandColors || "Not specified"}</p>
-                  <p><span className="text-muted-foreground">Services:</span> {intake.servicesList ? "Provided" : "Not specified"}</p>
+                  <p><span className="text-muted-foreground">Logo:</span> {LOGO_OPTIONS.find(l => l.id === intake.logoStatus)?.label || "Not specified"}</p>
+                  <p><span className="text-muted-foreground">Brand colors:</span> {intake.brandColorChoice === "choose_for_me" ? "Choose for me" : intake.brandColors || "Not specified"}</p>
+                  <p><span className="text-muted-foreground">Services:</span> {intake.servicesList || "Not specified"}</p>
                   <p><span className="text-muted-foreground">Photos:</span> {PHOTO_OPTIONS.find(p => p.id === intake.photoReadiness)?.label || "Not specified"}</p>
                 </div>
               </div>
