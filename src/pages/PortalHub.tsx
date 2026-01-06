@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, Lock, Mail, ArrowRight, ExternalLink, Sparkles, User as UserIcon, RefreshCw, Plus, Archive } from "lucide-react";
+import { Loader2, Lock, Mail, ArrowRight, ExternalLink, Sparkles, User as UserIcon, RefreshCw, Plus, Archive, Trash2, ChevronDown, ChevronUp } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/hooks/use-toast";
 import type { User, Session } from "@supabase/supabase-js";
@@ -19,6 +19,7 @@ const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 interface Portal {
   project_token: string;
   business_name: string;
+  deleted_at?: string | null;
 }
 
 // Extract token from URL or raw token string
@@ -60,7 +61,9 @@ export default function PortalHub() {
   const [authChecking, setAuthChecking] = useState(true);
   
   const [portals, setPortals] = useState<Portal[]>([]);
+  const [archivedPortals, setArchivedPortals] = useState<Portal[]>([]);
   const [loadingPortals, setLoadingPortals] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
   
   const [linkInput, setLinkInput] = useState("");
   const [linkError, setLinkError] = useState<string | null>(null);
@@ -110,6 +113,7 @@ export default function PortalHub() {
     
     setLoadingPortals(true);
     try {
+      // Fetch active projects
       const res = await fetch(`${SUPABASE_URL}/functions/v1/portal/my-projects`, {
         method: "GET",
         headers: {
@@ -122,10 +126,73 @@ export default function PortalHub() {
         const data = await res.json();
         setPortals(data.projects || []);
       }
+
+      // Fetch archived projects
+      const archivedRes = await fetch(`${SUPABASE_URL}/functions/v1/portal/my-projects?archived=true`, {
+        method: "GET",
+        headers: {
+          "apikey": SUPABASE_ANON_KEY,
+          "Authorization": `Bearer ${session.access_token}`,
+        },
+      });
+
+      if (archivedRes.ok) {
+        const archivedData = await archivedRes.json();
+        setArchivedPortals(archivedData.projects || []);
+      }
     } catch (err) {
       console.error("Failed to fetch portals:", err);
     } finally {
       setLoadingPortals(false);
+    }
+  };
+
+  const handleDeleteProject = async (token: string, name: string) => {
+    if (!confirm(`Permanently delete "${name}"? This cannot be undone.`)) return;
+    
+    try {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/portal/${token}/delete`, {
+        method: "DELETE",
+        headers: {
+          "apikey": SUPABASE_ANON_KEY,
+          "Authorization": `Bearer ${session?.access_token}`,
+        },
+      });
+      
+      if (res.ok) {
+        setArchivedPortals(prev => prev.filter(p => p.project_token !== token));
+        toast({ title: "Project deleted permanently" });
+      } else {
+        toast({ title: "Failed to delete", variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Failed to delete", variant: "destructive" });
+    }
+  };
+
+  const handleRestoreProject = async (token: string) => {
+    try {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/portal/${token}/restore`, {
+        method: "POST",
+        headers: {
+          "apikey": SUPABASE_ANON_KEY,
+          "Authorization": `Bearer ${session?.access_token}`,
+        },
+      });
+      
+      if (res.ok) {
+        // Move from archived to active
+        const restored = archivedPortals.find(p => p.project_token === token);
+        if (restored) {
+          setArchivedPortals(prev => prev.filter(p => p.project_token !== token));
+          setPortals(prev => [...prev, { ...restored, deleted_at: null }]);
+          toast({ title: "Project restored" });
+        }
+      } else {
+        toast({ title: "Failed to restore", variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Failed to restore", variant: "destructive" });
     }
   };
 
@@ -592,7 +659,7 @@ export default function PortalHub() {
                       variant="ghost"
                       size="sm"
                       onClick={async () => {
-                        if (!confirm(`Archive "${portal.business_name}"? It will be hidden from your list.`)) return;
+                        if (!confirm(`Archive "${portal.business_name}"? You can restore it later.`)) return;
                         try {
                           const res = await fetch(`${SUPABASE_URL}/functions/v1/portal/${portal.project_token}/archive`, {
                             method: "POST",
@@ -602,7 +669,9 @@ export default function PortalHub() {
                             },
                           });
                           if (res.ok) {
+                            // Move to archived list
                             setPortals(prev => prev.filter(p => p.project_token !== portal.project_token));
+                            setArchivedPortals(prev => [...prev, { ...portal, deleted_at: new Date().toISOString() }]);
                             toast({ title: "Project archived" });
                           } else {
                             toast({ title: "Failed to archive", variant: "destructive" });
@@ -624,6 +693,47 @@ export default function PortalHub() {
                   </div>
                 </BrandCard>
               ))}
+
+              {/* Archived section */}
+              {archivedPortals.length > 0 && (
+                <div className="mt-6">
+                  <button
+                    onClick={() => setShowArchived(!showArchived)}
+                    className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-3"
+                  >
+                    {showArchived ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                    Archived ({archivedPortals.length})
+                  </button>
+
+                  {showArchived && (
+                    <div className="space-y-3">
+                      {archivedPortals.map((portal) => (
+                        <BrandCard key={portal.project_token} variant="muted" className="flex items-center justify-between opacity-75">
+                          <h3 className="font-serif text-base text-muted-foreground">{portal.business_name}</h3>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleRestoreProject(portal.project_token)}
+                              className="text-muted-foreground hover:text-foreground"
+                            >
+                              <RefreshCw className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDeleteProject(portal.project_token, portal.business_name)}
+                              className="text-muted-foreground hover:text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </BrandCard>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </div>
