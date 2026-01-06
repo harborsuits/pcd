@@ -128,7 +128,7 @@ const Index = () => {
                 text={[
                   "With leads captured, qualified, and followed up automatically.",
                   "With missed calls turned into booked jobs.",
-                  "With websites that actually answer the phone.",
+                  "With instant replies to every call and text.",
                   "With systems that convert visitors into customers.",
                 ]}
                 speed={60}
