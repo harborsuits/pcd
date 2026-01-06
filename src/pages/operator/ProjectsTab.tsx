@@ -957,8 +957,8 @@ export function ProjectsTab() {
                       )}
                     </div>
                     
-                    {/* Actions - simplified on mobile */}
-                    <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+                    {/* Actions - simplified on mobile, handle overflow */}
+                    <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0 flex-wrap justify-end max-w-[50%] sm:max-w-none overflow-hidden">
                       {/* Archive/Unarchive button - FIRST for visibility */}
                       <Button
                         variant="outline"
