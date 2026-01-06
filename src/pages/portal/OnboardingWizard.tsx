@@ -26,7 +26,8 @@ import {
   Hand,
   Palette,
   Upload,
-  ImageIcon
+  ImageIcon,
+  Phone
 } from "lucide-react";
 import { ClientLayout } from "@/components/portal/ClientLayout";
 
@@ -41,6 +42,13 @@ const STEPS = [
   { id: "involvement", label: "Style", icon: Hand },
   { id: "assets", label: "Assets", icon: Palette },
   { id: "review", label: "Review", icon: CheckCircle2 },
+];
+
+// Service type options (website, AI receptionist, or both)
+const SERVICE_TYPES = [
+  { id: "website", label: "Website only", icon: Store, description: "A professional website for your business" },
+  { id: "ai_receptionist", label: "AI Receptionist only", icon: Phone, description: "24/7 AI that answers calls & texts" },
+  { id: "both", label: "Website + AI Receptionist", icon: Sparkles, description: "Full package: website + AI phone handling" },
 ];
 
 // Business types
@@ -105,6 +113,7 @@ const LOGO_OPTIONS = [
 ];
 
 interface IntakeData {
+  serviceType: string;
   businessName: string;
   businessType: string;
   serviceArea: string;
@@ -130,6 +139,7 @@ export default function OnboardingWizard() {
   const [authChecking, setAuthChecking] = useState(true);
   
   const [intake, setIntake] = useState<IntakeData>({
+    serviceType: "website",
     businessName: "",
     businessType: "",
     serviceArea: "",
@@ -279,6 +289,36 @@ export default function OnboardingWizard() {
       case 0:
         return (
           <div className="space-y-6">
+            {/* Service Type Selection */}
+            <div className="space-y-3">
+              <Label className="text-base">What do you need?</Label>
+              <div className="grid gap-3">
+                {SERVICE_TYPES.map((type) => {
+                  const Icon = type.icon;
+                  const isSelected = intake.serviceType === type.id;
+                  return (
+                    <button
+                      key={type.id}
+                      onClick={() => setIntake(prev => ({ ...prev, serviceType: type.id }))}
+                      className={`p-4 rounded-lg border-2 text-left transition-all flex items-center gap-4 ${
+                        isSelected 
+                          ? "border-primary bg-primary/5" 
+                          : "border-border hover:border-muted-foreground/30"
+                      }`}
+                    >
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center ${isSelected ? "bg-primary/10" : "bg-muted"}`}>
+                        <Icon className={`h-5 w-5 ${isSelected ? "text-primary" : "text-muted-foreground"}`} />
+                      </div>
+                      <div>
+                        <div className="font-medium text-sm">{type.label}</div>
+                        <div className="text-xs text-muted-foreground">{type.description}</div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="businessName">Business name</Label>
               <Input

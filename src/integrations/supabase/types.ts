@@ -932,6 +932,8 @@ export type Database = {
           source_demo_token: string | null
           state: string | null
           status: Database["public"]["Enums"]["project_status"]
+          ulio_business_id: string | null
+          ulio_setup_url: string | null
           updated_at: string
           website: string | null
           zip: string | null
@@ -965,6 +967,8 @@ export type Database = {
           source_demo_token?: string | null
           state?: string | null
           status?: Database["public"]["Enums"]["project_status"]
+          ulio_business_id?: string | null
+          ulio_setup_url?: string | null
           updated_at?: string
           website?: string | null
           zip?: string | null
@@ -998,6 +1002,8 @@ export type Database = {
           source_demo_token?: string | null
           state?: string | null
           status?: Database["public"]["Enums"]["project_status"]
+          ulio_business_id?: string | null
+          ulio_setup_url?: string | null
           updated_at?: string
           website?: string | null
           zip?: string | null

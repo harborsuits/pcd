@@ -20,7 +20,7 @@ import {
   MessageSquare, Send, Loader2, ExternalLink, Building2,
   Palette, Settings, CheckCircle, StickyNote, ListTodo, Trash2,
   Link, Plus, Eye, MessageCirclePlus, X, MessageSquareDot,
-  ChevronRight, ChevronLeft, Hammer
+  ChevronRight, ChevronLeft, Hammer, Bot, Power, AlertTriangle
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -41,6 +41,10 @@ interface Project {
   project_token: string;
   status: string;
   portal_stage?: string;
+  service_type?: string;
+  ai_trial_status?: string;
+  ulio_business_id?: string | null;
+  ulio_setup_url?: string | null;
   contact_name: string | null;
   contact_phone: string | null;
   contact_email: string | null;
@@ -54,6 +58,15 @@ interface Project {
   updated_at: string;
   intake: ProjectIntake | null;
 }
+
+const AI_STATUS_OPTIONS = [
+  { value: "inactive", label: "Inactive", color: "text-muted-foreground" },
+  { value: "setup_needed", label: "Setup Needed", color: "text-yellow-600" },
+  { value: "trial", label: "Trial", color: "text-blue-600" },
+  { value: "live", label: "Live", color: "text-green-600" },
+  { value: "paused", label: "Paused", color: "text-orange-600" },
+  { value: "canceled", label: "Canceled", color: "text-red-600" },
+];
 
 const PORTAL_STAGE_OPTIONS = [
   { value: "intake", label: "Intake" },
@@ -125,7 +138,9 @@ export function ProjectDetailDrawer({ project, open, onClose, onStatusChange }: 
   const [replyContent, setReplyContent] = useState("");
   const [newNote, setNewNote] = useState("");
   const [newChecklistItem, setNewChecklistItem] = useState("");
-  const [activeTab, setActiveTab] = useState<"intake" | "messages" | "notes" | "checklist" | "prototype">("intake");
+  const [activeTab, setActiveTab] = useState<"intake" | "messages" | "notes" | "checklist" | "prototype" | "ulio">("intake");
+  const [ulioBusinessId, setUlioBusinessId] = useState("");
+  const [ulioSetupUrl, setUlioSetupUrl] = useState("");
   const [clientTyping, setClientTyping] = useState(false);
   const [newPrototypeUrl, setNewPrototypeUrl] = useState("");
   const [newPrototypeVersion, setNewPrototypeVersion] = useState("");
@@ -355,6 +370,36 @@ export function ProjectDetailDrawer({ project, open, onClose, onStatusChange }: 
     },
     onSuccess: () => {
       toast.success("Portal stage updated");
+      queryClient.invalidateQueries({ queryKey: ["admin-projects"] });
+      onStatusChange();
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
+    },
+  });
+
+  // Update AI trial status mutation
+  const updateAiStatusMutation = useMutation({
+    mutationFn: async ({ status, ulioBusinessId, ulioSetupUrl }: { status: string; ulioBusinessId?: string; ulioSetupUrl?: string }) => {
+      if (!project) throw new Error("No project");
+      const adminKey = localStorage.getItem("admin_key") || "";
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/admin/projects/${project.project_token}/ai-status`, {
+        method: "PATCH",
+        headers: { 
+          "Content-Type": "application/json",
+          "x-admin-key": adminKey 
+        },
+        body: JSON.stringify({ 
+          ai_trial_status: status,
+          ulio_business_id: ulioBusinessId,
+          ulio_setup_url: ulioSetupUrl,
+        }),
+      });
+      if (!res.ok) throw new Error("Failed to update AI status");
+      return res.json();
+    },
+    onSuccess: () => {
+      toast.success("AI status updated");
       queryClient.invalidateQueries({ queryKey: ["admin-projects"] });
       onStatusChange();
     },
@@ -805,11 +850,27 @@ export function ProjectDetailDrawer({ project, open, onClose, onStatusChange }: 
           onValueChange={(v) => setActiveTab(v as typeof activeTab)}
           className="flex-1 flex flex-col overflow-hidden"
         >
-          <TabsList className="flex-shrink-0 w-full grid grid-cols-5">
+          <TabsList className="flex-shrink-0 w-full grid grid-cols-6">
             <TabsTrigger value="intake" className="gap-1 text-xs px-1">
               <FileText className="h-3 w-3" />
               <span className="hidden sm:inline">Intake</span>
               {project.intake && <CheckCircle className="h-2.5 w-2.5 text-green-500" />}
+            </TabsTrigger>
+            <TabsTrigger value="ulio" className="gap-1 text-xs px-1">
+              <Bot className="h-3 w-3" />
+              <span className="hidden sm:inline">AI</span>
+              {(project.service_type === "ai_receptionist" || project.service_type === "both") && (
+                <Badge 
+                  variant="secondary" 
+                  className={`text-[10px] px-1 py-0 ${
+                    project.ai_trial_status === "live" ? "bg-green-500/10 text-green-600" :
+                    project.ai_trial_status === "paused" ? "bg-orange-500/10 text-orange-600" :
+                    ""
+                  }`}
+                >
+                  {project.ai_trial_status || "–"}
+                </Badge>
+              )}
             </TabsTrigger>
             <TabsTrigger value="prototype" className="gap-1 text-xs px-1">
               <Link className="h-3 w-3" />
@@ -1458,6 +1519,120 @@ export function ProjectDetailDrawer({ project, open, onClose, onStatusChange }: 
                 )}
               </ScrollArea>
             </div>
+          </TabsContent>
+
+          {/* Ulio / AI Receptionist Tab */}
+          <TabsContent value="ulio" className="flex-1 overflow-hidden mt-4">
+            <ScrollArea className="h-full pr-4">
+              <div className="space-y-6">
+                {/* Service Type */}
+                <div className="p-4 bg-muted/50 rounded-lg">
+                  <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Service Type</div>
+                  <div className="font-medium capitalize">
+                    {project.service_type === "both" ? "Website + AI Receptionist" : 
+                     project.service_type === "ai_receptionist" ? "AI Receptionist Only" : 
+                     "Website Only"}
+                  </div>
+                </div>
+
+                {(project.service_type === "ai_receptionist" || project.service_type === "both") ? (
+                  <>
+                    {/* AI Status */}
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium flex items-center gap-2">
+                        <Bot className="h-4 w-4" />
+                        AI Status
+                      </label>
+                      <Select
+                        value={project.ai_trial_status || "inactive"}
+                        onValueChange={(v) => updateAiStatusMutation.mutate({ status: v })}
+                        disabled={updateAiStatusMutation.isPending}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {AI_STATUS_OPTIONS.map(opt => (
+                            <SelectItem key={opt.value} value={opt.value}>
+                              <span className={opt.color}>{opt.label}</span>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Kill Switch */}
+                    {(project.ai_trial_status === "live" || project.ai_trial_status === "trial") && (
+                      <Button
+                        variant="destructive"
+                        className="w-full gap-2"
+                        onClick={() => {
+                          if (confirm("Pause AI receptionist for this client?")) {
+                            updateAiStatusMutation.mutate({ status: "paused" });
+                          }
+                        }}
+                        disabled={updateAiStatusMutation.isPending}
+                      >
+                        <Power className="h-4 w-4" />
+                        Kill Switch (Pause AI)
+                      </Button>
+                    )}
+
+                    {/* Ulio Setup URL */}
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Ulio Setup URL</label>
+                      <Input
+                        placeholder="https://app.ulio.io/partner/businesses/..."
+                        defaultValue={project.ulio_setup_url || ""}
+                        onBlur={(e) => {
+                          if (e.target.value !== project.ulio_setup_url) {
+                            updateAiStatusMutation.mutate({ 
+                              status: project.ai_trial_status || "inactive",
+                              ulioSetupUrl: e.target.value 
+                            });
+                          }
+                        }}
+                      />
+                    </div>
+
+                    {/* Open Ulio Button */}
+                    {project.ulio_setup_url && (
+                      <Button
+                        variant="outline"
+                        className="w-full gap-2"
+                        onClick={() => window.open(project.ulio_setup_url!, "_blank")}
+                      >
+                        <ExternalLink className="h-4 w-4" />
+                        Open Ulio Dashboard
+                      </Button>
+                    )}
+
+                    {/* Ulio Business ID */}
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-muted-foreground">Ulio Business ID</label>
+                      <Input
+                        placeholder="UUID from Ulio"
+                        defaultValue={project.ulio_business_id || ""}
+                        onBlur={(e) => {
+                          if (e.target.value !== project.ulio_business_id) {
+                            updateAiStatusMutation.mutate({ 
+                              status: project.ai_trial_status || "inactive",
+                              ulioBusinessId: e.target.value 
+                            });
+                          }
+                        }}
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Bot className="h-10 w-10 mx-auto mb-3 opacity-50" />
+                    <p>AI Receptionist not included</p>
+                    <p className="text-sm mt-1">Client selected website only</p>
+                  </div>
+                )}
+              </div>
+            </ScrollArea>
           </TabsContent>
         </Tabs>
       </SheetContent>
