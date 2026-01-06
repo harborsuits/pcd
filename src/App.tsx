@@ -23,6 +23,7 @@ import GalleryDemo from "./pages/demos/GalleryDemo";
 import BoutiqueDemo from "./pages/demos/BoutiqueDemo";
 import BoutiqueProductPage from "./pages/demos/BoutiqueProductPage";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
+import TermsOfService from "./pages/TermsOfService";
 
 const queryClient = new QueryClient();
 
@@ -40,6 +41,7 @@ const App = () => (
           <Route path="/what-we-build" element={<WhatWeBuild />} />
           <Route path="/get-demo" element={<GetDemo />} />
           <Route path="/privacy" element={<PrivacyPolicy />} />
+          <Route path="/terms" element={<TermsOfService />} />
           <Route path="/portal" element={<PortalHub />} />
           <Route path="/portal/new" element={<OnboardingWizard />} />
           <Route path="/login" element={<PortalHub />} />
