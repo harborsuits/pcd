@@ -501,14 +501,27 @@ export function ProjectsTab() {
         ? `/admin/projects/${token}/unarchive` 
         : `/admin/projects/${token}/archive`;
       const res = await adminFetch(endpoint, { method: "POST" });
-      if (!res.ok) throw new Error("Failed to update archive status");
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        // Handle "already archived" or "not archived" gracefully
+        if (res.status === 404) {
+          throw new Error(unarchive 
+            ? "Project not found or not archived" 
+            : "Project not found or already archived");
+        }
+        throw new Error(data.error || "Failed to update archive status");
+      }
       return res.json();
     },
     onSuccess: (_, variables) => {
       toast.success(variables.unarchive ? "Project restored" : "Project archived");
       queryClient.invalidateQueries({ queryKey: ["admin-projects"] });
     },
-    onError: (error: Error) => toast.error(error.message),
+    onError: (error: Error) => {
+      toast.error(error.message);
+      // Refetch to sync UI state in case of stale data
+      queryClient.invalidateQueries({ queryKey: ["admin-projects"] });
+    },
   });
 
   // Mutation to permanently delete an archived project
