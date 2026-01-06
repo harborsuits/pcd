@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Loader2, Sparkles } from "lucide-react";
+import { ArrowLeft, ArrowRight, Loader2, Sparkles, Check, Bot, Globe, Package } from "lucide-react";
 import pcdLogo from "@/assets/pcd-logo.jpeg";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,68 +10,174 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { SEOHead } from "@/components/SEOHead";
+import { cn } from "@/lib/utils";
 
-type DemoType = "website" | "receptionist" | "both" | "recommend";
-type WebsiteStyle = "simple" | "full" | "unsure";
-type ReceptionistFocus = "answering" | "qualifying" | "everything";
+type ServiceType = "ai" | "website" | "both" | "";
+type WebsiteGoal = "calls" | "quotes" | "bookings" | "info" | "";
+type Timeline = "asap" | "2-4weeks" | "1-2months" | "unsure" | "";
+type LogoStatus = "yes" | "no" | "refresh" | "";
+type PhotoReadiness = "ready" | "some" | "none" | "";
+type Tone = "friendly" | "professional" | "direct" | "";
 
 // Map query param values to form values
-const SERVICE_PARAM_MAP: Record<string, DemoType> = {
+const SERVICE_PARAM_MAP: Record<string, ServiceType> = {
   website: "website",
-  ai_receptionist: "receptionist",
+  ai_receptionist: "ai",
   both: "both",
 };
+
+interface FormData {
+  // Basics
+  businessName: string;
+  yourName: string;
+  email: string;
+  phone: string;
+  serviceType: ServiceType;
+  
+  // Website fields
+  websiteGoal: WebsiteGoal;
+  serviceArea: string;
+  timeline: Timeline;
+  logoStatus: LogoStatus;
+  brandColors: string;
+  servicesList: string;
+  photoReadiness: PhotoReadiness;
+  
+  // AI Receptionist fields
+  businessPhone: string;
+  businessHours: string;
+  servicesOffered: string;
+  escalationNumber: string;
+  emergencyRules: string;
+  preferredTone: Tone;
+  bookingLink: string;
+  faqs: string;
+}
 
 const GetDemo = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
-  const [formData, setFormData] = useState({
+  const [currentStep, setCurrentStep] = useState(0);
+  
+  const [formData, setFormData] = useState<FormData>({
     businessName: "",
-    city: "",
+    yourName: "",
+    email: "",
     phone: "",
-    website: "",
-    occupation: "",
-    expectations: "",
-    demoType: "" as DemoType | "",
-    websiteStyle: "" as WebsiteStyle | "",
-    receptionistFocus: "" as ReceptionistFocus | "",
+    serviceType: "",
+    websiteGoal: "",
+    serviceArea: "",
+    timeline: "",
+    logoStatus: "",
+    brandColors: "",
+    servicesList: "",
+    photoReadiness: "",
+    businessPhone: "",
+    businessHours: "",
+    servicesOffered: "",
+    escalationNumber: "",
+    emergencyRules: "",
+    preferredTone: "",
+    bookingLink: "",
+    faqs: "",
   });
 
-  // Pre-select demo type from URL param
+  // Pre-select service type from URL param
   useEffect(() => {
     const serviceParam = searchParams.get("service");
     if (serviceParam && SERVICE_PARAM_MAP[serviceParam]) {
-      setFormData(prev => ({ ...prev, demoType: SERVICE_PARAM_MAP[serviceParam] }));
+      setFormData(prev => ({ ...prev, serviceType: SERVICE_PARAM_MAP[serviceParam] }));
     }
   }, [searchParams]);
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!formData.businessName.trim() || !formData.city.trim() || !formData.phone.trim() || !formData.demoType) {
-      toast({
-        title: "Missing information",
-        description: "Please enter your business name, city, phone number, and what you'd like to see.",
-        variant: "destructive",
-      });
-      return;
-    }
 
+  // Determine steps based on service type
+  const getSteps = () => {
+    const steps = [{ id: "choose", label: "Choose" }];
+    
+    if (!formData.serviceType) {
+      return steps;
+    }
+    
+    steps.push({ id: "basics", label: "Basics" });
+    
+    if (formData.serviceType === "website" || formData.serviceType === "both") {
+      steps.push({ id: "website", label: "Website" });
+      steps.push({ id: "brand", label: "Brand" });
+    }
+    
+    if (formData.serviceType === "ai" || formData.serviceType === "both") {
+      steps.push({ id: "ai", label: "AI Setup" });
+    }
+    
+    return steps;
+  };
+
+  const steps = getSteps();
+  const currentStepId = steps[currentStep]?.id;
+
+  const canProceed = () => {
+    switch (currentStepId) {
+      case "choose":
+        return !!formData.serviceType;
+      case "basics":
+        return formData.businessName.trim() && formData.email.trim() && formData.phone.trim();
+      case "website":
+        return !!formData.websiteGoal && formData.serviceArea.trim() && !!formData.timeline;
+      case "brand":
+        return !!formData.logoStatus && !!formData.photoReadiness;
+      case "ai":
+        return formData.businessPhone.trim() && formData.businessHours.trim() && 
+               formData.servicesOffered.trim() && formData.escalationNumber.trim() && 
+               formData.emergencyRules.trim() && !!formData.preferredTone;
+      default:
+        return true;
+    }
+  };
+
+  const handleNext = () => {
+    if (currentStep < steps.length - 1) {
+      setCurrentStep(currentStep + 1);
+    } else {
+      handleSubmit();
+    }
+  };
+
+  const handleBack = () => {
+    if (currentStep > 0) {
+      setCurrentStep(currentStep - 1);
+    }
+  };
+
+  const handleSubmit = async () => {
     setIsLoading(true);
 
     try {
       const { data, error } = await supabase.functions.invoke("leads/request-demo", {
         body: {
           business_name: formData.businessName.trim(),
-          city: formData.city.trim(),
-          phone: formData.phone.trim() || null,
-          website: formData.website.trim() || null,
-          occupation: formData.occupation.trim() || null,
-          expectations: formData.expectations.trim() || null,
-          demo_type: formData.demoType,
-          website_style: formData.websiteStyle || null,
-          receptionist_focus: formData.receptionistFocus || null,
+          city: formData.serviceArea.trim() || null,
+          phone: formData.phone.trim(),
+          email: formData.email.trim(),
+          your_name: formData.yourName.trim() || null,
+          service_type: formData.serviceType,
+          // Website fields
+          website_goal: formData.websiteGoal || null,
+          timeline: formData.timeline || null,
+          logo_status: formData.logoStatus || null,
+          brand_colors: formData.brandColors.trim() || null,
+          services_list: formData.servicesList.trim() || null,
+          photo_readiness: formData.photoReadiness || null,
+          // AI fields
+          business_phone: formData.businessPhone.trim() || null,
+          business_hours: formData.businessHours.trim() || null,
+          services_offered: formData.servicesOffered.trim() || null,
+          escalation_number: formData.escalationNumber.trim() || null,
+          emergency_rules: formData.emergencyRules.trim() || null,
+          preferred_tone: formData.preferredTone || null,
+          booking_link: formData.bookingLink.trim() || null,
+          faqs: formData.faqs.trim() || null,
         },
       });
 
@@ -82,13 +188,13 @@ const GetDemo = () => {
           title: "Demo ready!",
           description: "Redirecting you to your personalized demo...",
         });
-        // Navigate to the demo
         navigate(data.demo_url);
       } else {
         toast({
-          title: "Demo created",
-          description: "We'll send you a link shortly.",
+          title: getSuccessTitle(),
+          description: getSuccessDescription(),
         });
+        navigate("/");
       }
     } catch (err) {
       console.error("Demo request error:", err);
@@ -102,13 +208,453 @@ const GetDemo = () => {
     }
   };
 
+  const getSuccessTitle = () => {
+    if (formData.serviceType === "ai") return "You're set.";
+    if (formData.serviceType === "website") return "Got it.";
+    return "Perfect — we've got everything.";
+  };
+
+  const getSuccessDescription = () => {
+    if (formData.serviceType === "ai") {
+      return "We'll finalize your AI receptionist setup and follow up within 24–48 hours.";
+    }
+    if (formData.serviceType === "website") {
+      return "We'll build your first preview and notify you when it's ready (usually 24–48 hours).";
+    }
+    return "We'll start your website + AI receptionist setup and update you within 24–48 hours.";
+  };
+
+  const updateField = <K extends keyof FormData>(field: K, value: FormData[K]) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const ServiceCard = ({ 
+    value, 
+    icon: Icon, 
+    title, 
+    description, 
+    badge 
+  }: { 
+    value: ServiceType; 
+    icon: typeof Bot; 
+    title: string; 
+    description: string;
+    badge?: string;
+  }) => (
+    <button
+      type="button"
+      onClick={() => {
+        updateField("serviceType", value);
+        setCurrentStep(1);
+      }}
+      className={cn(
+        "relative p-6 rounded-xl border-2 text-left transition-all duration-200",
+        "hover:border-primary/50 hover:shadow-md",
+        formData.serviceType === value 
+          ? "border-primary bg-primary/5" 
+          : "border-border bg-card"
+      )}
+    >
+      <div className="w-12 h-12 rounded-lg bg-secondary/50 flex items-center justify-center mb-4">
+        <Icon className="w-6 h-6 text-primary" />
+      </div>
+      <h3 className="font-semibold text-lg mb-1">{title}</h3>
+      <p className="text-sm text-muted-foreground">{description}</p>
+      {badge && (
+        <span className="absolute top-4 right-4 px-2 py-1 text-xs font-medium rounded-full bg-primary/10 text-primary">
+          {badge}
+        </span>
+      )}
+    </button>
+  );
+
+  const renderChooseStep = () => (
+    <div className="space-y-6">
+      <div className="text-center mb-8">
+        <h2 className="font-serif text-2xl font-bold mb-2">What are you looking for?</h2>
+        <p className="text-muted-foreground">Choose your starting point — we'll handle the rest.</p>
+      </div>
+      
+      <div className="grid gap-4">
+        <ServiceCard
+          value="ai"
+          icon={Bot}
+          title="AI Receptionist"
+          description="Answer calls, texts & forms 24/7. Start capturing leads instantly."
+        />
+        <ServiceCard
+          value="website"
+          icon={Globe}
+          title="Website"
+          description="A fast, modern site that converts visitors into customers."
+        />
+        <ServiceCard
+          value="both"
+          icon={Package}
+          title="Full Package"
+          description="Website + AI Receptionist — the complete lead-capture system."
+          badge="Most Popular"
+        />
+      </div>
+    </div>
+  );
+
+  const renderBasicsStep = () => (
+    <div className="space-y-6">
+      <div>
+        <h2 className="font-serif text-2xl font-bold mb-2">Business basics</h2>
+        <p className="text-muted-foreground">Just enough to set things up and follow up with you.</p>
+      </div>
+      
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="businessName">Business name *</Label>
+          <Input
+            id="businessName"
+            placeholder="e.g. Smith Plumbing"
+            value={formData.businessName}
+            onChange={(e) => updateField("businessName", e.target.value)}
+            disabled={isLoading}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="yourName">Your name</Label>
+          <Input
+            id="yourName"
+            placeholder="e.g. John Smith"
+            value={formData.yourName}
+            onChange={(e) => updateField("yourName", e.target.value)}
+            disabled={isLoading}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="email">Email *</Label>
+          <Input
+            id="email"
+            type="email"
+            placeholder="john@smithplumbing.com"
+            value={formData.email}
+            onChange={(e) => updateField("email", e.target.value)}
+            disabled={isLoading}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="phone">Best phone number *</Label>
+          <Input
+            id="phone"
+            type="tel"
+            placeholder="(207) 555-1234"
+            value={formData.phone}
+            onChange={(e) => updateField("phone", e.target.value)}
+            disabled={isLoading}
+          />
+          <p className="text-xs text-muted-foreground">
+            Where we can reach you (not necessarily the number customers call)
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderWebsiteStep = () => (
+    <div className="space-y-6">
+      <div>
+        <h2 className="font-serif text-2xl font-bold mb-2">Website goals</h2>
+        <p className="text-muted-foreground">A fast, modern site that converts visitors into customers.</p>
+      </div>
+      
+      <div className="space-y-5">
+        <div className="space-y-3">
+          <Label>What do you want the site to do? *</Label>
+          <RadioGroup
+            value={formData.websiteGoal}
+            onValueChange={(v: WebsiteGoal) => updateField("websiteGoal", v)}
+            className="grid gap-2"
+            disabled={isLoading}
+          >
+            {[
+              { value: "calls", label: "Get calls" },
+              { value: "quotes", label: "Get quote requests" },
+              { value: "bookings", label: "Book appointments" },
+              { value: "info", label: "Show services" },
+            ].map((opt) => (
+              <div key={opt.value} className="flex items-center space-x-3 p-3 rounded-lg border border-border hover:bg-secondary/50 transition-colors cursor-pointer">
+                <RadioGroupItem value={opt.value} id={`goal-${opt.value}`} />
+                <Label htmlFor={`goal-${opt.value}`} className="cursor-pointer font-normal flex-1">{opt.label}</Label>
+              </div>
+            ))}
+          </RadioGroup>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="serviceArea">Where do you serve customers? *</Label>
+          <Input
+            id="serviceArea"
+            placeholder="e.g. Portland, ME and surrounding areas"
+            value={formData.serviceArea}
+            onChange={(e) => updateField("serviceArea", e.target.value)}
+            disabled={isLoading}
+          />
+          <p className="text-xs text-muted-foreground">City, county, or general area</p>
+        </div>
+
+        <div className="space-y-3">
+          <Label>Timeline / urgency *</Label>
+          <RadioGroup
+            value={formData.timeline}
+            onValueChange={(v: Timeline) => updateField("timeline", v)}
+            className="grid gap-2"
+            disabled={isLoading}
+          >
+            {[
+              { value: "asap", label: "ASAP" },
+              { value: "2-4weeks", label: "2–4 weeks" },
+              { value: "1-2months", label: "1–2 months" },
+              { value: "unsure", label: "Not sure" },
+            ].map((opt) => (
+              <div key={opt.value} className="flex items-center space-x-3 p-3 rounded-lg border border-border hover:bg-secondary/50 transition-colors cursor-pointer">
+                <RadioGroupItem value={opt.value} id={`timeline-${opt.value}`} />
+                <Label htmlFor={`timeline-${opt.value}`} className="cursor-pointer font-normal flex-1">{opt.label}</Label>
+              </div>
+            ))}
+          </RadioGroup>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderBrandStep = () => (
+    <div className="space-y-6">
+      <div>
+        <h2 className="font-serif text-2xl font-bold mb-2">Brand & content</h2>
+        <p className="text-muted-foreground">Don't stress — "I don't have it yet" is totally fine.</p>
+      </div>
+      
+      <div className="space-y-5">
+        <div className="space-y-3">
+          <Label>Do you have a logo? *</Label>
+          <RadioGroup
+            value={formData.logoStatus}
+            onValueChange={(v: LogoStatus) => updateField("logoStatus", v)}
+            className="grid gap-2"
+            disabled={isLoading}
+          >
+            {[
+              { value: "yes", label: "Yes" },
+              { value: "no", label: "No" },
+              { value: "refresh", label: "Need a refresh" },
+            ].map((opt) => (
+              <div key={opt.value} className="flex items-center space-x-3 p-3 rounded-lg border border-border hover:bg-secondary/50 transition-colors cursor-pointer">
+                <RadioGroupItem value={opt.value} id={`logo-${opt.value}`} />
+                <Label htmlFor={`logo-${opt.value}`} className="cursor-pointer font-normal flex-1">{opt.label}</Label>
+              </div>
+            ))}
+          </RadioGroup>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="brandColors">Brand colors (if you have them)</Label>
+          <Input
+            id="brandColors"
+            placeholder="e.g. Navy blue and gold, or #1a365d"
+            value={formData.brandColors}
+            onChange={(e) => updateField("brandColors", e.target.value)}
+            disabled={isLoading}
+          />
+          <p className="text-xs text-muted-foreground">Paste hex codes or describe them</p>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="servicesList">What services should be listed on the site?</Label>
+          <Textarea
+            id="servicesList"
+            placeholder="e.g. Emergency plumbing, Water heater repair, Drain cleaning..."
+            value={formData.servicesList}
+            onChange={(e) => updateField("servicesList", e.target.value)}
+            disabled={isLoading}
+            rows={3}
+            className="resize-none"
+          />
+          <p className="text-xs text-muted-foreground">Bullet list is fine</p>
+        </div>
+
+        <div className="space-y-3">
+          <Label>Photos / content readiness *</Label>
+          <RadioGroup
+            value={formData.photoReadiness}
+            onValueChange={(v: PhotoReadiness) => updateField("photoReadiness", v)}
+            className="grid gap-2"
+            disabled={isLoading}
+          >
+            {[
+              { value: "ready", label: "Ready" },
+              { value: "some", label: "Some" },
+              { value: "none", label: "None yet" },
+            ].map((opt) => (
+              <div key={opt.value} className="flex items-center space-x-3 p-3 rounded-lg border border-border hover:bg-secondary/50 transition-colors cursor-pointer">
+                <RadioGroupItem value={opt.value} id={`photo-${opt.value}`} />
+                <Label htmlFor={`photo-${opt.value}`} className="cursor-pointer font-normal flex-1">{opt.label}</Label>
+              </div>
+            ))}
+          </RadioGroup>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderAIStep = () => (
+    <div className="space-y-6">
+      <div>
+        <h2 className="font-serif text-2xl font-bold mb-2">AI Receptionist setup</h2>
+        <p className="text-muted-foreground">This is the info we use to answer calls, texts, and form leads correctly.</p>
+      </div>
+      
+      <div className="space-y-5">
+        <div className="space-y-2">
+          <Label htmlFor="businessPhone">Main business phone number *</Label>
+          <Input
+            id="businessPhone"
+            type="tel"
+            placeholder="(207) 555-1234"
+            value={formData.businessPhone}
+            onChange={(e) => updateField("businessPhone", e.target.value)}
+            disabled={isLoading}
+          />
+          <p className="text-xs text-muted-foreground">The number customers already call</p>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="businessHours">Business hours *</Label>
+          <Input
+            id="businessHours"
+            placeholder="e.g. Mon-Fri 8am-5pm, Sat 9am-12pm"
+            value={formData.businessHours}
+            onChange={(e) => updateField("businessHours", e.target.value)}
+            disabled={isLoading}
+          />
+          <p className="text-xs text-muted-foreground">When you want calls handled normally</p>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="servicesOffered">Services you offer *</Label>
+          <Textarea
+            id="servicesOffered"
+            placeholder="e.g. Emergency plumbing, Water heater repair, Drain cleaning..."
+            value={formData.servicesOffered}
+            onChange={(e) => updateField("servicesOffered", e.target.value)}
+            disabled={isLoading}
+            rows={3}
+            className="resize-none"
+          />
+          <p className="text-xs text-muted-foreground">A quick list is fine</p>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="escalationNumber">Escalation number *</Label>
+          <Input
+            id="escalationNumber"
+            type="tel"
+            placeholder="(207) 555-9999"
+            value={formData.escalationNumber}
+            onChange={(e) => updateField("escalationNumber", e.target.value)}
+            disabled={isLoading}
+          />
+          <p className="text-xs text-muted-foreground">Where emergencies / handoffs should go</p>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="emergencyRules">What counts as an emergency? *</Label>
+          <Textarea
+            id="emergencyRules"
+            placeholder="e.g. Flooding, no heat, fire, gas leak, burst pipes..."
+            value={formData.emergencyRules}
+            onChange={(e) => updateField("emergencyRules", e.target.value)}
+            disabled={isLoading}
+            rows={2}
+            className="resize-none"
+          />
+        </div>
+
+        <div className="space-y-3">
+          <Label>Preferred tone *</Label>
+          <RadioGroup
+            value={formData.preferredTone}
+            onValueChange={(v: Tone) => updateField("preferredTone", v)}
+            className="grid grid-cols-3 gap-2"
+            disabled={isLoading}
+          >
+            {[
+              { value: "friendly", label: "Friendly" },
+              { value: "professional", label: "Professional" },
+              { value: "direct", label: "Direct" },
+            ].map((opt) => (
+              <div key={opt.value} className="flex items-center space-x-2 p-3 rounded-lg border border-border hover:bg-secondary/50 transition-colors cursor-pointer">
+                <RadioGroupItem value={opt.value} id={`tone-${opt.value}`} />
+                <Label htmlFor={`tone-${opt.value}`} className="cursor-pointer font-normal text-sm">{opt.label}</Label>
+              </div>
+            ))}
+          </RadioGroup>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="bookingLink">Booking link (optional)</Label>
+          <Input
+            id="bookingLink"
+            type="url"
+            placeholder="https://calendly.com/your-business"
+            value={formData.bookingLink}
+            onChange={(e) => updateField("bookingLink", e.target.value)}
+            disabled={isLoading}
+          />
+          <p className="text-xs text-muted-foreground">Calendly, Acuity, etc.</p>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="faqs">Common questions & answers (optional)</Label>
+          <Textarea
+            id="faqs"
+            placeholder="Paste anything customers ask a lot..."
+            value={formData.faqs}
+            onChange={(e) => updateField("faqs", e.target.value)}
+            disabled={isLoading}
+            rows={3}
+            className="resize-none"
+          />
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderCurrentStep = () => {
+    switch (currentStepId) {
+      case "choose":
+        return renderChooseStep();
+      case "basics":
+        return renderBasicsStep();
+      case "website":
+        return renderWebsiteStep();
+      case "brand":
+        return renderBrandStep();
+      case "ai":
+        return renderAIStep();
+      default:
+        return renderChooseStep();
+    }
+  };
+
+  const isLastStep = currentStep === steps.length - 1;
+
   return (
     <div className="min-h-screen flex flex-col bg-page-bg text-foreground">
       <SEOHead
-        title="Get Your Demo"
+        title="Get Started"
         description="Request a personalized demo of our AI-powered websites and receptionist systems. No obligation, no spam."
         path="/get-demo"
       />
+      
       {/* Header */}
       <header className="border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-6 py-4 flex items-center justify-between">
@@ -124,211 +670,102 @@ const GetDemo = () => {
         </div>
       </header>
 
+      {/* Progress indicator */}
+      {formData.serviceType && steps.length > 1 && (
+        <div className="border-b border-border bg-card/50">
+          <div className="container mx-auto px-6 py-3">
+            <div className="flex items-center gap-2">
+              {steps.map((step, index) => (
+                <div key={step.id} className="flex items-center">
+                  <div className={cn(
+                    "flex items-center justify-center w-6 h-6 rounded-full text-xs font-medium transition-colors",
+                    index < currentStep 
+                      ? "bg-primary text-primary-foreground" 
+                      : index === currentStep 
+                        ? "bg-primary/20 text-primary border border-primary" 
+                        : "bg-muted text-muted-foreground"
+                  )}>
+                    {index < currentStep ? <Check className="w-3 h-3" /> : index + 1}
+                  </div>
+                  <span className={cn(
+                    "ml-2 text-sm hidden sm:inline",
+                    index === currentStep ? "text-foreground font-medium" : "text-muted-foreground"
+                  )}>
+                    {step.label}
+                  </span>
+                  {index < steps.length - 1 && (
+                    <div className={cn(
+                      "w-8 h-px mx-3",
+                      index < currentStep ? "bg-primary" : "bg-border"
+                    )} />
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Main content */}
-      <main className="flex-1 flex items-center justify-center py-16 px-6">
-        <div className="w-full max-w-md">
-          <div className="text-center mb-8">
-            <img src={pcdLogo} alt="Pleasant Cove Design" className="w-12 h-12 rounded-full mb-4 mx-auto" />
-            <h1 className="font-serif text-3xl md:text-4xl font-bold mb-3">
-              Get Your Demo
-            </h1>
-            <p className="text-muted-foreground leading-relaxed">
-              We'll create a personalized preview using public business information.
-              <span className="block mt-1 text-sm">No obligation. No spam.</span>
-            </p>
+      <main className="flex-1 flex items-start justify-center py-12 px-6">
+        <div className="w-full max-w-lg">
+          {currentStep === 0 && (
+            <div className="text-center mb-8">
+              <img src={pcdLogo} alt="Pleasant Cove Design" className="w-12 h-12 rounded-full mb-4 mx-auto" />
+              <h1 className="font-serif text-3xl md:text-4xl font-bold mb-3">
+                Get started
+              </h1>
+              <p className="text-muted-foreground">
+                Choose your starting point — we'll handle the rest.
+              </p>
+            </div>
+          )}
+
+          <div className="animate-in fade-in slide-in-from-right-4 duration-300">
+            {renderCurrentStep()}
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div className="space-y-2">
-              <Label htmlFor="businessName">Business Name *</Label>
-              <Input
-                id="businessName"
-                type="text"
-                placeholder="e.g. Smith Plumbing"
-                value={formData.businessName}
-                onChange={(e) => setFormData({ ...formData, businessName: e.target.value })}
+          {/* Navigation */}
+          {currentStep > 0 && (
+            <div className="flex gap-3 mt-8">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleBack}
                 disabled={isLoading}
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="occupation">What does your business do? *</Label>
-              <Input
-                id="occupation"
-                type="text"
-                placeholder="e.g. Residential plumbing, HVAC repair, Landscaping"
-                value={formData.occupation}
-                onChange={(e) => setFormData({ ...formData, occupation: e.target.value })}
-                disabled={isLoading}
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="city">City / Service Area *</Label>
-              <Input
-                id="city"
-                type="text"
-                placeholder="e.g. Portland, ME"
-                value={formData.city}
-                onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                disabled={isLoading}
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="phone">Phone Number *</Label>
-              <Input
-                id="phone"
-                type="tel"
-                placeholder="(207) 555-1234"
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                disabled={isLoading}
-                required
-              />
-              <p className="text-xs text-muted-foreground">
-                We'll only text you unless you ask for a call
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="website">Current Website</Label>
-              <Input
-                id="website"
-                type="url"
-                placeholder="https://example.com"
-                value={formData.website}
-                onChange={(e) => setFormData({ ...formData, website: e.target.value })}
-                disabled={isLoading}
-              />
-              <p className="text-xs text-muted-foreground">
-                Optional — leave blank if you don't have one
-              </p>
-            </div>
-
-            {/* Demo Type Selection - Moved up for clarity */}
-            <div className="space-y-3 pt-2 border-t border-border mt-2">
-              <Label className="text-base font-medium">What do you need? *</Label>
-              <RadioGroup
-                value={formData.demoType}
-                onValueChange={(value: DemoType) => setFormData({ 
-                  ...formData, 
-                  demoType: value,
-                  websiteStyle: "",
-                  receptionistFocus: ""
-                })}
-                className="grid gap-2"
-                disabled={isLoading}
+                className="flex-1"
               >
-                <div className="flex items-center space-x-3 p-3 rounded-lg border border-border hover:bg-secondary/50 transition-colors cursor-pointer">
-                  <RadioGroupItem value="website" id="website-demo" />
-                  <Label htmlFor="website-demo" className="cursor-pointer font-normal flex-1">A website</Label>
-                </div>
-                <div className="flex items-center space-x-3 p-3 rounded-lg border border-border hover:bg-secondary/50 transition-colors cursor-pointer">
-                  <RadioGroupItem value="receptionist" id="receptionist-demo" />
-                  <Label htmlFor="receptionist-demo" className="cursor-pointer font-normal flex-1">An AI receptionist</Label>
-                </div>
-                <div className="flex items-center space-x-3 p-3 rounded-lg border border-border hover:bg-secondary/50 transition-colors cursor-pointer">
-                  <RadioGroupItem value="both" id="both-demo" />
-                  <Label htmlFor="both-demo" className="cursor-pointer font-normal flex-1">Both — website + receptionist</Label>
-                </div>
-                <div className="flex items-center space-x-3 p-3 rounded-lg border border-border hover:bg-secondary/50 transition-colors cursor-pointer">
-                  <RadioGroupItem value="recommend" id="recommend-demo" />
-                  <Label htmlFor="recommend-demo" className="cursor-pointer font-normal flex-1">Not sure — recommend something</Label>
-                </div>
-              </RadioGroup>
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Back
+              </Button>
+              <Button
+                type="button"
+                onClick={handleNext}
+                disabled={!canProceed() || isLoading}
+                className="flex-1"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Submitting...
+                  </>
+                ) : isLastStep ? (
+                  <>
+                    <Sparkles className="mr-2 h-4 w-4" />
+                    Submit
+                  </>
+                ) : (
+                  <>
+                    Continue
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </>
+                )}
+              </Button>
             </div>
+          )}
 
-            <div className="space-y-2">
-              <Label htmlFor="expectations">What are you hoping we can help with?</Label>
-              <Textarea
-                id="expectations"
-                placeholder="e.g. More leads, better online presence, handling calls when I'm busy..."
-                value={formData.expectations}
-                onChange={(e) => setFormData({ ...formData, expectations: e.target.value })}
-                disabled={isLoading}
-                rows={3}
-                className="resize-none"
-              />
-            </div>
-
-            {/* Conditional: Website Style */}
-            {(formData.demoType === "website" || formData.demoType === "both") && (
-              <div className="space-y-3 pt-2 animate-in fade-in slide-in-from-top-2 duration-300">
-                <Label>What kind of website fits you best right now?</Label>
-                <RadioGroup
-                  value={formData.websiteStyle}
-                  onValueChange={(value: WebsiteStyle) => setFormData({ ...formData, websiteStyle: value })}
-                  className="grid gap-2"
-                  disabled={isLoading}
-                >
-                  <div className="flex items-center space-x-3 p-3 rounded-lg border border-border hover:bg-secondary/50 transition-colors cursor-pointer">
-                    <RadioGroupItem value="simple" id="simple-site" />
-                    <Label htmlFor="simple-site" className="cursor-pointer font-normal flex-1">Simple and clean</Label>
-                  </div>
-                  <div className="flex items-center space-x-3 p-3 rounded-lg border border-border hover:bg-secondary/50 transition-colors cursor-pointer">
-                    <RadioGroupItem value="full" id="full-site" />
-                    <Label htmlFor="full-site" className="cursor-pointer font-normal flex-1">Full service website</Label>
-                  </div>
-                  <div className="flex items-center space-x-3 p-3 rounded-lg border border-border hover:bg-secondary/50 transition-colors cursor-pointer">
-                    <RadioGroupItem value="unsure" id="unsure-site" />
-                    <Label htmlFor="unsure-site" className="cursor-pointer font-normal flex-1">Not sure yet</Label>
-                  </div>
-                </RadioGroup>
-              </div>
-            )}
-
-            {/* Conditional: Receptionist Focus */}
-            {(formData.demoType === "receptionist" || formData.demoType === "both") && (
-              <div className="space-y-3 pt-2 animate-in fade-in slide-in-from-top-2 duration-300">
-                <Label>What should the receptionist help with?</Label>
-                <RadioGroup
-                  value={formData.receptionistFocus}
-                  onValueChange={(value: ReceptionistFocus) => setFormData({ ...formData, receptionistFocus: value })}
-                  className="grid gap-2"
-                  disabled={isLoading}
-                >
-                  <div className="flex items-center space-x-3 p-3 rounded-lg border border-border hover:bg-secondary/50 transition-colors cursor-pointer">
-                    <RadioGroupItem value="answering" id="answering" />
-                    <Label htmlFor="answering" className="cursor-pointer font-normal flex-1">Answering calls & messages</Label>
-                  </div>
-                  <div className="flex items-center space-x-3 p-3 rounded-lg border border-border hover:bg-secondary/50 transition-colors cursor-pointer">
-                    <RadioGroupItem value="qualifying" id="qualifying" />
-                    <Label htmlFor="qualifying" className="cursor-pointer font-normal flex-1">Qualifying leads & booking</Label>
-                  </div>
-                  <div className="flex items-center space-x-3 p-3 rounded-lg border border-border hover:bg-secondary/50 transition-colors cursor-pointer">
-                    <RadioGroupItem value="everything" id="everything" />
-                    <Label htmlFor="everything" className="cursor-pointer font-normal flex-1">Handling everything automatically</Label>
-                  </div>
-                </RadioGroup>
-              </div>
-            )}
-
-            <Button
-              type="submit"
-              size="lg"
-              className="w-full"
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Creating your demo...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="mr-2 h-4 w-4" />
-                  Create My Demo
-                </>
-              )}
-            </Button>
-          </form>
-
-          <p className="text-center text-xs text-muted-foreground mt-6">
-            By submitting, you agree to receive a demo link. 
+          <p className="text-center text-xs text-muted-foreground mt-8">
+            By submitting, you agree to receive follow-up communication.
             <br />
             We won't share your info or send unwanted messages.
           </p>
