@@ -103,13 +103,13 @@ export default function PortalHub() {
 
   // Fetch user's portals when logged in
   useEffect(() => {
-    if (user && session) {
-      fetchMyPortals();
+    if (user && session?.access_token) {
+      fetchMyPortals(session.access_token);
     }
-  }, [user, session]);
+  }, [user, session?.access_token]);
 
-  const fetchMyPortals = async () => {
-    if (!session?.access_token) return;
+  const fetchMyPortals = async (accessToken: string) => {
+    if (!accessToken) return;
     
     setLoadingPortals(true);
     try {
@@ -118,13 +118,19 @@ export default function PortalHub() {
         method: "GET",
         headers: {
           "apikey": SUPABASE_ANON_KEY,
-          "Authorization": `Bearer ${session.access_token}`,
+          "Authorization": `Bearer ${accessToken}`,
         },
       });
 
       if (res.ok) {
         const data = await res.json();
         setPortals(data.projects || []);
+      } else if (res.status === 401) {
+        // Token expired or invalid - user needs to re-login
+        console.log("Session expired, clearing state");
+        setPortals([]);
+        setArchivedPortals([]);
+        return;
       }
 
       // Fetch archived projects
@@ -132,7 +138,7 @@ export default function PortalHub() {
         method: "GET",
         headers: {
           "apikey": SUPABASE_ANON_KEY,
-          "Authorization": `Bearer ${session.access_token}`,
+          "Authorization": `Bearer ${accessToken}`,
         },
       });
 
