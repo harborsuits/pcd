@@ -2,12 +2,14 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
 import rooferImage from '@/assets/demos/roofer-hero.jpeg';
+import galleryCoverVideo from '@/assets/demos/gallery-cover.mp4';
 
 interface AccordionItemData {
   id: number;
   category: string;
   title: string;
-  imageUrl: string;
+  imageUrl?: string;
+  videoUrl?: string;
   demoUrl: string;
 }
 
@@ -30,16 +32,27 @@ const AccordionItem: React.FC<AccordionItemProps> = ({ item, isActive, onMouseEn
         min-h-[400px] md:min-h-[500px]
       `}
     >
-      {/* Background Image */}
-      <img
-        src={item.imageUrl}
-        alt={item.title}
-        className="absolute inset-0 w-full h-full object-cover"
-        onError={(e) => {
-          e.currentTarget.onerror = null;
-          e.currentTarget.src = 'https://placehold.co/400x500/e8f5e9/2d5a47?text=' + item.title[0];
-        }}
-      />
+      {/* Background Image or Video */}
+      {item.videoUrl ? (
+        <video
+          src={item.videoUrl}
+          autoPlay
+          loop
+          muted
+          playsInline
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+      ) : (
+        <img
+          src={item.imageUrl}
+          alt={item.title}
+          className="absolute inset-0 w-full h-full object-cover"
+          onError={(e) => {
+            e.currentTarget.onerror = null;
+            e.currentTarget.src = 'https://placehold.co/400x500/e8f5e9/2d5a47?text=' + item.title[0];
+          }}
+        />
+      )}
       
       {/* Gradient overlay */}
       <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
@@ -101,7 +114,7 @@ const defaultItems: AccordionItemData[] = [
     id: 4,
     category: 'Art & Culture',
     title: 'Gallery',
-    imageUrl: 'https://images.unsplash.com/photo-1544967082-d9d25d867d66?w=800&auto=format&fit=crop',
+    videoUrl: galleryCoverVideo,
     demoUrl: '/demos/gallery',
   },
   {
