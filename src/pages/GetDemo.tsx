@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowLeft, Loader2, Sparkles } from "lucide-react";
 import pcdLogo from "@/assets/pcd-logo.jpeg";
 import { Button } from "@/components/ui/button";
@@ -15,8 +15,16 @@ type DemoType = "website" | "receptionist" | "both" | "recommend";
 type WebsiteStyle = "simple" | "full" | "unsure";
 type ReceptionistFocus = "answering" | "qualifying" | "everything";
 
+// Map query param values to form values
+const SERVICE_PARAM_MAP: Record<string, DemoType> = {
+  website: "website",
+  ai_receptionist: "receptionist",
+  both: "both",
+};
+
 const GetDemo = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -31,6 +39,13 @@ const GetDemo = () => {
     receptionistFocus: "" as ReceptionistFocus | "",
   });
 
+  // Pre-select demo type from URL param
+  useEffect(() => {
+    const serviceParam = searchParams.get("service");
+    if (serviceParam && SERVICE_PARAM_MAP[serviceParam]) {
+      setFormData(prev => ({ ...prev, demoType: SERVICE_PARAM_MAP[serviceParam] }));
+    }
+  }, [searchParams]);
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
