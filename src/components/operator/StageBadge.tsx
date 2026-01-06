@@ -201,6 +201,7 @@ export const PIPELINE_FILTERS = [
   { value: "revisions", label: "Revisions" },
   { value: "launch", label: "Launch" },
   { value: "live", label: "Live" },
+  { value: "archived", label: "Archived" },
 ] as const;
 
 export const SERVICE_TYPE_FILTERS = [

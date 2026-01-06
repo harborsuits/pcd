@@ -205,6 +205,13 @@ Deno.serve(async (req) => {
     return handleDeleteProject(req, token, corsHeaders);
   }
 
+  // POST /portal/:token/ai-trial - Update AI trial status and save setup data
+  const aiTrialIdx = pathParts.indexOf("ai-trial");
+  if (aiTrialIdx > portalIdx && req.method === "POST") {
+    const token = pathParts[portalIdx + 1];
+    return handleAITrialSetup(req, token, corsHeaders);
+  }
+
   if (req.method !== "GET") {
     return new Response(
       JSON.stringify({ error: "Method not allowed" }),
@@ -1357,6 +1364,13 @@ async function handleCreateProject(
       project_token: projectToken,
       event_type: "intake_submitted",
       payload: { business_name: intake.businessName, email: user.email },
+    });
+
+    // Log flow event
+    await supabase.from("project_events").insert({
+      project_token: projectToken,
+      event_name: "intake_submitted",
+      metadata: { business_name: intake.businessName, source: "onboarding" }
     });
 
     // Send auto-welcome message with actionable upload guidance
@@ -2730,6 +2744,13 @@ async function handlePhaseB(
         payload: { business_name: project.business_name },
       });
 
+      // Log flow event
+      await supabase.from("project_events").insert({
+        project_token: token,
+        event_name: "phase_b_saved",
+        metadata: { business_name: project.business_name, status: "complete" }
+      });
+
       // Send Telegram notification
       const telegramBotToken = Deno.env.get("TELEGRAM_BOT_TOKEN");
       const telegramChatId = Deno.env.get("TELEGRAM_CHAT_ID");
@@ -3072,6 +3093,94 @@ async function handleWhoami(
 
   } catch (error) {
     console.error("Whoami error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+}
+
+// POST /portal/:token/ai-trial - Update AI trial status and save setup data
+async function handleAITrialSetup(
+  req: Request,
+  token: string,
+  corsHeaders: Record<string, string>
+): Promise<Response> {
+  if (!isValidToken(token)) {
+    return new Response(
+      JSON.stringify({ error: "Invalid token" }),
+      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  try {
+    const body = await req.json();
+    const { action, setupData } = body;
+
+    // action: "accepted" | "declined" | "setup_complete"
+    if (!["accepted", "declined", "setup_complete"].includes(action)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid action" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Get project
+    const { data: project, error: projectError } = await supabase
+      .from("projects")
+      .select("id, business_name, ai_trial_status")
+      .eq("project_token", token)
+      .is("deleted_at", null)
+      .maybeSingle();
+
+    if (projectError || !project) {
+      console.error("Project not found:", projectError);
+      return new Response(
+        JSON.stringify({ error: "Project not found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Update AI trial status
+    const { error: updateError } = await supabase
+      .from("projects")
+      .update({ 
+        ai_trial_status: action === "setup_complete" ? "setup_complete" : action
+      })
+      .eq("id", project.id);
+
+    if (updateError) {
+      console.error("Update error:", updateError);
+      return new Response(
+        JSON.stringify({ error: "Failed to update" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Log the event
+    await supabase.from("project_events").insert({
+      project_token: token,
+      event_name: action === "accepted" ? "ai_trial_started" : 
+                 action === "declined" ? "ai_trial_declined" : "ai_trial_setup_complete",
+      metadata: { 
+        business_name: project.business_name,
+        setup_data: setupData || null
+      }
+    });
+
+    console.log(`AI trial ${action} for ${project.business_name}`);
+
+    return new Response(
+      JSON.stringify({ ok: true, status: action }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+
+  } catch (error) {
+    console.error("AI trial setup error:", error);
     return new Response(
       JSON.stringify({ error: "Internal server error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }

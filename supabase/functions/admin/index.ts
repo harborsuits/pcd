@@ -4697,10 +4697,17 @@ async function handleArchiveProject(req: Request, token: string): Promise<Respon
       );
     }
 
+    // Log the event
+    await supabase.from("project_events").insert({
+      project_token: token,
+      event_name: "archived",
+      metadata: { business_name: project.business_name }
+    });
+
     console.log(`Project archived: ${project.business_name}`);
 
     return new Response(
-      JSON.stringify({ ok: true, message: "Project archived" }),
+      JSON.stringify({ ok: true, message: "Moved to Archived" }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
 
@@ -4746,10 +4753,17 @@ async function handleUnarchiveProject(req: Request, token: string): Promise<Resp
       );
     }
 
+    // Log the event
+    await supabase.from("project_events").insert({
+      project_token: token,
+      event_name: "restored",
+      metadata: { business_name: project.business_name }
+    });
+
     console.log(`Project unarchived: ${project.business_name}`);
 
     return new Response(
-      JSON.stringify({ ok: true, message: "Project restored" }),
+      JSON.stringify({ ok: true, message: "Restored to active projects" }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
 
@@ -4875,6 +4889,13 @@ async function handlePermanentDeleteProject(req: Request, token: string): Promis
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    // Log the event (using a special marker since project is now gone)
+    await supabase.from("project_events").insert({
+      project_token: token,
+      event_name: "permanently_deleted",
+      metadata: { business_name: project.business_name }
+    });
 
     console.log(`Project permanently deleted: ${project.business_name}`);
 

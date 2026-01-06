@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { CheckCircle2, Phone, ArrowRight, Zap } from "lucide-react";
 import { ClientLayout } from "@/components/portal/ClientLayout";
 import { BrandCard } from "@/components/portal/BrandCard";
+import { QuickWinsChecklist } from "@/components/portal/QuickWinsChecklist";
 
 interface IntakeSubmittedScreenProps {
   businessName: string;
@@ -14,6 +15,7 @@ interface IntakeSubmittedScreenProps {
 export function IntakeSubmittedScreen({ businessName, projectToken }: IntakeSubmittedScreenProps) {
   const navigate = useNavigate();
   const [showTrialOffer, setShowTrialOffer] = useState(true);
+  const [showQuickWins, setShowQuickWins] = useState(true);
 
   const handleTryAI = () => {
     // Navigate to AI setup flow (can be enhanced later)
@@ -22,6 +24,14 @@ export function IntakeSubmittedScreen({ businessName, projectToken }: IntakeSubm
 
   const handleSkip = () => {
     setShowTrialOffer(false);
+  };
+
+  const handleQuickWinsNavigate = (path: string) => {
+    navigate(path);
+  };
+
+  const handleSkipQuickWins = () => {
+    setShowQuickWins(false);
   };
 
   return (
@@ -73,7 +83,16 @@ export function IntakeSubmittedScreen({ businessName, projectToken }: IntakeSubm
         </Button>
       </BrandCard>
 
-      {/* AI Receptionist Trial Offer */}
+      {/* Quick Wins Checklist - show after intake, before AI trial */}
+      {showQuickWins && (
+        <div className="mt-4">
+          <QuickWinsChecklist
+            projectToken={projectToken}
+            onNavigate={handleQuickWinsNavigate}
+            onSkip={handleSkipQuickWins}
+          />
+        </div>
+      )}
       {showTrialOffer && (
         <BrandCard className="mt-4">
           <div className="flex items-start gap-4">
