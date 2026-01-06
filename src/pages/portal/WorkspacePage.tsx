@@ -349,20 +349,25 @@ export default function WorkspacePage() {
 
     return (
       <div className="h-screen flex flex-col bg-background">
-        {/* Status banner */}
-        {projectInfo && (
-          <div className="border-b border-border bg-muted/30 px-4 py-3">
-            <div className="max-w-4xl mx-auto flex items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <Badge variant="outline" className={config.colorClass}>
-                  <Icon className="h-3 w-3 mr-1" />
-                  {config.label}
-                </Badge>
-                <span className="text-sm font-medium">{projectInfo.businessName}</span>
-              </div>
+        {/* Header with back navigation */}
+        <div className="border-b border-border bg-card/80 backdrop-blur-sm px-4 py-3">
+          <div className="max-w-4xl mx-auto flex items-center justify-between gap-4">
+            <Link 
+              to="/portal" 
+              className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors group"
+            >
+              <Home className="h-4 w-4 group-hover:scale-110 transition-transform" />
+              <span className="font-medium">Pleasant Cove Design</span>
+            </Link>
+            <div className="flex items-center gap-3">
+              <Badge variant="outline" className={config.colorClass}>
+                <Icon className="h-3 w-3 mr-1" />
+                {config.label}
+              </Badge>
+              <span className="text-sm font-medium">{projectInfo?.businessName}</span>
             </div>
           </div>
-        )}
+        </div>
 
         <div className="flex-1 overflow-y-auto">
           <div className="max-w-lg mx-auto px-4 py-12">
