@@ -813,7 +813,7 @@ export function ProjectsTab() {
           </div>
         ) : (
           /* List View */
-          <ScrollArea className="h-[calc(100vh-280px)]">
+          <ScrollArea className="h-[calc(100vh-320px)] min-h-[400px]">
           {isLoading ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
