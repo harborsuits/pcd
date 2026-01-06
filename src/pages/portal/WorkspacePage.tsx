@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { getAdminKey } from "@/lib/adminFetch";
 import { supabase } from "@/integrations/supabase/client";
 import { AITrialModal } from "@/components/portal/AITrialModal";
+import { SessionExpiredModal } from "@/components/portal/SessionExpiredModal";
+import { useSessionExpiry, storeAuthReturnPath } from "@/hooks/useSessionExpiry";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -128,6 +130,9 @@ export default function WorkspacePage() {
   // AI Trial modal state
   const [showAITrialModal, setShowAITrialModal] = useState(false);
 
+  // Session expiry monitoring and auth modal
+  const { showAuthModal, setShowAuthModal } = useSessionExpiry();
+
   // Server-verified operator status (NOT localStorage-based)
   const [isOperator, setIsOperator] = useState(false);
   const [operatorCheckDone, setOperatorCheckDone] = useState(false);
@@ -206,6 +211,14 @@ export default function WorkspacePage() {
       );
 
       const data = await res.json();
+      
+      // Handle 401 with requires_auth - show re-login modal
+      if (res.status === 401 && data.requires_auth) {
+        storeAuthReturnPath(`/w/${token}`);
+        setShowAuthModal(true);
+        return;
+      }
+      
       if (res.ok && data.business) {
         // Map intake_json from API to intakeData (can be the full intake object)
         const rawIntake = data.intake_json || {};
@@ -226,7 +239,7 @@ export default function WorkspacePage() {
     } catch (err) {
       console.error("Fetch project info error:", err);
     }
-  }, [token]);
+  }, [token, setShowAuthModal]);
 
   // Fetch prototypes (versions)
   const fetchVersions = useCallback(async () => {
@@ -435,6 +448,12 @@ export default function WorkspacePage() {
           onClose={() => setShowAITrialModal(false)}
           businessName={projectInfo?.businessName || "your business"}
         />
+
+        {/* Session Expired Modal */}
+        <SessionExpiredModal
+          open={showAuthModal}
+          onOpenChange={setShowAuthModal}
+        />
       </div>
     );
   }
@@ -553,6 +572,12 @@ export default function WorkspacePage() {
         open={showAITrialModal}
         onClose={() => setShowAITrialModal(false)}
         businessName={projectInfo?.businessName || "your business"}
+      />
+
+      {/* Session Expired Modal */}
+      <SessionExpiredModal
+        open={showAuthModal}
+        onOpenChange={setShowAuthModal}
       />
     </div>
   );

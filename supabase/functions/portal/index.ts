@@ -2738,6 +2738,41 @@ async function handleHelpRequest(
   }
 }
 
+// Rate limiter for whoami endpoint
+// In-memory store keyed by (IP:token_prefix) with 60-second window
+const whoamiRateLimiter = new Map<string, { count: number; resetAt: number }>();
+const WHOAMI_RATE_LIMIT = 10; // Max requests per window
+const WHOAMI_RATE_WINDOW_MS = 60_000; // 60 seconds
+
+function checkWhoamiRateLimit(ip: string, token: string): { allowed: boolean; retryAfter?: number } {
+  const key = `${ip}:${token.slice(0, 8)}`;
+  const now = Date.now();
+  
+  // Clean up expired entries occasionally (every 100 checks)
+  if (Math.random() < 0.01) {
+    for (const [k, v] of whoamiRateLimiter.entries()) {
+      if (v.resetAt < now) whoamiRateLimiter.delete(k);
+    }
+  }
+  
+  const entry = whoamiRateLimiter.get(key);
+  
+  if (!entry || entry.resetAt < now) {
+    // New window
+    whoamiRateLimiter.set(key, { count: 1, resetAt: now + WHOAMI_RATE_WINDOW_MS });
+    return { allowed: true };
+  }
+  
+  if (entry.count >= WHOAMI_RATE_LIMIT) {
+    const retryAfter = Math.ceil((entry.resetAt - now) / 1000);
+    return { allowed: false, retryAfter };
+  }
+  
+  // Increment count
+  entry.count++;
+  return { allowed: true };
+}
+
 // Handle whoami - server-side verification of operator status
 async function handleWhoami(
   req: Request,
@@ -2749,6 +2784,28 @@ async function handleWhoami(
       return new Response(
         JSON.stringify({ error: "Invalid token" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Get client IP for rate limiting
+    const clientIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() 
+      || req.headers.get("cf-connecting-ip") 
+      || "unknown";
+    
+    // Check rate limit
+    const rateCheck = checkWhoamiRateLimit(clientIp, token);
+    if (!rateCheck.allowed) {
+      console.log(`Rate limited whoami: IP=${clientIp}, token=${token.slice(0, 8)}...`);
+      return new Response(
+        JSON.stringify({ error: "rate_limited" }),
+        { 
+          status: 429, 
+          headers: { 
+            ...corsHeaders, 
+            "Content-Type": "application/json",
+            "Retry-After": String(rateCheck.retryAfter || 60),
+          } 
+        }
       );
     }
 
