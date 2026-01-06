@@ -152,7 +152,70 @@ const Index = () => {
         </div>
       </section>
 
-      {/* 2️⃣ SEE IT IN ACTION (DEMOS) - Proof */}
+      {/* 2️⃣ SERVICE CHOOSER - What do you need? */}
+      <section className="py-12 md:py-16 border-t border-border bg-card/30">
+        <div className="container mx-auto px-6">
+          <div className="text-center mb-8">
+            <h2 className="font-serif text-2xl md:text-3xl font-bold mb-2">
+              What are you looking for?
+            </h2>
+            <p className="text-muted-foreground">
+              Choose your starting point — we'll handle the rest.
+            </p>
+          </div>
+          
+          <div className="grid sm:grid-cols-3 gap-4 max-w-3xl mx-auto">
+            <Link to="/get-demo?service=ai_receptionist">
+              <GlowCard
+                customSize
+                glowColor="teal"
+                className="bg-card p-6 text-center hover:bg-card/90 transition-all cursor-pointer h-full"
+              >
+                <div className="p-3 rounded-xl bg-accent/10 w-fit mx-auto mb-4">
+                  <Bot className="h-8 w-8 text-accent" />
+                </div>
+                <h3 className="font-semibold text-lg text-foreground mb-2">AI Receptionist</h3>
+                <p className="text-sm text-muted-foreground">Answer calls, texts & forms 24/7. Start capturing leads instantly.</p>
+              </GlowCard>
+            </Link>
+            
+            <Link to="/get-demo?service=website">
+              <GlowCard
+                customSize
+                glowColor="emerald"
+                className="bg-card p-6 text-center hover:bg-card/90 transition-all cursor-pointer h-full"
+              >
+                <div className="p-3 rounded-xl bg-accent/10 w-fit mx-auto mb-4">
+                  <Globe className="h-8 w-8 text-accent" />
+                </div>
+                <h3 className="font-semibold text-lg text-foreground mb-2">Website</h3>
+                <p className="text-sm text-muted-foreground">A fast, modern site that converts visitors into customers.</p>
+              </GlowCard>
+            </Link>
+            
+            <Link to="/get-demo?service=both">
+              <GlowCard
+                customSize
+                glowColor="purple"
+                className="bg-card p-6 text-center hover:bg-card/90 transition-all cursor-pointer h-full border-2 border-accent/30"
+              >
+                <div className="p-3 rounded-xl bg-accent/10 w-fit mx-auto mb-4">
+                  <Sparkles className="h-8 w-8 text-accent" />
+                </div>
+                <h3 className="font-semibold text-lg text-foreground mb-2">Full Package</h3>
+                <p className="text-sm text-muted-foreground">Website + AI Receptionist — the complete lead-capture system.</p>
+                <span className="inline-block mt-3 text-xs bg-accent/20 text-accent px-2 py-1 rounded-full">Most Popular</span>
+              </GlowCard>
+            </Link>
+          </div>
+          
+          <p className="text-center text-sm text-muted-foreground mt-6">
+            Need something else? <Link to="/get-demo" className="text-accent hover:underline">Tell us what you're looking for →</Link>
+          </p>
+        </div>
+      </section>
+
+      {/* 3️⃣ SEE IT IN ACTION (DEMOS) - Proof */}
       <section id="demos" className="py-16 md:py-20 border-t border-border">
         <div className="container mx-auto px-6">
           <div className="text-center mb-10">
