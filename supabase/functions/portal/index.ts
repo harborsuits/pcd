@@ -191,6 +191,20 @@ Deno.serve(async (req) => {
     return handleArchiveProject(req, token, corsHeaders);
   }
 
+  // POST /portal/:token/restore - Restore an archived project
+  const restoreIdx = pathParts.indexOf("restore");
+  if (restoreIdx > portalIdx && req.method === "POST") {
+    const token = pathParts[portalIdx + 1];
+    return handleRestoreProject(req, token, corsHeaders);
+  }
+
+  // DELETE /portal/:token/delete - Permanently delete an archived project
+  const deleteIdx = pathParts.indexOf("delete");
+  if (deleteIdx > portalIdx && req.method === "DELETE") {
+    const token = pathParts[portalIdx + 1];
+    return handleDeleteProject(req, token, corsHeaders);
+  }
+
   if (req.method !== "GET") {
     return new Response(
       JSON.stringify({ error: "Method not allowed" }),
@@ -781,6 +795,7 @@ async function handleVerifyOwner(
 }
 
 // GET /portal/my-projects - Get all projects owned by the logged-in user
+// Supports ?archived=true to get archived projects instead
 async function handleMyProjects(
   req: Request,
   corsHeaders: Record<string, string>
@@ -810,13 +825,26 @@ async function handleMyProjects(
       );
     }
 
-    // Fetch all projects owned by this user
-    const { data: projects, error: fetchError } = await supabase
+    // Check if requesting archived projects
+    const url = new URL(req.url);
+    const showArchived = url.searchParams.get("archived") === "true";
+
+    // Fetch projects owned by this user
+    let query = supabase
       .from("projects")
-      .select("project_token, business_name, status")
+      .select("project_token, business_name, status, deleted_at")
       .eq("owner_user_id", user.id)
-      .is("deleted_at", null)
       .order("created_at", { ascending: false });
+
+    if (showArchived) {
+      // Get archived (soft-deleted) projects
+      query = query.not("deleted_at", "is", null);
+    } else {
+      // Get active projects
+      query = query.is("deleted_at", null);
+    }
+
+    const { data: projects, error: fetchError } = await query;
 
     if (fetchError) {
       console.error("Fetch projects error:", fetchError);
@@ -919,6 +947,203 @@ async function handleArchiveProject(
     );
   } catch (error) {
     console.error("Archive project error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+}
+
+// POST /portal/:token/restore - Restore an archived project
+async function handleRestoreProject(
+  req: Request,
+  token: string,
+  corsHeaders: Record<string, string>
+): Promise<Response> {
+  try {
+    if (!token || !isValidToken(token)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid token" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    const jwt = authHeader.replace("Bearer ", "");
+    const { data: { user }, error: authError } = await supabase.auth.getUser(jwt);
+
+    if (authError || !user) {
+      return new Response(
+        JSON.stringify({ error: "Invalid or expired token" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Check that user owns this archived project
+    const { data: project, error: projectError } = await supabase
+      .from("projects")
+      .select("id, owner_user_id")
+      .eq("project_token", token)
+      .not("deleted_at", "is", null)
+      .single();
+
+    if (projectError || !project) {
+      return new Response(
+        JSON.stringify({ error: "Archived project not found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (project.owner_user_id !== user.id) {
+      return new Response(
+        JSON.stringify({ error: "You do not own this project" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Restore the project
+    const { error: updateError } = await supabase
+      .from("projects")
+      .update({ deleted_at: null })
+      .eq("id", project.id);
+
+    if (updateError) {
+      console.error("Restore project error:", updateError);
+      return new Response(
+        JSON.stringify({ error: "Failed to restore project" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    return new Response(
+      JSON.stringify({ success: true }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  } catch (error) {
+    console.error("Restore project error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+}
+
+// DELETE /portal/:token/delete - Permanently delete an archived project
+async function handleDeleteProject(
+  req: Request,
+  token: string,
+  corsHeaders: Record<string, string>
+): Promise<Response> {
+  try {
+    if (!token || !isValidToken(token)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid token" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    const jwt = authHeader.replace("Bearer ", "");
+    const { data: { user }, error: authError } = await supabase.auth.getUser(jwt);
+
+    if (authError || !user) {
+      return new Response(
+        JSON.stringify({ error: "Invalid or expired token" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Check that user owns this archived project (only allow deleting archived projects)
+    const { data: project, error: projectError } = await supabase
+      .from("projects")
+      .select("id, owner_user_id, business_name")
+      .eq("project_token", token)
+      .not("deleted_at", "is", null)
+      .single();
+
+    if (projectError || !project) {
+      return new Response(
+        JSON.stringify({ error: "Archived project not found (projects must be archived before deletion)" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (project.owner_user_id !== user.id) {
+      return new Response(
+        JSON.stringify({ error: "You do not own this project" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log(`Permanently deleting project: ${project.business_name} (token: ${token.substring(0, 8)}...)`);
+
+    // Permanently delete the project and related data
+    // Delete in order to respect foreign key constraints
+    const projectId = project.id;
+
+    // Delete related records first
+    await supabase.from("prototype_comment_media").delete().eq("project_token", token);
+    await supabase.from("prototype_comments").delete().eq("project_token", token);
+    await supabase.from("prototypes").delete().eq("project_token", token);
+    await supabase.from("project_media").delete().eq("project_token", token);
+    await supabase.from("project_milestones").delete().eq("project_token", token);
+    await supabase.from("project_checklist_items").delete().eq("project_token", token);
+    await supabase.from("project_discovery_checklist").delete().eq("project_token", token);
+    await supabase.from("review_items").delete().eq("project_token", token);
+    await supabase.from("messages").delete().eq("project_token", token);
+    await supabase.from("files").delete().eq("project_token", token);
+    await supabase.from("payments").delete().eq("project_token", token);
+    await supabase.from("notification_events").delete().eq("project_token", token);
+    await supabase.from("outreach_events").delete().eq("project_token", token);
+    await supabase.from("operator_notes").delete().eq("project_token", token);
+    await supabase.from("admin_notes").delete().eq("project_token", token);
+    await supabase.from("milestone_notes").delete().eq("project_token", token);
+    await supabase.from("push_subscriptions").delete().eq("project_token", token);
+    await supabase.from("demos").delete().eq("project_token", token);
+    await supabase.from("project_intakes").delete().eq("project_id", projectId);
+
+    // Finally delete the project
+    const { error: deleteError } = await supabase
+      .from("projects")
+      .delete()
+      .eq("id", projectId);
+
+    if (deleteError) {
+      console.error("Delete project error:", deleteError);
+      return new Response(
+        JSON.stringify({ error: "Failed to delete project" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    return new Response(
+      JSON.stringify({ success: true }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  } catch (error) {
+    console.error("Delete project error:", error);
     return new Response(
       JSON.stringify({ error: "Internal server error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
