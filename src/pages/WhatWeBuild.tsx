@@ -10,6 +10,7 @@ import React, { useEffect, useRef, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { SEOHead } from "@/components/SEOHead";
 
 // Unified feature data - single source of truth
 type FeatureItem = {
@@ -560,6 +561,11 @@ const WhatWeBuild = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-page-bg text-foreground">
+      <SEOHead
+        title="What We Build"
+        description="Websites, AI front desk, client portals, booking systems, and automations for local businesses. See how we help owner-operated businesses grow."
+        path="/what-we-build"
+      />
       {/* Header */}
       <header className="border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-6 py-4 flex items-center justify-between">
@@ -809,12 +815,15 @@ const WhatWeBuild = () => {
             © {new Date().getFullYear()} Pleasant Cove Design
           </p>
           <div className="flex items-center gap-6 text-sm text-muted-foreground">
+            <Link to="/privacy" className="hover:text-foreground transition-colors">
+              Privacy
+            </Link>
+            <Link to="/terms" className="hover:text-foreground transition-colors">
+              Terms
+            </Link>
             <a href="mailto:hello@pleasantcove.design" className="hover:text-foreground transition-colors">
               Contact
             </a>
-            <Link to="/operator" className="hover:text-foreground transition-colors opacity-50 hover:opacity-100">
-              Operator
-            </Link>
           </div>
         </div>
       </footer>

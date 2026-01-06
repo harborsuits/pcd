@@ -13,6 +13,7 @@ import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp
 import { ClientLayout } from "@/components/portal/ClientLayout";
 import { BrandCard, BrandCardHeader, BrandCardContent } from "@/components/portal/BrandCard";
 import { FcGoogle } from "react-icons/fc";
+import { SEOHead } from "@/components/SEOHead";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -502,12 +503,18 @@ export default function PortalHub() {
   // This must come first so it doesn't get bypassed by auto-confirm sessions
   if (showOtpVerification) {
     return (
-      <ClientLayout
-        title="Verify Your Email"
-        subtitle={<>We sent a 6-digit code to <strong>{pendingSignup?.email || email}</strong></>}
-        maxWidth="md"
-        centered
-      >
+      <>
+        <SEOHead
+          title="Client Portal"
+          description="Log in to your client portal to track projects, send messages, and share files with Pleasant Cove Design."
+          path="/portal"
+        />
+        <ClientLayout
+          title="Verify Your Email"
+          subtitle={<>We sent a 6-digit code to <strong>{pendingSignup?.email || email}</strong></>}
+          maxWidth="md"
+          centered
+        >
         <BrandCard className="w-full max-w-md mx-auto">
           <div className="space-y-6">
             <div className="flex justify-center">
@@ -583,6 +590,7 @@ export default function PortalHub() {
           </div>
         </BrandCard>
       </ClientLayout>
+      </>
     );
   }
 
@@ -590,16 +598,22 @@ export default function PortalHub() {
   // Logged in - show portals
   if (user) {
     return (
-      <ClientLayout
-        title="Your Portals"
-        subtitle={`Logged in as ${user.email}`}
-        maxWidth="2xl"
-        rightSlot={
-          <Button variant="ghost" size="sm" onClick={handleLogout}>
-            Log out
-          </Button>
-        }
-      >
+      <>
+        <SEOHead
+          title="Client Portal"
+          description="Log in to your client portal to track projects, send messages, and share files with Pleasant Cove Design."
+          path="/portal"
+        />
+        <ClientLayout
+          title="Your Portals"
+          subtitle={`Logged in as ${user.email}`}
+          maxWidth="2xl"
+          rightSlot={
+            <Button variant="ghost" size="sm" onClick={handleLogout}>
+              Log out
+            </Button>
+          }
+        >
         <div className="space-y-6">
           {/* Always show "Open from link" at top */}
           <BrandCard>
@@ -763,17 +777,24 @@ export default function PortalHub() {
           )}
         </div>
       </ClientLayout>
+      </>
     );
   }
 
   // Not logged in - show login form
   return (
-    <ClientLayout
-      title="Client Portal"
-      subtitle={mode === "login" ? "Log in to access your project portal" : "Create an account to get started"}
-      maxWidth="md"
-      centered
-    >
+    <>
+      <SEOHead
+        title="Client Portal"
+        description="Log in to your client portal to track projects, send messages, and share files with Pleasant Cove Design."
+        path="/portal"
+      />
+      <ClientLayout
+        title="Client Portal"
+        subtitle={mode === "login" ? "Log in to access your project portal" : "Create an account to get started"}
+        maxWidth="md"
+        centered
+      >
       <BrandCard className="w-full max-w-md mx-auto">
         <Tabs value={mode} onValueChange={(v) => { setMode(v as "login" | "signup"); setError(null); setInfo(null); }}>
           <TabsList className="grid w-full grid-cols-2 mb-6">
@@ -1019,5 +1040,6 @@ export default function PortalHub() {
         </p>
       </BrandCard>
     </ClientLayout>
+    </>
   );
 }

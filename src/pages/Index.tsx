@@ -11,6 +11,7 @@ import HeroStatic from "@/components/HeroStatic";
 import { Footer } from "@/components/ui/footer";
 import { Typewriter } from "@/components/ui/typewriter-text";
 import pcdLogo from "@/assets/pcd-logo.jpeg";
+import { SEOHead } from "@/components/SEOHead";
 
 // Lazy load 3D component to isolate React Three Fiber from crashing the whole app
 const Hero3DModel = lazy(() => import("@/components/Hero3DModel").then(m => ({ default: m.Hero3DModel })));
@@ -96,6 +97,11 @@ const Index = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-page-bg text-foreground">
+      <SEOHead
+        title="Pleasant Cove Design — Web Design Studio"
+        description="Modern New England web design studio helping owner-operated businesses turn missed calls and inquiries into booked clients with smart, automated websites."
+        path="/"
+      />
       {/* Header */}
       <header className="border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-6 py-4 flex items-center justify-between">

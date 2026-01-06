@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { SEOHead } from "@/components/SEOHead";
 
 type DemoType = "website" | "receptionist" | "both" | "recommend";
 type WebsiteStyle = "simple" | "full" | "unsure";
@@ -88,6 +89,11 @@ const GetDemo = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-page-bg text-foreground">
+      <SEOHead
+        title="Get Your Demo"
+        description="Request a personalized demo of our AI-powered websites and receptionist systems. No obligation, no spam."
+        path="/get-demo"
+      />
       {/* Header */}
       <header className="border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-6 py-4 flex items-center justify-between">
@@ -316,8 +322,18 @@ const GetDemo = () => {
 
       {/* Footer */}
       <footer className="border-t border-border py-6">
-        <div className="container mx-auto px-6 text-center text-sm text-muted-foreground">
-          © {new Date().getFullYear()} Pleasant Cove Design
+        <div className="container mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4">
+          <p className="text-sm text-muted-foreground">
+            © {new Date().getFullYear()} Pleasant Cove Design
+          </p>
+          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+            <Link to="/privacy" className="hover:text-foreground transition-colors">
+              Privacy
+            </Link>
+            <Link to="/terms" className="hover:text-foreground transition-colors">
+              Terms
+            </Link>
+          </div>
         </div>
       </footer>
     </div>
