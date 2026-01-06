@@ -14,12 +14,34 @@ function generateCode(): string {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
-// Simple hash for the code (using Web Crypto API)
+// Proper HMAC-SHA256 for verification code hashing
 async function hashCode(code: string): Promise<string> {
+  const secret = Deno.env.get("EMAIL_VERIFICATION_SECRET");
+  if (!secret) {
+    throw new Error("EMAIL_VERIFICATION_SECRET not configured");
+  }
+  
   const encoder = new TextEncoder();
-  const data = encoder.encode(code + Deno.env.get("SUPABASE_SERVICE_ROLE_KEY"));
-  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const keyData = encoder.encode(secret);
+  
+  // Import the secret as an HMAC key
+  const key = await crypto.subtle.importKey(
+    "raw",
+    keyData,
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+  
+  // Sign the code with HMAC-SHA256
+  const signature = await crypto.subtle.sign(
+    "HMAC",
+    key,
+    encoder.encode(code)
+  );
+  
+  // Convert to hex string
+  const hashArray = Array.from(new Uint8Array(signature));
   return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
 }
 
