@@ -69,6 +69,13 @@ Deno.serve(async (req) => {
   const phaseBIdx = pathParts.indexOf("phase-b");
   const helpRequestIdx = pathParts.indexOf("help-request");
   const archiveIdx = pathParts.indexOf("archive");
+  const whoamiIdx = pathParts.indexOf("whoami");
+
+  // GET /portal/:token/whoami - Check if user is operator (server-verified)
+  if (whoamiIdx > portalIdx && req.method === "GET") {
+    const token = pathParts[portalIdx + 1];
+    return handleWhoami(req, token, corsHeaders);
+  }
   
   if (reviewIdx > portalIdx && req.method === "POST") {
     const token = pathParts[portalIdx + 1];
@@ -2724,6 +2731,65 @@ async function handleHelpRequest(
 
   } catch (error) {
     console.error("Help request error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+}
+
+// Handle whoami - server-side verification of operator status
+async function handleWhoami(
+  req: Request,
+  token: string,
+  corsHeaders: Record<string, string>
+): Promise<Response> {
+  try {
+    if (!token || !isValidToken(token)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid token" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Get admin key from header
+    const adminKey = req.headers.get("x-admin-key");
+    const expectedAdminKey = Deno.env.get("ADMIN_KEY");
+    
+    // Validate admin key if provided
+    const isOperator = !!(adminKey && expectedAdminKey && adminKey === expectedAdminKey);
+
+    // Also verify the project token is valid
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    const { data: project, error: projectError } = await supabase
+      .from("projects")
+      .select("id, business_name")
+      .eq("project_token", token)
+      .is("deleted_at", null)
+      .maybeSingle();
+
+    if (projectError || !project) {
+      return new Response(
+        JSON.stringify({ error: "Project not found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log(`Whoami check for ${token.slice(0, 8)}...: is_operator=${isOperator}`);
+
+    return new Response(
+      JSON.stringify({ 
+        is_operator: isOperator,
+        business_name: project.business_name,
+      }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+
+  } catch (error) {
+    console.error("Whoami error:", error);
     return new Response(
       JSON.stringify({ error: "Internal server error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }

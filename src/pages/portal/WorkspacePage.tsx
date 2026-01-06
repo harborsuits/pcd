@@ -128,8 +128,52 @@ export default function WorkspacePage() {
   // AI Trial modal state
   const [showAITrialModal, setShowAITrialModal] = useState(false);
 
-  // Check if user has operator access
-  const isOperator = !!getAdminKey();
+  // Server-verified operator status (NOT localStorage-based)
+  const [isOperator, setIsOperator] = useState(false);
+  const [operatorCheckDone, setOperatorCheckDone] = useState(false);
+  
+  // Server-side operator verification
+  const verifyOperatorStatus = useCallback(async () => {
+    if (!token) {
+      setOperatorCheckDone(true);
+      return;
+    }
+    
+    const adminKey = getAdminKey();
+    if (!adminKey) {
+      // No admin key in storage, definitely not an operator
+      setIsOperator(false);
+      setOperatorCheckDone(true);
+      return;
+    }
+    
+    try {
+      const res = await fetch(
+        `${SUPABASE_URL}/functions/v1/portal/${token}/whoami`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            apikey: SUPABASE_ANON_KEY,
+            "x-admin-key": adminKey,
+          },
+        }
+      );
+      
+      if (res.ok) {
+        const data = await res.json();
+        setIsOperator(data.is_operator === true);
+      } else {
+        // Invalid or unauthorized, not an operator
+        setIsOperator(false);
+      }
+    } catch (err) {
+      console.error("Operator verification failed:", err);
+      setIsOperator(false);
+    } finally {
+      setOperatorCheckDone(true);
+    }
+  }, [token]);
   
   // Handle ai_trial query param
   useEffect(() => {
@@ -249,13 +293,19 @@ export default function WorkspacePage() {
   useEffect(() => {
     const load = async () => {
       setLoading(true);
-      await Promise.all([fetchProjectInfo(), fetchVersions(), fetchComments()]);
+      await Promise.all([
+        fetchProjectInfo(), 
+        fetchVersions(), 
+        fetchComments(),
+        verifyOperatorStatus(),
+      ]);
       setLoading(false);
     };
     load();
-  }, [fetchProjectInfo, fetchVersions, fetchComments]);
+  }, [fetchProjectInfo, fetchVersions, fetchComments, verifyOperatorStatus]);
 
-  if (loading) {
+  // Wait for both loading AND operator check to complete
+  if (loading || !operatorCheckDone) {
     return (
       <div className="h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
