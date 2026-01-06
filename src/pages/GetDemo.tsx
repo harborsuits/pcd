@@ -1,18 +1,19 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, ArrowRight, Loader2, Sparkles, Check, Bot, Globe, Package } from "lucide-react";
+import { ArrowLeft, ArrowRight, Loader2, Sparkles, Check, Bot, Globe, Package, Palette, Image, Search, HelpCircle } from "lucide-react";
 import pcdLogo from "@/assets/pcd-logo.jpeg";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { SEOHead } from "@/components/SEOHead";
 import { cn } from "@/lib/utils";
 
-type ServiceType = "ai" | "website" | "both" | "";
+type ServiceType = "ai" | "website" | "both" | "other" | "";
 type WebsiteGoal = "calls" | "quotes" | "bookings" | "info" | "";
 type Timeline = "asap" | "2-4weeks" | "1-2months" | "unsure" | "";
 type LogoStatus = "yes" | "no" | "refresh" | "";
@@ -24,6 +25,7 @@ const SERVICE_PARAM_MAP: Record<string, ServiceType> = {
   website: "website",
   ai_receptionist: "ai",
   both: "both",
+  other: "other",
 };
 
 interface FormData {
@@ -52,6 +54,10 @@ interface FormData {
   preferredTone: Tone;
   bookingLink: string;
   faqs: string;
+  
+  // Other/à la carte fields
+  selectedServices: string[];
+  customRequest: string;
 }
 
 const GetDemo = () => {
@@ -82,6 +88,8 @@ const GetDemo = () => {
     preferredTone: "",
     bookingLink: "",
     faqs: "",
+    selectedServices: [],
+    customRequest: "",
   });
 
   // Pre-select service type from URL param
@@ -111,6 +119,10 @@ const GetDemo = () => {
       steps.push({ id: "ai", label: "AI Setup" });
     }
     
+    if (formData.serviceType === "other") {
+      steps.push({ id: "other", label: "Services" });
+    }
+    
     return steps;
   };
 
@@ -131,6 +143,8 @@ const GetDemo = () => {
         return formData.businessPhone.trim() && formData.businessHours.trim() && 
                formData.servicesOffered.trim() && formData.escalationNumber.trim() && 
                formData.emergencyRules.trim() && !!formData.preferredTone;
+      case "other":
+        return formData.selectedServices.length > 0 || formData.customRequest.trim().length > 0;
       default:
         return true;
     }
@@ -178,6 +192,8 @@ const GetDemo = () => {
           preferred_tone: formData.preferredTone || null,
           booking_link: formData.bookingLink.trim() || null,
           faqs: formData.faqs.trim() || null,
+          selected_services: formData.selectedServices.length > 0 ? formData.selectedServices : null,
+          custom_request: formData.customRequest.trim() || null,
         },
       });
 
@@ -211,6 +227,7 @@ const GetDemo = () => {
   const getSuccessTitle = () => {
     if (formData.serviceType === "ai") return "You're set.";
     if (formData.serviceType === "website") return "Got it.";
+    if (formData.serviceType === "other") return "Request received.";
     return "Perfect — we've got everything.";
   };
 
@@ -220,6 +237,9 @@ const GetDemo = () => {
     }
     if (formData.serviceType === "website") {
       return "We'll build your first preview and notify you when it's ready (usually 24–48 hours).";
+    }
+    if (formData.serviceType === "other") {
+      return "We'll review your request and reach out within 24–48 hours to discuss next steps.";
     }
     return "We'll start your website + AI receptionist setup and update you within 24–48 hours.";
   };
@@ -628,6 +648,89 @@ const GetDemo = () => {
     </div>
   );
 
+  const A_LA_CARTE_SERVICES = [
+    { id: "logo", label: "Logo & Branding", description: "Professional logo design or refresh", icon: Palette },
+    { id: "photos", label: "Animated Photos / Videos", description: "Motion graphics and video content", icon: Image },
+    { id: "seo", label: "SEO & Local Optimization", description: "Google rankings and local visibility", icon: Search },
+  ];
+
+  const toggleService = (serviceId: string) => {
+    setFormData(prev => ({
+      ...prev,
+      selectedServices: prev.selectedServices.includes(serviceId)
+        ? prev.selectedServices.filter(s => s !== serviceId)
+        : [...prev.selectedServices, serviceId]
+    }));
+  };
+
+  const renderOtherStep = () => (
+    <div className="space-y-6">
+      <div>
+        <h2 className="font-serif text-2xl font-bold mb-2">What do you need?</h2>
+        <p className="text-muted-foreground">Select any services you're interested in, or describe what you're looking for.</p>
+      </div>
+      
+      <div className="space-y-5">
+        <div className="space-y-3">
+          <Label>À la carte services</Label>
+          <div className="grid gap-3">
+            {A_LA_CARTE_SERVICES.map((service) => {
+              const Icon = service.icon;
+              const isSelected = formData.selectedServices.includes(service.id);
+              return (
+                <button
+                  key={service.id}
+                  type="button"
+                  onClick={() => toggleService(service.id)}
+                  className={cn(
+                    "flex items-start gap-4 p-4 rounded-xl border-2 text-left transition-all duration-200",
+                    "hover:border-primary/50 hover:shadow-md",
+                    isSelected
+                      ? "border-primary bg-primary/5"
+                      : "border-border bg-card"
+                  )}
+                >
+                  <div className={cn(
+                    "w-10 h-10 rounded-lg flex items-center justify-center shrink-0",
+                    isSelected ? "bg-primary/20" : "bg-secondary/50"
+                  )}>
+                    <Icon className={cn(
+                      "w-5 h-5",
+                      isSelected ? "text-primary" : "text-muted-foreground"
+                    )} />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">{service.label}</span>
+                      {isSelected && <Check className="w-4 h-4 text-primary" />}
+                    </div>
+                    <p className="text-sm text-muted-foreground">{service.description}</p>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="customRequest">Something specific or unique?</Label>
+          <Textarea
+            id="customRequest"
+            placeholder="Tell us about any custom needs, integrations, or ideas you have in mind..."
+            value={formData.customRequest}
+            onChange={(e) => updateField("customRequest", e.target.value)}
+            disabled={isLoading}
+            rows={4}
+            className="resize-none"
+          />
+          <p className="text-xs text-muted-foreground">
+            Examples: CRM integrations, custom booking flows, membership portals, etc.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+
   const renderCurrentStep = () => {
     switch (currentStepId) {
       case "choose":
@@ -640,6 +743,8 @@ const GetDemo = () => {
         return renderBrandStep();
       case "ai":
         return renderAIStep();
+      case "other":
+        return renderOtherStep();
       default:
         return renderChooseStep();
     }
