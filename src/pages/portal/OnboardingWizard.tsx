@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
@@ -22,21 +23,24 @@ import {
   Sparkles,
   Target,
   Timer,
-  Package,
-  Hand
+  Hand,
+  Palette,
+  Upload,
+  ImageIcon
 } from "lucide-react";
 import { ClientLayout } from "@/components/portal/ClientLayout";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
-// Lean 5-step intake
+// 6-step intake with assets integrated
 const STEPS = [
   { id: "basics", label: "Basics", icon: Building2 },
   { id: "goal", label: "Goal", icon: Target },
   { id: "timeline", label: "Timeline", icon: Timer },
-  { id: "readiness", label: "Readiness", icon: Package },
-  { id: "involvement", label: "Involvement", icon: Hand },
+  { id: "involvement", label: "Style", icon: Hand },
+  { id: "assets", label: "Assets", icon: Palette },
+  { id: "review", label: "Review", icon: CheckCircle2 },
 ];
 
 // Business types
@@ -73,19 +77,18 @@ const TIMELINE_OPTIONS = [
   { id: "deadline", label: "I have a specific deadline", description: "Event, launch, or date driving this" },
 ];
 
-// Readiness - what they have
-const READINESS_OPTIONS = [
-  { id: "ready", label: "I have everything ready", description: "Logo, photos, content" },
-  { id: "some", label: "I have some things", description: "Partial assets" },
-  { id: "need_help", label: "I need help with assets", description: "We can assist" },
-  { id: "unsure", label: "Not sure what I need", description: "We'll guide you" },
-];
-
 // Involvement preference - how hands-on
 const INVOLVEMENT_OPTIONS = [
   { id: "hands_on", label: "I want to be hands-on", description: "Involved in every decision" },
   { id: "options", label: "Give me options to choose from", description: "Curated choices" },
   { id: "handle_it", label: "Just handle it for me", description: "Trust the experts" },
+];
+
+// Photo readiness options
+const PHOTO_OPTIONS = [
+  { id: "have_photos", label: "I have photos ready", description: "Will upload after submitting" },
+  { id: "need_photos", label: "I need photos taken or sourced", description: "We can help with this" },
+  { id: "generate", label: "Generate professional images for me", description: "AI-powered, industry-matched" },
 ];
 
 interface IntakeData {
@@ -98,8 +101,12 @@ interface IntakeData {
   sellType: string;
   timeline: string;
   deadlineDate: string;
-  readiness: string;
   involvement: string;
+  // Assets - all optional
+  hasLogo: boolean;
+  brandColors: string;
+  servicesList: string;
+  photoReadiness: string;
 }
 
 export default function OnboardingWizard() {
@@ -118,8 +125,12 @@ export default function OnboardingWizard() {
     sellType: "",
     timeline: "",
     deadlineDate: "",
-    readiness: "",
     involvement: "",
+    // Assets - all optional
+    hasLogo: false,
+    brandColors: "",
+    servicesList: "",
+    photoReadiness: "",
   });
 
   // Auth guard: redirect if no session
@@ -172,10 +183,12 @@ export default function OnboardingWizard() {
           return !!intake.timeline && !!intake.deadlineDate;
         }
         return !!intake.timeline;
-      case 3: // Readiness
-        return !!intake.readiness;
-      case 4: // Involvement
+      case 3: // Involvement/Style
         return !!intake.involvement;
+      case 4: // Assets - all optional, always can proceed
+        return true;
+      case 5: // Review - always can proceed
+        return true;
       default:
         return false;
     }
@@ -424,44 +437,8 @@ export default function OnboardingWizard() {
           </div>
         );
 
-      // STEP 4: READINESS
+      // STEP 4: INVOLVEMENT/STYLE
       case 3:
-        return (
-          <div className="space-y-6">
-            <div className="space-y-3">
-              <Label className="text-base">How ready are you with assets?</Label>
-              <p className="text-sm text-muted-foreground">Logo, photos, written content, etc.</p>
-              <RadioGroup
-                value={intake.readiness}
-                onValueChange={(value) => setIntake(prev => ({ ...prev, readiness: value }))}
-                className="space-y-3"
-              >
-                {READINESS_OPTIONS.map((opt) => (
-                  <div 
-                    key={opt.id} 
-                    className={`flex items-start space-x-3 p-4 rounded-lg border-2 transition-all cursor-pointer ${
-                      intake.readiness === opt.id 
-                        ? "border-primary bg-primary/5" 
-                        : "border-border hover:border-muted-foreground/30"
-                    }`}
-                    onClick={() => setIntake(prev => ({ ...prev, readiness: opt.id }))}
-                  >
-                    <RadioGroupItem value={opt.id} id={`readiness-${opt.id}`} className="mt-0.5" />
-                    <div className="flex-1">
-                      <Label htmlFor={`readiness-${opt.id}`} className="cursor-pointer font-medium">
-                        {opt.label}
-                      </Label>
-                      <p className="text-sm text-muted-foreground mt-0.5">{opt.description}</p>
-                    </div>
-                  </div>
-                ))}
-              </RadioGroup>
-            </div>
-          </div>
-        );
-
-      // STEP 5: INVOLVEMENT
-      case 4:
         return (
           <div className="space-y-6">
             <div className="space-y-3">
@@ -492,6 +469,179 @@ export default function OnboardingWizard() {
                   </div>
                 ))}
               </RadioGroup>
+            </div>
+          </div>
+        );
+
+      // STEP 5: ASSETS (all optional)
+      case 4:
+        return (
+          <div className="space-y-6">
+            <p className="text-sm text-muted-foreground">
+              These help us build faster — but everything here is optional. Skip what you don't have ready.
+            </p>
+
+            {/* Logo */}
+            <div className="p-4 rounded-lg border-2 border-border space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Upload className="h-5 w-5 text-primary" />
+                </div>
+                <div className="flex-1">
+                  <Label className="font-medium">Do you have a logo?</Label>
+                  <p className="text-sm text-muted-foreground">We can work with or without one</p>
+                </div>
+                <Checkbox
+                  checked={intake.hasLogo}
+                  onCheckedChange={(checked) => setIntake(prev => ({ ...prev, hasLogo: !!checked }))}
+                />
+              </div>
+              {intake.hasLogo && (
+                <p className="text-xs text-muted-foreground ml-13 pl-13">
+                  Great! You'll be able to upload it after submitting.
+                </p>
+              )}
+            </div>
+
+            {/* Brand Colors */}
+            <div className="p-4 rounded-lg border-2 border-border space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Palette className="h-5 w-5 text-primary" />
+                </div>
+                <div className="flex-1">
+                  <Label className="font-medium">Brand colors</Label>
+                  <p className="text-sm text-muted-foreground">Any colors you want us to use?</p>
+                </div>
+              </div>
+              <Input
+                placeholder="e.g. Navy blue and gold, or #1a365d"
+                value={intake.brandColors}
+                onChange={(e) => setIntake(prev => ({ ...prev, brandColors: e.target.value }))}
+              />
+            </div>
+
+            {/* Services List */}
+            <div className="p-4 rounded-lg border-2 border-border space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Briefcase className="h-5 w-5 text-primary" />
+                </div>
+                <div className="flex-1">
+                  <Label className="font-medium">Services or products</Label>
+                  <p className="text-sm text-muted-foreground">What do you offer?</p>
+                </div>
+              </div>
+              <Textarea
+                placeholder="e.g. Residential plumbing, drain cleaning, water heater installation..."
+                value={intake.servicesList}
+                onChange={(e) => setIntake(prev => ({ ...prev, servicesList: e.target.value }))}
+                rows={3}
+              />
+            </div>
+
+            {/* Photos */}
+            <div className="p-4 rounded-lg border-2 border-border space-y-3">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                  <ImageIcon className="h-5 w-5 text-primary" />
+                </div>
+                <div className="flex-1">
+                  <Label className="font-medium">Photos of your work</Label>
+                  <p className="text-sm text-muted-foreground">Portfolio, team, or workspace images</p>
+                </div>
+              </div>
+              <RadioGroup
+                value={intake.photoReadiness}
+                onValueChange={(value) => setIntake(prev => ({ ...prev, photoReadiness: value }))}
+                className="space-y-2"
+              >
+                {PHOTO_OPTIONS.map((opt) => (
+                  <div 
+                    key={opt.id} 
+                    className={`flex items-center space-x-3 p-3 rounded-lg border transition-all cursor-pointer ${
+                      intake.photoReadiness === opt.id 
+                        ? "border-primary bg-primary/5" 
+                        : "border-border hover:border-muted-foreground/30"
+                    }`}
+                    onClick={() => setIntake(prev => ({ ...prev, photoReadiness: opt.id }))}
+                  >
+                    <RadioGroupItem value={opt.id} id={`photo-${opt.id}`} />
+                    <div className="flex-1">
+                      <Label htmlFor={`photo-${opt.id}`} className="cursor-pointer text-sm font-medium">
+                        {opt.label}
+                      </Label>
+                      <p className="text-xs text-muted-foreground">{opt.description}</p>
+                    </div>
+                  </div>
+                ))}
+              </RadioGroup>
+            </div>
+          </div>
+        );
+
+      // STEP 6: REVIEW
+      case 5:
+        return (
+          <div className="space-y-6">
+            <p className="text-sm text-muted-foreground">
+              Review your information below. You can go back to make changes.
+            </p>
+
+            <div className="space-y-4">
+              {/* Business Info */}
+              <div className="p-4 rounded-lg bg-muted/50 space-y-2">
+                <h3 className="font-medium flex items-center gap-2">
+                  <Building2 className="h-4 w-4 text-primary" />
+                  Business
+                </h3>
+                <div className="text-sm space-y-1">
+                  <p><span className="text-muted-foreground">Name:</span> {intake.businessName}</p>
+                  <p><span className="text-muted-foreground">Type:</span> {BUSINESS_TYPES.find(t => t.id === intake.businessType)?.label}</p>
+                  <p><span className="text-muted-foreground">Service area:</span> {intake.serviceArea || "Not specified"}</p>
+                </div>
+              </div>
+
+              {/* Contact */}
+              <div className="p-4 rounded-lg bg-muted/50 space-y-2">
+                <h3 className="font-medium">Contact</h3>
+                <div className="text-sm space-y-1">
+                  <p><span className="text-muted-foreground">Email:</span> {intake.contactEmail}</p>
+                  <p><span className="text-muted-foreground">Phone:</span> {intake.contactPhone}</p>
+                </div>
+              </div>
+
+              {/* Goals & Timeline */}
+              <div className="p-4 rounded-lg bg-muted/50 space-y-2">
+                <h3 className="font-medium flex items-center gap-2">
+                  <Target className="h-4 w-4 text-primary" />
+                  Goals
+                </h3>
+                <div className="text-sm space-y-1">
+                  <p><span className="text-muted-foreground">Main goal:</span> {PRIMARY_GOALS.find(g => g.id === intake.primaryGoal)?.label}</p>
+                  {intake.sellType && (
+                    <p><span className="text-muted-foreground">Selling:</span> {SELL_TYPE_OPTIONS.find(s => s.id === intake.sellType)?.label}</p>
+                  )}
+                  <p><span className="text-muted-foreground">Timeline:</span> {TIMELINE_OPTIONS.find(t => t.id === intake.timeline)?.label}</p>
+                  {intake.deadlineDate && (
+                    <p><span className="text-muted-foreground">Deadline:</span> {intake.deadlineDate}</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Assets */}
+              <div className="p-4 rounded-lg bg-muted/50 space-y-2">
+                <h3 className="font-medium flex items-center gap-2">
+                  <Palette className="h-4 w-4 text-primary" />
+                  Assets
+                </h3>
+                <div className="text-sm space-y-1">
+                  <p><span className="text-muted-foreground">Has logo:</span> {intake.hasLogo ? "Yes" : "No"}</p>
+                  <p><span className="text-muted-foreground">Brand colors:</span> {intake.brandColors || "Not specified"}</p>
+                  <p><span className="text-muted-foreground">Services:</span> {intake.servicesList ? "Provided" : "Not specified"}</p>
+                  <p><span className="text-muted-foreground">Photos:</span> {PHOTO_OPTIONS.find(p => p.id === intake.photoReadiness)?.label || "Not specified"}</p>
+                </div>
+              </div>
             </div>
           </div>
         );
