@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, ArrowRight, Loader2, Sparkles, Check, Bot, Globe, Package, Palette, Image, Search, HelpCircle } from "lucide-react";
+import { ArrowLeft, ArrowRight, Loader2, Sparkles, Check, Bot, Globe, Package, Palette, Image, Search, Phone, Clock, AlertTriangle, Users, MessageSquare, FileText, CheckCircle2 } from "lucide-react";
 import pcdLogo from "@/assets/pcd-logo.jpeg";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -50,36 +50,43 @@ interface FormData {
   servicesList: string;
   photoReadiness: PhotoReadiness;
   
-  // AI Receptionist fields - Basics
+  // AI Receptionist fields - Call Coverage
+  callHandling: CallHandling;
+  handoffMethod: HandoffMethod;
+  textHandling: string[];
+  
+  // AI Receptionist fields - Business Operations
   businessPhone: string;
   businessHours: string;
   servicesOffered: string;
+  serviceAreaRules: string;
+  serviceConstraints: string;
+  
+  // AI Receptionist fields - Emergencies & Escalation
   escalationNumber: string;
   emergencyRules: string;
-  preferredTone: Tone;
-  bookingLink: string;
-  faqs: string;
-  
-  // AI Receptionist fields - Handling
-  callHandling: CallHandling;
   afterHoursAction: AfterHoursAction;
-  textHandling: string[];
   
-  // AI Receptionist fields - Customer Knowledge
-  teamNames: string;
-  customerFaqs: string;
-  doNotSay: string;
-  guaranteesPolicies: string;
-  businessPersonality: string[];
-  
-  // AI Receptionist fields - Ops
+  // AI Receptionist fields - Lead & Qualification
   leadFields: string[];
   qualifiedLeadRules: string;
-  serviceConstraints: string;
-  serviceAreaRules: string;
-  pricingGuidance: PricingGuidance;
   handoffTriggers: string[];
-  handoffMethod: HandoffMethod;
+  pricingGuidance: PricingGuidance;
+  
+  // AI Receptionist fields - Voice & Personality
+  preferredTone: Tone;
+  businessPersonality: string[];
+  doNotSay: string;
+  guaranteesPolicies: string;
+  
+  // AI Receptionist fields - FAQs & Human Context
+  faqs: string;
+  customerFaqs: string;
+  teamNames: string;
+  bookingLink: string;
+  
+  // Review confirmation
+  reviewConfirmed: boolean;
   
   // Other/à la carte fields
   selectedServices: string[];
@@ -106,29 +113,30 @@ const GetDemo = () => {
     brandColors: "",
     servicesList: "",
     photoReadiness: "",
+    callHandling: "",
+    handoffMethod: "",
+    textHandling: [],
     businessPhone: "",
     businessHours: "",
     servicesOffered: "",
+    serviceAreaRules: "",
+    serviceConstraints: "",
     escalationNumber: "",
     emergencyRules: "",
-    preferredTone: "",
-    bookingLink: "",
-    faqs: "",
-    callHandling: "",
     afterHoursAction: "",
-    textHandling: [],
-    teamNames: "",
-    customerFaqs: "",
-    doNotSay: "",
-    guaranteesPolicies: "",
-    businessPersonality: [],
     leadFields: [],
     qualifiedLeadRules: "",
-    serviceConstraints: "",
-    serviceAreaRules: "",
-    pricingGuidance: "",
     handoffTriggers: [],
-    handoffMethod: "",
+    pricingGuidance: "",
+    preferredTone: "",
+    businessPersonality: [],
+    doNotSay: "",
+    guaranteesPolicies: "",
+    faqs: "",
+    customerFaqs: "",
+    teamNames: "",
+    bookingLink: "",
+    reviewConfirmed: false,
     selectedServices: [],
     customRequest: "",
   });
@@ -145,7 +153,13 @@ const GetDemo = () => {
     }
   }, [searchParams]);
 
-  // Determine steps based on service type
+  // Check if we should show emergency step (based on call handling selection)
+  const shouldShowEmergencyStep = () => {
+    // Show if AI answers calls (not just overflow) OR if after-hours includes emergency escalation
+    return formData.callHandling !== "overflow";
+  };
+
+  // Determine steps based on service type - OPTIMIZED ORDER FOR AI
   const getSteps = () => {
     const steps: { id: string; label: string }[] = [];
     
@@ -172,10 +186,25 @@ const GetDemo = () => {
     }
     
     if (formData.serviceType === "ai" || formData.serviceType === "both") {
-      steps.push({ id: "ai-basics", label: "AI Basics" });
-      steps.push({ id: "ai-knowledge", label: "Customer Info" });
-      steps.push({ id: "ai-handling", label: "Call Handling" });
-      steps.push({ id: "ai-ops", label: "Operations" });
+      // NEW OPTIMIZED ORDER:
+      // 1. Framing (sets expectations)
+      steps.push({ id: "ai-framing", label: "Overview" });
+      // 2. Call Coverage (core mental model)
+      steps.push({ id: "ai-coverage", label: "Call Coverage" });
+      // 3. Business Operations (concrete, familiar)
+      steps.push({ id: "ai-operations", label: "Operations" });
+      // 4. Emergencies & Escalation (conditional)
+      if (shouldShowEmergencyStep()) {
+        steps.push({ id: "ai-emergency", label: "Emergencies" });
+      }
+      // 5. Lead & Qualification (where AI becomes useful)
+      steps.push({ id: "ai-leads", label: "Leads" });
+      // 6. AI Voice & Personality (after logic is clear)
+      steps.push({ id: "ai-voice", label: "Voice" });
+      // 7. FAQs & Human Context (optional depth)
+      steps.push({ id: "ai-context", label: "Context" });
+      // 8. Review & Confirmation (required)
+      steps.push({ id: "ai-review", label: "Review" });
     }
     
     if (formData.serviceType === "other") {
@@ -198,16 +227,23 @@ const GetDemo = () => {
         return !!formData.websiteGoal && formData.serviceArea.trim() && !!formData.timeline;
       case "brand":
         return !!formData.logoStatus && !!formData.photoReadiness;
-      case "ai-basics":
-        return formData.businessPhone.trim() && formData.businessHours.trim() && 
-               formData.servicesOffered.trim() && formData.escalationNumber.trim() && 
-               formData.emergencyRules.trim() && !!formData.preferredTone;
-      case "ai-knowledge":
-        return true; // All fields optional on this step
-      case "ai-handling":
-        return !!formData.callHandling && !!formData.afterHoursAction;
-      case "ai-ops":
-        return formData.leadFields.length > 0 && !!formData.handoffMethod;
+      // AI Steps - new order
+      case "ai-framing":
+        return true; // Just context, always can proceed
+      case "ai-coverage":
+        return !!formData.callHandling && !!formData.handoffMethod;
+      case "ai-operations":
+        return formData.businessPhone.trim() && formData.businessHours.trim() && formData.servicesOffered.trim();
+      case "ai-emergency":
+        return formData.escalationNumber.trim() && formData.emergencyRules.trim();
+      case "ai-leads":
+        return formData.leadFields.length > 0;
+      case "ai-voice":
+        return !!formData.preferredTone;
+      case "ai-context":
+        return true; // All optional
+      case "ai-review":
+        return formData.reviewConfirmed;
       case "other":
         return formData.selectedServices.length > 0 || formData.customRequest.trim().length > 0;
       default:
@@ -231,6 +267,12 @@ const GetDemo = () => {
     }
   };
 
+  // Map frontend service types to database-compatible values
+  const mapServiceType = (type: ServiceType): string => {
+    if (type === "ai") return "ai_receptionist";
+    return type;
+  };
+
   const handleSubmit = async () => {
     setIsLoading(true);
 
@@ -242,7 +284,7 @@ const GetDemo = () => {
           phone: formData.phone.trim(),
           email: formData.email.trim(),
           your_name: formData.yourName.trim() || null,
-          service_type: formData.serviceType,
+          service_type: mapServiceType(formData.serviceType),
           // Website fields
           website_goal: formData.websiteGoal || null,
           timeline: formData.timeline || null,
@@ -376,6 +418,16 @@ const GetDemo = () => {
       )}
     </button>
   );
+
+  // Helper to toggle array field values
+  const toggleArrayField = (field: "textHandling" | "leadFields" | "handoffTriggers" | "businessPersonality", value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: (prev[field] as string[]).includes(value)
+        ? (prev[field] as string[]).filter((v: string) => v !== value)
+        : [...(prev[field] as string[]), value]
+    }));
+  };
 
   const renderChooseStep = () => (
     <div className="space-y-6">
@@ -626,21 +678,140 @@ const GetDemo = () => {
     </div>
   );
 
-  // Helper to toggle array field values
-  const toggleArrayField = (field: "textHandling" | "leadFields" | "handoffTriggers" | "businessPersonality", value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: (prev[field] as string[]).includes(value)
-        ? (prev[field] as string[]).filter((v: string) => v !== value)
-        : [...(prev[field] as string[]), value]
-    }));
-  };
+  // =====================================================
+  // AI RECEPTIONIST STEPS - NEW OPTIMIZED ORDER
+  // =====================================================
 
-  const renderAIBasicsStep = () => (
+  // Step 0: Framing (NEW - sets expectations, ~10 seconds)
+  const renderAIFramingStep = () => (
+    <div className="space-y-6">
+      <div className="text-center">
+        <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-6">
+          <Bot className="w-8 h-8 text-primary" />
+        </div>
+        <h2 className="font-serif text-2xl font-bold mb-3">Let's set up your AI receptionist</h2>
+        <p className="text-muted-foreground max-w-md mx-auto">
+          We'll walk through how your AI handles calls, emergencies, and leads. 
+          Takes about 5 minutes — and you can change anything later.
+        </p>
+      </div>
+      
+      <div className="bg-secondary/30 rounded-xl p-6 space-y-4">
+        <h3 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">What we'll cover:</h3>
+        <div className="grid gap-3">
+          {[
+            { icon: Phone, label: "When & how AI answers calls" },
+            { icon: Clock, label: "Your business hours & operations" },
+            { icon: AlertTriangle, label: "Emergency handling & escalation" },
+            { icon: Users, label: "Lead capture & qualification" },
+            { icon: MessageSquare, label: "Voice, tone & brand personality" },
+          ].map((item, i) => (
+            <div key={i} className="flex items-center gap-3 text-sm">
+              <div className="w-8 h-8 rounded-lg bg-background flex items-center justify-center">
+                <item.icon className="w-4 h-4 text-primary" />
+              </div>
+              <span>{item.label}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+
+  // Step 1: Call Coverage (defines core mental model)
+  const renderAICoverageStep = () => (
     <div className="space-y-6">
       <div>
-        <h2 className="font-serif text-2xl font-bold mb-2">AI Receptionist basics</h2>
-        <p className="text-muted-foreground">Core info we need to answer calls, texts, and leads correctly.</p>
+        <h2 className="font-serif text-2xl font-bold mb-2">Call coverage</h2>
+        <p className="text-muted-foreground">This defines when and how the AI answers your phone.</p>
+      </div>
+      
+      <div className="space-y-5">
+        <div className="space-y-3">
+          <Label>When should the AI answer calls? *</Label>
+          <RadioGroup
+            value={formData.callHandling}
+            onValueChange={(v: CallHandling) => updateField("callHandling", v)}
+            className="grid gap-2"
+            disabled={isLoading}
+          >
+            {[
+              { value: "always", label: "Always answer", desc: "AI picks up every call" },
+              { value: "after_hours", label: "After hours only", desc: "AI answers when you're closed" },
+              { value: "overflow", label: "Overflow only", desc: "AI answers missed calls" },
+            ].map((opt) => (
+              <div key={opt.value} className="flex items-start space-x-3 p-4 rounded-lg border border-border hover:bg-secondary/50 transition-colors cursor-pointer">
+                <RadioGroupItem value={opt.value} id={`coverage-${opt.value}`} className="mt-0.5" />
+                <div>
+                  <Label htmlFor={`coverage-${opt.value}`} className="cursor-pointer font-medium">{opt.label}</Label>
+                  <p className="text-xs text-muted-foreground">{opt.desc}</p>
+                </div>
+              </div>
+            ))}
+          </RadioGroup>
+        </div>
+
+        <div className="space-y-3">
+          <Label>How should handoffs work? *</Label>
+          <RadioGroup
+            value={formData.handoffMethod}
+            onValueChange={(v: HandoffMethod) => updateField("handoffMethod", v)}
+            className="grid gap-2"
+            disabled={isLoading}
+          >
+            {[
+              { value: "transfer", label: "Transfer call", desc: "Warm transfer to a person" },
+              { value: "message", label: "Take message", desc: "Collect info, you call back" },
+              { value: "callback", label: "Schedule callback", desc: "Book a time for you to call" },
+              { value: "text", label: "Send text follow-up", desc: "Text the caller details" },
+            ].map((opt) => (
+              <div key={opt.value} className="flex items-start space-x-3 p-4 rounded-lg border border-border hover:bg-secondary/50 transition-colors cursor-pointer">
+                <RadioGroupItem value={opt.value} id={`handoff-${opt.value}`} className="mt-0.5" />
+                <div>
+                  <Label htmlFor={`handoff-${opt.value}`} className="cursor-pointer font-medium">{opt.label}</Label>
+                  <p className="text-xs text-muted-foreground">{opt.desc}</p>
+                </div>
+              </div>
+            ))}
+          </RadioGroup>
+        </div>
+
+        <div className="space-y-3">
+          <Label>Text/chat capabilities (select all that apply)</Label>
+          <div className="grid gap-2">
+            {[
+              { value: "answer_faqs", label: "Answer FAQs" },
+              { value: "collect_lead", label: "Collect lead info" },
+              { value: "send_booking", label: "Send booking links" },
+              { value: "follow_up", label: "Follow up missed calls" },
+            ].map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => toggleArrayField("textHandling", opt.value)}
+                className={cn(
+                  "flex items-center space-x-2 p-3 rounded-lg border text-left text-sm transition-colors",
+                  formData.textHandling.includes(opt.value)
+                    ? "border-primary bg-primary/5"
+                    : "border-border hover:bg-secondary/50"
+                )}
+              >
+                <Checkbox checked={formData.textHandling.includes(opt.value)} />
+                <span>{opt.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  // Step 2: Business Operations (concrete, familiar)
+  const renderAIOperationsStep = () => (
+    <div className="space-y-6">
+      <div>
+        <h2 className="font-serif text-2xl font-bold mb-2">Business operations</h2>
+        <p className="text-muted-foreground">The basics the AI needs to answer accurately.</p>
       </div>
       
       <div className="space-y-5">
@@ -682,6 +853,46 @@ const GetDemo = () => {
         </div>
 
         <div className="space-y-2">
+          <Label htmlFor="serviceAreaRules">Service area (optional)</Label>
+          <Input
+            id="serviceAreaRules"
+            placeholder="e.g. Greater Portland, within 30 miles of Brunswick..."
+            value={formData.serviceAreaRules}
+            onChange={(e) => updateField("serviceAreaRules", e.target.value)}
+            disabled={isLoading}
+          />
+          <p className="text-xs text-muted-foreground">AI will politely decline out-of-area requests</p>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="serviceConstraints">Service limitations (optional)</Label>
+          <Textarea
+            id="serviceConstraints"
+            placeholder="e.g. No work on Sundays, no high-rise buildings, no warranty calls..."
+            value={formData.serviceConstraints}
+            onChange={(e) => updateField("serviceConstraints", e.target.value)}
+            disabled={isLoading}
+            rows={2}
+            className="resize-none"
+          />
+        </div>
+      </div>
+    </div>
+  );
+
+  // Step 3: Emergencies & Escalation (conditional)
+  const renderAIEmergencyStep = () => (
+    <div className="space-y-6">
+      <div>
+        <div className="flex items-center gap-2 mb-2">
+          <AlertTriangle className="w-5 h-5 text-destructive" />
+          <h2 className="font-serif text-2xl font-bold">Emergencies & escalation</h2>
+        </div>
+        <p className="text-muted-foreground">Safety-critical settings for urgent situations.</p>
+      </div>
+      
+      <div className="space-y-5">
+        <div className="space-y-2">
           <Label htmlFor="escalationNumber">Escalation number *</Label>
           <Input
             id="escalationNumber"
@@ -702,11 +913,154 @@ const GetDemo = () => {
             value={formData.emergencyRules}
             onChange={(e) => updateField("emergencyRules", e.target.value)}
             disabled={isLoading}
+            rows={3}
+            className="resize-none"
+          />
+          <p className="text-xs text-muted-foreground">AI will escalate these immediately</p>
+        </div>
+
+        {formData.callHandling !== "always" && (
+          <div className="space-y-3">
+            <Label>After-hours behavior</Label>
+            <RadioGroup
+              value={formData.afterHoursAction}
+              onValueChange={(v: AfterHoursAction) => updateField("afterHoursAction", v)}
+              className="grid gap-2"
+              disabled={isLoading}
+            >
+              {[
+                { value: "message", label: "Take a message" },
+                { value: "book", label: "Book appointments" },
+                { value: "emergency_only", label: "Emergency escalation only" },
+                { value: "callback_info", label: "Tell callers when to call back" },
+              ].map((opt) => (
+                <div key={opt.value} className="flex items-center space-x-3 p-3 rounded-lg border border-border hover:bg-secondary/50 transition-colors cursor-pointer">
+                  <RadioGroupItem value={opt.value} id={`after-${opt.value}`} />
+                  <Label htmlFor={`after-${opt.value}`} className="cursor-pointer font-normal flex-1">{opt.label}</Label>
+                </div>
+              ))}
+            </RadioGroup>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  // Step 4: Lead & Qualification (where AI becomes useful)
+  const renderAILeadsStep = () => (
+    <div className="space-y-6">
+      <div>
+        <h2 className="font-serif text-2xl font-bold mb-2">Lead capture & qualification</h2>
+        <p className="text-muted-foreground">What info should the AI collect from potential customers?</p>
+      </div>
+      
+      <div className="space-y-5">
+        <div className="space-y-3">
+          <Label>What should the AI collect from leads? *</Label>
+          <div className="grid grid-cols-2 gap-2">
+            {[
+              { value: "name", label: "Name" },
+              { value: "phone", label: "Phone" },
+              { value: "email", label: "Email" },
+              { value: "address", label: "Address" },
+              { value: "issue", label: "Issue description" },
+              { value: "urgency", label: "Urgency level" },
+              { value: "budget", label: "Budget" },
+              { value: "preferred_time", label: "Preferred time" },
+            ].map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => toggleArrayField("leadFields", opt.value)}
+                className={cn(
+                  "flex items-center space-x-2 p-3 rounded-lg border text-left text-sm transition-colors",
+                  formData.leadFields.includes(opt.value)
+                    ? "border-primary bg-primary/5"
+                    : "border-border hover:bg-secondary/50"
+                )}
+              >
+                <Checkbox checked={formData.leadFields.includes(opt.value)} />
+                <span>{opt.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="qualifiedLeadRules">What makes a "good" lead? (optional)</Label>
+          <Textarea
+            id="qualifiedLeadRules"
+            placeholder="e.g. Homeowner (not renter), within service area, job over $500..."
+            value={formData.qualifiedLeadRules}
+            onChange={(e) => updateField("qualifiedLeadRules", e.target.value)}
+            disabled={isLoading}
             rows={2}
             className="resize-none"
           />
+          <p className="text-xs text-muted-foreground">AI will flag high-quality leads for priority follow-up</p>
         </div>
 
+        <div className="space-y-3">
+          <Label>When should the AI hand off to a human?</Label>
+          <div className="grid grid-cols-2 gap-2">
+            {[
+              { value: "angry", label: "Angry caller" },
+              { value: "repeated", label: "Repeated questions" },
+              { value: "complex", label: "Complex request" },
+              { value: "payment", label: "Payment questions" },
+              { value: "legal", label: "Legal / safety" },
+            ].map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => toggleArrayField("handoffTriggers", opt.value)}
+                className={cn(
+                  "flex items-center space-x-2 p-3 rounded-lg border text-left text-sm transition-colors",
+                  formData.handoffTriggers.includes(opt.value)
+                    ? "border-primary bg-primary/5"
+                    : "border-border hover:bg-secondary/50"
+                )}
+              >
+                <Checkbox checked={formData.handoffTriggers.includes(opt.value)} />
+                <span>{opt.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          <Label>Can the AI discuss pricing?</Label>
+          <RadioGroup
+            value={formData.pricingGuidance}
+            onValueChange={(v: PricingGuidance) => updateField("pricingGuidance", v)}
+            className="grid gap-2"
+            disabled={isLoading}
+          >
+            {[
+              { value: "ranges", label: "Yes, give ranges" },
+              { value: "follow_up", label: 'Only say "we\'ll follow up"' },
+              { value: "never", label: "Never discuss pricing" },
+            ].map((opt) => (
+              <div key={opt.value} className="flex items-center space-x-3 p-3 rounded-lg border border-border hover:bg-secondary/50 transition-colors cursor-pointer">
+                <RadioGroupItem value={opt.value} id={`pricing-${opt.value}`} />
+                <Label htmlFor={`pricing-${opt.value}`} className="cursor-pointer font-normal flex-1">{opt.label}</Label>
+              </div>
+            ))}
+          </RadioGroup>
+        </div>
+      </div>
+    </div>
+  );
+
+  // Step 5: AI Voice & Personality (after logic is clear)
+  const renderAIVoiceStep = () => (
+    <div className="space-y-6">
+      <div>
+        <h2 className="font-serif text-2xl font-bold mb-2">Voice & personality</h2>
+        <p className="text-muted-foreground">Now that we know what the AI does, let's define how it sounds.</p>
+      </div>
+      
+      <div className="space-y-5">
         <div className="space-y-3">
           <Label>Preferred tone *</Label>
           <RadioGroup
@@ -716,108 +1070,17 @@ const GetDemo = () => {
             disabled={isLoading}
           >
             {[
-              { value: "friendly", label: "Friendly" },
-              { value: "professional", label: "Professional" },
-              { value: "direct", label: "Direct" },
+              { value: "friendly", label: "Friendly", desc: "Warm & approachable" },
+              { value: "professional", label: "Professional", desc: "Polished & formal" },
+              { value: "direct", label: "Direct", desc: "Efficient & to the point" },
             ].map((opt) => (
-              <div key={opt.value} className="flex items-center space-x-2 p-3 rounded-lg border border-border hover:bg-secondary/50 transition-colors cursor-pointer">
+              <div key={opt.value} className="flex flex-col items-center text-center space-y-1 p-4 rounded-lg border border-border hover:bg-secondary/50 transition-colors cursor-pointer">
                 <RadioGroupItem value={opt.value} id={`tone-${opt.value}`} />
-                <Label htmlFor={`tone-${opt.value}`} className="cursor-pointer font-normal text-sm">{opt.label}</Label>
+                <Label htmlFor={`tone-${opt.value}`} className="cursor-pointer font-medium text-sm">{opt.label}</Label>
+                <p className="text-xs text-muted-foreground">{opt.desc}</p>
               </div>
             ))}
           </RadioGroup>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="bookingLink">Booking link (optional)</Label>
-          <Input
-            id="bookingLink"
-            type="url"
-            placeholder="https://calendly.com/your-business"
-            value={formData.bookingLink}
-            onChange={(e) => updateField("bookingLink", e.target.value)}
-            disabled={isLoading}
-          />
-          <p className="text-xs text-muted-foreground">Calendly, Acuity, etc.</p>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="faqs">Common questions & answers (optional)</Label>
-          <Textarea
-            id="faqs"
-            placeholder="Paste anything customers ask a lot..."
-            value={formData.faqs}
-            onChange={(e) => updateField("faqs", e.target.value)}
-            disabled={isLoading}
-            rows={3}
-            className="resize-none"
-          />
-        </div>
-      </div>
-    </div>
-  );
-
-  const renderAIKnowledgeStep = () => (
-    <div className="space-y-6">
-      <div>
-        <h2 className="font-serif text-2xl font-bold mb-2">Business info for customers</h2>
-        <p className="text-muted-foreground">This helps the AI sound accurate and confident.</p>
-      </div>
-      
-      <div className="space-y-5">
-        <div className="space-y-2">
-          <Label htmlFor="teamNames">Who might customers speak to or hear about?</Label>
-          <Textarea
-            id="teamNames"
-            placeholder="John – Owner&#10;Sarah – Office Manager&#10;Mike – Lead Technician"
-            value={formData.teamNames}
-            onChange={(e) => updateField("teamNames", e.target.value)}
-            disabled={isLoading}
-            rows={3}
-            className="resize-none"
-          />
-          <p className="text-xs text-muted-foreground">AI can say "I'll pass this to Mike" — sounds human instantly</p>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="customerFaqs">What do customers ask all the time?</Label>
-          <Textarea
-            id="customerFaqs"
-            placeholder="Do you offer emergency service?&#10;Do you work weekends?&#10;Do you give free estimates?"
-            value={formData.customerFaqs}
-            onChange={(e) => updateField("customerFaqs", e.target.value)}
-            disabled={isLoading}
-            rows={3}
-            className="resize-none"
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="doNotSay">Anything the AI should avoid saying?</Label>
-          <Textarea
-            id="doNotSay"
-            placeholder="Don't quote prices&#10;Don't promise same-day service&#10;Don't mention competitors"
-            value={formData.doNotSay}
-            onChange={(e) => updateField("doNotSay", e.target.value)}
-            disabled={isLoading}
-            rows={3}
-            className="resize-none"
-          />
-          <p className="text-xs text-muted-foreground">Prevents brand damage</p>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="guaranteesPolicies">Any guarantees or policies worth mentioning?</Label>
-          <Textarea
-            id="guaranteesPolicies"
-            placeholder="Licensed & insured&#10;Satisfaction guarantee&#10;No weekend fees&#10;Family-owned"
-            value={formData.guaranteesPolicies}
-            onChange={(e) => updateField("guaranteesPolicies", e.target.value)}
-            disabled={isLoading}
-            rows={3}
-            className="resize-none"
-          />
-          <p className="text-xs text-muted-foreground">Becomes part of the AI's default pitch</p>
         </div>
 
         <div className="space-y-3">
@@ -847,242 +1110,259 @@ const GetDemo = () => {
           </div>
           <p className="text-xs text-muted-foreground">Guides phrasing, not just tone</p>
         </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="doNotSay">Anything the AI should avoid saying?</Label>
+          <Textarea
+            id="doNotSay"
+            placeholder="Don't quote prices&#10;Don't promise same-day service&#10;Don't mention competitors"
+            value={formData.doNotSay}
+            onChange={(e) => updateField("doNotSay", e.target.value)}
+            disabled={isLoading}
+            rows={3}
+            className="resize-none"
+          />
+          <p className="text-xs text-muted-foreground">Prevents brand damage</p>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="guaranteesPolicies">Any guarantees or policies worth mentioning?</Label>
+          <Textarea
+            id="guaranteesPolicies"
+            placeholder="Licensed & insured&#10;Satisfaction guarantee&#10;No weekend fees&#10;Family-owned"
+            value={formData.guaranteesPolicies}
+            onChange={(e) => updateField("guaranteesPolicies", e.target.value)}
+            disabled={isLoading}
+            rows={3}
+            className="resize-none"
+          />
+          <p className="text-xs text-muted-foreground">Becomes part of the AI's default pitch</p>
+        </div>
       </div>
     </div>
   );
 
-  const renderAIHandlingStep = () => (
+  // Step 6: FAQs & Human Context (optional depth)
+  const renderAIContextStep = () => (
     <div className="space-y-6">
       <div>
-        <h2 className="font-serif text-2xl font-bold mb-2">Call & message handling</h2>
-        <p className="text-muted-foreground">Tell us how the AI should handle different situations.</p>
+        <h2 className="font-serif text-2xl font-bold mb-2">FAQs & context</h2>
+        <p className="text-muted-foreground">Optional but powerful — makes the AI sound like it really knows your business.</p>
       </div>
       
       <div className="space-y-5">
-        <div className="space-y-3">
-          <Label>When should the AI answer calls? *</Label>
-          <RadioGroup
-            value={formData.callHandling}
-            onValueChange={(v: CallHandling) => updateField("callHandling", v)}
-            className="grid gap-2"
+        <div className="space-y-2">
+          <Label htmlFor="faqs">Common questions & answers</Label>
+          <Textarea
+            id="faqs"
+            placeholder="Q: Do you offer emergency service?&#10;A: Yes, 24/7 for existing customers.&#10;&#10;Q: Do you give free estimates?&#10;A: Yes, for jobs over $200."
+            value={formData.faqs}
+            onChange={(e) => updateField("faqs", e.target.value)}
             disabled={isLoading}
-          >
-            {[
-              { value: "always", label: "Always answer", desc: "AI picks up every call" },
-              { value: "after_hours", label: "After hours only", desc: "AI answers when you're closed" },
-              { value: "overflow", label: "Overflow only", desc: "AI answers missed calls" },
-            ].map((opt) => (
-              <div key={opt.value} className="flex items-start space-x-3 p-3 rounded-lg border border-border hover:bg-secondary/50 transition-colors cursor-pointer">
-                <RadioGroupItem value={opt.value} id={`call-${opt.value}`} className="mt-0.5" />
+            rows={4}
+            className="resize-none"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="customerFaqs">What do customers ask all the time?</Label>
+          <Textarea
+            id="customerFaqs"
+            placeholder="Do you work weekends?&#10;How fast can you get here?&#10;Do you service my area?"
+            value={formData.customerFaqs}
+            onChange={(e) => updateField("customerFaqs", e.target.value)}
+            disabled={isLoading}
+            rows={3}
+            className="resize-none"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="teamNames">Who might customers speak to or hear about?</Label>
+          <Textarea
+            id="teamNames"
+            placeholder="John – Owner&#10;Sarah – Office Manager&#10;Mike – Lead Technician"
+            value={formData.teamNames}
+            onChange={(e) => updateField("teamNames", e.target.value)}
+            disabled={isLoading}
+            rows={3}
+            className="resize-none"
+          />
+          <p className="text-xs text-muted-foreground">AI can say "I'll pass this to Mike" — sounds human instantly</p>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="bookingLink">Booking link (optional)</Label>
+          <Input
+            id="bookingLink"
+            type="url"
+            placeholder="https://calendly.com/your-business"
+            value={formData.bookingLink}
+            onChange={(e) => updateField("bookingLink", e.target.value)}
+            disabled={isLoading}
+          />
+          <p className="text-xs text-muted-foreground">Calendly, Acuity, etc. — AI can send this to callers</p>
+        </div>
+      </div>
+    </div>
+  );
+
+  // Step 7: Review & Confirmation (NEW - required)
+  const renderAIReviewStep = () => {
+    const callHandlingLabels: Record<string, string> = {
+      always: "Always answer",
+      after_hours: "After hours only",
+      overflow: "Overflow only",
+    };
+    
+    const handoffLabels: Record<string, string> = {
+      transfer: "Transfer call",
+      message: "Take message",
+      callback: "Schedule callback",
+      text: "Send text follow-up",
+    };
+
+    const afterHoursLabels: Record<string, string> = {
+      message: "Take a message",
+      book: "Book appointments",
+      emergency_only: "Emergency escalation only",
+      callback_info: "Tell callers when to call back",
+    };
+
+    const toneLabels: Record<string, string> = {
+      friendly: "Friendly",
+      professional: "Professional",
+      direct: "Direct",
+    };
+
+    const pricingLabels: Record<string, string> = {
+      ranges: "Yes, give ranges",
+      follow_up: 'Only say "we\'ll follow up"',
+      never: "Never discuss pricing",
+    };
+
+    return (
+      <div className="space-y-6">
+        <div className="text-center">
+          <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-6">
+            <FileText className="w-8 h-8 text-primary" />
+          </div>
+          <h2 className="font-serif text-2xl font-bold mb-3">Review your setup</h2>
+          <p className="text-muted-foreground max-w-md mx-auto">
+            Take a moment to verify everything looks correct. You can always change settings later.
+          </p>
+        </div>
+
+        <div className="space-y-4">
+          {/* Call Behavior */}
+          <div className="bg-secondary/30 rounded-xl p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Phone className="w-4 h-4 text-primary" />
+              <h3 className="font-medium">Call Behavior</h3>
+            </div>
+            <div className="grid gap-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">When AI answers:</span>
+                <span className="font-medium">{callHandlingLabels[formData.callHandling] || "—"}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Handoff method:</span>
+                <span className="font-medium">{handoffLabels[formData.handoffMethod] || "—"}</span>
+              </div>
+              {formData.afterHoursAction && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">After hours:</span>
+                  <span className="font-medium">{afterHoursLabels[formData.afterHoursAction]}</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Emergencies */}
+          {shouldShowEmergencyStep() && (
+            <div className="bg-secondary/30 rounded-xl p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <AlertTriangle className="w-4 h-4 text-destructive" />
+                <h3 className="font-medium">Emergencies</h3>
+              </div>
+              <div className="grid gap-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Escalation number:</span>
+                  <span className="font-medium">{formData.escalationNumber || "—"}</span>
+                </div>
                 <div>
-                  <Label htmlFor={`call-${opt.value}`} className="cursor-pointer font-medium">{opt.label}</Label>
-                  <p className="text-xs text-muted-foreground">{opt.desc}</p>
+                  <span className="text-muted-foreground">Emergency triggers:</span>
+                  <p className="font-medium mt-1 text-xs">{formData.emergencyRules || "—"}</p>
                 </div>
               </div>
-            ))}
-          </RadioGroup>
-        </div>
+            </div>
+          )}
 
-        <div className="space-y-3">
-          <Label>After-hours behavior *</Label>
-          <RadioGroup
-            value={formData.afterHoursAction}
-            onValueChange={(v: AfterHoursAction) => updateField("afterHoursAction", v)}
-            className="grid gap-2"
-            disabled={isLoading}
-          >
-            {[
-              { value: "message", label: "Take a message" },
-              { value: "book", label: "Book appointments" },
-              { value: "emergency_only", label: "Emergency escalation only" },
-              { value: "callback_info", label: "Tell callers when to call back" },
-            ].map((opt) => (
-              <div key={opt.value} className="flex items-center space-x-3 p-3 rounded-lg border border-border hover:bg-secondary/50 transition-colors cursor-pointer">
-                <RadioGroupItem value={opt.value} id={`after-${opt.value}`} />
-                <Label htmlFor={`after-${opt.value}`} className="cursor-pointer font-normal flex-1">{opt.label}</Label>
+          {/* Lead Handling */}
+          <div className="bg-secondary/30 rounded-xl p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Users className="w-4 h-4 text-primary" />
+              <h3 className="font-medium">Lead Handling</h3>
+            </div>
+            <div className="grid gap-2 text-sm">
+              <div>
+                <span className="text-muted-foreground">Info collected:</span>
+                <p className="font-medium mt-1">{formData.leadFields.join(", ") || "—"}</p>
               </div>
-            ))}
-          </RadioGroup>
-        </div>
-
-        <div className="space-y-3">
-          <Label>What should the AI do via text/chat? (select all that apply)</Label>
-          <div className="grid gap-2">
-            {[
-              { value: "answer_faqs", label: "Answer FAQs" },
-              { value: "collect_lead", label: "Collect lead info" },
-              { value: "send_booking", label: "Send booking links" },
-              { value: "follow_up", label: "Follow up missed calls" },
-            ].map((opt) => (
-              <button
-                key={opt.value}
-                type="button"
-                onClick={() => toggleArrayField("textHandling", opt.value)}
-                className={cn(
-                  "flex items-center space-x-3 p-3 rounded-lg border text-left transition-colors",
-                  formData.textHandling.includes(opt.value)
-                    ? "border-primary bg-primary/5"
-                    : "border-border hover:bg-secondary/50"
-                )}
-              >
-                <Checkbox checked={formData.textHandling.includes(opt.value)} />
-                <span className="font-normal">{opt.label}</span>
-              </button>
-            ))}
+              {formData.pricingGuidance && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Pricing:</span>
+                  <span className="font-medium">{pricingLabels[formData.pricingGuidance]}</span>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-      </div>
-    </div>
-  );
 
-  const renderAIOpsStep = () => (
-    <div className="space-y-6">
-      <div>
-        <h2 className="font-serif text-2xl font-bold mb-2">Operations & handoffs</h2>
-        <p className="text-muted-foreground">Help the AI qualify leads and know when to escalate.</p>
-      </div>
-      
-      <div className="space-y-5">
-        <div className="space-y-3">
-          <Label>What info should we collect from new leads? *</Label>
-          <div className="grid grid-cols-2 gap-2">
-            {[
-              { value: "name", label: "Name" },
-              { value: "phone", label: "Phone" },
-              { value: "email", label: "Email" },
-              { value: "address", label: "Address" },
-              { value: "service_type", label: "Type of service" },
-              { value: "urgency", label: "Urgency" },
-              { value: "budget", label: "Budget range" },
-            ].map((opt) => (
-              <button
-                key={opt.value}
-                type="button"
-                onClick={() => toggleArrayField("leadFields", opt.value)}
-                className={cn(
-                  "flex items-center space-x-2 p-3 rounded-lg border text-left text-sm transition-colors",
-                  formData.leadFields.includes(opt.value)
-                    ? "border-primary bg-primary/5"
-                    : "border-border hover:bg-secondary/50"
-                )}
-              >
-                <Checkbox checked={formData.leadFields.includes(opt.value)} />
-                <span>{opt.label}</span>
-              </button>
-            ))}
+          {/* Tone & Brand */}
+          <div className="bg-secondary/30 rounded-xl p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <MessageSquare className="w-4 h-4 text-primary" />
+              <h3 className="font-medium">Tone & Brand</h3>
+            </div>
+            <div className="grid gap-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Tone:</span>
+                <span className="font-medium">{toneLabels[formData.preferredTone] || "—"}</span>
+              </div>
+              {formData.businessPersonality.length > 0 && (
+                <div>
+                  <span className="text-muted-foreground">Personality:</span>
+                  <p className="font-medium mt-1 text-xs">{formData.businessPersonality.join(", ")}</p>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="qualifiedLeadRules">What makes a "good lead"? (optional)</Label>
-          <Textarea
-            id="qualifiedLeadRules"
-            placeholder="e.g. Residential only, within 30 miles, jobs over $300..."
-            value={formData.qualifiedLeadRules}
-            onChange={(e) => updateField("qualifiedLeadRules", e.target.value)}
-            disabled={isLoading}
-            rows={2}
-            className="resize-none"
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="serviceAreaRules">Service area rules (optional)</Label>
-          <Input
-            id="serviceAreaRules"
-            placeholder="e.g. Within 25 miles, excludes downtown, certain zip codes only..."
-            value={formData.serviceAreaRules}
-            onChange={(e) => updateField("serviceAreaRules", e.target.value)}
-            disabled={isLoading}
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="serviceConstraints">Service limitations (optional)</Label>
-          <Textarea
-            id="serviceConstraints"
-            placeholder="e.g. No work on Sundays, no high-rise buildings, no warranty calls..."
-            value={formData.serviceConstraints}
-            onChange={(e) => updateField("serviceConstraints", e.target.value)}
-            disabled={isLoading}
-            rows={2}
-            className="resize-none"
-          />
-        </div>
-
-        <div className="space-y-3">
-          <Label>Can the AI discuss pricing?</Label>
-          <RadioGroup
-            value={formData.pricingGuidance}
-            onValueChange={(v: PricingGuidance) => updateField("pricingGuidance", v)}
-            className="grid gap-2"
-            disabled={isLoading}
+        {/* Confirmation checkbox */}
+        <div className="bg-primary/5 border border-primary/20 rounded-xl p-4">
+          <button
+            type="button"
+            onClick={() => updateField("reviewConfirmed", !formData.reviewConfirmed)}
+            className="flex items-start gap-3 w-full text-left"
           >
-            {[
-              { value: "ranges", label: "Yes, give ranges" },
-              { value: "follow_up", label: 'Only say "we\'ll follow up"' },
-              { value: "never", label: "Never discuss pricing" },
-            ].map((opt) => (
-              <div key={opt.value} className="flex items-center space-x-3 p-3 rounded-lg border border-border hover:bg-secondary/50 transition-colors cursor-pointer">
-                <RadioGroupItem value={opt.value} id={`pricing-${opt.value}`} />
-                <Label htmlFor={`pricing-${opt.value}`} className="cursor-pointer font-normal flex-1">{opt.label}</Label>
-              </div>
-            ))}
-          </RadioGroup>
-        </div>
-
-        <div className="space-y-3">
-          <Label>When should the AI hand off to a human? (select all)</Label>
-          <div className="grid grid-cols-2 gap-2">
-            {[
-              { value: "angry", label: "Angry caller" },
-              { value: "repeated", label: "Repeated questions" },
-              { value: "complex", label: "Complex request" },
-              { value: "payment", label: "Payment questions" },
-              { value: "legal", label: "Legal / safety" },
-            ].map((opt) => (
-              <button
-                key={opt.value}
-                type="button"
-                onClick={() => toggleArrayField("handoffTriggers", opt.value)}
-                className={cn(
-                  "flex items-center space-x-2 p-3 rounded-lg border text-left text-sm transition-colors",
-                  formData.handoffTriggers.includes(opt.value)
-                    ? "border-primary bg-primary/5"
-                    : "border-border hover:bg-secondary/50"
-                )}
-              >
-                <Checkbox checked={formData.handoffTriggers.includes(opt.value)} />
-                <span>{opt.label}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="space-y-3">
-          <Label>Preferred handoff method *</Label>
-          <RadioGroup
-            value={formData.handoffMethod}
-            onValueChange={(v: HandoffMethod) => updateField("handoffMethod", v)}
-            className="grid gap-2"
-            disabled={isLoading}
-          >
-            {[
-              { value: "transfer", label: "Transfer call" },
-              { value: "message", label: "Take message" },
-              { value: "callback", label: "Schedule callback" },
-              { value: "text", label: "Send text follow-up" },
-            ].map((opt) => (
-              <div key={opt.value} className="flex items-center space-x-3 p-3 rounded-lg border border-border hover:bg-secondary/50 transition-colors cursor-pointer">
-                <RadioGroupItem value={opt.value} id={`handoff-${opt.value}`} />
-                <Label htmlFor={`handoff-${opt.value}`} className="cursor-pointer font-normal flex-1">{opt.label}</Label>
-              </div>
-            ))}
-          </RadioGroup>
+            <div className={cn(
+              "w-5 h-5 rounded border-2 flex items-center justify-center mt-0.5 transition-colors",
+              formData.reviewConfirmed 
+                ? "bg-primary border-primary" 
+                : "border-muted-foreground/50"
+            )}>
+              {formData.reviewConfirmed && <Check className="w-3 h-3 text-primary-foreground" />}
+            </div>
+            <div>
+              <p className="font-medium">I've reviewed this and understand how the AI will handle customer calls.</p>
+              <p className="text-xs text-muted-foreground mt-1">You can update any of these settings later in your dashboard.</p>
+            </div>
+          </button>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const A_LA_CARTE_SERVICES = [
     { id: "logo", label: "Logo & Branding", description: "Professional logo design or refresh", icon: Palette },
@@ -1177,14 +1457,23 @@ const GetDemo = () => {
         return renderWebsiteStep();
       case "brand":
         return renderBrandStep();
-      case "ai-basics":
-        return renderAIBasicsStep();
-      case "ai-knowledge":
-        return renderAIKnowledgeStep();
-      case "ai-handling":
-        return renderAIHandlingStep();
-      case "ai-ops":
-        return renderAIOpsStep();
+      // AI steps - new order
+      case "ai-framing":
+        return renderAIFramingStep();
+      case "ai-coverage":
+        return renderAICoverageStep();
+      case "ai-operations":
+        return renderAIOperationsStep();
+      case "ai-emergency":
+        return renderAIEmergencyStep();
+      case "ai-leads":
+        return renderAILeadsStep();
+      case "ai-voice":
+        return renderAIVoiceStep();
+      case "ai-context":
+        return renderAIContextStep();
+      case "ai-review":
+        return renderAIReviewStep();
       case "other":
         return renderOtherStep();
       default:
@@ -1221,9 +1510,9 @@ const GetDemo = () => {
       {formData.serviceType && steps.length > 1 && (
         <div className="border-b border-border bg-card/50">
           <div className="container mx-auto px-6 py-3">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 overflow-x-auto">
               {steps.map((step, index) => (
-                <div key={step.id} className="flex items-center">
+                <div key={step.id} className="flex items-center shrink-0">
                   <div className={cn(
                     "flex items-center justify-center w-6 h-6 rounded-full text-xs font-medium transition-colors",
                     index < currentStep 
@@ -1256,7 +1545,7 @@ const GetDemo = () => {
       {/* Main content */}
       <main className="flex-1 flex items-start justify-center py-12 px-6">
         <div className="w-full max-w-lg">
-          {currentStep === 0 && (
+          {currentStep === 0 && !skipChoose && (
             <div className="text-center mb-8">
               <img src={pcdLogo} alt="Pleasant Cove Design" className="w-12 h-12 rounded-full mb-4 mx-auto" />
               <h1 className="font-serif text-3xl md:text-4xl font-bold mb-3">
@@ -1298,7 +1587,7 @@ const GetDemo = () => {
                   </>
                 ) : isLastStep ? (
                   <>
-                    <Sparkles className="mr-2 h-4 w-4" />
+                    <CheckCircle2 className="mr-2 h-4 w-4" />
                     Submit
                   </>
                 ) : (
