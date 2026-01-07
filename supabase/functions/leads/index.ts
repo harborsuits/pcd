@@ -1656,19 +1656,26 @@ async function handleRequestDemo(req: Request): Promise<Response> {
       leadId = manualLead.id;
     }
 
-    // Now generate the demo
-    const templateSlug = getIndustryTemplate(null, business_name);
+    // Generate slug and token
     const businessSlug = generateSlug(business_name);
     const projectToken = generateToken();
     const bestPhone = phoneE164 || phoneRaw;
 
     // Build notes from request metadata for operator visibility
     const notesLines = [];
-    if (occupation) notesLines.push(`Occupation: ${occupation}`);
-    if (demo_type) notesLines.push(`Interested in: ${demo_type}`);
-    if (website_style) notesLines.push(`Website style: ${website_style}`);
-    if (receptionist_focus) notesLines.push(`AI focus: ${receptionist_focus}`);
-    if (expectations) notesLines.push(`Expectations: ${expectations}`);
+    if (your_name) notesLines.push(`Contact: ${your_name}`);
+    if (email) notesLines.push(`Email: ${email}`);
+    if (service_type) notesLines.push(`Service: ${service_type}`);
+    if (timeline) notesLines.push(`Timeline: ${timeline}`);
+    if (website_goal) notesLines.push(`Website goal: ${website_goal}`);
+    if (logo_status) notesLines.push(`Logo: ${logo_status}`);
+    if (photo_readiness) notesLines.push(`Photos: ${photo_readiness}`);
+    if (brand_colors) notesLines.push(`Brand colors: ${brand_colors}`);
+    if (services_list) notesLines.push(`Services: ${services_list}`);
+    if (preferred_tone) notesLines.push(`Tone: ${preferred_tone}`);
+    if (booking_link) notesLines.push(`Booking: ${booking_link}`);
+    if (selected_services?.length) notesLines.push(`Selected services: ${selected_services.join(", ")}`);
+    if (custom_request) notesLines.push(`Custom request: ${custom_request}`);
     const projectNotes = notesLines.length > 0 ? notesLines.join('\n') : null;
 
     // Create project
@@ -1679,9 +1686,12 @@ async function handleRequestDemo(req: Request): Promise<Response> {
         business_slug: businessSlug,
         project_token: projectToken,
         contact_phone: bestPhone,
+        contact_email: email || null,
+        contact_name: your_name || null,
         website: website || null,
-        city: city,
+        city: city || null,
         source: "request_demo",
+        service_type: service_type || "demo",
         status: "lead",
         notes: projectNotes,
       })
@@ -1691,77 +1701,136 @@ async function handleRequestDemo(req: Request): Promise<Response> {
     if (projectError) {
       console.error("Failed to create project:", projectError);
       return new Response(
-        JSON.stringify({ error: "Failed to create demo" }),
+        JSON.stringify({ error: "Failed to create project" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Build demo content with enriched data
-    const heroHeadline = city
-      ? `${business_name} - Serving ${city} & Surrounding Areas`
-      : `${business_name} - Your Trusted Local Partner`;
-
-    const demoContent = {
-      template: templateSlug,
-      hero: {
-        headline: heroHeadline,
-        subheadline: "Quality service you can trust. Get started today!",
-      },
-      business: {
-        name: business_name,
-        phone: bestPhone,
-        city: city,
-        website: website || null,
-      },
-      enriched: enrichedData,
-      cta: {
-        primary: bestPhone ? { label: "Call Now", action: `tel:${bestPhone.replace(/\s+/g, "")}` } : null,
-        secondary: { label: "Request Quote", action: "#quote" },
-      },
-      generated_at: new Date().toISOString(),
+    // Create intake record with all the form data
+    const intakeData = {
+      service_type: service_type || "demo",
+      business_name,
+      city,
+      phone: bestPhone,
+      email,
+      your_name,
+      website,
+      // Website fields
+      website_goal,
+      timeline,
+      logo_status,
+      brand_colors,
+      services_list,
+      photo_readiness,
+      // AI fields
+      business_phone,
+      business_hours,
+      services_offered,
+      escalation_number,
+      emergency_rules,
+      preferred_tone,
+      booking_link,
+      faqs,
+      // Other fields
+      selected_services,
+      custom_request,
+      submitted_at: new Date().toISOString(),
     };
 
-    // Create demo record
-    const { error: demoError } = await supabase
-      .from("demos")
+    const { error: intakeError } = await supabase
+      .from("project_intakes")
       .insert({
         project_id: newProject.id,
-        project_token: projectToken,
-        template_type: templateSlug,
-        content: demoContent,
+        intake_json: intakeData,
+        intake_status: "submitted",
       });
 
-    if (demoError) {
-      console.error("Failed to create demo:", demoError);
+    if (intakeError) {
+      console.error("Failed to create intake:", intakeError);
+      // Non-fatal - project was created
+    }
+
+    // For "demo" service type ONLY, generate an actual demo site
+    if (service_type === "demo") {
+      const templateSlug = getIndustryTemplate(null, business_name);
+
+      const heroHeadline = city
+        ? `${business_name} - Serving ${city} & Surrounding Areas`
+        : `${business_name} - Your Trusted Local Partner`;
+
+      const demoContent = {
+        template: templateSlug,
+        hero: {
+          headline: heroHeadline,
+          subheadline: "Quality service you can trust. Get started today!",
+        },
+        business: {
+          name: business_name,
+          phone: bestPhone,
+          city: city,
+          website: website || null,
+        },
+        enriched: enrichedData,
+        cta: {
+          primary: bestPhone ? { label: "Call Now", action: `tel:${bestPhone.replace(/\s+/g, "")}` } : null,
+          secondary: { label: "Request Quote", action: "#quote" },
+        },
+        generated_at: new Date().toISOString(),
+      };
+
+      const { error: demoError } = await supabase
+        .from("demos")
+        .insert({
+          project_id: newProject.id,
+          project_token: projectToken,
+          template_type: templateSlug,
+          content: demoContent,
+        });
+
+      if (demoError) {
+        console.error("Failed to create demo:", demoError);
+        return new Response(
+          JSON.stringify({ error: "Failed to create demo" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const demoUrl = `/d/${projectToken}/${businessSlug}`;
+
+      // Update lead with demo info
+      await supabase
+        .from("leads")
+        .update({
+          demo_project_id: newProject.id,
+          demo_token: projectToken,
+          demo_url: demoUrl,
+          demo_status: "created",
+          industry_template: templateSlug,
+          outreach_status: "requested",
+        })
+        .eq("id", leadId);
+
+      console.log(`Demo created for service_type=demo: ${demoUrl}`);
+
       return new Response(
-        JSON.stringify({ error: "Failed to create demo" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({
+          ok: true,
+          demo_url: demoUrl,
+          project_token: projectToken,
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Build demo URL
-    const demoUrl = `/d/${projectToken}/${businessSlug}`;
-
-    // Update lead with demo info
-    await supabase
-      .from("leads")
-      .update({
-        demo_project_id: newProject.id,
-        demo_token: projectToken,
-        demo_url: demoUrl,
-        demo_status: "created",
-        industry_template: templateSlug,
-        outreach_status: "requested",
-      })
-      .eq("id", leadId);
-
-    console.log(`Demo created: ${demoUrl}`);
+    // For all other service types (website, ai, both, other), 
+    // just create the project + intake, NO demo generated
+    console.log(`Intake submitted for service_type=${service_type}: project ${projectToken}`);
 
     return new Response(
       JSON.stringify({
         ok: true,
-        demo_url: demoUrl,
         project_token: projectToken,
+        message: "Your request has been submitted. We'll be in touch soon!",
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
