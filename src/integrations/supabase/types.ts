@@ -687,6 +687,59 @@ export type Database = {
           },
         ]
       }
+      project_clients: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          invite_sent_at: string | null
+          invite_status: string
+          last_login_at: string | null
+          name: string | null
+          phone: string | null
+          project_id: string
+          project_token: string
+          role: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          invite_sent_at?: string | null
+          invite_status?: string
+          last_login_at?: string | null
+          name?: string | null
+          phone?: string | null
+          project_id: string
+          project_token: string
+          role?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          invite_sent_at?: string | null
+          invite_status?: string
+          last_login_at?: string | null
+          name?: string | null
+          phone?: string | null
+          project_id?: string
+          project_token?: string
+          role?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_clients_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_discovery_checklist: {
         Row: {
           checked: boolean

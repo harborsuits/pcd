@@ -1824,6 +1824,48 @@ async function handleRequestDemo(req: Request): Promise<Response> {
       // Non-fatal - project was created
     }
 
+    // Create client portal identity record (for AI and Full Package submissions)
+    if (email && (service_type === "ai_receptionist" || service_type === "both" || service_type === "website")) {
+      const { error: clientError } = await supabase
+        .from("project_clients")
+        .insert({
+          project_id: newProject.id,
+          project_token: projectToken,
+          email: email,
+          phone: bestPhone || null,
+          name: your_name || null,
+          role: "owner",
+          invite_status: "invited",
+          invite_sent_at: new Date().toISOString(),
+        });
+
+      if (clientError) {
+        console.error("Failed to create client record:", clientError);
+        // Non-fatal - project was created
+      } else {
+        console.log(`Client record created for ${email} on project ${projectToken}`);
+      }
+
+      // Trigger welcome email notification
+      const { error: notifError } = await supabase
+        .from("notification_events")
+        .insert({
+          project_id: newProject.id,
+          project_token: projectToken,
+          event_type: "portal_ready",
+          payload: {
+            service_type: service_type,
+            business_name: business_name,
+            contact_name: your_name || null,
+          },
+        });
+
+      if (notifError) {
+        console.error("Failed to create notification event:", notifError);
+        // Non-fatal
+      }
+    }
+
     // For "demo" service type ONLY, generate an actual demo site
     if (service_type === "demo") {
       const templateSlug = getIndustryTemplate(null, business_name);
