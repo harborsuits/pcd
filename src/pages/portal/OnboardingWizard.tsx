@@ -846,13 +846,16 @@ export default function OnboardingWizard() {
     return (
       <div className="space-y-6">
         <div>
-          <h2 className="font-serif text-2xl font-bold mb-2">Select your tier</h2>
+          <h2 className="font-serif text-2xl font-bold mb-2">Choose your package</h2>
           <p className="text-muted-foreground">
-            Choose a {serviceLabel} tier that fits your needs. We'll discuss details on our call.
+            Select a {serviceLabel} that fits your needs. We'll finalize details on a quick call.
+          </p>
+          <p className="text-xs text-muted-foreground mt-1">
+            We don't take bookings here — this helps us prepare for our conversation.
           </p>
         </div>
 
-        <div className="space-y-3">
+        <div className="space-y-4">
           {pricingTiers.map((tier) => {
             const isSelected = formData.pricingTier === tier.id;
             return (
@@ -862,14 +865,14 @@ export default function OnboardingWizard() {
                 onClick={() => updateField("pricingTier", tier.id)}
                 disabled={isLoading}
                 className={cn(
-                  "relative w-full flex flex-col items-start gap-1 rounded-xl border-2 p-4 text-left transition-all hover:border-primary/50",
+                  "relative w-full flex flex-col items-start gap-2 rounded-xl border-2 p-5 text-left transition-all hover:border-primary/50",
                   isSelected
                     ? "border-primary bg-primary/5 ring-2 ring-primary/20"
                     : "border-border bg-card hover:bg-accent/50"
                 )}
               >
                 <div className="flex items-center justify-between w-full">
-                  <h3 className="font-semibold text-foreground">{tier.label}</h3>
+                  <h3 className="font-semibold text-lg text-foreground">{tier.label}</h3>
                   <span className={cn(
                     "text-sm font-medium",
                     isSelected ? "text-primary" : "text-muted-foreground"
@@ -878,8 +881,21 @@ export default function OnboardingWizard() {
                   </span>
                 </div>
                 <p className="text-sm text-muted-foreground">{tier.description}</p>
+                
+                {/* Show features if available */}
+                {tier.features && tier.features.length > 0 && (
+                  <ul className="mt-2 space-y-1.5 w-full">
+                    {tier.features.map((feature, idx) => (
+                      <li key={idx} className="flex items-start gap-2 text-sm text-muted-foreground">
+                        <Check className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                        <span>{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                
                 {isSelected && (
-                  <div className="absolute top-3 right-3">
+                  <div className="absolute top-4 right-4">
                     <Check className="h-5 w-5 text-primary" />
                   </div>
                 )}
@@ -894,7 +910,7 @@ export default function OnboardingWizard() {
             id="pricingNotes"
             value={formData.pricingNotes}
             onChange={(e) => updateField("pricingNotes", e.target.value)}
-            placeholder="Comparing options? Let us know what you're aiming for..."
+            placeholder="Any budget constraints or timeline goals? Let us know..."
             disabled={isLoading}
             rows={2}
             className="resize-none"
