@@ -1,4 +1,4 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "npm:@supabase/supabase-js@2";
 
 // Allowed origins for admin console
 const ADMIN_ALLOWED_ORIGINS = [
