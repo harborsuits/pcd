@@ -1,164 +1,101 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { ArrowLeft, ArrowRight, Loader2, Sparkles, Check, Bot, Globe, Package, Palette, Image, Search, HelpCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Progress } from "@/components/ui/progress";
+import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "@/hooks/use-toast";
-import { 
-  ArrowLeft, 
-  ArrowRight, 
-  Building2, 
-  CheckCircle2,
-  Loader2,
-  Briefcase,
-  Wrench,
-  Store,
-  Users,
-  Utensils,
-  Sparkles,
-  Target,
-  Timer,
-  Hand,
-  Palette,
-  Upload,
-  ImageIcon,
-  Phone
-} from "lucide-react";
 import { ClientLayout } from "@/components/portal/ClientLayout";
+import { cn } from "@/lib/utils";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
-// 6-step intake with assets integrated
-const STEPS = [
-  { id: "basics", label: "Basics", icon: Building2 },
-  { id: "goal", label: "Goal", icon: Target },
-  { id: "timeline", label: "Timeline", icon: Timer },
-  { id: "involvement", label: "Style", icon: Hand },
-  { id: "assets", label: "Assets", icon: Palette },
-  { id: "review", label: "Review", icon: CheckCircle2 },
-];
+type ServiceType = "ai" | "website" | "both" | "other" | "";
+type WebsiteGoal = "calls" | "quotes" | "bookings" | "info" | "";
+type Timeline = "asap" | "2-4weeks" | "1-2months" | "unsure" | "";
+type LogoStatus = "yes" | "no" | "refresh" | "";
+type PhotoReadiness = "ready" | "some" | "none" | "";
+type Tone = "friendly" | "professional" | "direct" | "";
 
-// Service type options (website, AI receptionist, or both)
-const SERVICE_TYPES = [
-  { id: "website", label: "Website only", icon: Store, description: "A professional website for your business" },
-  { id: "ai_receptionist", label: "AI Receptionist only", icon: Phone, description: "24/7 AI that answers calls & texts" },
-  { id: "both", label: "Website + AI Receptionist", icon: Sparkles, description: "Full package: website + AI phone handling" },
-];
+// Map query param values to form values
+const SERVICE_PARAM_MAP: Record<string, ServiceType> = {
+  website: "website",
+  ai_receptionist: "ai",
+  ai: "ai",
+  both: "both",
+  other: "other",
+};
 
-// Business types
-const BUSINESS_TYPES = [
-  { id: "trades", label: "Trades", icon: Wrench, description: "Plumbing, HVAC, electrical, roofing" },
-  { id: "professional", label: "Professional", icon: Briefcase, description: "Law, accounting, consulting" },
-  { id: "retail", label: "Retail", icon: Store, description: "Shops, boutiques, e-commerce" },
-  { id: "restaurant", label: "Food & hospitality", icon: Utensils, description: "Restaurants, bars, hotels" },
-  { id: "creative", label: "Creative", icon: Sparkles, description: "Design, photography, media" },
-  { id: "other", label: "Other", icon: Users, description: "Something else" },
-];
-
-// Primary goal - single choice, high-signal
-const PRIMARY_GOALS = [
-  { id: "leads", label: "Get more calls / leads", description: "Your site will be built around contact forms, click-to-call, and booking" },
-  { id: "sell", label: "Sell products or services online", description: "We'll set up payments, checkout, and product/service listings" },
-  { id: "professional", label: "Look more professional", description: "Focus on credibility, portfolio, and trust signals" },
-  { id: "unsure", label: "Not sure yet — guide me", description: "We'll figure out what works best for your business" },
-];
-
-// What they're selling - only shown if "sell" is selected
-const SELL_TYPE_OPTIONS = [
-  { id: "services", label: "Services", description: "Appointments, consultations, packages" },
-  { id: "physical", label: "Physical products", description: "Items you ship or deliver" },
-  { id: "digital", label: "Digital products", description: "Downloads, courses, subscriptions" },
-  { id: "unsure", label: "Not sure yet", description: "We'll help you decide" },
-];
-
-// Timeline - confidence gauge
-const TIMELINE_OPTIONS = [
-  { id: "exploring", label: "Actively researching", description: "Evaluating options, no rush yet" },
-  { id: "soon", label: "In the next 1–2 months", description: "Ready to kick things off soon" },
-  { id: "asap", label: "ASAP", description: "High priority — we'll fast-track your project" },
-  { id: "deadline", label: "I have a specific deadline", description: "Event, launch, or date driving this" },
-];
-
-// Involvement preference - how hands-on
-const INVOLVEMENT_OPTIONS = [
-  { id: "hands_on", label: "I want to be hands-on", description: "Involved in every decision" },
-  { id: "options", label: "Give me options to choose from", description: "Curated choices" },
-  { id: "handle_it", label: "Just handle it for me", description: "Trust the experts" },
-];
-
-// Photo readiness options
-const PHOTO_OPTIONS = [
-  { id: "have_photos", label: "I have photos ready to upload", description: "Portfolio, team, or workspace images" },
-  { id: "need_photos", label: "I need photos taken or sourced", description: "We can help coordinate this" },
-  { id: "generate", label: "Generate professional images for me", description: "AI-powered, industry-matched visuals" },
-];
-
-// Brand color options - allows "choose for me"
-const BRAND_COLOR_OPTIONS = [
-  { id: "have_colors", label: "I have specific colors", description: "Enter your brand colors below" },
-  { id: "choose_for_me", label: "Choose colors for me", description: "We'll pick something professional" },
-];
-
-// Logo options
-const LOGO_OPTIONS = [
-  { id: "have_logo", label: "Yes, I have a logo", description: "I'll upload it after submitting" },
-  { id: "no_logo", label: "No logo yet", description: "Use text-based branding for now" },
-  { id: "create_logo", label: "I need a logo created", description: "We can help with this" },
-];
-
-interface IntakeData {
-  serviceType: string;
+interface FormData {
+  // Basics
   businessName: string;
-  businessType: string;
+  yourName: string;
+  email: string;
+  phone: string;
+  serviceType: ServiceType;
+  
+  // Website fields
+  websiteGoal: WebsiteGoal;
   serviceArea: string;
-  contactEmail: string;
-  contactPhone: string;
-  primaryGoal: string;
-  sellType: string;
-  timeline: string;
-  deadlineDate: string;
-  involvement: string;
-  // Assets - REQUIRED for building
-  logoStatus: string;
-  brandColorChoice: string;
+  timeline: Timeline;
+  logoStatus: LogoStatus;
   brandColors: string;
   servicesList: string;
-  photoReadiness: string;
+  photoReadiness: PhotoReadiness;
+  
+  // AI Receptionist fields
+  businessPhone: string;
+  businessHours: string;
+  servicesOffered: string;
+  escalationNumber: string;
+  emergencyRules: string;
+  preferredTone: Tone;
+  bookingLink: string;
+  faqs: string;
+  
+  // Other/à la carte fields
+  selectedServices: string[];
+  customRequest: string;
 }
 
 export default function OnboardingWizard() {
   const navigate = useNavigate();
-  const [currentStep, setCurrentStep] = useState(0);
-  const [loading, setLoading] = useState(false);
+  const [searchParams] = useSearchParams();
+  const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
   const [authChecking, setAuthChecking] = useState(true);
+  const [currentStep, setCurrentStep] = useState(0);
   
-  const [intake, setIntake] = useState<IntakeData>({
-    serviceType: "website",
+  const [formData, setFormData] = useState<FormData>({
     businessName: "",
-    businessType: "",
+    yourName: "",
+    email: "",
+    phone: "",
+    serviceType: "",
+    websiteGoal: "",
     serviceArea: "",
-    contactEmail: "",
-    contactPhone: "",
-    primaryGoal: "",
-    sellType: "",
     timeline: "",
-    deadlineDate: "",
-    involvement: "",
-    // Assets - REQUIRED
     logoStatus: "",
-    brandColorChoice: "",
     brandColors: "",
     servicesList: "",
     photoReadiness: "",
+    businessPhone: "",
+    businessHours: "",
+    servicesOffered: "",
+    escalationNumber: "",
+    emergencyRules: "",
+    preferredTone: "",
+    bookingLink: "",
+    faqs: "",
+    selectedServices: [],
+    customRequest: "",
   });
 
-  // Auth guard: redirect if no session
+  // Auth guard
   useEffect(() => {
     const checkAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession();
@@ -171,63 +108,90 @@ export default function OnboardingWizard() {
         navigate("/portal", { replace: true });
         return;
       }
+      
+      // Pre-fill email from session
+      setFormData(prev => ({
+        ...prev,
+        email: session.user.email || "",
+      }));
       setAuthChecking(false);
     };
     
     checkAuth();
     
-    // Also listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (!session && !authChecking) {
-        toast({
-          title: "Session expired",
-          description: "Please sign in again to continue.",
-          variant: "destructive",
-        });
         navigate("/portal", { replace: true });
       }
     });
     
     return () => subscription.unsubscribe();
-  }, [navigate, authChecking]);
+  }, [navigate, authChecking, toast]);
 
-  const stepProgress = ((currentStep + 1) / STEPS.length) * 100;
+  // Pre-select service type from URL param and auto-advance
+  useEffect(() => {
+    const serviceParam = searchParams.get("service");
+    if (serviceParam && SERVICE_PARAM_MAP[serviceParam]) {
+      setFormData(prev => ({ ...prev, serviceType: SERVICE_PARAM_MAP[serviceParam] }));
+      setCurrentStep(1);
+    }
+  }, [searchParams]);
 
-  const canProceed = (): boolean => {
-    switch (currentStep) {
-      case 0: // Basics
-        return !!intake.businessName && !!intake.businessType && !!intake.serviceArea && !!intake.contactEmail && !!intake.contactPhone;
-      case 1: // Goal
-        // If they selected "sell", require sellType too
-        if (intake.primaryGoal === "sell") {
-          return !!intake.primaryGoal && !!intake.sellType;
-        }
-        return !!intake.primaryGoal;
-      case 2: // Timeline
-        if (intake.timeline === "deadline") {
-          return !!intake.timeline && !!intake.deadlineDate;
-        }
-        return !!intake.timeline;
-      case 3: // Involvement/Style
-        return !!intake.involvement;
-      case 4: // Assets - ALL REQUIRED
-        const hasLogo = !!intake.logoStatus;
-        const hasColors = intake.brandColorChoice === "choose_for_me" || (intake.brandColorChoice === "have_colors" && !!intake.brandColors.trim());
-        const hasServices = !!intake.servicesList.trim();
-        const hasPhotos = !!intake.photoReadiness;
-        return hasLogo && hasColors && hasServices && hasPhotos;
-      case 5: // Review - always can proceed
-        return true;
+  // Determine steps based on service type (same as GetDemo)
+  const getSteps = () => {
+    const steps = [{ id: "choose", label: "Choose" }];
+    
+    if (!formData.serviceType) {
+      return steps;
+    }
+    
+    steps.push({ id: "basics", label: "Basics" });
+    
+    if (formData.serviceType === "website" || formData.serviceType === "both") {
+      steps.push({ id: "website", label: "Website" });
+      steps.push({ id: "brand", label: "Brand" });
+    }
+    
+    if (formData.serviceType === "ai" || formData.serviceType === "both") {
+      steps.push({ id: "ai", label: "AI Setup" });
+    }
+    
+    if (formData.serviceType === "other") {
+      steps.push({ id: "other", label: "Services" });
+    }
+    
+    return steps;
+  };
+
+  const steps = getSteps();
+  const currentStepId = steps[currentStep]?.id;
+
+  const canProceed = () => {
+    switch (currentStepId) {
+      case "choose":
+        return !!formData.serviceType;
+      case "basics":
+        return formData.businessName.trim() && formData.email.trim() && formData.phone.trim();
+      case "website":
+        return !!formData.websiteGoal && formData.serviceArea.trim() && !!formData.timeline;
+      case "brand":
+        return !!formData.logoStatus && !!formData.photoReadiness;
+      case "ai":
+        return formData.businessPhone.trim() && formData.businessHours.trim() && 
+               formData.servicesOffered.trim() && formData.escalationNumber.trim() && 
+               formData.emergencyRules.trim() && !!formData.preferredTone;
+      case "other":
+        return formData.selectedServices.length > 0 || formData.customRequest.trim().length > 0;
       default:
-        return false;
+        return true;
     }
   };
 
   const handleNext = () => {
-    if (currentStep < STEPS.length - 1) {
+    if (currentStep < steps.length - 1) {
       setCurrentStep(currentStep + 1);
     } else {
-      handleCreateProject();
+      handleSubmit();
     }
   };
 
@@ -239,8 +203,9 @@ export default function OnboardingWizard() {
     }
   };
 
-  const handleCreateProject = async () => {
-    setLoading(true);
+  const handleSubmit = async () => {
+    setIsLoading(true);
+
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) {
@@ -260,7 +225,35 @@ export default function OnboardingWizard() {
           "apikey": SUPABASE_ANON_KEY,
           "Authorization": `Bearer ${session.access_token}`,
         },
-        body: JSON.stringify({ intake }),
+        body: JSON.stringify({
+          intake: {
+            serviceType: formData.serviceType,
+            businessName: formData.businessName.trim(),
+            yourName: formData.yourName.trim(),
+            contactEmail: formData.email.trim(),
+            contactPhone: formData.phone.trim(),
+            // Website fields
+            websiteGoal: formData.websiteGoal || null,
+            serviceArea: formData.serviceArea.trim() || null,
+            timeline: formData.timeline || null,
+            logoStatus: formData.logoStatus || null,
+            brandColors: formData.brandColors.trim() || null,
+            servicesList: formData.servicesList.trim() || null,
+            photoReadiness: formData.photoReadiness || null,
+            // AI fields
+            businessPhone: formData.businessPhone.trim() || null,
+            businessHours: formData.businessHours.trim() || null,
+            servicesOffered: formData.servicesOffered.trim() || null,
+            escalationNumber: formData.escalationNumber.trim() || null,
+            emergencyRules: formData.emergencyRules.trim() || null,
+            preferredTone: formData.preferredTone || null,
+            bookingLink: formData.bookingLink.trim() || null,
+            faqs: formData.faqs.trim() || null,
+            // Other fields
+            selectedServices: formData.selectedServices.length > 0 ? formData.selectedServices : null,
+            customRequest: formData.customRequest.trim() || null,
+          },
+        }),
       });
 
       const data = await res.json();
@@ -269,502 +262,575 @@ export default function OnboardingWizard() {
         throw new Error(data.error || "Failed to create project");
       }
 
-      // Navigate directly to workspace with AI trial offer
-      navigate(`/w/${data.project_token}?ai_trial=start`);
+      toast({
+        title: getSuccessTitle(),
+        description: getSuccessDescription(),
+      });
+      
+      navigate(`/w/${data.project_token}`);
     } catch (err) {
       console.error("Create project error:", err);
       toast({
-        title: "Error",
-        description: err instanceof Error ? err.message : "Failed to create project",
+        title: "Something went wrong",
+        description: err instanceof Error ? err.message : "Please try again or contact us.",
         variant: "destructive",
       });
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
-  const renderStep = () => {
-    switch (currentStep) {
-      // STEP 1: BASICS
-      case 0:
-        return (
-          <div className="space-y-6">
-            {/* Service Type Selection */}
-            <div className="space-y-3">
-              <Label className="text-base">What do you need?</Label>
-              <div className="grid gap-3">
-                {SERVICE_TYPES.map((type) => {
-                  const Icon = type.icon;
-                  const isSelected = intake.serviceType === type.id;
-                  return (
-                    <button
-                      key={type.id}
-                      onClick={() => setIntake(prev => ({ ...prev, serviceType: type.id }))}
-                      className={`p-4 rounded-lg border-2 text-left transition-all flex items-center gap-4 ${
-                        isSelected 
-                          ? "border-primary bg-primary/5" 
-                          : "border-border hover:border-muted-foreground/30"
-                      }`}
-                    >
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center ${isSelected ? "bg-primary/10" : "bg-muted"}`}>
-                        <Icon className={`h-5 w-5 ${isSelected ? "text-primary" : "text-muted-foreground"}`} />
-                      </div>
-                      <div>
-                        <div className="font-medium text-sm">{type.label}</div>
-                        <div className="text-xs text-muted-foreground">{type.description}</div>
-                      </div>
-                    </button>
-                  );
-                })}
+  const getSuccessTitle = () => {
+    if (formData.serviceType === "ai") return "You're set.";
+    if (formData.serviceType === "website") return "Got it.";
+    if (formData.serviceType === "other") return "Request received.";
+    return "Perfect — we've got everything.";
+  };
+
+  const getSuccessDescription = () => {
+    if (formData.serviceType === "ai") {
+      return "We'll finalize your AI receptionist setup and follow up within 24–48 hours.";
+    }
+    if (formData.serviceType === "website") {
+      return "We'll build your first preview and notify you when it's ready (usually 24–48 hours).";
+    }
+    if (formData.serviceType === "other") {
+      return "We'll review your request and reach out within 24–48 hours to discuss next steps.";
+    }
+    return "We'll start your website + AI receptionist setup and update you within 24–48 hours.";
+  };
+
+  const updateField = <K extends keyof FormData>(field: K, value: FormData[K]) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const ServiceCard = ({ 
+    value, 
+    icon: Icon, 
+    title, 
+    description, 
+    badge 
+  }: { 
+    value: ServiceType; 
+    icon: typeof Bot; 
+    title: string; 
+    description: string;
+    badge?: string;
+  }) => (
+    <button
+      type="button"
+      onClick={() => {
+        updateField("serviceType", value);
+        setCurrentStep(1);
+      }}
+      className={cn(
+        "relative p-6 rounded-xl border-2 text-left transition-all duration-200",
+        "hover:border-primary/50 hover:shadow-md",
+        formData.serviceType === value 
+          ? "border-primary bg-primary/5" 
+          : "border-border bg-card"
+      )}
+    >
+      <div className="w-12 h-12 rounded-lg bg-secondary/50 flex items-center justify-center mb-4">
+        <Icon className="w-6 h-6 text-primary" />
+      </div>
+      <h3 className="font-semibold text-lg mb-1">{title}</h3>
+      <p className="text-sm text-muted-foreground">{description}</p>
+      {badge && (
+        <span className="absolute top-4 right-4 px-2 py-1 text-xs font-medium rounded-full bg-primary/10 text-primary">
+          {badge}
+        </span>
+      )}
+    </button>
+  );
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // STEP RENDERERS (same as GetDemo)
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  const renderChooseStep = () => (
+    <div className="space-y-6">
+      <div className="text-center mb-8">
+        <h2 className="font-serif text-2xl font-bold mb-2">What are you looking for?</h2>
+        <p className="text-muted-foreground">Choose your starting point — we'll handle the rest.</p>
+      </div>
+      
+      <div className="grid gap-4">
+        <ServiceCard
+          value="ai"
+          icon={Bot}
+          title="AI Receptionist"
+          description="Answer calls, texts & forms 24/7. Start capturing leads instantly."
+        />
+        <ServiceCard
+          value="website"
+          icon={Globe}
+          title="Website"
+          description="A fast, modern site that converts visitors into customers."
+        />
+        <ServiceCard
+          value="both"
+          icon={Package}
+          title="Full Package"
+          description="Website + AI Receptionist — the complete lead-capture system."
+          badge="Most Popular"
+        />
+      </div>
+      
+      <p className="text-center text-sm text-muted-foreground">
+        Need something else?{" "}
+        <button
+          type="button"
+          onClick={() => {
+            updateField("serviceType", "other");
+            setCurrentStep(1);
+          }}
+          className="text-primary hover:underline"
+        >
+          Tell us what you're looking for →
+        </button>
+      </p>
+    </div>
+  );
+
+  const renderBasicsStep = () => (
+    <div className="space-y-6">
+      <div>
+        <h2 className="font-serif text-2xl font-bold mb-2">Business basics</h2>
+        <p className="text-muted-foreground">Just enough to set things up and follow up with you.</p>
+      </div>
+      
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="businessName">Business name *</Label>
+          <Input
+            id="businessName"
+            placeholder="e.g. Smith Plumbing"
+            value={formData.businessName}
+            onChange={(e) => updateField("businessName", e.target.value)}
+            disabled={isLoading}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="yourName">Your name</Label>
+          <Input
+            id="yourName"
+            placeholder="e.g. John Smith"
+            value={formData.yourName}
+            onChange={(e) => updateField("yourName", e.target.value)}
+            disabled={isLoading}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="email">Email *</Label>
+          <Input
+            id="email"
+            type="email"
+            placeholder="john@smithplumbing.com"
+            value={formData.email}
+            onChange={(e) => updateField("email", e.target.value)}
+            disabled={isLoading}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="phone">Best phone number *</Label>
+          <Input
+            id="phone"
+            type="tel"
+            placeholder="(207) 555-1234"
+            value={formData.phone}
+            onChange={(e) => updateField("phone", e.target.value)}
+            disabled={isLoading}
+          />
+          <p className="text-xs text-muted-foreground">
+            Where we can reach you (not necessarily the number customers call)
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderWebsiteStep = () => (
+    <div className="space-y-6">
+      <div>
+        <h2 className="font-serif text-2xl font-bold mb-2">Website goals</h2>
+        <p className="text-muted-foreground">A fast, modern site that converts visitors into customers.</p>
+      </div>
+      
+      <div className="space-y-5">
+        <div className="space-y-3">
+          <Label>What do you want the site to do? *</Label>
+          <RadioGroup
+            value={formData.websiteGoal}
+            onValueChange={(v: WebsiteGoal) => updateField("websiteGoal", v)}
+            className="grid gap-2"
+            disabled={isLoading}
+          >
+            {[
+              { value: "calls", label: "Get calls" },
+              { value: "quotes", label: "Get quote requests" },
+              { value: "bookings", label: "Book appointments" },
+              { value: "info", label: "Show services" },
+            ].map((opt) => (
+              <div key={opt.value} className="flex items-center space-x-3 p-3 rounded-lg border border-border hover:bg-secondary/50 transition-colors cursor-pointer">
+                <RadioGroupItem value={opt.value} id={`goal-${opt.value}`} />
+                <Label htmlFor={`goal-${opt.value}`} className="cursor-pointer font-normal flex-1">{opt.label}</Label>
               </div>
-            </div>
+            ))}
+          </RadioGroup>
+        </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="businessName">Business name</Label>
-              <Input
-                id="businessName"
-                placeholder="e.g. Smith Plumbing, Acme Roofing"
-                value={intake.businessName}
-                onChange={(e) => setIntake(prev => ({ ...prev, businessName: e.target.value }))}
-              />
-            </div>
+        <div className="space-y-2">
+          <Label htmlFor="serviceArea">Where do you serve customers? *</Label>
+          <Input
+            id="serviceArea"
+            placeholder="e.g. Portland, ME and surrounding areas"
+            value={formData.serviceArea}
+            onChange={(e) => updateField("serviceArea", e.target.value)}
+            disabled={isLoading}
+          />
+          <p className="text-xs text-muted-foreground">City, county, or general area</p>
+        </div>
 
-            <div className="space-y-3">
-              <Label>What type of business?</Label>
-              <div className="grid grid-cols-2 gap-3">
-                {BUSINESS_TYPES.map((type) => {
-                  const Icon = type.icon;
-                  const isSelected = intake.businessType === type.id;
-                  return (
-                    <button
-                      key={type.id}
-                      onClick={() => setIntake(prev => ({ ...prev, businessType: type.id }))}
-                      className={`p-4 rounded-lg border-2 text-left transition-all ${
-                        isSelected 
-                          ? "border-primary bg-primary/5" 
-                          : "border-border hover:border-muted-foreground/30"
-                      }`}
-                    >
-                      <Icon className={`h-5 w-5 mb-2 ${isSelected ? "text-primary" : "text-muted-foreground"}`} />
-                      <div className="font-medium text-sm">{type.label}</div>
-                      <div className="text-xs text-muted-foreground">{type.description}</div>
-                    </button>
-                  );
-                })}
+        <div className="space-y-3">
+          <Label>Timeline / urgency *</Label>
+          <RadioGroup
+            value={formData.timeline}
+            onValueChange={(v: Timeline) => updateField("timeline", v)}
+            className="grid gap-2"
+            disabled={isLoading}
+          >
+            {[
+              { value: "asap", label: "ASAP" },
+              { value: "2-4weeks", label: "2–4 weeks" },
+              { value: "1-2months", label: "1–2 months" },
+              { value: "unsure", label: "Not sure" },
+            ].map((opt) => (
+              <div key={opt.value} className="flex items-center space-x-3 p-3 rounded-lg border border-border hover:bg-secondary/50 transition-colors cursor-pointer">
+                <RadioGroupItem value={opt.value} id={`timeline-${opt.value}`} />
+                <Label htmlFor={`timeline-${opt.value}`} className="cursor-pointer font-normal flex-1">{opt.label}</Label>
               </div>
-            </div>
+            ))}
+          </RadioGroup>
+        </div>
+      </div>
+    </div>
+  );
 
-            <div className="space-y-2">
-              <Label htmlFor="serviceArea">Where do you serve customers?</Label>
-              <Input
-                id="serviceArea"
-                placeholder="e.g. Dallas, TX or Greater Boston Area"
-                value={intake.serviceArea}
-                onChange={(e) => setIntake(prev => ({ ...prev, serviceArea: e.target.value }))}
-              />
-            </div>
-
-            <div className="space-y-3">
-              <Label>How can we reach you?</Label>
-              <div className="grid grid-cols-2 gap-3">
-                <Input
-                  placeholder="Email"
-                  type="email"
-                  value={intake.contactEmail}
-                  onChange={(e) => setIntake(prev => ({ ...prev, contactEmail: e.target.value }))}
-                />
-                <Input
-                  placeholder="Phone"
-                  type="tel"
-                  value={intake.contactPhone}
-                  onChange={(e) => setIntake(prev => ({ ...prev, contactPhone: e.target.value }))}
-                />
+  const renderBrandStep = () => (
+    <div className="space-y-6">
+      <div>
+        <h2 className="font-serif text-2xl font-bold mb-2">Brand & content</h2>
+        <p className="text-muted-foreground">Don't stress — "I don't have it yet" is totally fine.</p>
+      </div>
+      
+      <div className="space-y-5">
+        <div className="space-y-3">
+          <Label>Do you have a logo? *</Label>
+          <RadioGroup
+            value={formData.logoStatus}
+            onValueChange={(v: LogoStatus) => updateField("logoStatus", v)}
+            className="grid gap-2"
+            disabled={isLoading}
+          >
+            {[
+              { value: "yes", label: "Yes" },
+              { value: "no", label: "No" },
+              { value: "refresh", label: "Need a refresh" },
+            ].map((opt) => (
+              <div key={opt.value} className="flex items-center space-x-3 p-3 rounded-lg border border-border hover:bg-secondary/50 transition-colors cursor-pointer">
+                <RadioGroupItem value={opt.value} id={`logo-${opt.value}`} />
+                <Label htmlFor={`logo-${opt.value}`} className="cursor-pointer font-normal flex-1">{opt.label}</Label>
               </div>
-            </div>
-          </div>
-        );
+            ))}
+          </RadioGroup>
+        </div>
 
-      // STEP 2: PRIMARY GOAL
-      case 1:
-        return (
-          <div className="space-y-6">
-            <div className="space-y-3">
-              <Label className="text-base">What's the main purpose of this website?</Label>
-              <p className="text-sm text-muted-foreground">This shapes everything — layout, calls-to-action, and features we prioritize.</p>
-              <RadioGroup
-                value={intake.primaryGoal}
-                onValueChange={(value) => setIntake(prev => ({ ...prev, primaryGoal: value, sellType: value === "sell" ? prev.sellType : "" }))}
-                className="space-y-3"
-              >
-                {PRIMARY_GOALS.map((goal) => (
-                  <div 
-                    key={goal.id} 
-                    className={`flex items-start space-x-3 p-4 rounded-lg border-2 transition-all cursor-pointer ${
-                      intake.primaryGoal === goal.id 
-                        ? "border-primary bg-primary/5" 
-                        : "border-border hover:border-muted-foreground/30"
-                    }`}
-                    onClick={() => setIntake(prev => ({ ...prev, primaryGoal: goal.id, sellType: goal.id === "sell" ? prev.sellType : "" }))}
-                  >
-                    <RadioGroupItem value={goal.id} id={`goal-${goal.id}`} className="mt-0.5" />
-                    <div className="flex-1">
-                      <Label htmlFor={`goal-${goal.id}`} className="cursor-pointer font-medium">
-                        {goal.label}
-                      </Label>
-                      <p className="text-sm text-muted-foreground mt-0.5">{goal.description}</p>
-                    </div>
-                  </div>
-                ))}
-              </RadioGroup>
-            </div>
+        <div className="space-y-2">
+          <Label htmlFor="brandColors">Brand colors (if you have them)</Label>
+          <Input
+            id="brandColors"
+            placeholder="e.g. Navy blue and gold, or #1a365d"
+            value={formData.brandColors}
+            onChange={(e) => updateField("brandColors", e.target.value)}
+            disabled={isLoading}
+          />
+          <p className="text-xs text-muted-foreground">Paste hex codes or describe them</p>
+        </div>
 
-            {/* Follow-up for "sell" option */}
-            {intake.primaryGoal === "sell" && (
-              <div className="space-y-3 pt-2 border-t">
-                <Label className="text-base">What will you be selling?</Label>
-                <div className="grid grid-cols-2 gap-3">
-                  {SELL_TYPE_OPTIONS.map((opt) => {
-                    const isSelected = intake.sellType === opt.id;
-                    return (
-                      <button
-                        key={opt.id}
-                        onClick={() => setIntake(prev => ({ ...prev, sellType: opt.id }))}
-                        className={`p-3 rounded-lg border-2 text-left transition-all ${
-                          isSelected 
-                            ? "border-primary bg-primary/5" 
-                            : "border-border hover:border-muted-foreground/30"
-                        }`}
-                      >
-                        <div className="font-medium text-sm">{opt.label}</div>
-                        <div className="text-xs text-muted-foreground">{opt.description}</div>
-                      </button>
-                    );
-                  })}
-                </div>
+        <div className="space-y-2">
+          <Label htmlFor="servicesList">What services should be listed on the site?</Label>
+          <Textarea
+            id="servicesList"
+            placeholder="e.g. Emergency plumbing, Water heater repair, Drain cleaning..."
+            value={formData.servicesList}
+            onChange={(e) => updateField("servicesList", e.target.value)}
+            disabled={isLoading}
+            rows={3}
+            className="resize-none"
+          />
+          <p className="text-xs text-muted-foreground">Bullet list is fine</p>
+        </div>
+
+        <div className="space-y-3">
+          <Label>Photos / content readiness *</Label>
+          <RadioGroup
+            value={formData.photoReadiness}
+            onValueChange={(v: PhotoReadiness) => updateField("photoReadiness", v)}
+            className="grid gap-2"
+            disabled={isLoading}
+          >
+            {[
+              { value: "ready", label: "Ready" },
+              { value: "some", label: "Some" },
+              { value: "none", label: "None yet" },
+            ].map((opt) => (
+              <div key={opt.value} className="flex items-center space-x-3 p-3 rounded-lg border border-border hover:bg-secondary/50 transition-colors cursor-pointer">
+                <RadioGroupItem value={opt.value} id={`photo-${opt.value}`} />
+                <Label htmlFor={`photo-${opt.value}`} className="cursor-pointer font-normal flex-1">{opt.label}</Label>
               </div>
-            )}
-          </div>
-        );
+            ))}
+          </RadioGroup>
+        </div>
+      </div>
+    </div>
+  );
 
-      // STEP 3: TIMELINE
-      case 2:
-        return (
-          <div className="space-y-6">
-            <div className="space-y-3">
-              <Label className="text-base">When are you hoping to have something live?</Label>
-              <p className="text-sm text-muted-foreground">This helps us prioritize and plan — no commitment yet.</p>
-              <RadioGroup
-                value={intake.timeline}
-                onValueChange={(value) => setIntake(prev => ({ ...prev, timeline: value, deadlineDate: value !== "deadline" ? "" : prev.deadlineDate }))}
-                className="space-y-3"
-              >
-                {TIMELINE_OPTIONS.map((opt) => (
-                  <div 
-                    key={opt.id} 
-                    className={`flex items-start space-x-3 p-4 rounded-lg border-2 transition-all cursor-pointer ${
-                      intake.timeline === opt.id 
-                        ? "border-primary bg-primary/5" 
-                        : "border-border hover:border-muted-foreground/30"
-                    }`}
-                    onClick={() => setIntake(prev => ({ ...prev, timeline: opt.id, deadlineDate: opt.id !== "deadline" ? "" : prev.deadlineDate }))}
-                  >
-                    <RadioGroupItem value={opt.id} id={`timeline-${opt.id}`} className="mt-0.5" />
-                    <div className="flex-1">
-                      <Label htmlFor={`timeline-${opt.id}`} className="cursor-pointer font-medium">
-                        {opt.label}
-                      </Label>
-                      <p className="text-sm text-muted-foreground mt-0.5">{opt.description}</p>
-                    </div>
-                  </div>
-                ))}
-              </RadioGroup>
-            </div>
+  const renderAIStep = () => (
+    <div className="space-y-6">
+      <div>
+        <h2 className="font-serif text-2xl font-bold mb-2">AI Receptionist setup</h2>
+        <p className="text-muted-foreground">This is the info we use to answer calls, texts, and form leads correctly.</p>
+      </div>
+      
+      <div className="space-y-5">
+        <div className="space-y-2">
+          <Label htmlFor="businessPhone">Main business phone number *</Label>
+          <Input
+            id="businessPhone"
+            type="tel"
+            placeholder="(207) 555-1234"
+            value={formData.businessPhone}
+            onChange={(e) => updateField("businessPhone", e.target.value)}
+            disabled={isLoading}
+          />
+          <p className="text-xs text-muted-foreground">The number customers already call</p>
+        </div>
 
-            {/* Conditional: Deadline date picker */}
-            {intake.timeline === "deadline" && (
-              <div className="space-y-3 pt-2 border-t">
-                <Label className="text-base">When is your deadline?</Label>
-                <Input
-                  type="date"
-                  value={intake.deadlineDate}
-                  onChange={(e) => setIntake(prev => ({ ...prev, deadlineDate: e.target.value }))}
-                  min={new Date().toISOString().split('T')[0]}
-                  className="max-w-xs"
-                />
+        <div className="space-y-2">
+          <Label htmlFor="businessHours">Business hours *</Label>
+          <Input
+            id="businessHours"
+            placeholder="e.g. Mon-Fri 8am-5pm, Sat 9am-12pm"
+            value={formData.businessHours}
+            onChange={(e) => updateField("businessHours", e.target.value)}
+            disabled={isLoading}
+          />
+          <p className="text-xs text-muted-foreground">When you want calls handled normally</p>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="servicesOffered">Services you offer *</Label>
+          <Textarea
+            id="servicesOffered"
+            placeholder="e.g. Emergency plumbing, Water heater repair, Drain cleaning..."
+            value={formData.servicesOffered}
+            onChange={(e) => updateField("servicesOffered", e.target.value)}
+            disabled={isLoading}
+            rows={3}
+            className="resize-none"
+          />
+          <p className="text-xs text-muted-foreground">A quick list is fine</p>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="escalationNumber">Escalation number *</Label>
+          <Input
+            id="escalationNumber"
+            type="tel"
+            placeholder="(207) 555-9999"
+            value={formData.escalationNumber}
+            onChange={(e) => updateField("escalationNumber", e.target.value)}
+            disabled={isLoading}
+          />
+          <p className="text-xs text-muted-foreground">Where emergencies / handoffs should go</p>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="emergencyRules">What counts as an emergency? *</Label>
+          <Textarea
+            id="emergencyRules"
+            placeholder="e.g. Flooding, no heat, fire, gas leak, burst pipes..."
+            value={formData.emergencyRules}
+            onChange={(e) => updateField("emergencyRules", e.target.value)}
+            disabled={isLoading}
+            rows={2}
+            className="resize-none"
+          />
+        </div>
+
+        <div className="space-y-3">
+          <Label>Preferred tone *</Label>
+          <RadioGroup
+            value={formData.preferredTone}
+            onValueChange={(v: Tone) => updateField("preferredTone", v)}
+            className="grid grid-cols-3 gap-2"
+            disabled={isLoading}
+          >
+            {[
+              { value: "friendly", label: "Friendly" },
+              { value: "professional", label: "Professional" },
+              { value: "direct", label: "Direct" },
+            ].map((opt) => (
+              <div key={opt.value} className="flex items-center space-x-2 p-3 rounded-lg border border-border hover:bg-secondary/50 transition-colors cursor-pointer">
+                <RadioGroupItem value={opt.value} id={`tone-${opt.value}`} />
+                <Label htmlFor={`tone-${opt.value}`} className="cursor-pointer font-normal text-sm">{opt.label}</Label>
               </div>
-            )}
-          </div>
-        );
+            ))}
+          </RadioGroup>
+        </div>
 
-      // STEP 4: INVOLVEMENT/STYLE
-      case 3:
-        return (
-          <div className="space-y-6">
-            <div className="space-y-3">
-              <Label className="text-base">How involved do you want to be in decisions?</Label>
-              <p className="text-sm text-muted-foreground">There's no wrong answer — this helps us match your style.</p>
-              <RadioGroup
-                value={intake.involvement}
-                onValueChange={(value) => setIntake(prev => ({ ...prev, involvement: value }))}
-                className="space-y-3"
-              >
-                {INVOLVEMENT_OPTIONS.map((opt) => (
-                  <div 
-                    key={opt.id} 
-                    className={`flex items-start space-x-3 p-4 rounded-lg border-2 transition-all cursor-pointer ${
-                      intake.involvement === opt.id 
-                        ? "border-primary bg-primary/5" 
-                        : "border-border hover:border-muted-foreground/30"
-                    }`}
-                    onClick={() => setIntake(prev => ({ ...prev, involvement: opt.id }))}
-                  >
-                    <RadioGroupItem value={opt.id} id={`involvement-${opt.id}`} className="mt-0.5" />
-                    <div className="flex-1">
-                      <Label htmlFor={`involvement-${opt.id}`} className="cursor-pointer font-medium">
-                        {opt.label}
-                      </Label>
-                      <p className="text-sm text-muted-foreground mt-0.5">{opt.description}</p>
-                    </div>
-                  </div>
-                ))}
-              </RadioGroup>
-            </div>
-          </div>
-        );
+        <div className="space-y-2">
+          <Label htmlFor="bookingLink">Booking link (optional)</Label>
+          <Input
+            id="bookingLink"
+            type="url"
+            placeholder="https://calendly.com/your-business"
+            value={formData.bookingLink}
+            onChange={(e) => updateField("bookingLink", e.target.value)}
+            disabled={isLoading}
+          />
+          <p className="text-xs text-muted-foreground">Calendly, Acuity, etc.</p>
+        </div>
 
-      // STEP 5: ASSETS (REQUIRED)
-      case 4:
-        return (
-          <div className="space-y-6">
-            <p className="text-sm text-muted-foreground">
-              We need this info to build your site. Answer each question — it only takes a minute.
-            </p>
+        <div className="space-y-2">
+          <Label htmlFor="faqs">Common questions & answers (optional)</Label>
+          <Textarea
+            id="faqs"
+            placeholder="Paste anything customers ask a lot..."
+            value={formData.faqs}
+            onChange={(e) => updateField("faqs", e.target.value)}
+            disabled={isLoading}
+            rows={3}
+            className="resize-none"
+          />
+        </div>
+      </div>
+    </div>
+  );
 
-            {/* Logo */}
-            <div className="p-4 rounded-lg border-2 border-border space-y-3">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                  <Upload className="h-5 w-5 text-primary" />
-                </div>
-                <div className="flex-1">
-                  <Label className="font-medium">Do you have a logo? <span className="text-destructive">*</span></Label>
-                </div>
-              </div>
-              <RadioGroup
-                value={intake.logoStatus}
-                onValueChange={(value) => setIntake(prev => ({ ...prev, logoStatus: value }))}
-                className="space-y-2"
-              >
-                {LOGO_OPTIONS.map((opt) => (
-                  <div 
-                    key={opt.id} 
-                    className={`flex items-center space-x-3 p-3 rounded-lg border transition-all cursor-pointer ${
-                      intake.logoStatus === opt.id 
-                        ? "border-primary bg-primary/5" 
-                        : "border-border hover:border-muted-foreground/30"
-                    }`}
-                    onClick={() => setIntake(prev => ({ ...prev, logoStatus: opt.id }))}
-                  >
-                    <RadioGroupItem value={opt.id} id={`logo-${opt.id}`} />
-                    <div className="flex-1">
-                      <Label htmlFor={`logo-${opt.id}`} className="cursor-pointer text-sm font-medium">
-                        {opt.label}
-                      </Label>
-                      <p className="text-xs text-muted-foreground">{opt.description}</p>
-                    </div>
-                  </div>
-                ))}
-              </RadioGroup>
-            </div>
+  const A_LA_CARTE_SERVICES = [
+    { id: "logo", label: "Logo & Branding", description: "Professional logo design or refresh", icon: Palette },
+    { id: "photos", label: "Animated Photos / Videos", description: "Motion graphics and video content", icon: Image },
+    { id: "seo", label: "SEO & Local Optimization", description: "Google rankings and local visibility", icon: Search },
+  ];
 
-            {/* Brand Colors */}
-            <div className="p-4 rounded-lg border-2 border-border space-y-3">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                  <Palette className="h-5 w-5 text-primary" />
-                </div>
-                <div className="flex-1">
-                  <Label className="font-medium">Brand colors <span className="text-destructive">*</span></Label>
-                </div>
-              </div>
-              <RadioGroup
-                value={intake.brandColorChoice}
-                onValueChange={(value) => setIntake(prev => ({ ...prev, brandColorChoice: value, brandColors: value === "choose_for_me" ? "" : prev.brandColors }))}
-                className="space-y-2"
-              >
-                {BRAND_COLOR_OPTIONS.map((opt) => (
-                  <div 
-                    key={opt.id} 
-                    className={`flex items-center space-x-3 p-3 rounded-lg border transition-all cursor-pointer ${
-                      intake.brandColorChoice === opt.id 
-                        ? "border-primary bg-primary/5" 
-                        : "border-border hover:border-muted-foreground/30"
-                    }`}
-                    onClick={() => setIntake(prev => ({ ...prev, brandColorChoice: opt.id, brandColors: opt.id === "choose_for_me" ? "" : prev.brandColors }))}
-                  >
-                    <RadioGroupItem value={opt.id} id={`color-${opt.id}`} />
-                    <div className="flex-1">
-                      <Label htmlFor={`color-${opt.id}`} className="cursor-pointer text-sm font-medium">
-                        {opt.label}
-                      </Label>
-                      <p className="text-xs text-muted-foreground">{opt.description}</p>
-                    </div>
-                  </div>
-                ))}
-              </RadioGroup>
-              {intake.brandColorChoice === "have_colors" && (
-                <Input
-                  placeholder="e.g. Navy blue and gold, or #1a365d"
-                  value={intake.brandColors}
-                  onChange={(e) => setIntake(prev => ({ ...prev, brandColors: e.target.value }))}
-                  className="mt-2"
-                />
-              )}
-            </div>
+  const toggleService = (serviceId: string) => {
+    setFormData(prev => ({
+      ...prev,
+      selectedServices: prev.selectedServices.includes(serviceId)
+        ? prev.selectedServices.filter(s => s !== serviceId)
+        : [...prev.selectedServices, serviceId]
+    }));
+  };
 
-            {/* Services List */}
-            <div className="p-4 rounded-lg border-2 border-border space-y-3">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                  <Briefcase className="h-5 w-5 text-primary" />
-                </div>
-                <div className="flex-1">
-                  <Label className="font-medium">Services or products you offer <span className="text-destructive">*</span></Label>
-                  <p className="text-sm text-muted-foreground">List everything you want featured on your site</p>
-                </div>
-              </div>
-              <Textarea
-                placeholder="e.g. Residential plumbing, drain cleaning, water heater installation, emergency repairs..."
-                value={intake.servicesList}
-                onChange={(e) => setIntake(prev => ({ ...prev, servicesList: e.target.value }))}
-                rows={4}
-              />
-            </div>
-
-            {/* Photos */}
-            <div className="p-4 rounded-lg border-2 border-border space-y-3">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                  <ImageIcon className="h-5 w-5 text-primary" />
-                </div>
-                <div className="flex-1">
-                  <Label className="font-medium">Photos for your website <span className="text-destructive">*</span></Label>
-                  <p className="text-sm text-muted-foreground">Portfolio, team, or workspace images</p>
-                </div>
-              </div>
-              <RadioGroup
-                value={intake.photoReadiness}
-                onValueChange={(value) => setIntake(prev => ({ ...prev, photoReadiness: value }))}
-                className="space-y-2"
-              >
-                {PHOTO_OPTIONS.map((opt) => (
-                  <div 
-                    key={opt.id} 
-                    className={`flex items-center space-x-3 p-3 rounded-lg border transition-all cursor-pointer ${
-                      intake.photoReadiness === opt.id 
-                        ? "border-primary bg-primary/5" 
-                        : "border-border hover:border-muted-foreground/30"
-                    }`}
-                    onClick={() => setIntake(prev => ({ ...prev, photoReadiness: opt.id }))}
-                  >
-                    <RadioGroupItem value={opt.id} id={`photo-${opt.id}`} />
-                    <div className="flex-1">
-                      <Label htmlFor={`photo-${opt.id}`} className="cursor-pointer text-sm font-medium">
-                        {opt.label}
-                      </Label>
-                      <p className="text-xs text-muted-foreground">{opt.description}</p>
-                    </div>
-                  </div>
-                ))}
-              </RadioGroup>
-            </div>
-          </div>
-        );
-
-      // STEP 6: REVIEW
-      case 5:
-        return (
-          <div className="space-y-6">
-            <p className="text-sm text-muted-foreground">
-              Review your information below. You can go back to make changes.
-            </p>
-
-            <div className="space-y-4">
-              {/* Business Info */}
-              <div className="p-4 rounded-lg bg-muted/50 space-y-2">
-                <h3 className="font-medium flex items-center gap-2">
-                  <Building2 className="h-4 w-4 text-primary" />
-                  Business
-                </h3>
-                <div className="text-sm space-y-1">
-                  <p><span className="text-muted-foreground">Name:</span> {intake.businessName}</p>
-                  <p><span className="text-muted-foreground">Type:</span> {BUSINESS_TYPES.find(t => t.id === intake.businessType)?.label}</p>
-                  <p><span className="text-muted-foreground">Service area:</span> {intake.serviceArea || "Not specified"}</p>
-                </div>
-              </div>
-
-              {/* Contact */}
-              <div className="p-4 rounded-lg bg-muted/50 space-y-2">
-                <h3 className="font-medium">Contact</h3>
-                <div className="text-sm space-y-1">
-                  <p><span className="text-muted-foreground">Email:</span> {intake.contactEmail}</p>
-                  <p><span className="text-muted-foreground">Phone:</span> {intake.contactPhone}</p>
-                </div>
-              </div>
-
-              {/* Goals & Timeline */}
-              <div className="p-4 rounded-lg bg-muted/50 space-y-2">
-                <h3 className="font-medium flex items-center gap-2">
-                  <Target className="h-4 w-4 text-primary" />
-                  Goals
-                </h3>
-                <div className="text-sm space-y-1">
-                  <p><span className="text-muted-foreground">Main goal:</span> {PRIMARY_GOALS.find(g => g.id === intake.primaryGoal)?.label}</p>
-                  {intake.sellType && (
-                    <p><span className="text-muted-foreground">Selling:</span> {SELL_TYPE_OPTIONS.find(s => s.id === intake.sellType)?.label}</p>
+  const renderOtherStep = () => (
+    <div className="space-y-6">
+      <div>
+        <h2 className="font-serif text-2xl font-bold mb-2">What do you need?</h2>
+        <p className="text-muted-foreground">Select any services you're interested in, or describe what you're looking for.</p>
+      </div>
+      
+      <div className="space-y-5">
+        <div className="space-y-3">
+          <Label>À la carte services</Label>
+          <div className="grid gap-3">
+            {A_LA_CARTE_SERVICES.map((service) => {
+              const Icon = service.icon;
+              const isSelected = formData.selectedServices.includes(service.id);
+              return (
+                <button
+                  key={service.id}
+                  type="button"
+                  onClick={() => toggleService(service.id)}
+                  className={cn(
+                    "flex items-start gap-4 p-4 rounded-xl border-2 text-left transition-all duration-200",
+                    "hover:border-primary/50 hover:shadow-md",
+                    isSelected
+                      ? "border-primary bg-primary/5"
+                      : "border-border bg-card"
                   )}
-                  <p><span className="text-muted-foreground">Timeline:</span> {TIMELINE_OPTIONS.find(t => t.id === intake.timeline)?.label}</p>
-                  {intake.deadlineDate && (
-                    <p><span className="text-muted-foreground">Deadline:</span> {intake.deadlineDate}</p>
-                  )}
-                </div>
-              </div>
-
-              {/* Assets */}
-              <div className="p-4 rounded-lg bg-muted/50 space-y-2">
-                <h3 className="font-medium flex items-center gap-2">
-                  <Palette className="h-4 w-4 text-primary" />
-                  Assets & Brand
-                </h3>
-                <div className="text-sm space-y-1">
-                  <p><span className="text-muted-foreground">Logo:</span> {LOGO_OPTIONS.find(l => l.id === intake.logoStatus)?.label || "Not specified"}</p>
-                  <p><span className="text-muted-foreground">Brand colors:</span> {intake.brandColorChoice === "choose_for_me" ? "Choose for me" : intake.brandColors || "Not specified"}</p>
-                  <p><span className="text-muted-foreground">Services:</span> {intake.servicesList || "Not specified"}</p>
-                  <p><span className="text-muted-foreground">Photos:</span> {PHOTO_OPTIONS.find(p => p.id === intake.photoReadiness)?.label || "Not specified"}</p>
-                </div>
-              </div>
-            </div>
+                >
+                  <div className={cn(
+                    "w-10 h-10 rounded-lg flex items-center justify-center shrink-0",
+                    isSelected ? "bg-primary/20" : "bg-secondary/50"
+                  )}>
+                    <Icon className={cn(
+                      "w-5 h-5",
+                      isSelected ? "text-primary" : "text-muted-foreground"
+                    )} />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">{service.label}</span>
+                      {isSelected && <Check className="w-4 h-4 text-primary" />}
+                    </div>
+                    <p className="text-sm text-muted-foreground">{service.description}</p>
+                  </div>
+                </button>
+              );
+            })}
           </div>
-        );
+        </div>
 
+        <div className="space-y-2">
+          <Label htmlFor="customRequest">Something specific or unique?</Label>
+          <Textarea
+            id="customRequest"
+            placeholder="Tell us about any custom needs, integrations, or ideas you have in mind..."
+            value={formData.customRequest}
+            onChange={(e) => updateField("customRequest", e.target.value)}
+            disabled={isLoading}
+            rows={4}
+            className="resize-none"
+          />
+          <p className="text-xs text-muted-foreground">
+            Examples: CRM integrations, custom booking flows, membership portals, etc.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderCurrentStep = () => {
+    switch (currentStepId) {
+      case "choose":
+        return renderChooseStep();
+      case "basics":
+        return renderBasicsStep();
+      case "website":
+        return renderWebsiteStep();
+      case "brand":
+        return renderBrandStep();
+      case "ai":
+        return renderAIStep();
+      case "other":
+        return renderOtherStep();
       default:
-        return null;
+        return renderChooseStep();
     }
   };
 
-  const CurrentStepIcon = STEPS[currentStep].icon;
-  const isLastStep = currentStep === STEPS.length - 1;
+  const isLastStep = currentStep === steps.length - 1;
 
-  // Show loading state while checking auth
   if (authChecking) {
     return (
-      <ClientLayout
-        title="New Project"
-        subtitle="Checking authentication..."
-        maxWidth="md"
-      >
-        <div className="flex items-center justify-center min-h-[300px]">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      <ClientLayout title="Loading..." subtitle="">
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
       </ClientLayout>
     );
@@ -772,84 +838,84 @@ export default function OnboardingWizard() {
 
   return (
     <ClientLayout
-      title="New Project"
-      subtitle={`Step ${currentStep + 1} of ${STEPS.length}`}
-      maxWidth="md"
+      title={currentStep === 0 ? "Start a new project" : undefined}
+      subtitle={currentStep === 0 ? "Choose your starting point — we'll handle the rest." : undefined}
     >
-      {/* Progress bar */}
-      <div className="mb-8">
-        <Progress value={stepProgress} className="h-1" />
-        <div className="flex justify-between mt-3">
-          {STEPS.map((step, idx) => {
-            const Icon = step.icon;
-            const isComplete = idx < currentStep;
-            const isCurrent = idx === currentStep;
-            return (
-              <div 
-                key={step.id}
-                className={`flex flex-col items-center gap-1 ${
-                  isCurrent ? "text-primary" : isComplete ? "text-primary/60" : "text-muted-foreground/40"
-                }`}
-              >
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 ${
-                  isCurrent ? "border-primary bg-primary/10" : isComplete ? "border-primary/60 bg-primary/5" : "border-muted"
-                }`}>
-                  {isComplete ? (
-                    <CheckCircle2 className="h-4 w-4" />
-                  ) : (
-                    <Icon className="h-4 w-4" />
-                  )}
+      {/* Progress indicator */}
+      {formData.serviceType && steps.length > 1 && (
+        <div className="mb-8">
+          <div className="flex items-center gap-2">
+            {steps.map((step, index) => (
+              <div key={step.id} className="flex items-center">
+                <div className={cn(
+                  "flex items-center justify-center w-6 h-6 rounded-full text-xs font-medium transition-colors",
+                  index < currentStep 
+                    ? "bg-primary text-primary-foreground" 
+                    : index === currentStep 
+                      ? "bg-primary/20 text-primary border border-primary" 
+                      : "bg-muted text-muted-foreground"
+                )}>
+                  {index < currentStep ? <Check className="w-3 h-3" /> : index + 1}
                 </div>
-                <span className="text-xs hidden sm:block">{step.label}</span>
+                <span className={cn(
+                  "ml-2 text-sm hidden sm:inline",
+                  index === currentStep ? "text-foreground font-medium" : "text-muted-foreground"
+                )}>
+                  {step.label}
+                </span>
+                {index < steps.length - 1 && (
+                  <div className={cn(
+                    "w-8 h-px mx-3",
+                    index < currentStep ? "bg-primary" : "bg-border"
+                  )} />
+                )}
               </div>
-            );
-          })}
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* Step content */}
-      <div className="min-h-[400px]">
-        <div className="mb-6">
-          <h2 className="font-serif text-2xl font-bold flex items-center gap-3">
-            <CurrentStepIcon className="h-6 w-6 text-primary" />
-            {STEPS[currentStep].label}
-          </h2>
+      <div className="max-w-lg mx-auto">
+        <div className="animate-in fade-in slide-in-from-right-4 duration-300">
+          {renderCurrentStep()}
         </div>
-        
-        {renderStep()}
-      </div>
 
-      {/* Navigation */}
-      <div className="flex justify-between pt-6 border-t border-border mt-8">
-        <Button
-          variant="ghost"
-          onClick={handleBack}
-        >
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          {currentStep === 0 ? "Cancel" : "Back"}
-        </Button>
-        
-        <Button
-          onClick={handleNext}
-          disabled={!canProceed() || loading}
-        >
-          {loading ? (
-            <>
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              Creating...
-            </>
-          ) : isLastStep ? (
-            <>
-              Submit
-              <CheckCircle2 className="h-4 w-4 ml-2" />
-            </>
-          ) : (
-            <>
-              Continue
-              <ArrowRight className="h-4 w-4 ml-2" />
-            </>
-          )}
-        </Button>
+        {/* Navigation */}
+        <div className="flex gap-3 mt-8">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleBack}
+            disabled={isLoading}
+            className="flex-1"
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            {currentStep === 0 ? "Cancel" : "Back"}
+          </Button>
+          <Button
+            type="button"
+            onClick={handleNext}
+            disabled={!canProceed() || isLoading}
+            className="flex-1"
+          >
+            {isLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Creating...
+              </>
+            ) : isLastStep ? (
+              <>
+                <Sparkles className="mr-2 h-4 w-4" />
+                Create Project
+              </>
+            ) : (
+              <>
+                Continue
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </>
+            )}
+          </Button>
+        </div>
       </div>
     </ClientLayout>
   );
