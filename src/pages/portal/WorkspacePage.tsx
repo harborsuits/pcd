@@ -1,16 +1,17 @@
 import { useParams, Link, useSearchParams, useNavigate } from "react-router-dom";
 import React, { useState, useEffect, useCallback } from "react";
-import { Loader2, AlertCircle, CheckCircle2, Clock, Rocket, FileText, Upload, Image, Palette, MapPin, Phone, Calendar, ClipboardList, LucideIcon, Settings2, Home, ExternalLink } from "lucide-react";
-import { ProjectWorkspace, type Version, type CommentData } from "@/components/portal/workspace";
+import { Loader2, AlertCircle, Home, Settings2, ExternalLink, Activity, MessageCircle, FolderOpen, Globe, Phone } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { isAuthenticatedAdmin } from "@/lib/adminFetch";
 import { supabase } from "@/integrations/supabase/client";
 import { AIReceptionistSetup } from "@/components/portal/AIReceptionistSetup";
 import { SessionExpiredModal } from "@/components/portal/SessionExpiredModal";
 import { useSessionExpiry, storeAuthReturnPath } from "@/hooks/useSessionExpiry";
 import { useToast } from "@/hooks/use-toast";
-
+import { UpdatesTab, MessagesTab, FilesTab, WebsiteTab, AIReceptionistTab } from "@/components/portal/workspace/tabs";
+import type { Version } from "@/components/portal/workspace/VersionsList";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -35,7 +36,7 @@ interface IntakeData {
   contactEmail?: string;
   contactPhone?: string;
   // Service type
-  service_type?: string;
+  service_type?: 'website' | 'ai_receptionist' | 'both';
   // Legacy fields
   goals?: string[];
   assetsReadiness?: string;
@@ -69,154 +70,18 @@ interface IntakeData {
   handoff_triggers?: string[];
 }
 
-interface PhaseBData {
-  logoStatus?: "uploaded" | "create" | "help" | "" | null;
-  brandColors?: string | null;
-  colorPreference?: "pick_for_me" | "custom" | "" | null;
-  businessDescription?: string | null;
-  services?: string | null;
-  serviceArea?: string | null;
-  differentiators?: string | null;
-  faq?: string | null;
-  primaryGoal?: "book" | "quote" | "call" | "portfolio" | "learn" | "visit" | "" | null;
-  photosPlan?: "upload" | "generate" | "none" | "help" | "" | null;
-  photosUploaded?: number | null;
-  generatedPhotoSubjects?: string | null;
-  generatedPhotoStyle?: "realistic" | "studio" | "lifestyle" | "minimal" | "" | null;
-  generatedPhotoNotes?: string | null;
-  placeholderOk?: boolean | null;
-  googleReviewsLink?: string | null;
-  certifications?: string | null;
-  hasBeforeAfter?: "yes" | "coming_soon" | "no" | "" | null;
-  vibe?: "modern" | "classic" | "luxury" | "bold" | "minimal" | "cozy" | "" | null;
-  tone?: "professional" | "friendly" | "direct" | "playful" | "" | null;
-  exampleSites?: string | null;
-  mustInclude?: string | null;
-  mustAvoid?: string | null;
-  contentNeedsHelp?: boolean;
-  styleNeedsHelp?: boolean;
-}
-
 interface ProjectInfo {
   id: string;
   businessName: string;
   intakeStatus: 'draft' | 'submitted' | 'approved' | null;
   pipelineStage: string;
   portalStage: string;
+  status: 'lead' | 'contacted' | 'interested' | 'client' | 'completed' | 'archived' | null;
   intakeData: IntakeData | null;
   needsInfo: boolean;
   needsInfoItems: NeedsInfoItem[];
   needsInfoNote: string | null;
-  phaseBStatus: 'pending' | 'in_progress' | 'complete' | null;
-  phaseBData: PhaseBData | null;
   aiStatus: 'intake_received' | 'review' | 'setup' | 'testing' | 'live' | 'paused' | null;
-}
-
-// AI Status configuration - maps ai_trial_status to display
-type AIStatusKey = 'intake_received' | 'review' | 'setup' | 'testing' | 'live' | 'paused';
-
-function getAIStatusConfig(status: string | null): { 
-  label: string; 
-  Icon: typeof Clock; 
-  colorClass: string; 
-  headline: string;
-  description: string;
-  showProgress: boolean;
-  progressStep: number;
-} {
-  const configs: Record<AIStatusKey, ReturnType<typeof getAIStatusConfig>> = {
-    intake_received: {
-      label: "Received",
-      Icon: Clock,
-      colorClass: "bg-amber-500/10 text-amber-600 border-amber-200",
-      headline: "We've received your setup",
-      description: "Your AI receptionist configuration is in our queue. We'll start reviewing it shortly.",
-      showProgress: true,
-      progressStep: 1,
-    },
-    review: {
-      label: "Under Review",
-      Icon: Clock,
-      colorClass: "bg-amber-500/10 text-amber-600 border-amber-200",
-      headline: "We're reviewing your configuration",
-      description: "We're verifying your settings and phone number to make sure everything is correct.",
-      showProgress: true,
-      progressStep: 2,
-    },
-    setup: {
-      label: "Setting Up",
-      Icon: Settings2,
-      colorClass: "bg-blue-500/10 text-blue-600 border-blue-200",
-      headline: "We're configuring your AI",
-      description: "We're programming the AI with your business rules, FAQs, and preferences.",
-      showProgress: true,
-      progressStep: 3,
-    },
-    testing: {
-      label: "Testing",
-      Icon: Phone,
-      colorClass: "bg-purple-500/10 text-purple-600 border-purple-200",
-      headline: "Testing in progress",
-      description: "We're running sample calls to ensure everything works perfectly before going live.",
-      showProgress: true,
-      progressStep: 4,
-    },
-    live: {
-      label: "Live",
-      Icon: CheckCircle2,
-      colorClass: "bg-green-500/10 text-green-600 border-green-200",
-      headline: "Your AI receptionist is live!",
-      description: "Calls are being answered. You'll receive leads and summaries automatically.",
-      showProgress: false,
-      progressStep: 5,
-    },
-    paused: {
-      label: "Paused",
-      Icon: AlertCircle,
-      colorClass: "bg-muted text-muted-foreground border-border",
-      headline: "Service paused",
-      description: "Your AI receptionist is temporarily paused. Contact us to resume.",
-      showProgress: false,
-      progressStep: 0,
-    },
-  };
-
-  const key = (status as AIStatusKey) || 'intake_received';
-  return configs[key] || configs.intake_received;
-}
-
-// Status banner configuration
-function getStatusConfig(status: string | null) {
-  switch (status) {
-    case "submitted":
-      return {
-        label: "Intake Under Review",
-        Icon: Clock,
-        colorClass: "bg-amber-500/10 text-amber-600 border-amber-200",
-        hint: "We're reviewing your intake. You'll be notified when we start building.",
-      };
-    case "approved":
-      return {
-        label: "In Progress",
-        Icon: Rocket,
-        colorClass: "bg-primary/10 text-primary border-primary/20",
-        hint: "Your project is approved and we're building your site.",
-      };
-    case "draft":
-      return {
-        label: "Intake Incomplete",
-        Icon: FileText,
-        colorClass: "bg-muted text-muted-foreground border-border",
-        hint: "Please complete your intake to move forward.",
-      };
-    default:
-      return {
-        label: "Intake Under Review",
-        Icon: Clock,
-        colorClass: "bg-amber-500/10 text-amber-600 border-amber-200",
-        hint: "We're reviewing your intake. You'll be notified when we start building.",
-      };
-  }
 }
 
 export default function WorkspacePage() {
@@ -227,8 +92,8 @@ export default function WorkspacePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [versions, setVersions] = useState<Version[]>([]);
-  const [comments, setComments] = useState<CommentData[]>([]);
   const [projectInfo, setProjectInfo] = useState<ProjectInfo | null>(null);
+  const [activeTab, setActiveTab] = useState("updates");
   
   // AI Trial modal state
   const [showAITrialModal, setShowAITrialModal] = useState(false);
@@ -240,6 +105,12 @@ export default function WorkspacePage() {
   const [isOperator, setIsOperator] = useState(false);
   const [operatorCheckDone, setOperatorCheckDone] = useState(false);
   
+  // Determine service type and what tabs to show
+  const serviceType = projectInfo?.intakeData?.service_type || 'website';
+  const includesWebsite = serviceType === 'website' || serviceType === 'both';
+  const includesAI = serviceType === 'ai_receptionist' || serviceType === 'both';
+  const hasVersions = versions.length > 0;
+  
   // Server-side operator verification
   const verifyOperatorStatus = useCallback(async () => {
     if (!token) {
@@ -250,7 +121,6 @@ export default function WorkspacePage() {
     // Check if user is authenticated as admin
     const isAdmin = await isAuthenticatedAdmin();
     if (!isAdmin) {
-      // Not authenticated as admin
       setIsOperator(false);
       setOperatorCheckDone(true);
       return;
@@ -281,7 +151,6 @@ export default function WorkspacePage() {
         const data = await res.json();
         setIsOperator(data.is_operator === true);
       } else {
-        // Invalid or unauthorized, not an operator
         setIsOperator(false);
       }
     } catch (err) {
@@ -296,7 +165,6 @@ export default function WorkspacePage() {
   useEffect(() => {
     if (searchParams.get("ai_trial") === "start") {
       setShowAITrialModal(true);
-      // Remove the query param from URL without reload
       navigate(`/w/${token}`, { replace: true });
     }
   }, [searchParams, token, navigate]);
@@ -306,7 +174,6 @@ export default function WorkspacePage() {
     if (!token) return;
 
     try {
-      // Get user session for auth
       const { data: { session } } = await supabase.auth.getSession();
       const authToken = session?.access_token || SUPABASE_ANON_KEY;
       
@@ -332,7 +199,6 @@ export default function WorkspacePage() {
       }
       
       if (res.ok && data.business) {
-        // Map intake_json from API to intakeData (can be the full intake object)
         const rawIntake = data.intake_json || {};
         setProjectInfo({
           id: data.business.id || "",
@@ -340,12 +206,11 @@ export default function WorkspacePage() {
           intakeStatus: data.intake_status,
           pipelineStage: data.business.pipeline_stage || "new",
           portalStage: data.business.portal_stage || "intake",
+          status: data.business.status || null,
           intakeData: rawIntake,
           needsInfo: data.business.needs_info || false,
           needsInfoItems: data.business.needs_info_items || [],
           needsInfoNote: data.business.needs_info_note || null,
-          phaseBStatus: data.phase_b_status || null,
-          phaseBData: data.phase_b_data || null,
           aiStatus: data.business.ai_trial_status || null,
         });
       }
@@ -386,35 +251,6 @@ export default function WorkspacePage() {
     }
   }, [token]);
 
-  // Fetch all comments
-  const fetchComments = useCallback(async () => {
-    if (!token) return;
-
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const authToken = session?.access_token || SUPABASE_ANON_KEY;
-      
-      const res = await fetch(
-        `${SUPABASE_URL}/functions/v1/portal/${token}/comments`,
-        {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            apikey: SUPABASE_ANON_KEY,
-            Authorization: `Bearer ${authToken}`,
-          },
-        }
-      );
-
-      const data = await res.json();
-      if (res.ok && data.comments) {
-        setComments(data.comments);
-      }
-    } catch (err) {
-      console.error("Fetch comments error:", err);
-    }
-  }, [token]);
-
   // Initial load
   useEffect(() => {
     const load = async () => {
@@ -422,13 +258,53 @@ export default function WorkspacePage() {
       await Promise.all([
         fetchProjectInfo(), 
         fetchVersions(), 
-        fetchComments(),
         verifyOperatorStatus(),
       ]);
       setLoading(false);
     };
     load();
-  }, [fetchProjectInfo, fetchVersions, fetchComments, verifyOperatorStatus]);
+  }, [fetchProjectInfo, fetchVersions, verifyOperatorStatus]);
+
+  // Request change handler
+  const handleRequestChange = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const authToken = session?.access_token || SUPABASE_ANON_KEY;
+      
+      const res = await fetch(
+        `${SUPABASE_URL}/functions/v1/portal/${token}/help-request`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            apikey: SUPABASE_ANON_KEY,
+            Authorization: `Bearer ${authToken}`,
+          },
+          body: JSON.stringify({ 
+            type: "change_request",
+            message: "Client requested a change" 
+          }),
+        }
+      );
+      
+      if (res.ok) {
+        toast({
+          title: "Request sent!",
+          description: "We'll reach out to confirm details.",
+        });
+      } else {
+        toast({
+          title: "Request noted",
+          description: "Reply to any email from us or we'll reach out.",
+        });
+      }
+    } catch (err) {
+      toast({
+        title: "Request noted",
+        description: "Reply to any email from us or we'll reach out.",
+      });
+    }
+  };
 
   // Wait for both loading AND operator check to complete
   if (loading || !operatorCheckDone) {
@@ -453,487 +329,150 @@ export default function WorkspacePage() {
     );
   }
 
-  // Detect if this is an AI receptionist project
-  const isAIReceptionistProject = projectInfo?.intakeData?.service_type === "ai_receptionist" || 
-                                   projectInfo?.intakeData?.service_type === "both";
-
-  // Client Portal Home - shown when no versions exist yet (post-intake)
-  // Only show this client-facing screen if NOT an operator
-  if (versions.length === 0 && !isOperator) {
-    const config = getStatusConfig(projectInfo?.intakeStatus || "submitted");
-    const Icon = config.Icon;
-
-    // AI Receptionist specific view
-    if (isAIReceptionistProject) {
-      const intake = projectInfo?.intakeData;
-      
-      const CALL_HANDLING_LABELS: Record<string, string> = {
-        always: "Always answer",
-        after_hours: "After hours only",
-        overflow: "Overflow only",
-      };
-      
-      const HANDOFF_LABELS: Record<string, string> = {
-        transfer: "Transfer call",
-        message: "Take message",
-        callback: "Schedule callback",
-        text: "Text follow-up",
-      };
-
-      // Get status-based config
-      const aiStatusConfig = getAIStatusConfig(projectInfo?.aiStatus);
-      const StatusIcon = aiStatusConfig.Icon;
-
-      return (
-        <div className="h-screen flex flex-col bg-background">
-          {/* Header */}
-          <div className="border-b border-border bg-card/80 backdrop-blur-sm px-4 py-3">
-            <div className="max-w-4xl mx-auto flex items-center justify-between gap-4">
-              <Link 
-                to="/portal" 
-                className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors group"
-              >
-                <Home className="h-4 w-4 group-hover:scale-110 transition-transform" />
-                <span className="font-medium">Pleasant Cove Design</span>
-              </Link>
-              <div className="flex items-center gap-3">
-                <Badge variant="outline" className={aiStatusConfig.colorClass}>
-                  <StatusIcon className="h-3 w-3 mr-1" />
-                  {aiStatusConfig.label}
-                </Badge>
-                <span className="text-sm font-medium">{projectInfo?.businessName}</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex-1 overflow-y-auto">
-            <div className="max-w-lg mx-auto px-4 py-12">
-              {/* AI Receptionist Status Card */}
-              <div className="bg-card border border-border rounded-xl p-6 text-center mb-6">
-                <div className={`inline-flex items-center justify-center w-14 h-14 rounded-full mb-5 ${
-                  projectInfo?.aiStatus === 'live' 
-                    ? 'bg-green-500/10 text-green-600' 
-                    : 'bg-primary/10 text-primary'
-                }`}>
-                  <StatusIcon className="h-7 w-7" />
-                </div>
-
-                <h2 className="font-serif text-2xl font-bold mb-2">
-                  {aiStatusConfig.headline}
-                </h2>
-                <p className="text-muted-foreground mb-6">
-                  {aiStatusConfig.description}
-                </p>
-
-                {/* Progress steps - only show if not live */}
-                {aiStatusConfig.showProgress && (
-                  <div className="bg-muted/40 rounded-lg p-4 text-left text-sm space-y-3">
-                    <p className="font-medium text-foreground">Progress:</p>
-                    <div className="space-y-2">
-                      {[
-                        { step: 1, label: "Intake received" },
-                        { step: 2, label: "Configuration review" },
-                        { step: 3, label: "AI setup" },
-                        { step: 4, label: "Testing" },
-                        { step: 5, label: "Live!" },
-                      ].map(({ step, label }) => (
-                        <div key={step} className="flex items-center gap-2">
-                          <div className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-medium ${
-                            step < aiStatusConfig.progressStep 
-                              ? 'bg-green-500 text-white' 
-                              : step === aiStatusConfig.progressStep 
-                                ? 'bg-primary text-primary-foreground'
-                                : 'bg-muted-foreground/20 text-muted-foreground'
-                          }`}>
-                            {step < aiStatusConfig.progressStep ? '✓' : step}
-                          </div>
-                          <span className={step <= aiStatusConfig.progressStep ? 'text-foreground' : 'text-muted-foreground'}>
-                            {label}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                    <p className="text-xs text-muted-foreground pt-2">
-                      Expected timeline: <span className="font-medium text-foreground">24–48 hours</span>
-                    </p>
-                  </div>
-                )}
-
-                {/* Live status - show dashboard preview */}
-                {projectInfo?.aiStatus === 'live' && (
-                  <div className="bg-green-500/5 border border-green-200 dark:border-green-800 rounded-lg p-4 text-left text-sm">
-                    <p className="font-medium text-green-700 dark:text-green-400 mb-2">🎉 You're live!</p>
-                    <p className="text-muted-foreground">
-                      Your AI receptionist is actively answering calls. Leads and call summaries will appear here soon.
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              {/* Summary of what they submitted */}
-              <div className="bg-card border border-border rounded-xl p-5 space-y-4">
-                <h3 className="font-medium flex items-center gap-2">
-                  <FileText className="h-4 w-4 text-muted-foreground" />
-                  Your submitted configuration
-                </h3>
-                
-                <div className="space-y-3 text-sm">
-                  {intake?.business_phone && (
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Business phone</span>
-                      <span className="font-medium">{intake.business_phone}</span>
-                    </div>
-                  )}
-                  {intake?.business_hours && (
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Hours</span>
-                      <span className="font-medium">{intake.business_hours}</span>
-                    </div>
-                  )}
-                  {intake?.call_handling && (
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">When AI answers</span>
-                      <span className="font-medium">{CALL_HANDLING_LABELS[intake.call_handling] || intake.call_handling}</span>
-                    </div>
-                  )}
-                  {intake?.handoff_method && (
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Handoff method</span>
-                      <span className="font-medium">{HANDOFF_LABELS[intake.handoff_method] || intake.handoff_method}</span>
-                    </div>
-                  )}
-                  {intake?.escalation_number && (
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Escalation number</span>
-                      <span className="font-medium">{intake.escalation_number}</span>
-                    </div>
-                  )}
-                  {intake?.services_offered && (
-                    <div>
-                      <span className="text-muted-foreground">Services</span>
-                      <p className="font-medium mt-1 text-xs">{intake.services_offered}</p>
-                    </div>
-                  )}
-                </div>
-
-                <div className="pt-3 border-t">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="w-full gap-2"
-                    onClick={async () => {
-                      // Create a change request event via the messaging system
-                      try {
-                        const { data: { session } } = await supabase.auth.getSession();
-                        const authToken = session?.access_token || SUPABASE_ANON_KEY;
-                        
-                        const res = await fetch(
-                          `${SUPABASE_URL}/functions/v1/portal/${token}/help-request`,
-                          {
-                            method: "POST",
-                            headers: {
-                              "Content-Type": "application/json",
-                              apikey: SUPABASE_ANON_KEY,
-                              Authorization: `Bearer ${authToken}`,
-                            },
-                            body: JSON.stringify({ 
-                              type: "change_request",
-                              message: "Client requested a configuration change" 
-                            }),
-                          }
-                        );
-                        
-                        if (res.ok) {
-                          toast({
-                            title: "Request sent!",
-                            description: "We'll reach out before making any changes to confirm details.",
-                          });
-                        } else {
-                          toast({
-                            title: "Request noted",
-                            description: "Reply to any email from us or we'll reach out before going live.",
-                          });
-                        }
-                      } catch (err) {
-                        toast({
-                          title: "Request noted",
-                          description: "Reply to any email from us or we'll reach out before going live.",
-                        });
-                      }
-                    }}
-                  >
-                    <AlertCircle className="h-4 w-4" />
-                    Request a change
-                  </Button>
-                </div>
-              </div>
-
-              {/* Footer note */}
-              <p className="text-center text-xs text-muted-foreground mt-6">
-                Questions? Just reply to any email from us.
-              </p>
-            </div>
-          </div>
-
-          {/* Session Expired Modal */}
-          <SessionExpiredModal
-            open={showAuthModal}
-            onOpenChange={setShowAuthModal}
-          />
-        </div>
-      );
-    }
-
-    // Website/default intake view
-    return (
-      <div className="h-screen flex flex-col bg-background">
-        {/* Header with back navigation */}
-        <div className="border-b border-border bg-card/80 backdrop-blur-sm px-4 py-3">
-          <div className="max-w-4xl mx-auto flex items-center justify-between gap-4">
+  return (
+    <div className="h-screen flex flex-col bg-background">
+      {/* Header */}
+      <div className="border-b border-border bg-card/80 backdrop-blur-sm px-4 py-3 flex-shrink-0">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
             <Link 
               to="/portal" 
               className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors group"
             >
               <Home className="h-4 w-4 group-hover:scale-110 transition-transform" />
-              <span className="font-medium">Pleasant Cove Design</span>
+              <span className="font-medium hidden sm:inline">Pleasant Cove Design</span>
             </Link>
-            <div className="flex items-center gap-3">
-              <Badge variant="outline" className={config.colorClass}>
-                <Icon className="h-3 w-3 mr-1" />
-                {config.label}
-              </Badge>
-              <span className="text-sm font-medium">{projectInfo?.businessName}</span>
-            </div>
+            <div className="h-4 w-px bg-border" />
+            <span className="text-sm font-semibold">{projectInfo?.businessName}</span>
           </div>
-        </div>
-
-        <div className="flex-1 overflow-y-auto">
-          <div className="max-w-lg mx-auto px-4 py-12">
-            {/* Success confirmation card */}
-            <div className="bg-card border border-border rounded-xl p-6 text-center mb-6">
-              <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-green-500/10 text-green-600 mb-5">
-                <CheckCircle2 className="h-7 w-7" />
-              </div>
-
-              <h2 className="font-serif text-2xl font-bold mb-2">
-                We've got what we need
-              </h2>
-              <p className="text-muted-foreground mb-6">
-                We're reviewing your intake and preparing next steps.
-                <br />
-                <span className="text-foreground/80">Nothing else needed from you right now.</span>
-              </p>
-
-              {/* What happens next */}
-              <div className="bg-muted/40 rounded-lg p-4 text-left text-sm">
-                <p className="text-muted-foreground">
-                  <span className="font-medium text-foreground">What happens next:</span>{" "}
-                  We'll have your first preview ready within 24–48 hours. You'll get a notification when it's time to review.
-                </p>
-              </div>
-
-              {projectInfo?.intakeStatus === "submitted" && (
-                <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground mt-4">
-                  <CheckCircle2 className="h-4 w-4 text-green-500" />
-                  Intake submitted successfully
-                </div>
-              )}
-              {projectInfo?.intakeStatus === "approved" && (
-                <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground mt-4">
-                  <CheckCircle2 className="h-4 w-4 text-green-500" />
-                  Intake approved — build in progress
-                </div>
-              )}
-            </div>
-
-
-            {/* AI Receptionist Trial Offer */}
-            <div className="bg-card border border-border rounded-xl p-5">
-              <div className="flex items-start gap-4">
-                <div className="flex-shrink-0 w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                  <Phone className="h-5 w-5 text-primary" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm text-muted-foreground mb-2">
-                    While we're setting things up…
-                  </p>
-                  <h3 className="font-medium mb-1">
-                    Try our AI receptionist free for a week
-                  </h3>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    It answers calls, captures leads, and follows up automatically — no setup stress, no commitment.
-                  </p>
-                  
-                  <Button 
-                    onClick={() => setShowAITrialModal(true)}
-                    className="w-full"
-                    size="sm"
-                  >
-                    <Rocket className="mr-2 h-4 w-4" />
-                    Try it free for a week
+          <div className="flex items-center gap-3">
+            <Badge variant="outline" className="text-xs">
+              {serviceType === 'both' ? 'Website + AI' : 
+               serviceType === 'ai_receptionist' ? 'AI Receptionist' : 'Website'}
+            </Badge>
+            {isOperator && (
+              <>
+                <Link to={`/c/${token}`} target="_blank">
+                  <Button variant="ghost" size="sm" className="gap-1.5 text-xs">
+                    <ExternalLink className="h-3 w-3" />
+                    Client View
                   </Button>
-                  
-                  <p className="text-xs text-muted-foreground mt-3 text-center">
-                    Totally optional. If you don't like it, we'll turn it off.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Footer note */}
-            <p className="text-center text-xs text-muted-foreground mt-6">
-              Questions? Just reply to any email from us.
-            </p>
+                </Link>
+                <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-200">
+                  <Settings2 className="h-3 w-3 mr-1" />
+                  Operator
+                </Badge>
+              </>
+            )}
           </div>
         </div>
-
-        {/* AI Receptionist Setup Wizard */}
-        <AIReceptionistSetup
-          open={showAITrialModal}
-          onClose={() => setShowAITrialModal(false)}
-          onComplete={async (data) => {
-            try {
-              const res = await fetch(
-                `${SUPABASE_URL}/functions/v1/portal/${token}/ai-trial`,
-                {
-                  method: "POST",
-                  headers: {
-                    "Content-Type": "application/json",
-                    apikey: SUPABASE_ANON_KEY,
-                  },
-                  body: JSON.stringify({ action: "setup_complete", setupData: data }),
-                }
-              );
-              if (!res.ok) {
-                console.error("AI trial setup failed:", await res.text());
-              }
-            } catch (err) {
-              console.error("AI trial setup error:", err);
-            }
-          }}
-          businessName={projectInfo?.businessName || "your business"}
-        />
-
-        {/* Session Expired Modal */}
-        <SessionExpiredModal
-          open={showAuthModal}
-          onOpenChange={setShowAuthModal}
-        />
-      </div>
-    );
-  }
-
-  // Render status banner + workspace when versions exist
-  const config = getStatusConfig(projectInfo?.intakeStatus || "approved");
-  const Icon = config.Icon;
-
-  // Icon mapping for info items
-  const INFO_ICONS: Record<string, LucideIcon> = {
-    logo: Palette,
-    photos: Image,
-    services: ClipboardList,
-    service_area: MapPin,
-    contact: Phone,
-    booking: Calendar,
-    brand_colors: Palette,
-  };
-
-  return (
-    <div className="h-screen flex flex-col">
-      {/* Status banner */}
-      {projectInfo && (
-        <div className="border-b border-border bg-muted/30 px-4 py-2 flex-shrink-0">
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <Link to="/">
-                <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground hover:text-foreground">
-                  <Home className="h-4 w-4" />
-                  <span className="hidden sm:inline">Home</span>
-                </Button>
-              </Link>
-              <div className="h-4 w-px bg-border" />
-              <Badge variant="outline" className={config.colorClass}>
-                <Icon className="h-3 w-3 mr-1" />
-                {config.label}
-              </Badge>
-              <span className="text-sm font-medium">{projectInfo.businessName}</span>
-            </div>
-            <div className="flex items-center gap-3">
-              <span className="text-xs text-muted-foreground">
-                {versions.length} version{versions.length !== 1 ? "s" : ""} available
-              </span>
-              {isOperator && (
-                <>
-                  <Link to={`/c/${token}`} target="_blank">
-                    <Button variant="ghost" size="sm" className="gap-1.5 text-xs">
-                      <ExternalLink className="h-3 w-3" />
-                      Client View
-                    </Button>
-                  </Link>
-                  <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-200">
-                    <Settings2 className="h-3 w-3 mr-1" />
-                    Operator
-                  </Badge>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Action Needed Banner (client-facing) */}
-      {projectInfo?.needsInfo && projectInfo.needsInfoItems.length > 0 && (
-        <div className="border-b border-amber-200 bg-amber-50 dark:bg-amber-950/30 px-4 py-3 flex-shrink-0">
-          <div className="max-w-4xl mx-auto">
-            <div className="flex items-start gap-3">
-              <div className="h-8 w-8 rounded-full bg-amber-500/20 flex items-center justify-center flex-shrink-0">
-                <AlertCircle className="h-4 w-4 text-amber-600" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <h3 className="font-semibold text-amber-800 dark:text-amber-300">Action Needed</h3>
-                <p className="text-sm text-amber-700 dark:text-amber-400 mb-3">
-                  {projectInfo.needsInfoNote || "We need a couple things before we can continue building."}
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {projectInfo.needsInfoItems.map((item) => {
-                    const ItemIcon = INFO_ICONS[item.key] || Upload;
-                    return (
-                      <div
-                        key={item.key}
-                        className="flex items-center gap-2 bg-white dark:bg-background border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-1.5 text-sm"
-                      >
-                        <ItemIcon className="h-3.5 w-3.5 text-amber-600" />
-                        <span>{item.label}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Workspace (3-column layout with operator tab integrated) */}
-      <div className="flex-1 min-h-0">
-        <ProjectWorkspace
-          token={token!}
-          versions={versions}
-          comments={comments}
-          onRefreshComments={fetchComments}
-          projectId={projectInfo?.id}
-          intakeStatus={projectInfo?.intakeStatus}
-          pipelineStage={projectInfo?.pipelineStage}
-          portalStage={projectInfo?.portalStage}
-          intakeData={projectInfo?.intakeData}
-          phaseBStatus={projectInfo?.phaseBStatus}
-          phaseBData={projectInfo?.phaseBData}
-          aiStatus={projectInfo?.aiStatus}
-          onRefreshProject={fetchProjectInfo}
-        />
       </div>
 
-      {/* AI Receptionist Setup Wizard */}
+      {/* Main content with tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
+        {/* Tab navigation */}
+        <div className="border-b border-border px-4 bg-muted/30 flex-shrink-0">
+          <TabsList className="h-11 bg-transparent p-0 gap-1">
+            <TabsTrigger 
+              value="updates" 
+              className="data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-b-none border-b-2 border-transparent data-[state=active]:border-primary gap-2"
+            >
+              <Activity className="h-4 w-4" />
+              <span className="hidden sm:inline">Updates</span>
+            </TabsTrigger>
+            <TabsTrigger 
+              value="messages" 
+              className="data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-b-none border-b-2 border-transparent data-[state=active]:border-primary gap-2"
+            >
+              <MessageCircle className="h-4 w-4" />
+              <span className="hidden sm:inline">Messages</span>
+            </TabsTrigger>
+            <TabsTrigger 
+              value="files" 
+              className="data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-b-none border-b-2 border-transparent data-[state=active]:border-primary gap-2"
+            >
+              <FolderOpen className="h-4 w-4" />
+              <span className="hidden sm:inline">Files</span>
+            </TabsTrigger>
+            {includesWebsite && (
+              <TabsTrigger 
+                value="website" 
+                className="data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-b-none border-b-2 border-transparent data-[state=active]:border-primary gap-2"
+              >
+                <Globe className="h-4 w-4" />
+                <span className="hidden sm:inline">Website</span>
+                {hasVersions && (
+                  <span className="ml-1 px-1.5 py-0.5 text-xs bg-green-500/10 text-green-600 rounded">
+                    {versions.length}
+                  </span>
+                )}
+              </TabsTrigger>
+            )}
+            {includesAI && (
+              <TabsTrigger 
+                value="ai" 
+                className="data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-b-none border-b-2 border-transparent data-[state=active]:border-primary gap-2"
+              >
+                <Phone className="h-4 w-4" />
+                <span className="hidden sm:inline">AI Receptionist</span>
+              </TabsTrigger>
+            )}
+          </TabsList>
+        </div>
+
+        {/* Tab content */}
+        <div className="flex-1 min-h-0">
+          <TabsContent value="updates" className="h-full m-0">
+            <UpdatesTab
+              projectStatus={projectInfo?.status || null}
+              intakeStatus={projectInfo?.intakeStatus || null}
+              portalStage={projectInfo?.portalStage || 'intake'}
+              serviceType={serviceType}
+              aiStatus={projectInfo?.aiStatus || null}
+              hasVersions={hasVersions}
+              businessName={projectInfo?.businessName || ''}
+              needsInfo={projectInfo?.needsInfo}
+              needsInfoItems={projectInfo?.needsInfoItems}
+              needsInfoNote={projectInfo?.needsInfoNote}
+              onRequestChange={handleRequestChange}
+              onUploadFiles={() => setActiveTab('files')}
+            />
+          </TabsContent>
+          
+          <TabsContent value="messages" className="h-full m-0">
+            <MessagesTab 
+              token={token!} 
+              businessName={projectInfo?.businessName || ''} 
+            />
+          </TabsContent>
+          
+          <TabsContent value="files" className="h-full m-0">
+            <FilesTab token={token!} />
+          </TabsContent>
+          
+          {includesWebsite && (
+            <TabsContent value="website" className="h-full m-0">
+              <WebsiteTab
+                versions={versions}
+                intakeStatus={projectInfo?.intakeStatus || null}
+                hasVersions={hasVersions}
+              />
+            </TabsContent>
+          )}
+          
+          {includesAI && (
+            <TabsContent value="ai" className="h-full m-0">
+              <AIReceptionistTab
+                aiStatus={projectInfo?.aiStatus || null}
+                intakeData={projectInfo?.intakeData}
+                onRequestChange={handleRequestChange}
+              />
+            </TabsContent>
+          )}
+        </div>
+      </Tabs>
+
+      {/* AI Receptionist Setup Wizard (for trial offer) */}
       <AIReceptionistSetup
         open={showAITrialModal}
         onClose={() => setShowAITrialModal(false)}
