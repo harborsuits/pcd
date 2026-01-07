@@ -64,7 +64,8 @@ interface FormData {
   
   // AI Receptionist fields - Emergencies & Escalation
   escalationNumber: string;
-  emergencyRules: string;
+  emergencyTriggers: string[];
+  emergencyOther: string;
   afterHoursAction: AfterHoursAction;
   
   // AI Receptionist fields - Lead & Qualification
@@ -122,7 +123,8 @@ const GetDemo = () => {
     serviceAreaRules: "",
     serviceConstraints: "",
     escalationNumber: "",
-    emergencyRules: "",
+    emergencyTriggers: [],
+    emergencyOther: "",
     afterHoursAction: "",
     leadFields: [],
     qualifiedLeadRules: "",
@@ -235,7 +237,7 @@ const GetDemo = () => {
       case "ai-operations":
         return formData.businessPhone.trim() && formData.businessHours.trim() && formData.servicesOffered.trim();
       case "ai-emergency":
-        return formData.escalationNumber.trim() && formData.emergencyRules.trim();
+        return formData.escalationNumber.trim() && formData.emergencyTriggers.length > 0;
       case "ai-leads":
         return formData.leadFields.length > 0;
       case "ai-voice":
@@ -297,7 +299,8 @@ const GetDemo = () => {
           business_hours: formData.businessHours.trim() || null,
           services_offered: formData.servicesOffered.trim() || null,
           escalation_number: formData.escalationNumber.trim() || null,
-          emergency_rules: formData.emergencyRules.trim() || null,
+          emergency_triggers: formData.emergencyTriggers.length > 0 ? formData.emergencyTriggers : null,
+          emergency_other: formData.emergencyOther.trim() || null,
           preferred_tone: formData.preferredTone || null,
           booking_link: formData.bookingLink.trim() || null,
           faqs: formData.faqs.trim() || null,
@@ -434,14 +437,28 @@ const GetDemo = () => {
     </button>
   );
 
-  // Helper to toggle array field values
-  const toggleArrayField = (field: "textHandling" | "leadFields" | "handoffTriggers" | "businessPersonality", value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: (prev[field] as string[]).includes(value)
-        ? (prev[field] as string[]).filter((v: string) => v !== value)
-        : [...(prev[field] as string[]), value]
-    }));
+  // Helper to toggle array field values (with optional max cap)
+  const toggleArrayField = (
+    field: "textHandling" | "leadFields" | "handoffTriggers" | "businessPersonality" | "emergencyTriggers", 
+    value: string,
+    maxItems?: number
+  ) => {
+    setFormData(prev => {
+      const currentValues = prev[field] as string[];
+      const isSelected = currentValues.includes(value);
+      
+      // If removing, always allow
+      if (isSelected) {
+        return { ...prev, [field]: currentValues.filter((v: string) => v !== value) };
+      }
+      
+      // If adding and at max, don't add
+      if (maxItems && currentValues.length >= maxItems) {
+        return prev;
+      }
+      
+      return { ...prev, [field]: [...currentValues, value] };
+    });
   };
 
   const renderChooseStep = () => (
@@ -773,7 +790,8 @@ const GetDemo = () => {
         </div>
 
         <div className="space-y-3">
-          <Label>Text/chat capabilities (select all that apply)</Label>
+          <Label>Text/chat capabilities</Label>
+          <p className="text-xs text-muted-foreground -mt-1">Select all that apply</p>
           <div className="grid gap-2">
             {[
               { value: "answer_faqs", label: "Answer FAQs" },
@@ -901,17 +919,44 @@ const GetDemo = () => {
           <p className="text-xs text-muted-foreground">Where emergencies / handoffs should go</p>
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="emergencyRules">What counts as an emergency? *</Label>
-          <Textarea
-            id="emergencyRules"
-            placeholder="e.g. Flooding, no heat, fire, gas leak, burst pipes..."
-            value={formData.emergencyRules}
-            onChange={(e) => updateField("emergencyRules", e.target.value)}
-            disabled={isLoading}
-            rows={3}
-            className="resize-none"
-          />
+        <div className="space-y-3">
+          <Label>What counts as an emergency? *</Label>
+          <p className="text-xs text-muted-foreground -mt-1">Select all that apply</p>
+          <div className="grid grid-cols-2 gap-2">
+            {[
+              { value: "safety", label: "Safety issue" },
+              { value: "water_power_heat", label: "Water / power / heat outage" },
+              { value: "fire_gas", label: "Fire / gas" },
+              { value: "locked_out", label: "Locked out" },
+              { value: "flooding", label: "Flooding / burst pipes" },
+              { value: "no_heat_ac", label: "No heat or A/C" },
+            ].map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => toggleArrayField("emergencyTriggers", opt.value)}
+                className={cn(
+                  "flex items-center space-x-2 p-3 rounded-lg border text-left text-sm transition-colors",
+                  formData.emergencyTriggers.includes(opt.value)
+                    ? "border-primary bg-primary/5"
+                    : "border-border hover:bg-secondary/50"
+                )}
+              >
+                <Checkbox checked={formData.emergencyTriggers.includes(opt.value)} />
+                <span>{opt.label}</span>
+              </button>
+            ))}
+          </div>
+          <div className="space-y-2 pt-2">
+            <Label htmlFor="emergencyOther" className="text-sm font-normal">Other emergency triggers</Label>
+            <Input
+              id="emergencyOther"
+              placeholder="e.g. Sewage backup, electrical sparks..."
+              value={formData.emergencyOther}
+              onChange={(e) => updateField("emergencyOther", e.target.value)}
+              disabled={isLoading}
+            />
+          </div>
           <p className="text-xs text-muted-foreground">AI will escalate these immediately</p>
         </div>
 
@@ -953,6 +998,7 @@ const GetDemo = () => {
       <div className="space-y-5">
         <div className="space-y-3">
           <Label>What should the AI collect from leads? *</Label>
+          <p className="text-xs text-muted-foreground -mt-1">Select all that apply</p>
           <div className="grid grid-cols-2 gap-2">
             {[
               { value: "name", label: "Name" },
@@ -998,6 +1044,7 @@ const GetDemo = () => {
 
         <div className="space-y-3">
           <Label>When should the AI hand off to a human?</Label>
+          <p className="text-xs text-muted-foreground -mt-1">Select all that apply</p>
           <div className="grid grid-cols-2 gap-2">
             {[
               { value: "angry", label: "Angry caller" },
@@ -1081,28 +1128,36 @@ const GetDemo = () => {
 
         <div className="space-y-3">
           <Label>How should the business feel to customers?</Label>
+          <p className="text-xs text-muted-foreground -mt-1">Select up to 2</p>
           <div className="grid grid-cols-2 gap-2">
             {[
               { value: "family_owned", label: "Family-owned & personal" },
               { value: "fast", label: "Fast & no-nonsense" },
               { value: "calm", label: "Calm & professional" },
               { value: "friendly", label: "Friendly & casual" },
-            ].map((opt) => (
-              <button
-                key={opt.value}
-                type="button"
-                onClick={() => toggleArrayField("businessPersonality", opt.value)}
-                className={cn(
-                  "flex items-center space-x-2 p-3 rounded-lg border text-left text-sm transition-colors",
-                  formData.businessPersonality.includes(opt.value)
-                    ? "border-primary bg-primary/5"
-                    : "border-border hover:bg-secondary/50"
-                )}
-              >
-                <Checkbox checked={formData.businessPersonality.includes(opt.value)} />
-                <span>{opt.label}</span>
-              </button>
-            ))}
+            ].map((opt) => {
+              const isSelected = formData.businessPersonality.includes(opt.value);
+              const isDisabled = !isSelected && formData.businessPersonality.length >= 2;
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => toggleArrayField("businessPersonality", opt.value, 2)}
+                  disabled={isDisabled}
+                  className={cn(
+                    "flex items-center space-x-2 p-3 rounded-lg border text-left text-sm transition-colors",
+                    isSelected
+                      ? "border-primary bg-primary/5"
+                      : isDisabled
+                        ? "border-border opacity-50 cursor-not-allowed"
+                        : "border-border hover:bg-secondary/50"
+                  )}
+                >
+                  <Checkbox checked={isSelected} disabled={isDisabled} />
+                  <span>{opt.label}</span>
+                </button>
+              );
+            })}
           </div>
           <p className="text-xs text-muted-foreground">Guides phrasing, not just tone</p>
         </div>
@@ -1288,7 +1343,22 @@ const GetDemo = () => {
                 </div>
                 <div>
                   <span className="text-muted-foreground">Emergency triggers:</span>
-                  <p className="font-medium mt-1 text-xs">{formData.emergencyRules || "—"}</p>
+                  <p className="font-medium mt-1 text-xs">
+                    {formData.emergencyTriggers.length > 0 
+                      ? formData.emergencyTriggers.map(t => {
+                          const labels: Record<string, string> = {
+                            safety: "Safety issue",
+                            water_power_heat: "Water/power/heat outage",
+                            fire_gas: "Fire/gas",
+                            locked_out: "Locked out",
+                            flooding: "Flooding/burst pipes",
+                            no_heat_ac: "No heat or A/C"
+                          };
+                          return labels[t] || t;
+                        }).join(", ")
+                      : "—"}
+                    {formData.emergencyOther && `, ${formData.emergencyOther}`}
+                  </p>
                 </div>
               </div>
             </div>
