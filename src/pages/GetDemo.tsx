@@ -447,23 +447,11 @@ const GetDemo = () => {
   const renderChooseStep = () => (
     <div className="space-y-6">
       <div className="text-center mb-8">
-        <h2 className="font-serif text-2xl font-bold mb-2">What are you looking for?</h2>
-        <p className="text-muted-foreground">Choose your starting point — we'll handle the rest.</p>
+        <h2 className="font-serif text-2xl font-bold mb-2">What can we build for you?</h2>
+        <p className="text-muted-foreground">Choose your product — we'll guide you through the rest.</p>
       </div>
       
-      <div className="grid gap-4">
-        <ServiceCard
-          value="demo"
-          icon={Globe}
-          title="See a Demo"
-          description="Preview a sample site for your business — no commitment."
-        />
-        <ServiceCard
-          value="ai"
-          icon={Bot}
-          title="AI Receptionist"
-          description="Answer calls, texts & forms 24/7. Start capturing leads instantly."
-        />
+      <div className="grid gap-4 md:grid-cols-2">
         <ServiceCard
           value="website"
           icon={Globe}
@@ -471,17 +459,10 @@ const GetDemo = () => {
           description="A fast, modern site that converts visitors into customers."
         />
         <ServiceCard
-          value="both"
-          icon={Package}
-          title="Full Package"
-          description="Website + AI Receptionist — the complete lead-capture system."
-          badge="Most Popular"
-        />
-        <ServiceCard
-          value="other"
-          icon={Sparkles}
-          title="Something Else"
-          description="Logo, branding, SEO, animated media, or a custom request."
+          value="ai"
+          icon={Bot}
+          title="AI Receptionist"
+          description="Answer calls, texts & forms 24/7. Start capturing leads instantly."
         />
       </div>
     </div>
