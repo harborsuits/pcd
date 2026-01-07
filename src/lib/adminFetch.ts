@@ -109,12 +109,31 @@ export async function signInAdmin(email: string, password: string): Promise<{ su
 
 // Sign out
 export async function signOutAdmin(): Promise<void> {
+  sessionStorage.removeItem("admin_verified");
   await supabase.auth.signOut();
 }
 
-// Check if currently authenticated as admin
+// Check if currently authenticated as admin (with caching for faster loads)
 export async function isAuthenticatedAdmin(): Promise<boolean> {
   const { data: { session } } = await supabase.auth.getSession();
-  if (!session) return false;
-  return await checkAdminRole();
+  if (!session) {
+    sessionStorage.removeItem("admin_verified");
+    return false;
+  }
+  
+  // Check if we've already verified admin status for this session
+  const cachedUserId = sessionStorage.getItem("admin_verified");
+  if (cachedUserId === session.user.id) {
+    console.log("[adminFetch] Using cached admin verification");
+    return true;
+  }
+  
+  // Verify admin role and cache result
+  const isAdmin = await checkAdminRole();
+  if (isAdmin) {
+    sessionStorage.setItem("admin_verified", session.user.id);
+  } else {
+    sessionStorage.removeItem("admin_verified");
+  }
+  return isAdmin;
 }
