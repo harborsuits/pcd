@@ -13,7 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { SEOHead } from "@/components/SEOHead";
 import { cn } from "@/lib/utils";
 
-type ServiceType = "ai" | "website" | "both" | "other" | "";
+type ServiceType = "demo" | "ai" | "website" | "both" | "other" | "";
 type WebsiteGoal = "calls" | "quotes" | "bookings" | "info" | "";
 type Timeline = "asap" | "2-4weeks" | "1-2months" | "unsure" | "";
 type LogoStatus = "yes" | "no" | "refresh" | "";
@@ -22,6 +22,7 @@ type Tone = "friendly" | "professional" | "direct" | "";
 
 // Map query param values to form values
 const SERVICE_PARAM_MAP: Record<string, ServiceType> = {
+  demo: "demo",
   website: "website",
   ai_receptionist: "ai",
   both: "both",
@@ -92,13 +93,12 @@ const GetDemo = () => {
     customRequest: "",
   });
 
-  // Pre-select service type from URL param and auto-advance past choose step
+// Pre-select service type from URL param (but stay on Choose step)
   useEffect(() => {
     const serviceParam = searchParams.get("service");
     if (serviceParam && SERVICE_PARAM_MAP[serviceParam]) {
       setFormData(prev => ({ ...prev, serviceType: SERVICE_PARAM_MAP[serviceParam] }));
-      // Auto-advance to basics step (step 1) since service is preselected
-      setCurrentStep(1);
+      // Always stay on step 0 so user sees the full menu
     }
   }, [searchParams]);
 
@@ -107,6 +107,12 @@ const GetDemo = () => {
     const steps = [{ id: "choose", label: "Choose" }];
     
     if (!formData.serviceType) {
+      return steps;
+    }
+    
+    // Demo only needs basics (quick form to generate demo)
+    if (formData.serviceType === "demo") {
+      steps.push({ id: "basics", label: "Basics" });
       return steps;
     }
     
@@ -227,6 +233,7 @@ const GetDemo = () => {
   };
 
   const getSuccessTitle = () => {
+    if (formData.serviceType === "demo") return "Demo on the way!";
     if (formData.serviceType === "ai") return "You're set.";
     if (formData.serviceType === "website") return "Got it.";
     if (formData.serviceType === "other") return "Request received.";
@@ -234,6 +241,9 @@ const GetDemo = () => {
   };
 
   const getSuccessDescription = () => {
+    if (formData.serviceType === "demo") {
+      return "Redirecting you to your personalized demo...";
+    }
     if (formData.serviceType === "ai") {
       return "We'll finalize your AI receptionist setup and follow up within 24–48 hours.";
     }
@@ -299,6 +309,12 @@ const GetDemo = () => {
       
       <div className="grid gap-4">
         <ServiceCard
+          value="demo"
+          icon={Globe}
+          title="See a Demo"
+          description="Preview a sample site for your business — no commitment."
+        />
+        <ServiceCard
           value="ai"
           icon={Bot}
           title="AI Receptionist"
@@ -316,6 +332,12 @@ const GetDemo = () => {
           title="Full Package"
           description="Website + AI Receptionist — the complete lead-capture system."
           badge="Most Popular"
+        />
+        <ServiceCard
+          value="other"
+          icon={Sparkles}
+          title="Something Else"
+          description="Logo, branding, SEO, animated media, or a custom request."
         />
       </div>
     </div>
