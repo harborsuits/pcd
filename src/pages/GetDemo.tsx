@@ -862,8 +862,8 @@ const GetDemo = () => {
             {renderCurrentStep()}
           </div>
 
-          {/* Navigation */}
-          {currentStep > 0 && (
+          {/* Navigation - show when not on choose step */}
+          {currentStepId !== "choose" && (
             <div className="flex gap-3 mt-8">
               <Button
                 type="button"
