@@ -338,20 +338,37 @@ export function ProjectDetailDrawer({ project, open, onClose, onStatusChange }: 
     enabled: !!project && open,
   });
 
-  // Fetch project files
+  // Fetch project files with signed URLs via edge function
   const { data: filesData, isLoading: filesLoading } = useQuery({
-    queryKey: ["project-files", project?.id],
+    queryKey: ["project-files", project?.project_token],
     queryFn: async () => {
-      if (!project) return [];
-      const { data, error } = await supabase
-        .from("files")
-        .select("id, file_name, file_type, storage_path, description, created_at")
-        .eq("project_id", project.id)
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return data as ProjectFile[];
+      if (!project?.project_token) return [];
+      
+      // Get current session for auth
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        console.warn("No session for files list");
+        return [];
+      }
+      
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/files/${project.project_token}/list`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+      
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        console.error("Files list error:", err);
+        return [];
+      }
+      
+      const { files } = await res.json();
+      return files as (ProjectFile & { signed_url: string | null })[];
     },
-    enabled: !!project && open,
+    enabled: !!project?.project_token && open,
+    staleTime: 5 * 60 * 1000, // 5 minutes - signed URLs last 1 hour
   });
 
   const projectFiles = filesData || [];
@@ -972,20 +989,56 @@ export function ProjectDetailDrawer({ project, open, onClose, onStatusChange }: 
                       const categoryMatch = file.description?.match(/^\[([^\]]+)\]/);
                       const category = categoryMatch?.[1];
                       
-                      // Build signed URL or public URL for storage
-                      const storageUrl = `${SUPABASE_URL}/storage/v1/object/authenticated/${file.storage_path}`;
+                      // Use signed URL from edge function
+                      const fileUrl = (file as { signed_url?: string | null }).signed_url;
+                      
+                      if (!fileUrl) {
+                        // No signed URL available - show disabled state
+                        return (
+                          <div
+                            key={file.id}
+                            className="border rounded-lg p-2 opacity-50 flex items-center gap-2"
+                          >
+                            <div className="w-10 h-10 rounded bg-muted/50 flex items-center justify-center flex-shrink-0">
+                              {isImage ? (
+                                <ImageIcon className="h-5 w-5 text-muted-foreground" />
+                              ) : isPdf ? (
+                                <FileText className="h-5 w-5 text-muted-foreground" />
+                              ) : (
+                                <File className="h-5 w-5 text-muted-foreground" />
+                              )}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-xs font-medium truncate">{file.file_name}</p>
+                              <p className="text-[10px] text-muted-foreground">Unavailable</p>
+                            </div>
+                          </div>
+                        );
+                      }
                       
                       return (
                         <a
                           key={file.id}
-                          href={storageUrl}
+                          href={fileUrl}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="group border rounded-lg p-2 hover:border-primary/50 transition-colors flex items-center gap-2"
                         >
-                          <div className="w-10 h-10 rounded bg-muted/50 flex items-center justify-center flex-shrink-0">
+                          <div className="w-10 h-10 rounded bg-muted/50 flex items-center justify-center flex-shrink-0 overflow-hidden">
                             {isImage ? (
-                              <ImageIcon className="h-5 w-5 text-muted-foreground" />
+                              <img 
+                                src={fileUrl} 
+                                alt={file.file_name}
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  // Fallback to icon if image fails to load
+                                  (e.target as HTMLImageElement).style.display = 'none';
+                                  (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
+                                }}
+                              />
+                            ) : null}
+                            {isImage ? (
+                              <ImageIcon className="h-5 w-5 text-muted-foreground hidden" />
                             ) : isPdf ? (
                               <FileText className="h-5 w-5 text-muted-foreground" />
                             ) : (
