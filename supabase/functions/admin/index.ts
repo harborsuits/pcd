@@ -3716,19 +3716,33 @@ async function handleTestEmail(req: Request): Promise<Response> {
   }
 }
 
-// GET /admin/accounts - List all auth users with linked projects
+// GET /admin/accounts - List all auth users with linked projects (excludes admin/operator accounts)
 async function handleGetAccounts(req: Request): Promise<Response> {
   const authError = await validateAdminKey(req);
   if (authError) return authError;
 
   try {
-    console.log("Fetching all accounts with linked projects...");
+    console.log("Fetching all client accounts with linked projects...");
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey, {
       auth: { autoRefreshToken: false, persistSession: false }
     });
+
+    // Fetch all admin/operator user IDs to exclude them
+    const { data: adminRoles, error: rolesError } = await supabase
+      .from("user_roles")
+      .select("user_id, role")
+      .in("role", ["admin", "operator"]);
+
+    if (rolesError) {
+      console.error("Failed to fetch admin roles:", rolesError);
+      // Continue anyway, just won't filter admins
+    }
+
+    const adminUserIds = new Set((adminRoles || []).map((r) => r.user_id));
+    console.log(`Found ${adminUserIds.size} admin/operator users to exclude`);
 
     // Fetch all auth users using Admin API
     const { data: usersData, error: usersError } = await supabase.auth.admin.listUsers({
@@ -3743,8 +3757,9 @@ async function handleGetAccounts(req: Request): Promise<Response> {
       );
     }
 
-    const users = usersData?.users || [];
-    console.log(`Found ${users.length} auth users`);
+    // Filter out admin/operator users - they shouldn't appear in client accounts list
+    const users = (usersData?.users || []).filter((u) => !adminUserIds.has(u.id));
+    console.log(`Found ${users.length} client users (after excluding admins)`);
 
     // Fetch all projects with owner_user_id set
     const { data: projects, error: projectsError } = await supabase
@@ -3782,7 +3797,7 @@ async function handleGetAccounts(req: Request): Promise<Response> {
       };
     });
 
-    console.log(`Returning ${accountsWithProjects.length} accounts`);
+    console.log(`Returning ${accountsWithProjects.length} client accounts`);
 
     return new Response(
       JSON.stringify(accountsWithProjects),
@@ -3871,19 +3886,42 @@ async function handleUpdateAccount(req: Request, userId: string): Promise<Respon
   }
 }
 
-// DELETE /admin/accounts/:userId - Delete auth user
+// DELETE /admin/accounts/:userId - Delete auth user (protected: cannot delete admins/operators)
 async function handleDeleteAccount(req: Request, userId: string): Promise<Response> {
   const authError = await validateAdminKey(req);
   if (authError) return authError;
 
   try {
-    console.log(`Deleting account ${userId}...`);
+    console.log(`Attempting to delete account ${userId}...`);
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey, {
       auth: { autoRefreshToken: false, persistSession: false }
     });
+
+    // SECURITY: Check if this user is an admin or operator - prevent deletion
+    const { data: userRoles, error: rolesError } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", userId)
+      .in("role", ["admin", "operator"]);
+
+    if (rolesError) {
+      console.error("Failed to check user roles:", rolesError);
+      return new Response(
+        JSON.stringify({ error: "Failed to verify account permissions" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (userRoles && userRoles.length > 0) {
+      console.warn(`Blocked deletion of admin/operator account ${userId}`);
+      return new Response(
+        JSON.stringify({ error: "Cannot delete admin or operator accounts. Remove their role first." }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     // Unlink projects from this user before deleting
     const { error: unlinkError } = await supabase
