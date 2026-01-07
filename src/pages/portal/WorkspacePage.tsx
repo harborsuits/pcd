@@ -457,6 +457,19 @@ export default function WorkspacePage() {
                     Expected timeline: <span className="font-medium text-foreground">24–48 hours</span>
                   </p>
                 </div>
+
+                {/* CTA to client portal */}
+                <Button 
+                  onClick={() => navigate(`/p/${token}`)}
+                  className="w-full mt-6"
+                  size="lg"
+                >
+                  Go to your client portal
+                  <ExternalLink className="ml-2 h-4 w-4" />
+                </Button>
+                <p className="text-xs text-muted-foreground mt-2 text-center">
+                  View status updates and manage your account
+                </p>
               </div>
 
               {/* Summary of what they submitted */}
