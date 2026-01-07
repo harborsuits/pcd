@@ -37,7 +37,17 @@ interface PrototypeComment {
   status?: CommentStatus;
   resolution_note?: string | null;
   resolved_by?: string | null;
+  screenshot_path?: string | null;
+  screenshot_w?: number | null;
+  screenshot_h?: number | null;
+  screenshot_full_path?: string | null;
+  crop_x?: number | null;
+  crop_y?: number | null;
+  crop_w?: number | null;
+  crop_h?: number | null;
 }
+
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 
 interface Attachment {
   id: string;
@@ -243,6 +253,28 @@ export function CommentCard({
           </Button>
         </div>
       </div>
+
+      {/* Screenshot preview */}
+      {comment.screenshot_path && (
+        <div className="mt-2 rounded-md overflow-hidden border border-border bg-muted/30">
+          <a 
+            href={`${SUPABASE_URL}/storage/v1/object/public/project-media/${comment.screenshot_path}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <img
+              src={`${SUPABASE_URL}/storage/v1/object/public/project-media/${comment.screenshot_path}`}
+              alt="Screenshot"
+              className="w-full max-h-40 object-contain bg-background"
+              onError={(e) => {
+                e.currentTarget.style.display = 'none';
+              }}
+            />
+          </a>
+        </div>
+      )}
 
       {/* Reply input */}
       {showReply && (
