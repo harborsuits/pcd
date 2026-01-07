@@ -27,6 +27,12 @@ import {
   Wrench
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { 
+  getPricingTiersForService, 
+  RETAINER_ADDONS,
+  type ServiceType as PricingServiceType 
+} from "@/lib/pricingMenu";
+import { PricingSummary } from "./PricingSummary";
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TYPES
@@ -147,85 +153,6 @@ const A_LA_CARTE_OPTIONS = [
   { id: "logo", label: "Logo & Branding" },
   { id: "media", label: "Animated Photos / Videos" },
   { id: "seo", label: "SEO & Local Optimization" },
-];
-
-// Pricing tiers by service type
-const WEBSITE_TIERS = [
-  { 
-    id: "website_essential", 
-    label: "Essential Website", 
-    price: "Starting at $750",
-    description: "Fast, mobile-optimized site with core pages"
-  },
-  { 
-    id: "website_growth", 
-    label: "Growth Website", 
-    price: "Starting at $1,500",
-    description: "Extended pages, forms, and conversion focus"
-  },
-  { 
-    id: "website_premium", 
-    label: "Premium / Interactive", 
-    price: "Starting at $2,500",
-    description: "Custom features, animations, and integrations"
-  },
-];
-
-const AI_TIERS = [
-  { 
-    id: "ai_front_door", 
-    label: "AI Front Door", 
-    price: "Starting at $450/mo",
-    description: "24/7 call answering, routing, and follow-ups"
-  },
-  { 
-    id: "ai_booking", 
-    label: "AI Front Door + Booking", 
-    price: "Starting at $700/mo",
-    description: "Includes scheduling integration"
-  },
-  { 
-    id: "ai_full", 
-    label: "AI + Booking + CRM", 
-    price: "Starting at $950/mo",
-    description: "Full automation with lead management"
-  },
-];
-
-const BUNDLE_TIERS = [
-  { 
-    id: "bundle_starter", 
-    label: "PCD Starter System", 
-    price: "Starting at $1,200 + $450/mo",
-    description: "Essential Website + AI Front Door"
-  },
-  { 
-    id: "bundle_growth", 
-    label: "PCD Growth System", 
-    price: "Starting at $2,200 + $700/mo",
-    description: "Growth Website + AI Front Door + Booking"
-  },
-];
-
-const RETAINER_ADDONS = [
-  { 
-    id: "maintenance", 
-    label: "Hosting & Maintenance", 
-    price: "Starting at $75/mo",
-    description: "Updates, backups, and uptime monitoring"
-  },
-  { 
-    id: "ai_tuning", 
-    label: "AI Updates & Tuning", 
-    price: "Starting at $100/mo",
-    description: "Ongoing call flow optimization"
-  },
-  { 
-    id: "operations", 
-    label: "Digital Operations Support", 
-    price: "Starting at $150/mo",
-    description: "Reporting, analytics, and conversion tracking"
-  },
 ];
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -829,22 +756,11 @@ export function IntakeForm({
     </div>
   );
 
-  // Get pricing tiers based on service type
-  const getPricingTiers = () => {
-    switch (formData.serviceType) {
-      case "ai":
-        return AI_TIERS;
-      case "website":
-        return WEBSITE_TIERS;
-      case "both":
-        return BUNDLE_TIERS;
-      default:
-        return [];
-    }
-  };
+  // Get pricing tiers from shared module
+  const pricingTiers = getPricingTiersForService(formData.serviceType);
 
   const renderPricingStep = () => {
-    const tiers = getPricingTiers();
+    const tiers = pricingTiers;
     const serviceLabel = formData.serviceType === "ai" 
       ? "AI Receptionist" 
       : formData.serviceType === "website" 
@@ -984,6 +900,16 @@ export function IntakeForm({
           className="mt-1.5"
         />
       </div>
+
+      {/* Pricing Summary before submit */}
+      <PricingSummary
+        serviceType={formData.serviceType}
+        pricingTier={formData.pricingTier}
+        pricingNotes={formData.pricingNotes}
+        retainerAddons={formData.retainerAddons}
+        addonNotes={formData.addonNotes}
+        className="mt-6"
+      />
     </div>
   );
 
