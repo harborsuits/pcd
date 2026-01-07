@@ -1258,6 +1258,11 @@ const GetDemo = () => {
     </div>
   );
 
+  // Helper to find step index by id
+  const getStepIndex = (stepId: string) => {
+    return steps.findIndex(s => s.id === stepId);
+  };
+
   // Step 7: Review & Confirmation (NEW - required)
   const renderAIReviewStep = () => {
     const callHandlingLabels: Record<string, string> = {
@@ -1292,6 +1297,73 @@ const GetDemo = () => {
       never: "Never discuss pricing",
     };
 
+    const textHandlingLabels: Record<string, string> = {
+      answer_faqs: "Answer FAQs",
+      collect_lead: "Collect lead info",
+      send_booking: "Send booking link",
+      follow_up_missed: "Follow up missed calls",
+    };
+
+    const handoffTriggerLabels: Record<string, string> = {
+      angry: "Angry caller",
+      repeated: "Repeated questions",
+      complex: "Complex request",
+      pricing_disputes: "Pricing disputes",
+      legal_safety: "Legal/safety concerns",
+    };
+
+    const emergencyLabels: Record<string, string> = {
+      safety: "Safety issue",
+      water_power_heat: "Water/power/heat outage",
+      fire_gas: "Fire/gas",
+      locked_out: "Locked out",
+      flooding: "Flooding/burst pipes",
+      no_heat_ac: "No heat or A/C",
+    };
+
+    const ReviewSection = ({ 
+      icon: Icon, 
+      title, 
+      stepId, 
+      children 
+    }: { 
+      icon: typeof Phone; 
+      title: string; 
+      stepId: string;
+      children: React.ReactNode;
+    }) => (
+      <div className="bg-secondary/30 rounded-xl p-4">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <Icon className="w-4 h-4 text-primary" />
+            <h3 className="font-medium">{title}</h3>
+          </div>
+          <button
+            type="button"
+            onClick={() => setCurrentStep(getStepIndex(stepId))}
+            className="text-xs text-primary hover:underline"
+          >
+            Edit
+          </button>
+        </div>
+        {children}
+      </div>
+    );
+
+    const ReviewRow = ({ label, value }: { label: string; value: string | undefined | null }) => (
+      <div className="flex justify-between gap-2">
+        <span className="text-muted-foreground shrink-0">{label}</span>
+        <span className="font-medium text-right truncate">{value || "—"}</span>
+      </div>
+    );
+
+    const ReviewList = ({ label, items }: { label: string; items: string[] }) => (
+      <div>
+        <span className="text-muted-foreground">{label}</span>
+        <p className="font-medium mt-1 text-xs">{items.length > 0 ? items.join(", ") : "—"}</p>
+      </div>
+    );
+
     return (
       <div className="space-y-6">
         <div className="text-center">
@@ -1300,109 +1372,146 @@ const GetDemo = () => {
           </div>
           <h2 className="font-serif text-2xl font-bold mb-3">Review your setup</h2>
           <p className="text-muted-foreground max-w-md mx-auto">
-            Take a moment to verify everything looks correct. You can always change settings later.
+            Click "Edit" on any section to make changes.
           </p>
         </div>
 
         <div className="space-y-4">
-          {/* Call Behavior */}
-          <div className="bg-secondary/30 rounded-xl p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <Phone className="w-4 h-4 text-primary" />
-              <h3 className="font-medium">Call Behavior</h3>
-            </div>
+          {/* Business Basics */}
+          <ReviewSection icon={Users} title="Business Basics" stepId="basics">
             <div className="grid gap-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">When AI answers:</span>
-                <span className="font-medium">{callHandlingLabels[formData.callHandling] || "—"}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Handoff method:</span>
-                <span className="font-medium">{handoffLabels[formData.handoffMethod] || "—"}</span>
-              </div>
+              <ReviewRow label="Business:" value={formData.businessName} />
+              <ReviewRow label="Contact:" value={formData.yourName} />
+              <ReviewRow label="Email:" value={formData.email} />
+              <ReviewRow label="Phone:" value={formData.phone} />
+            </div>
+          </ReviewSection>
+
+          {/* Call Coverage */}
+          <ReviewSection icon={Phone} title="Call Coverage" stepId="ai-coverage">
+            <div className="grid gap-2 text-sm">
+              <ReviewRow label="When AI answers:" value={callHandlingLabels[formData.callHandling]} />
+              <ReviewRow label="Handoff method:" value={handoffLabels[formData.handoffMethod]} />
+              {formData.textHandling.length > 0 && (
+                <ReviewList 
+                  label="Text/chat actions:" 
+                  items={formData.textHandling.map(t => textHandlingLabels[t] || t)} 
+                />
+              )}
+            </div>
+          </ReviewSection>
+
+          {/* Operations */}
+          <ReviewSection icon={Clock} title="Operations" stepId="ai-operations">
+            <div className="grid gap-2 text-sm">
+              <ReviewRow label="Business phone:" value={formData.businessPhone} />
+              <ReviewRow label="Hours:" value={formData.businessHours} />
               {formData.afterHoursAction && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">After hours:</span>
-                  <span className="font-medium">{afterHoursLabels[formData.afterHoursAction]}</span>
+                <ReviewRow label="After hours:" value={afterHoursLabels[formData.afterHoursAction]} />
+              )}
+              {formData.servicesOffered && (
+                <div>
+                  <span className="text-muted-foreground">Services:</span>
+                  <p className="font-medium mt-1 text-xs line-clamp-2">{formData.servicesOffered}</p>
+                </div>
+              )}
+              {formData.serviceAreaRules && (
+                <div>
+                  <span className="text-muted-foreground">Service area:</span>
+                  <p className="font-medium mt-1 text-xs line-clamp-2">{formData.serviceAreaRules}</p>
                 </div>
               )}
             </div>
-          </div>
+          </ReviewSection>
 
           {/* Emergencies */}
           {shouldShowEmergencyStep() && (
-            <div className="bg-secondary/30 rounded-xl p-4">
-              <div className="flex items-center gap-2 mb-3">
-                <AlertTriangle className="w-4 h-4 text-destructive" />
-                <h3 className="font-medium">Emergencies</h3>
-              </div>
+            <ReviewSection icon={AlertTriangle} title="Emergencies" stepId="ai-emergency">
               <div className="grid gap-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Escalation number:</span>
-                  <span className="font-medium">{formData.escalationNumber || "—"}</span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Emergency triggers:</span>
-                  <p className="font-medium mt-1 text-xs">
-                    {formData.emergencyTriggers.length > 0 
-                      ? formData.emergencyTriggers.map(t => {
-                          const labels: Record<string, string> = {
-                            safety: "Safety issue",
-                            water_power_heat: "Water/power/heat outage",
-                            fire_gas: "Fire/gas",
-                            locked_out: "Locked out",
-                            flooding: "Flooding/burst pipes",
-                            no_heat_ac: "No heat or A/C"
-                          };
-                          return labels[t] || t;
-                        }).join(", ")
-                      : "—"}
-                    {formData.emergencyOther && `, ${formData.emergencyOther}`}
-                  </p>
-                </div>
+                <ReviewRow label="Escalation number:" value={formData.escalationNumber} />
+                <ReviewList 
+                  label="Emergency triggers:" 
+                  items={[
+                    ...formData.emergencyTriggers.map(t => emergencyLabels[t] || t),
+                    ...(formData.emergencyOther ? [formData.emergencyOther] : [])
+                  ]} 
+                />
               </div>
-            </div>
+            </ReviewSection>
           )}
 
           {/* Lead Handling */}
-          <div className="bg-secondary/30 rounded-xl p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <Users className="w-4 h-4 text-primary" />
-              <h3 className="font-medium">Lead Handling</h3>
-            </div>
+          <ReviewSection icon={Users} title="Lead Handling" stepId="ai-leads">
             <div className="grid gap-2 text-sm">
-              <div>
-                <span className="text-muted-foreground">Info collected:</span>
-                <p className="font-medium mt-1">{formData.leadFields.join(", ") || "—"}</p>
-              </div>
+              <ReviewList label="Info collected:" items={formData.leadFields} />
               {formData.pricingGuidance && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Pricing:</span>
-                  <span className="font-medium">{pricingLabels[formData.pricingGuidance]}</span>
-                </div>
+                <ReviewRow label="Pricing:" value={pricingLabels[formData.pricingGuidance]} />
               )}
-            </div>
-          </div>
-
-          {/* Tone & Brand */}
-          <div className="bg-secondary/30 rounded-xl p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <MessageSquare className="w-4 h-4 text-primary" />
-              <h3 className="font-medium">Tone & Brand</h3>
-            </div>
-            <div className="grid gap-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Tone:</span>
-                <span className="font-medium">{toneLabels[formData.preferredTone] || "—"}</span>
-              </div>
-              {formData.businessPersonality.length > 0 && (
+              {formData.handoffTriggers.length > 0 && (
+                <ReviewList 
+                  label="Handoff triggers:" 
+                  items={formData.handoffTriggers.map(t => handoffTriggerLabels[t] || t)} 
+                />
+              )}
+              {formData.qualifiedLeadRules && (
                 <div>
-                  <span className="text-muted-foreground">Personality:</span>
-                  <p className="font-medium mt-1 text-xs">{formData.businessPersonality.join(", ")}</p>
+                  <span className="text-muted-foreground">Qualification rules:</span>
+                  <p className="font-medium mt-1 text-xs line-clamp-2">{formData.qualifiedLeadRules}</p>
                 </div>
               )}
             </div>
-          </div>
+          </ReviewSection>
+
+          {/* Voice & Personality */}
+          <ReviewSection icon={MessageSquare} title="Voice & Personality" stepId="ai-voice">
+            <div className="grid gap-2 text-sm">
+              <ReviewRow label="Tone:" value={toneLabels[formData.preferredTone]} />
+              {formData.businessPersonality.length > 0 && (
+                <ReviewList label="Personality:" items={formData.businessPersonality} />
+              )}
+              {formData.doNotSay && (
+                <div>
+                  <span className="text-muted-foreground">Do not say:</span>
+                  <p className="font-medium mt-1 text-xs line-clamp-2">{formData.doNotSay}</p>
+                </div>
+              )}
+              {formData.guaranteesPolicies && (
+                <div>
+                  <span className="text-muted-foreground">Guarantees/policies:</span>
+                  <p className="font-medium mt-1 text-xs line-clamp-2">{formData.guaranteesPolicies}</p>
+                </div>
+              )}
+            </div>
+          </ReviewSection>
+
+          {/* Context (if any filled) */}
+          {(formData.faqs || formData.customerFaqs || formData.teamNames || formData.bookingLink) && (
+            <ReviewSection icon={FileText} title="FAQs & Context" stepId="ai-context">
+              <div className="grid gap-2 text-sm">
+                {formData.teamNames && (
+                  <div>
+                    <span className="text-muted-foreground">Team names:</span>
+                    <p className="font-medium mt-1 text-xs line-clamp-2">{formData.teamNames}</p>
+                  </div>
+                )}
+                {formData.bookingLink && (
+                  <ReviewRow label="Booking link:" value={formData.bookingLink} />
+                )}
+                {formData.faqs && (
+                  <div>
+                    <span className="text-muted-foreground">FAQs:</span>
+                    <p className="font-medium mt-1 text-xs line-clamp-2">{formData.faqs}</p>
+                  </div>
+                )}
+                {formData.customerFaqs && (
+                  <div>
+                    <span className="text-muted-foreground">Common questions:</span>
+                    <p className="font-medium mt-1 text-xs line-clamp-2">{formData.customerFaqs}</p>
+                  </div>
+                )}
+              </div>
+            </ReviewSection>
+          )}
         </div>
 
         {/* Confirmation checkbox */}
