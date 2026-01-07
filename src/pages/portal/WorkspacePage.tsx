@@ -455,6 +455,7 @@ export default function WorkspacePage() {
                 versions={versions}
                 intakeStatus={projectInfo?.intakeStatus || null}
                 hasVersions={hasVersions}
+                token={token!}
               />
             </TabsContent>
           )}
