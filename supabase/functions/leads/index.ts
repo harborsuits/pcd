@@ -1369,12 +1369,34 @@ async function handleRequestDemo(req: Request): Promise<Response> {
       business_name?: string; 
       city?: string; 
       phone?: string; 
+      email?: string;
+      your_name?: string;
       website?: string;
       occupation?: string;
       expectations?: string;
       demo_type?: string;
       website_style?: string;
       receptionist_focus?: string;
+      service_type?: string;
+      // Website fields
+      website_goal?: string;
+      timeline?: string;
+      logo_status?: string;
+      brand_colors?: string;
+      services_list?: string;
+      photo_readiness?: string;
+      // AI fields
+      business_phone?: string;
+      business_hours?: string;
+      services_offered?: string;
+      escalation_number?: string;
+      emergency_rules?: string;
+      preferred_tone?: string;
+      booking_link?: string;
+      faqs?: string;
+      // Other fields
+      selected_services?: string[];
+      custom_request?: string;
     };
     try {
       body = await req.json();
@@ -1388,13 +1410,35 @@ async function handleRequestDemo(req: Request): Promise<Response> {
     const { 
       business_name, 
       city, 
-      phone, 
+      phone,
+      email,
+      your_name,
       website,
       occupation,
       expectations,
       demo_type,
       website_style,
-      receptionist_focus
+      receptionist_focus,
+      service_type,
+      // Website fields
+      website_goal,
+      timeline,
+      logo_status,
+      brand_colors,
+      services_list,
+      photo_readiness,
+      // AI fields
+      business_phone,
+      business_hours,
+      services_offered,
+      escalation_number,
+      emergency_rules,
+      preferred_tone,
+      booking_link,
+      faqs,
+      // Other fields
+      selected_services,
+      custom_request,
     } = body;
     
     // Build request metadata for operator visibility
@@ -1404,17 +1448,50 @@ async function handleRequestDemo(req: Request): Promise<Response> {
       demo_type: demo_type || null,
       website_style: website_style || null,
       receptionist_focus: receptionist_focus || null,
+      service_type: service_type || null,
+      your_name: your_name || null,
+      email: email || null,
+      // Website fields
+      website_goal: website_goal || null,
+      timeline: timeline || null,
+      logo_status: logo_status || null,
+      brand_colors: brand_colors || null,
+      services_list: services_list || null,
+      photo_readiness: photo_readiness || null,
+      // AI fields
+      business_phone: business_phone || null,
+      business_hours: business_hours || null,
+      services_offered: services_offered || null,
+      escalation_number: escalation_number || null,
+      emergency_rules: emergency_rules || null,
+      preferred_tone: preferred_tone || null,
+      booking_link: booking_link || null,
+      faqs: faqs || null,
+      // Other fields
+      selected_services: selected_services || null,
+      custom_request: custom_request || null,
       requested_at: new Date().toISOString(),
     };
 
-    if (!business_name || !city) {
+    // business_name is always required
+    // city is required for demo, website, both; optional for ai and other
+    const cityRequired = !service_type || service_type === "demo" || service_type === "website" || service_type === "both";
+    
+    if (!business_name) {
       return new Response(
-        JSON.stringify({ error: "business_name and city are required" }),
+        JSON.stringify({ error: "business_name is required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    
+    if (cityRequired && !city) {
+      return new Response(
+        JSON.stringify({ error: "city is required for this service type" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    console.log(`Request demo: "${business_name}" in "${city}"`);
+    console.log(`Request demo: "${business_name}"${city ? ` in "${city}"` : ""} (service: ${service_type || "unknown"})`);
 
     const supabase = getSupabaseClient();
     const apiKey = Deno.env.get("GOOGLE_PLACES_API_KEY");
