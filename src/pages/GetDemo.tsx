@@ -92,11 +92,13 @@ const GetDemo = () => {
     customRequest: "",
   });
 
-  // Pre-select service type from URL param
+  // Pre-select service type from URL param and auto-advance past choose step
   useEffect(() => {
     const serviceParam = searchParams.get("service");
     if (serviceParam && SERVICE_PARAM_MAP[serviceParam]) {
       setFormData(prev => ({ ...prev, serviceType: SERVICE_PARAM_MAP[serviceParam] }));
+      // Auto-advance to basics step (step 1) since service is preselected
+      setCurrentStep(1);
     }
   }, [searchParams]);
 
