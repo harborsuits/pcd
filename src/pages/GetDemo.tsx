@@ -327,11 +327,26 @@ const GetDemo = () => {
       if (error) throw error;
 
       if (data?.demo_url) {
+        // Demo service type - redirect to generated demo
         toast({
           title: "Demo ready!",
           description: "Redirecting you to your personalized demo...",
         });
         navigate(data.demo_url);
+      } else if (data?.project_token && (formData.serviceType === "ai" || formData.serviceType === "both")) {
+        // AI receptionist - redirect to client portal
+        toast({
+          title: "You're all set!",
+          description: "Redirecting you to your project portal...",
+        });
+        navigate(`/p/${data.project_token}`);
+      } else if (data?.project_token) {
+        // Website or other - redirect to portal
+        toast({
+          title: getSuccessTitle(),
+          description: getSuccessDescription(),
+        });
+        navigate(`/p/${data.project_token}`);
       } else {
         toast({
           title: getSuccessTitle(),
