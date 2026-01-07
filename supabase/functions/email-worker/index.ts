@@ -52,7 +52,11 @@ async function sendResendEmail(args: {
 
 function renderEmail(event: NotificationEvent, appUrl: string, businessName: string) {
   const token = event.project_token;
-  const portalLink = `${appUrl}/p/${token}`;
+  // Use /w/ (workspace) route instead of /p/ (old portal redirect)
+  const portalLink = `${appUrl}/w/${token}`;
+  const payload = event.payload as Record<string, unknown>;
+  const contactName = (payload?.contact_name as string) || "";
+  const serviceType = (payload?.service_type as string) || "";
 
   const baseStyle = `
     <style>
@@ -62,10 +66,52 @@ function renderEmail(event: NotificationEvent, appUrl: string, businessName: str
       p { margin-bottom: 16px; color: #555; }
       .cta { display: inline-block; background: #111; color: #fff; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 500; }
       .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee; color: #888; font-size: 14px; }
+      .highlight { background: #f8f8f8; border-radius: 8px; padding: 16px; margin: 20px 0; }
     </style>
   `;
 
+  // Greeting with name if available
+  const greeting = contactName ? `Hi ${contactName},` : "Hi there,";
+
   switch (event.event_type) {
+    case "portal_ready": {
+      // Determine what was submitted based on service_type
+      let serviceDescription = "your project";
+      let nextSteps = "We'll review your submission and be in touch soon.";
+      
+      if (serviceType === "ai_receptionist") {
+        serviceDescription = "your AI receptionist setup";
+        nextSteps = "We're configuring your AI based on your answers. You'll get a notification when testing begins (usually 24–48 hours).";
+      } else if (serviceType === "both") {
+        serviceDescription = "your website + AI receptionist bundle";
+        nextSteps = "We'll start on your website design and configure your AI receptionist. You'll hear from us soon with updates on both.";
+      } else if (serviceType === "website") {
+        serviceDescription = "your website project";
+        nextSteps = "We'll review your submission and start working on your first preview. You'll get an email when it's ready.";
+      }
+
+      return {
+        subject: `Your portal is ready — ${businessName} 🎉`,
+        html: `
+          <!DOCTYPE html><html><head>${baseStyle}</head><body>
+            <div class="container">
+              <h1>Your portal is ready</h1>
+              <p>${greeting}</p>
+              <p>Thanks for submitting ${serviceDescription} for <strong>${businessName}</strong>. Your client portal is now set up and ready to use.</p>
+              <div class="highlight">
+                <p style="margin-bottom: 8px;"><strong>What happens next:</strong></p>
+                <p style="margin: 0;">${nextSteps}</p>
+              </div>
+              <p>You can check your status, view your submitted info, and request changes anytime in your portal:</p>
+              <a href="${portalLink}" class="cta">Open your portal</a>
+              <p style="margin-top: 24px; font-size: 14px; color: #888;">Bookmark this link — it's your home base for this project.</p>
+              <div class="footer">Pleasant Cove Design</div>
+            </div>
+          </body></html>
+        `,
+      };
+    }
+
     case "intake_submitted":
       return {
         subject: `We received your project intake for ${businessName} ✅`,
@@ -73,6 +119,7 @@ function renderEmail(event: NotificationEvent, appUrl: string, businessName: str
           <!DOCTYPE html><html><head>${baseStyle}</head><body>
             <div class="container">
               <h1>Intake received</h1>
+              <p>${greeting}</p>
               <p>Thanks — we received your intake for <strong>${businessName}</strong> and we're reviewing it now.</p>
               <p>We'll reach out soon with next steps.</p>
               <a href="${portalLink}" class="cta">Open your project portal</a>
@@ -89,6 +136,7 @@ function renderEmail(event: NotificationEvent, appUrl: string, businessName: str
           <!DOCTYPE html><html><head>${baseStyle}</head><body>
             <div class="container">
               <h1>Intake approved</h1>
+              <p>${greeting}</p>
               <p>Great news! We reviewed your intake for <strong>${businessName}</strong> and we're moving into the first preview.</p>
               <p>You'll receive another email when your first preview is ready to review.</p>
               <a href="${portalLink}" class="cta">Open your project portal</a>
@@ -105,6 +153,7 @@ function renderEmail(event: NotificationEvent, appUrl: string, businessName: str
           <!DOCTYPE html><html><head>${baseStyle}</head><body>
             <div class="container">
               <h1>Your preview is ready</h1>
+              <p>${greeting}</p>
               <p>We posted a preview for <strong>${businessName}</strong>. You can review it and leave feedback directly in the portal.</p>
               <p>Click anywhere on the preview to add comments, and we'll address them in the next revision.</p>
               <a href="${portalLink}" class="cta">View preview in your portal</a>
@@ -121,6 +170,7 @@ function renderEmail(event: NotificationEvent, appUrl: string, businessName: str
           <!DOCTYPE html><html><head>${baseStyle}</head><body>
             <div class="container">
               <h1>Final approved</h1>
+              <p>${greeting}</p>
               <p>Thanks for approving the final version of <strong>${businessName}</strong>. We're now preparing launch.</p>
               <p>You'll receive one more email when your site goes live.</p>
               <a href="${portalLink}" class="cta">Open your project portal</a>
@@ -137,6 +187,7 @@ function renderEmail(event: NotificationEvent, appUrl: string, businessName: str
           <!DOCTYPE html><html><head>${baseStyle}</head><body>
             <div class="container">
               <h1>Launch complete</h1>
+              <p>${greeting}</p>
               <p>Congratulations! <strong>${businessName}</strong> has been launched and is now live.</p>
               <p>If you need anything, just reply to this email or reach out through your portal.</p>
               <a href="${portalLink}" class="cta">Open your project portal</a>
@@ -146,6 +197,40 @@ function renderEmail(event: NotificationEvent, appUrl: string, businessName: str
         `,
       };
 
+    case "ai_status_changed": {
+      const newStatus = (payload?.new_status as string) || "";
+      let statusMessage = "Your AI receptionist status has been updated.";
+      
+      if (newStatus === "review") {
+        statusMessage = "We're reviewing your AI receptionist configuration.";
+      } else if (newStatus === "setup") {
+        statusMessage = "We're setting up your AI receptionist now.";
+      } else if (newStatus === "testing") {
+        statusMessage = "Your AI receptionist is in testing. We're making test calls to ensure everything works perfectly.";
+      } else if (newStatus === "live") {
+        statusMessage = "Great news! Your AI receptionist is now live and answering calls.";
+      } else if (newStatus === "paused") {
+        statusMessage = "Your AI receptionist has been paused. Check your portal for details.";
+      }
+
+      return {
+        subject: newStatus === "live" 
+          ? `Your AI receptionist is live! 🎉 — ${businessName}` 
+          : `AI receptionist update — ${businessName}`,
+        html: `
+          <!DOCTYPE html><html><head>${baseStyle}</head><body>
+            <div class="container">
+              <h1>${newStatus === "live" ? "You're live!" : "Status update"}</h1>
+              <p>${greeting}</p>
+              <p>${statusMessage}</p>
+              <a href="${portalLink}" class="cta">View in your portal</a>
+              <div class="footer">Pleasant Cove Design</div>
+            </div>
+          </body></html>
+        `,
+      };
+    }
+
     default:
       return {
         subject: `Project update for ${businessName}`,
@@ -153,6 +238,7 @@ function renderEmail(event: NotificationEvent, appUrl: string, businessName: str
           <!DOCTYPE html><html><head>${baseStyle}</head><body>
             <div class="container">
               <h1>Project update</h1>
+              <p>${greeting}</p>
               <p>You have a new update for <strong>${businessName}</strong> in your project portal.</p>
               <a href="${portalLink}" class="cta">Open portal</a>
               <div class="footer">Pleasant Cove Design</div>
