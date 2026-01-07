@@ -145,12 +145,15 @@ export function WebsiteTab({
   };
 
   // Upload screenshot to storage
-  const uploadScreenshot = async (blob: Blob): Promise<{ mediaId: string; path: string }> => {
+  const uploadScreenshot = async (blob: Blob, prototypeId?: string): Promise<{ mediaId: string; path: string }> => {
     const formData = new FormData();
     formData.append("file", blob, `screenshot-${Date.now()}.png`);
+    if (prototypeId) {
+      formData.append("prototype_id", prototypeId);
+    }
 
     const res = await fetch(
-      `${SUPABASE_URL}/functions/v1/portal/${token}/media`,
+      `${SUPABASE_URL}/functions/v1/portal/${token}/screenshot`,
       {
         method: "POST",
         headers: {
@@ -161,7 +164,10 @@ export function WebsiteTab({
       }
     );
 
-    if (!res.ok) throw new Error("Failed to upload screenshot");
+    if (!res.ok) {
+      const error = await res.json().catch(() => ({ error: "Unknown error" }));
+      throw new Error(error.error || "Failed to upload screenshot");
+    }
     const data = await res.json();
     return { mediaId: data.media_id, path: data.path };
   };
@@ -175,12 +181,12 @@ export function WebsiteTab({
       // Upload the cropped image (this becomes the main screenshot_path)
       const croppedResponse = await fetch(mode.croppedImage);
       const croppedBlob = await croppedResponse.blob();
-      const { mediaId, path } = await uploadScreenshot(croppedBlob);
+      const { mediaId, path } = await uploadScreenshot(croppedBlob, selectedVersion.id);
 
       // Optionally upload full screenshot for context
       const fullResponse = await fetch(mode.fullImage);
       const fullBlob = await fullResponse.blob();
-      const fullUpload = await uploadScreenshot(fullBlob);
+      const fullUpload = await uploadScreenshot(fullBlob, selectedVersion.id);
 
       // Create comment with cropped screenshot + crop coordinates
       const res = await fetch(
