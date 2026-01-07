@@ -1,6 +1,6 @@
 import { useParams, Link, useSearchParams, useNavigate } from "react-router-dom";
 import React, { useState, useEffect, useCallback } from "react";
-import { Loader2, AlertCircle, Home, Settings2, ExternalLink, Activity, MessageCircle, FolderOpen, Globe, Phone } from "lucide-react";
+import { Loader2, AlertCircle, Home, Settings2, ExternalLink, Activity, MessageCircle, FolderOpen, Globe, Phone, ArrowLeft } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -335,14 +335,13 @@ export default function WorkspacePage() {
       <div className="border-b border-border bg-card/80 backdrop-blur-sm px-4 py-3 flex-shrink-0">
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <Link 
-              to="/portal" 
-              className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors group"
-            >
-              <Home className="h-4 w-4 group-hover:scale-110 transition-transform" />
-              <span className="font-medium hidden sm:inline">Pleasant Cove Design</span>
+            <Link to="/portal">
+              <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground hover:text-foreground">
+                <ArrowLeft className="h-4 w-4" />
+                <span className="hidden sm:inline">My Projects</span>
+              </Button>
             </Link>
-            <div className="h-4 w-px bg-border" />
+            <div className="h-4 w-px bg-border hidden sm:block" />
             <span className="text-sm font-semibold">{projectInfo?.businessName}</span>
           </div>
           <div className="flex items-center gap-3">
