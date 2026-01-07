@@ -19,6 +19,7 @@ export interface PricingTier {
   label: string;
   price: string; // "Starting at $X" format
   description: string;
+  features?: string[]; // What's included
 }
 
 export interface RetainerAddon {
@@ -88,12 +89,27 @@ export const BUNDLE_TIERS: PricingTier[] = [
     label: "PCD Starter System",
     price: "Starting at $1,200 + $450/mo",
     description: "Essential Website + AI Front Door",
+    features: [
+      "Fast, mobile-optimized website (3-5 pages)",
+      "AI receptionist: 24/7 call answering & routing",
+      "Missed-call text-back",
+      "Lead notifications to your phone/email",
+      "Basic SEO setup",
+    ],
   },
   {
     id: "bundle_growth",
     label: "PCD Growth System",
     price: "Starting at $2,200 + $700/mo",
     description: "Growth Website + AI Front Door + Booking",
+    features: [
+      "Extended website (5-8 pages) with conversion focus",
+      "AI receptionist: 24/7 call answering & routing",
+      "Booking integration (directs callers to your scheduler)",
+      "Lead capture forms with smart follow-up",
+      "Priority support & faster turnaround",
+      "Advanced SEO & local search optimization",
+    ],
   },
 ];
 
