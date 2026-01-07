@@ -601,9 +601,13 @@ const GetDemo = () => {
               { value: "bookings", label: "Book appointments" },
               { value: "info", label: "Show services" },
             ].map((opt) => (
-              <div key={opt.value} className="flex items-center space-x-3 p-3 rounded-lg border border-border hover:bg-secondary/50 transition-colors cursor-pointer">
-                <RadioGroupItem value={opt.value} id={`goal-${opt.value}`} />
-                <Label htmlFor={`goal-${opt.value}`} className="cursor-pointer font-normal flex-1">{opt.label}</Label>
+              <div 
+                key={opt.value} 
+                onClick={() => !isLoading && updateField("websiteGoal", opt.value as WebsiteGoal)}
+                className="flex items-center space-x-3 p-3 rounded-lg border border-border hover:bg-secondary/50 transition-colors cursor-pointer"
+              >
+                <RadioGroupItem value={opt.value} id={`goal-${opt.value}`} className="pointer-events-none" />
+                <Label className="cursor-pointer font-normal flex-1 pointer-events-none">{opt.label}</Label>
               </div>
             ))}
           </RadioGroup>
@@ -635,9 +639,13 @@ const GetDemo = () => {
               { value: "1-2months", label: "1–2 months" },
               { value: "unsure", label: "Not sure" },
             ].map((opt) => (
-              <div key={opt.value} className="flex items-center space-x-3 p-3 rounded-lg border border-border hover:bg-secondary/50 transition-colors cursor-pointer">
-                <RadioGroupItem value={opt.value} id={`timeline-${opt.value}`} />
-                <Label htmlFor={`timeline-${opt.value}`} className="cursor-pointer font-normal flex-1">{opt.label}</Label>
+              <div 
+                key={opt.value} 
+                onClick={() => !isLoading && updateField("timeline", opt.value as Timeline)}
+                className="flex items-center space-x-3 p-3 rounded-lg border border-border hover:bg-secondary/50 transition-colors cursor-pointer"
+              >
+                <RadioGroupItem value={opt.value} id={`timeline-${opt.value}`} className="pointer-events-none" />
+                <Label className="cursor-pointer font-normal flex-1 pointer-events-none">{opt.label}</Label>
               </div>
             ))}
           </RadioGroup>
@@ -667,9 +675,13 @@ const GetDemo = () => {
               { value: "no", label: "No" },
               { value: "refresh", label: "Need a refresh" },
             ].map((opt) => (
-              <div key={opt.value} className="flex items-center space-x-3 p-3 rounded-lg border border-border hover:bg-secondary/50 transition-colors cursor-pointer">
-                <RadioGroupItem value={opt.value} id={`logo-${opt.value}`} />
-                <Label htmlFor={`logo-${opt.value}`} className="cursor-pointer font-normal flex-1">{opt.label}</Label>
+              <div 
+                key={opt.value} 
+                onClick={() => !isLoading && updateField("logoStatus", opt.value as LogoStatus)}
+                className="flex items-center space-x-3 p-3 rounded-lg border border-border hover:bg-secondary/50 transition-colors cursor-pointer"
+              >
+                <RadioGroupItem value={opt.value} id={`logo-${opt.value}`} className="pointer-events-none" />
+                <Label className="cursor-pointer font-normal flex-1 pointer-events-none">{opt.label}</Label>
               </div>
             ))}
           </RadioGroup>
@@ -714,9 +726,13 @@ const GetDemo = () => {
               { value: "some", label: "Some — I have a few to share" },
               { value: "none", label: "None yet — I'll need help" },
             ].map((opt) => (
-              <div key={opt.value} className="flex items-center space-x-3 p-3 rounded-lg border border-border hover:bg-secondary/50 transition-colors cursor-pointer">
-                <RadioGroupItem value={opt.value} id={`photo-${opt.value}`} />
-                <Label htmlFor={`photo-${opt.value}`} className="cursor-pointer font-normal flex-1">{opt.label}</Label>
+              <div 
+                key={opt.value} 
+                onClick={() => !isLoading && updateField("photoReadiness", opt.value as PhotoReadiness)}
+                className="flex items-center space-x-3 p-3 rounded-lg border border-border hover:bg-secondary/50 transition-colors cursor-pointer"
+              >
+                <RadioGroupItem value={opt.value} id={`photo-${opt.value}`} className="pointer-events-none" />
+                <Label className="cursor-pointer font-normal flex-1 pointer-events-none">{opt.label}</Label>
               </div>
             ))}
           </RadioGroup>
@@ -802,10 +818,14 @@ const GetDemo = () => {
               { value: "after_hours", label: "After hours only", desc: "AI answers when you're closed" },
               { value: "overflow", label: "Overflow only", desc: "AI answers missed calls" },
             ].map((opt) => (
-              <div key={opt.value} className="flex items-start space-x-3 p-4 rounded-lg border border-border hover:bg-secondary/50 transition-colors cursor-pointer">
-                <RadioGroupItem value={opt.value} id={`coverage-${opt.value}`} className="mt-0.5" />
-                <div>
-                  <Label htmlFor={`coverage-${opt.value}`} className="cursor-pointer font-medium">{opt.label}</Label>
+              <div 
+                key={opt.value} 
+                onClick={() => !isLoading && updateField("callHandling", opt.value as CallHandling)}
+                className="flex items-start space-x-3 p-4 rounded-lg border border-border hover:bg-secondary/50 transition-colors cursor-pointer"
+              >
+                <RadioGroupItem value={opt.value} id={`coverage-${opt.value}`} className="mt-0.5 pointer-events-none" />
+                <div className="flex-1">
+                  <Label className="cursor-pointer font-medium pointer-events-none">{opt.label}</Label>
                   <p className="text-xs text-muted-foreground">{opt.desc}</p>
                 </div>
               </div>
@@ -827,10 +847,14 @@ const GetDemo = () => {
               { value: "callback", label: "Schedule callback", desc: "Book a time for you to call" },
               { value: "text", label: "Send text follow-up", desc: "Text the caller details" },
             ].map((opt) => (
-              <div key={opt.value} className="flex items-start space-x-3 p-4 rounded-lg border border-border hover:bg-secondary/50 transition-colors cursor-pointer">
-                <RadioGroupItem value={opt.value} id={`handoff-${opt.value}`} className="mt-0.5" />
-                <div>
-                  <Label htmlFor={`handoff-${opt.value}`} className="cursor-pointer font-medium">{opt.label}</Label>
+              <div 
+                key={opt.value} 
+                onClick={() => !isLoading && updateField("handoffMethod", opt.value as HandoffMethod)}
+                className="flex items-start space-x-3 p-4 rounded-lg border border-border hover:bg-secondary/50 transition-colors cursor-pointer"
+              >
+                <RadioGroupItem value={opt.value} id={`handoff-${opt.value}`} className="mt-0.5 pointer-events-none" />
+                <div className="flex-1">
+                  <Label className="cursor-pointer font-medium pointer-events-none">{opt.label}</Label>
                   <p className="text-xs text-muted-foreground">{opt.desc}</p>
                 </div>
               </div>
@@ -1024,9 +1048,13 @@ const GetDemo = () => {
                 { value: "emergency_only", label: "Emergency escalation only" },
                 { value: "callback_info", label: "Tell callers when to call back" },
               ].map((opt) => (
-                <div key={opt.value} className="flex items-center space-x-3 p-3 rounded-lg border border-border hover:bg-secondary/50 transition-colors cursor-pointer">
-                  <RadioGroupItem value={opt.value} id={`after-${opt.value}`} />
-                  <Label htmlFor={`after-${opt.value}`} className="cursor-pointer font-normal flex-1">{opt.label}</Label>
+                <div 
+                  key={opt.value} 
+                  onClick={() => !isLoading && updateField("afterHoursAction", opt.value as AfterHoursAction)}
+                  className="flex items-center space-x-3 p-3 rounded-lg border border-border hover:bg-secondary/50 transition-colors cursor-pointer"
+                >
+                  <RadioGroupItem value={opt.value} id={`after-${opt.value}`} className="pointer-events-none" />
+                  <Label className="cursor-pointer font-normal flex-1 pointer-events-none">{opt.label}</Label>
                 </div>
               ))}
             </RadioGroup>
@@ -1133,9 +1161,13 @@ const GetDemo = () => {
               { value: "follow_up", label: 'Only say "we\'ll follow up"' },
               { value: "never", label: "Never discuss pricing" },
             ].map((opt) => (
-              <div key={opt.value} className="flex items-center space-x-3 p-3 rounded-lg border border-border hover:bg-secondary/50 transition-colors cursor-pointer">
-                <RadioGroupItem value={opt.value} id={`pricing-${opt.value}`} />
-                <Label htmlFor={`pricing-${opt.value}`} className="cursor-pointer font-normal flex-1">{opt.label}</Label>
+              <div 
+                key={opt.value} 
+                onClick={() => !isLoading && updateField("pricingGuidance", opt.value as PricingGuidance)}
+                className="flex items-center space-x-3 p-3 rounded-lg border border-border hover:bg-secondary/50 transition-colors cursor-pointer"
+              >
+                <RadioGroupItem value={opt.value} id={`pricing-${opt.value}`} className="pointer-events-none" />
+                <Label className="cursor-pointer font-normal flex-1 pointer-events-none">{opt.label}</Label>
               </div>
             ))}
           </RadioGroup>
@@ -1166,9 +1198,13 @@ const GetDemo = () => {
               { value: "professional", label: "Professional", desc: "Polished & formal" },
               { value: "direct", label: "Direct", desc: "Efficient & to the point" },
             ].map((opt) => (
-              <div key={opt.value} className="flex flex-col items-center text-center space-y-1 p-4 rounded-lg border border-border hover:bg-secondary/50 transition-colors cursor-pointer">
-                <RadioGroupItem value={opt.value} id={`tone-${opt.value}`} />
-                <Label htmlFor={`tone-${opt.value}`} className="cursor-pointer font-medium text-sm">{opt.label}</Label>
+              <div 
+                key={opt.value} 
+                onClick={() => !isLoading && updateField("preferredTone", opt.value as Tone)}
+                className="flex flex-col items-center text-center space-y-1 p-4 rounded-lg border border-border hover:bg-secondary/50 transition-colors cursor-pointer"
+              >
+                <RadioGroupItem value={opt.value} id={`tone-${opt.value}`} className="pointer-events-none" />
+                <Label className="cursor-pointer font-medium text-sm pointer-events-none">{opt.label}</Label>
                 <p className="text-xs text-muted-foreground">{opt.desc}</p>
               </div>
             ))}
