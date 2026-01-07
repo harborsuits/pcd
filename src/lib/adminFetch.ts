@@ -115,25 +115,46 @@ export async function signOutAdmin(): Promise<void> {
 
 // Check if currently authenticated as admin (with caching for faster loads)
 export async function isAuthenticatedAdmin(): Promise<boolean> {
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session) {
+  try {
+    const { data: { session }, error } = await supabase.auth.getSession();
+    
+    // Handle session errors or missing session
+    if (error || !session) {
+      console.log("[adminFetch] No valid session found:", error?.message);
+      sessionStorage.removeItem("admin_verified");
+      return false;
+    }
+    
+    // Check if session is expired
+    const expiresAt = session.expires_at;
+    if (expiresAt && expiresAt * 1000 < Date.now()) {
+      console.log("[adminFetch] Session expired, attempting refresh...");
+      const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+      if (refreshError || !refreshData.session) {
+        console.log("[adminFetch] Session refresh failed:", refreshError?.message);
+        sessionStorage.removeItem("admin_verified");
+        return false;
+      }
+    }
+    
+    // Check if we've already verified admin status for this session
+    const cachedUserId = sessionStorage.getItem("admin_verified");
+    if (cachedUserId === session.user.id) {
+      console.log("[adminFetch] Using cached admin verification");
+      return true;
+    }
+    
+    // Verify admin role and cache result
+    const isAdmin = await checkAdminRole();
+    if (isAdmin) {
+      sessionStorage.setItem("admin_verified", session.user.id);
+    } else {
+      sessionStorage.removeItem("admin_verified");
+    }
+    return isAdmin;
+  } catch (err) {
+    console.error("[adminFetch] isAuthenticatedAdmin error:", err);
     sessionStorage.removeItem("admin_verified");
     return false;
   }
-  
-  // Check if we've already verified admin status for this session
-  const cachedUserId = sessionStorage.getItem("admin_verified");
-  if (cachedUserId === session.user.id) {
-    console.log("[adminFetch] Using cached admin verification");
-    return true;
-  }
-  
-  // Verify admin role and cache result
-  const isAdmin = await checkAdminRole();
-  if (isAdmin) {
-    sessionStorage.setItem("admin_verified", session.user.id);
-  } else {
-    sessionStorage.removeItem("admin_verified");
-  }
-  return isAdmin;
 }
