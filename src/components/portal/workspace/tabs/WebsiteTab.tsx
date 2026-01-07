@@ -1,14 +1,29 @@
-import { useState, useRef, useCallback } from "react";
-import { Clock, ExternalLink, RefreshCw, Camera, Upload, Loader2, X, Send, Paperclip } from "lucide-react";
+import { useState, useRef, useCallback, useEffect } from "react";
+import { Clock, ExternalLink, RefreshCw, Camera, Upload, Loader2, X, Send, Paperclip, Check, CircleDot, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import { VersionsList, type Version } from "../VersionsList";
 import { CropSelector } from "../CropSelector";
 import { captureTabCropped, isTabCaptureSupported, type CaptureError } from "@/lib/tabCapture";
 
+interface FeedbackComment {
+  id: string;
+  prototype_id: string;
+  author_type: string;
+  body: string;
+  status: string;
+  resolved_at: string | null;
+  created_at: string;
+  screenshot_path?: string | null;
+  crop_x?: number | null;
+  crop_y?: number | null;
+  crop_w?: number | null;
+  crop_h?: number | null;
+}
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
@@ -52,6 +67,8 @@ export function WebsiteTab({
   const [commentText, setCommentText] = useState("");
   const [attachments, setAttachments] = useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [comments, setComments] = useState<FeedbackComment[]>([]);
+  const [isLoadingComments, setIsLoadingComments] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const attachInputRef = useRef<HTMLInputElement>(null);
@@ -62,6 +79,36 @@ export function WebsiteTab({
   
   const selectedVersion = versions.find(v => v.id === selectedId);
   const canTabCapture = isTabCaptureSupported();
+
+  // Fetch comments for the selected prototype
+  const fetchComments = useCallback(async () => {
+    if (!selectedId) return;
+    setIsLoadingComments(true);
+    try {
+      const res = await fetch(
+        `${SUPABASE_URL}/functions/v1/portal/${token}/comments?prototype_id=${selectedId}`,
+        {
+          headers: {
+            apikey: SUPABASE_ANON_KEY,
+            Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+          },
+        }
+      );
+      if (res.ok) {
+        const data = await res.json();
+        setComments(data.comments || []);
+      }
+    } catch (err) {
+      console.error("Failed to fetch comments:", err);
+    } finally {
+      setIsLoadingComments(false);
+    }
+  }, [selectedId, token]);
+
+  // Fetch comments when prototype selection changes
+  useEffect(() => {
+    fetchComments();
+  }, [fetchComments]);
 
   // Capture screenshot using browser tab capture (auto-crops to preview area)
   const handleCaptureScreenshot = useCallback(async () => {
@@ -224,6 +271,7 @@ export function WebsiteTab({
       setMode({ type: "preview" });
       setCommentText("");
       setAttachments([]);
+      fetchComments(); // Refresh comments list
       onRefreshComments?.();
     } catch (err) {
       console.error("Submit feedback failed:", err);
@@ -263,48 +311,137 @@ export function WebsiteTab({
   return (
     <div className="h-full flex flex-col">
       <div className="flex-1 flex min-h-0">
-        {/* Left: Version list + pending feedback card */}
-        <div className="w-48 border-r border-border flex-shrink-0 overflow-y-auto flex flex-col">
+        {/* Left: Version list + feedback items */}
+        <div className="w-56 border-r border-border flex-shrink-0 flex flex-col min-h-0">
           <VersionsList
             versions={versions}
             selectedId={selectedId}
             onSelect={handleSelect}
           />
           
-          {/* Pending feedback mini card */}
-          {mode.type === "compose" && (
-            <div className="border-t border-border p-2 bg-muted/30">
-              <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide mb-2">
-                Your Feedback
+          {/* Feedback section */}
+          <div className="flex-1 flex flex-col min-h-0 border-t border-border">
+            <div className="px-3 py-2 border-b border-border bg-muted/30 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <h4 className="text-xs font-semibold">Feedback</h4>
+                {comments.length > 0 && (
+                  <Badge variant="secondary" className="text-[10px] h-4 px-1.5">
+                    {comments.length}
+                  </Badge>
+                )}
               </div>
-              <div className="rounded-md border border-primary/30 bg-background overflow-hidden">
-                <div className="relative aspect-video">
-                  <img
-                    src={mode.croppedImage}
-                    alt="Your selection"
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
-                  <div className="absolute bottom-1 left-1 right-1">
-                    <span className="text-[9px] text-white/90 font-medium truncate block">
-                      {commentText.trim() ? commentText.slice(0, 30) + (commentText.length > 30 ? '...' : '') : 'Add a comment...'}
-                    </span>
+              {isLoadingComments && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
+            </div>
+            
+            <ScrollArea className="flex-1">
+              <div className="p-2 space-y-2">
+                {/* Pending feedback mini card (when composing) */}
+                {mode.type === "compose" && (
+                  <div className="rounded-md border-2 border-dashed border-primary/50 bg-primary/5 overflow-hidden">
+                    <div className="relative aspect-video">
+                      <img
+                        src={mode.croppedImage}
+                        alt="Your selection"
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+                      <div className="absolute top-1 right-1">
+                        <Badge className="text-[8px] h-4 px-1 bg-primary">Draft</Badge>
+                      </div>
+                      <div className="absolute bottom-1 left-1 right-1">
+                        <span className="text-[9px] text-white font-medium truncate block">
+                          {commentText.trim() ? commentText.slice(0, 25) + (commentText.length > 25 ? '...' : '') : 'Writing...'}
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                </div>
-                {attachments.length > 0 && (
-                  <div className="px-2 py-1 border-t border-border bg-muted/50 flex items-center gap-1">
-                    <Paperclip className="h-2.5 w-2.5 text-muted-foreground" />
-                    <span className="text-[9px] text-muted-foreground">
-                      {attachments.length} file{attachments.length > 1 ? 's' : ''}
-                    </span>
+                )}
+
+                {/* Live comments */}
+                {comments.filter(c => !c.resolved_at).map((comment) => {
+                  const statusIcon = comment.status === "in_progress" 
+                    ? <Clock className="h-2.5 w-2.5 text-blue-500" />
+                    : <CircleDot className="h-2.5 w-2.5 text-orange-500" />;
+                  
+                  return (
+                    <div
+                      key={comment.id}
+                      className="rounded-md border border-border bg-background overflow-hidden hover:border-muted-foreground/30 transition-colors cursor-pointer"
+                    >
+                      {comment.screenshot_path ? (
+                        <div className="relative aspect-video bg-muted">
+                          <img
+                            src={`${SUPABASE_URL}/storage/v1/object/public/project-media/${comment.screenshot_path}`}
+                            alt="Feedback"
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none';
+                            }}
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+                          <div className="absolute top-1 right-1 flex items-center gap-1">
+                            {statusIcon}
+                          </div>
+                          <div className="absolute bottom-1 left-1 right-1">
+                            <span className="text-[9px] text-white/90 font-medium truncate block">
+                              {comment.body.slice(0, 30)}{comment.body.length > 30 ? '...' : ''}
+                            </span>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="p-2">
+                          <div className="flex items-start gap-1.5">
+                            {statusIcon}
+                            <p className="text-[10px] text-foreground leading-tight line-clamp-2">
+                              {comment.body}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                      <div className="px-2 py-1 border-t border-border bg-muted/30 flex items-center justify-between">
+                        <span className="text-[9px] text-muted-foreground">
+                          {comment.author_type === "client" ? "You" : "Operator"}
+                        </span>
+                        <Badge 
+                          variant="outline" 
+                          className={`text-[8px] h-4 px-1 ${
+                            comment.status === "in_progress" 
+                              ? "bg-blue-50 text-blue-700 border-blue-200" 
+                              : "bg-orange-50 text-orange-700 border-orange-200"
+                          }`}
+                        >
+                          {comment.status === "in_progress" ? "In Progress" : "Open"}
+                        </Badge>
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {/* Resolved comments (collapsed) */}
+                {comments.filter(c => c.resolved_at).length > 0 && (
+                  <div className="pt-2 border-t border-border">
+                    <div className="flex items-center gap-1.5 mb-2">
+                      <Check className="h-3 w-3 text-green-500" />
+                      <span className="text-[10px] text-muted-foreground">
+                        {comments.filter(c => c.resolved_at).length} resolved
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Empty state */}
+                {comments.length === 0 && mode.type !== "compose" && !isLoadingComments && (
+                  <div className="py-6 text-center">
+                    <MessageCircle className="h-6 w-6 text-muted-foreground/40 mx-auto mb-2" />
+                    <p className="text-[10px] text-muted-foreground">No feedback yet</p>
+                    <p className="text-[9px] text-muted-foreground/70 mt-0.5">
+                      Use "Capture Feedback" to add your first
+                    </p>
                   </div>
                 )}
               </div>
-              <p className="text-[9px] text-muted-foreground mt-1.5 text-center">
-                Complete your comment →
-              </p>
-            </div>
-          )}
+            </ScrollArea>
+          </div>
         </div>
         
         {/* Right: Preview or Screenshot mode */}
