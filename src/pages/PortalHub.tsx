@@ -101,36 +101,45 @@ export default function PortalHub() {
   const fetchMyPortals = async (accessToken: string) => {
     if (!accessToken) return;
     
+    // Verify session is still valid before fetching
+    const { data: { session: currentSession } } = await supabase.auth.getSession();
+    if (!currentSession) {
+      console.log("No active session, skipping fetch");
+      return;
+    }
+    
     setLoadingPortals(true);
     try {
-      // Fetch active projects
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/portal/my-projects`, {
-        method: "GET",
-        headers: {
-          "apikey": SUPABASE_ANON_KEY,
-          "Authorization": `Bearer ${accessToken}`,
-        },
-      });
+      // Fetch active and archived projects in parallel
+      const [res, archivedRes] = await Promise.all([
+        fetch(`${SUPABASE_URL}/functions/v1/portal/my-projects`, {
+          method: "GET",
+          headers: {
+            "apikey": SUPABASE_ANON_KEY,
+            "Authorization": `Bearer ${accessToken}`,
+          },
+        }),
+        fetch(`${SUPABASE_URL}/functions/v1/portal/my-projects?archived=true`, {
+          method: "GET",
+          headers: {
+            "apikey": SUPABASE_ANON_KEY,
+            "Authorization": `Bearer ${accessToken}`,
+          },
+        }),
+      ]);
 
-      if (res.ok) {
-        const data = await res.json();
-        setPortals(data.projects || []);
-      } else if (res.status === 401) {
-        // Token expired or invalid - user needs to re-login
+      if (res.status === 401 || archivedRes.status === 401) {
+        // Token expired or invalid - clear state silently
         console.log("Session expired, clearing state");
         setPortals([]);
         setArchivedPortals([]);
         return;
       }
 
-      // Fetch archived projects
-      const archivedRes = await fetch(`${SUPABASE_URL}/functions/v1/portal/my-projects?archived=true`, {
-        method: "GET",
-        headers: {
-          "apikey": SUPABASE_ANON_KEY,
-          "Authorization": `Bearer ${accessToken}`,
-        },
-      });
+      if (res.ok) {
+        const data = await res.json();
+        setPortals(data.projects || []);
+      }
 
       if (archivedRes.ok) {
         const archivedData = await archivedRes.json();
