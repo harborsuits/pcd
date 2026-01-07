@@ -82,6 +82,7 @@ interface ProjectWorkspaceProps {
   intakeData?: IntakeData | null;
   phaseBStatus?: 'pending' | 'in_progress' | 'complete' | null;
   phaseBData?: PhaseBData | null;
+  aiStatus?: 'intake_received' | 'review' | 'setup' | 'testing' | 'live' | 'paused' | null;
   onRefreshProject?: () => void;
   // Force client mode - disables operator UI even if admin_key exists
   forceClientMode?: boolean;
@@ -104,6 +105,7 @@ export function ProjectWorkspace({
   intakeData,
   phaseBStatus,
   phaseBData,
+  aiStatus,
   onRefreshProject,
   forceClientMode = false,
 }: ProjectWorkspaceProps) {
@@ -499,6 +501,7 @@ export function ProjectWorkspace({
                 intakeData={intakeData}
                 phaseBStatus={phaseBStatus}
                 phaseBData={phaseBData}
+                aiStatus={aiStatus}
                 onRefresh={onRefreshProject ?? (() => {})}
               />
             </TabsContent>
