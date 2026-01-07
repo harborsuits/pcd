@@ -22,6 +22,8 @@ import {
   Link, Plus, Eye, MessageCirclePlus, X, MessageSquareDot,
   ChevronRight, ChevronLeft, Hammer, Bot, Power, AlertTriangle
 } from "lucide-react";
+import { ServiceTypeBadge } from "@/components/operator/StageBadge";
+import { IntakeSummary } from "@/components/intake/IntakeSummary";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
@@ -721,7 +723,10 @@ export function ProjectDetailDrawer({ project, open, onClose, onStatusChange }: 
         <SheetHeader className="flex-shrink-0">
           <div className="flex items-start justify-between">
             <div>
-              <SheetTitle className="text-xl">{project.business_name}</SheetTitle>
+              <SheetTitle className="text-xl flex items-center gap-2">
+                {project.business_name}
+                <ServiceTypeBadge serviceType={project.service_type} />
+              </SheetTitle>
               <p className="text-sm text-muted-foreground mt-1">
                 Created {format(new Date(project.created_at), "MMM d, yyyy")}
               </p>
@@ -912,78 +917,16 @@ export function ProjectDetailDrawer({ project, open, onClose, onStatusChange }: 
                   <p className="text-sm mt-1">Client hasn't completed the wizard</p>
                 </div>
               ) : (
-                <div className="space-y-6">
-                  {/* Basics */}
-                  {basics && Object.keys(basics).length > 0 && (
-                    <div>
-                      <h4 className="font-medium flex items-center gap-2 mb-3">
-                        <Building2 className="h-4 w-4" />
-                        Business Basics
-                      </h4>
-                      <div className="space-y-2 pl-6">
-                        {Object.entries(basics).map(([key, value]) => (
-                          <div key={key} className="text-sm">
-                            <span className="text-muted-foreground capitalize">
-                              {key.replace(/_/g, " ")}:
-                            </span>{" "}
-                            <span>{String(value)}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Style */}
-                  {style && Object.keys(style).length > 0 && (
-                    <div>
-                      <h4 className="font-medium flex items-center gap-2 mb-3">
-                        <Palette className="h-4 w-4" />
-                        Style Preferences
-                      </h4>
-                      <div className="space-y-2 pl-6">
-                        {Object.entries(style).map(([key, value]) => (
-                          <div key={key} className="text-sm">
-                            <span className="text-muted-foreground capitalize">
-                              {key.replace(/_/g, " ")}:
-                            </span>{" "}
-                            <span>
-                              {Array.isArray(value) ? value.join(", ") : String(value)}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Functionality */}
-                  {functionality && Object.keys(functionality).length > 0 && (
-                    <div>
-                      <h4 className="font-medium flex items-center gap-2 mb-3">
-                        <Settings className="h-4 w-4" />
-                        Functionality
-                      </h4>
-                      <div className="space-y-2 pl-6">
-                        {Object.entries(functionality).map(([key, value]) => (
-                          <div key={key} className="text-sm">
-                            <span className="text-muted-foreground capitalize">
-                              {key.replace(/_/g, " ")}:
-                            </span>{" "}
-                            <span>
-                              {Array.isArray(value) ? value.join(", ") : String(value)}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Raw JSON fallback if no structured sections */}
-                  {!basics && !style && !functionality && (
-                    <pre className="text-xs bg-muted p-3 rounded overflow-auto">
-                      {JSON.stringify(intake, null, 2)}
-                    </pre>
-                  )}
-                </div>
+                <IntakeSummary
+                  serviceType={project.service_type}
+                  intake={intake}
+                  basics={{
+                    businessName: project.business_name,
+                    yourName: project.contact_name || undefined,
+                    email: project.contact_email || undefined,
+                    phone: project.contact_phone || undefined,
+                  }}
+                />
               )}
             </ScrollArea>
           </TabsContent>
