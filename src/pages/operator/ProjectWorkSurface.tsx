@@ -20,7 +20,7 @@ import { format } from "date-fns";
 import { CommentCard } from "@/components/operator/CommentCard";
 import { DataFreshnessPill } from "@/components/operator/DataFreshnessPill";
 import { IntakeOverviewPanel } from "@/components/operator/IntakeOverviewPanel";
-import { PhaseBOverviewPanel } from "@/components/operator/PhaseBOverviewPanel";
+
 import { LaunchChecklist } from "@/components/operator/LaunchChecklist";
 import { DeliverablesMilestones } from "@/components/operator/DeliverablesMilestones";
 import { adminFetch, AdminAuthError } from "@/lib/adminFetch";
@@ -806,14 +806,6 @@ export function ProjectWorkSurface({ project, onBack, onStatusChange }: ProjectW
                     intakeStatus={project.intake?.intake_status}
                     onApproveIntake={project.intake?.id ? () => approveIntakeMut.mutate(project.intake!.id) : undefined}
                     isApproving={approveIntakeMut.isPending}
-                  />
-                  
-                  {/* Phase B - Detailed Setup */}
-                  <PhaseBOverviewPanel 
-                    phaseB={project.intake?.phase_b_json}
-                    phaseBStatus={project.intake?.phase_b_status}
-                    phaseBCompletedAt={project.intake?.phase_b_completed_at}
-                    onOpenMedia={() => setActivePanel("media")}
                   />
                 </div>
               </TabsContent>
