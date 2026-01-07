@@ -949,14 +949,14 @@ export function ProjectsTab() {
                     
                     {/* Actions - reordered: Workspace first, Archive last */}
                     <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0 flex-wrap justify-end max-w-[50%] sm:max-w-none overflow-hidden">
-                      {/* 1. Workspace button - PRIMARY */}
+                      {/* 1. Workspace button - Opens operator work surface */}
                       <Button
                         variant="default"
                         size="sm"
                         className="gap-1 text-xs h-7 px-2"
                         onClick={(e) => {
                           e.stopPropagation();
-                          window.open(`/w/${project.project_token}`, "_blank");
+                          setSelectedProject(project);
                         }}
                       >
                         <ExternalLink className="h-3 w-3" />
