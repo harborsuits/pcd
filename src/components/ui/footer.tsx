@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { Link } from "react-router-dom";
 
 interface FooterProps {
   logo: React.ReactNode;
@@ -61,28 +62,54 @@ export function Footer({
           <div className="flex flex-col items-center gap-6 md:flex-row md:items-start md:gap-12">
             {/* Main Links */}
             <nav className="flex flex-wrap justify-center gap-x-6 gap-y-2">
-              {mainLinks.map((link, i) => (
-                <a
-                  key={i}
-                  href={link.href}
-                  className="text-sm text-muted-foreground transition-colors hover:text-foreground"
-                >
-                  {link.label}
-                </a>
-              ))}
+              {mainLinks.map((link, i) => {
+                const isExternal = link.href.startsWith('http') || link.href.startsWith('mailto:');
+                return isExternal ? (
+                  <a
+                    key={i}
+                    href={link.href}
+                    className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {link.label}
+                  </a>
+                ) : (
+                  <Link
+                    key={i}
+                    to={link.href}
+                    className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+                  >
+                    {link.label}
+                  </Link>
+                );
+              })}
             </nav>
 
             {/* Legal Links */}
             <nav className="flex flex-wrap justify-center gap-x-6 gap-y-2">
-              {legalLinks.map((link, i) => (
-                <a
-                  key={i}
-                  href={link.href}
-                  className="text-sm text-muted-foreground transition-colors hover:text-foreground"
-                >
-                  {link.label}
-                </a>
-              ))}
+              {legalLinks.map((link, i) => {
+                const isExternal = link.href.startsWith('http') || link.href.startsWith('mailto:');
+                return isExternal ? (
+                  <a
+                    key={i}
+                    href={link.href}
+                    className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {link.label}
+                  </a>
+                ) : (
+                  <Link
+                    key={i}
+                    to={link.href}
+                    className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+                  >
+                    {link.label}
+                  </Link>
+                );
+              })}
             </nav>
           </div>
         </div>
