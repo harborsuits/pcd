@@ -3209,27 +3209,18 @@ async function handleWhoami(
     
     if (authHeader?.startsWith("Bearer ")) {
       const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-      const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+      const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+      const supabase = createClient(supabaseUrl, supabaseServiceKey);
       
-      const supabaseWithAuth = createClient(supabaseUrl, supabaseAnonKey, {
-        global: { headers: { Authorization: authHeader } }
-      });
+      const jwt = authHeader.replace("Bearer ", "");
+      const { data: { user }, error: authError } = await supabase.auth.getUser(jwt);
       
-      const jwtToken = authHeader.replace("Bearer ", "");
-      const { data: claimsData, error: claimsError } = await supabaseWithAuth.auth.getClaims(jwtToken);
-      
-      if (!claimsError && claimsData?.claims) {
-        const userId = claimsData.claims.sub as string;
-        
-        // Check admin role using service client
-        const supabaseUrl2 = Deno.env.get("SUPABASE_URL")!;
-        const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-        const serviceClient = createClient(supabaseUrl2, supabaseServiceKey);
-        
-        const { data: roleData } = await serviceClient
+      if (!authError && user) {
+        // Check admin role
+        const { data: roleData } = await supabase
           .from("user_roles")
           .select("role")
-          .eq("user_id", userId)
+          .eq("user_id", user.id)
           .eq("role", "admin")
           .maybeSingle();
         
