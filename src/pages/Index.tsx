@@ -396,11 +396,11 @@ const Index = () => {
             Ready to see it for your business?
           </h2>
           <p className="text-muted-foreground max-w-md mx-auto mb-8">
-            Get a personalized demo — no pressure, no commitment.
+            Get a personalized website demo — no pressure, no commitment.
           </p>
-          <Link to="/get-demo">
+          <Link to="/get-demo?service=demo">
             <LiquidButton size="lg">
-              Get Your Demo
+              See a Demo
             </LiquidButton>
           </Link>
         </div>

@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import ScrollToTop from "@/components/ScrollToTop";
 import Index from "./pages/Index";
-import GetDemo from "./pages/GetDemo";
+import IntakeWizard from "./pages/IntakeWizard";
 import Pricing from "./pages/Pricing";
 import WhatWeBuild from "./pages/WhatWeBuild";
 import NotFound from "./pages/NotFound";
@@ -39,7 +39,7 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/pricing" element={<Pricing />} />
           <Route path="/what-we-build" element={<WhatWeBuild />} />
-          <Route path="/get-demo" element={<GetDemo />} />
+          <Route path="/get-demo" element={<IntakeWizard />} />
           <Route path="/privacy" element={<PrivacyPolicy />} />
           <Route path="/terms" element={<TermsOfService />} />
           <Route path="/portal" element={<PortalHub />} />
