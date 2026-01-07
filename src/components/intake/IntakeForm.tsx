@@ -22,7 +22,9 @@ import {
   Calendar,
   Palette,
   Camera,
-  Check
+  Check,
+  DollarSign,
+  Wrench
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -64,6 +66,14 @@ export interface IntakeFormData {
   // Other (à la carte)
   selectedServices: string[];
   customRequest: string;
+  
+  // Pricing tier
+  pricingTier: string;
+  pricingNotes: string;
+  
+  // Retainer add-ons
+  retainerAddons: string[];
+  addonNotes: string;
 }
 
 export const DEFAULT_INTAKE_DATA: IntakeFormData = {
@@ -89,6 +99,10 @@ export const DEFAULT_INTAKE_DATA: IntakeFormData = {
   photoReadiness: "",
   selectedServices: [],
   customRequest: "",
+  pricingTier: "",
+  pricingNotes: "",
+  retainerAddons: [],
+  addonNotes: "",
 };
 
 interface IntakeFormProps {
@@ -135,6 +149,85 @@ const A_LA_CARTE_OPTIONS = [
   { id: "seo", label: "SEO & Local Optimization" },
 ];
 
+// Pricing tiers by service type
+const WEBSITE_TIERS = [
+  { 
+    id: "website_essential", 
+    label: "Essential Website", 
+    price: "Starting at $750",
+    description: "Fast, mobile-optimized site with core pages"
+  },
+  { 
+    id: "website_growth", 
+    label: "Growth Website", 
+    price: "Starting at $1,500",
+    description: "Extended pages, forms, and conversion focus"
+  },
+  { 
+    id: "website_premium", 
+    label: "Premium / Interactive", 
+    price: "Starting at $2,500",
+    description: "Custom features, animations, and integrations"
+  },
+];
+
+const AI_TIERS = [
+  { 
+    id: "ai_front_door", 
+    label: "AI Front Door", 
+    price: "Starting at $450/mo",
+    description: "24/7 call answering, routing, and follow-ups"
+  },
+  { 
+    id: "ai_booking", 
+    label: "AI Front Door + Booking", 
+    price: "Starting at $700/mo",
+    description: "Includes scheduling integration"
+  },
+  { 
+    id: "ai_full", 
+    label: "AI + Booking + CRM", 
+    price: "Starting at $950/mo",
+    description: "Full automation with lead management"
+  },
+];
+
+const BUNDLE_TIERS = [
+  { 
+    id: "bundle_starter", 
+    label: "PCD Starter System", 
+    price: "Starting at $1,200 + $450/mo",
+    description: "Essential Website + AI Front Door"
+  },
+  { 
+    id: "bundle_growth", 
+    label: "PCD Growth System", 
+    price: "Starting at $2,200 + $700/mo",
+    description: "Growth Website + AI Front Door + Booking"
+  },
+];
+
+const RETAINER_ADDONS = [
+  { 
+    id: "maintenance", 
+    label: "Hosting & Maintenance", 
+    price: "Starting at $75/mo",
+    description: "Updates, backups, and uptime monitoring"
+  },
+  { 
+    id: "ai_tuning", 
+    label: "AI Updates & Tuning", 
+    price: "Starting at $100/mo",
+    description: "Ongoing call flow optimization"
+  },
+  { 
+    id: "operations", 
+    label: "Digital Operations Support", 
+    price: "Starting at $150/mo",
+    description: "Reporting, analytics, and conversion tracking"
+  },
+];
+
 // ═══════════════════════════════════════════════════════════════════════════
 // MAIN COMPONENT
 // ═══════════════════════════════════════════════════════════════════════════
@@ -176,11 +269,11 @@ export function IntakeForm({
     
     switch (serviceType) {
       case "ai":
-        return ["choose", "basics", "ai"];
+        return ["choose", "basics", "ai", "pricing", "addons"];
       case "website":
-        return ["choose", "basics", "website", "brand"];
+        return ["choose", "basics", "website", "brand", "pricing", "addons"];
       case "both":
-        return ["choose", "basics", "website", "brand", "ai"];
+        return ["choose", "basics", "website", "brand", "ai", "pricing", "addons"];
       case "other":
         return ["choose", "basics", "other"];
       default:
@@ -218,6 +311,10 @@ export function IntakeForm({
         return !!(formData.logoStatus && formData.photoReadiness);
       case "other":
         return !!(formData.selectedServices.length > 0 || formData.customRequest.trim());
+      case "pricing":
+        return !!formData.pricingTier;
+      case "addons":
+        return true; // Optional step, always can proceed
       default:
         return true;
     }
@@ -732,6 +829,164 @@ export function IntakeForm({
     </div>
   );
 
+  // Get pricing tiers based on service type
+  const getPricingTiers = () => {
+    switch (formData.serviceType) {
+      case "ai":
+        return AI_TIERS;
+      case "website":
+        return WEBSITE_TIERS;
+      case "both":
+        return BUNDLE_TIERS;
+      default:
+        return [];
+    }
+  };
+
+  const renderPricingStep = () => {
+    const tiers = getPricingTiers();
+    const serviceLabel = formData.serviceType === "ai" 
+      ? "AI Receptionist" 
+      : formData.serviceType === "website" 
+        ? "Website" 
+        : "Full Package";
+
+    return (
+      <div className="space-y-6">
+        <div className="mb-6">
+          <div className="flex items-center gap-2 mb-2">
+            <DollarSign className="h-5 w-5 text-primary" />
+            <h2 className="text-xl font-bold text-foreground">Select your tier</h2>
+          </div>
+          <p className="text-muted-foreground text-sm">
+            Choose a {serviceLabel} tier that fits your needs. We'll discuss details on our call.
+          </p>
+        </div>
+
+        <div className="space-y-3">
+          {tiers.map((tier) => {
+            const isSelected = formData.pricingTier === tier.id;
+            return (
+              <button
+                key={tier.id}
+                type="button"
+                onClick={() => updateField("pricingTier", tier.id)}
+                className={cn(
+                  "relative w-full flex flex-col items-start gap-1 rounded-xl border-2 p-4 text-left transition-all hover:border-primary/50",
+                  isSelected
+                    ? "border-primary bg-primary/5 ring-2 ring-primary/20"
+                    : "border-border bg-card hover:bg-accent/50"
+                )}
+              >
+                <div className="flex items-center justify-between w-full">
+                  <h3 className="font-semibold text-foreground">{tier.label}</h3>
+                  <span className={cn(
+                    "text-sm font-medium",
+                    isSelected ? "text-primary" : "text-muted-foreground"
+                  )}>
+                    {tier.price}
+                  </span>
+                </div>
+                <p className="text-sm text-muted-foreground">{tier.description}</p>
+                {isSelected && (
+                  <div className="absolute top-3 right-3">
+                    <Check className="h-5 w-5 text-primary" />
+                  </div>
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="pt-4">
+          <Label htmlFor="pricingNotes">Budget or timing notes (optional)</Label>
+          <p className="text-xs text-muted-foreground mb-1.5">
+            Comparing options? Let us know what you're aiming for.
+          </p>
+          <Textarea
+            id="pricingNotes"
+            value={formData.pricingNotes}
+            onChange={(e) => updateField("pricingNotes", e.target.value)}
+            placeholder="Any context that helps us scope this correctly..."
+            rows={2}
+          />
+        </div>
+      </div>
+    );
+  };
+
+  const renderAddonsStep = () => (
+    <div className="space-y-6">
+      <div className="mb-6">
+        <div className="flex items-center gap-2 mb-2">
+          <Wrench className="h-5 w-5 text-primary" />
+          <h2 className="text-xl font-bold text-foreground">Ongoing support (optional)</h2>
+        </div>
+        <p className="text-muted-foreground text-sm">
+          Add monthly retainers to keep things running smoothly. Skip if you're not sure yet.
+        </p>
+      </div>
+
+      <div className="space-y-3">
+        {RETAINER_ADDONS.map((addon) => {
+          const isChecked = formData.retainerAddons.includes(addon.id);
+          return (
+            <div
+              key={addon.id}
+              className={cn(
+                "flex items-start gap-3 rounded-xl border-2 p-4 transition-all cursor-pointer",
+                isChecked
+                  ? "border-primary bg-primary/5"
+                  : "border-border bg-card hover:border-primary/30"
+              )}
+              onClick={() => {
+                if (isChecked) {
+                  updateField("retainerAddons", formData.retainerAddons.filter(id => id !== addon.id));
+                } else {
+                  updateField("retainerAddons", [...formData.retainerAddons, addon.id]);
+                }
+              }}
+            >
+              <Checkbox
+                id={addon.id}
+                checked={isChecked}
+                onCheckedChange={(checked) => {
+                  if (checked) {
+                    updateField("retainerAddons", [...formData.retainerAddons, addon.id]);
+                  } else {
+                    updateField("retainerAddons", formData.retainerAddons.filter(id => id !== addon.id));
+                  }
+                }}
+                className="mt-0.5"
+              />
+              <div className="flex-1">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor={addon.id} className="font-semibold cursor-pointer">
+                    {addon.label}
+                  </Label>
+                  <span className="text-sm text-muted-foreground">{addon.price}</span>
+                </div>
+                <p className="text-sm text-muted-foreground mt-0.5">{addon.description}</p>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="pt-4">
+        <Label htmlFor="addonNotes">Anything specific you want covered? (optional)</Label>
+        <Textarea
+          id="addonNotes"
+          value={formData.addonNotes}
+          onChange={(e) => updateField("addonNotes", e.target.value)}
+          placeholder="Tell us what matters most for ongoing support..."
+          rows={2}
+          className="mt-1.5"
+        />
+      </div>
+    </div>
+  );
+
   const renderCurrentStep = () => {
     switch (currentStepName) {
       case "choose":
@@ -746,6 +1001,10 @@ export function IntakeForm({
         return renderBrandStep();
       case "other":
         return renderOtherStep();
+      case "pricing":
+        return renderPricingStep();
+      case "addons":
+        return renderAddonsStep();
       default:
         return renderChooseStep();
     }
