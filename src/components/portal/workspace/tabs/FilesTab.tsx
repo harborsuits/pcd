@@ -38,7 +38,7 @@ export function FilesTab({ token }: FilesTabProps) {
       const authToken = session?.access_token || SUPABASE_ANON_KEY;
       
       const res = await fetch(
-        `${SUPABASE_URL}/functions/v1/files/${token}`,
+        `${SUPABASE_URL}/functions/v1/files/${token}/list`,
         {
           method: "GET",
           headers: {
@@ -79,7 +79,7 @@ export function FilesTab({ token }: FilesTabProps) {
         formData.append('file', file);
         
         const res = await fetch(
-          `${SUPABASE_URL}/functions/v1/files/${token}`,
+          `${SUPABASE_URL}/functions/v1/files/${token}/upload`,
           {
             method: "POST",
             headers: {
