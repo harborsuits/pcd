@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
-import html2canvas from "html2canvas";
+import { captureTab, isTabCaptureSupported, type CaptureError } from "@/lib/tabCapture";
 import { VersionsList, type Version } from "./VersionsList";
 import { PreviewPanel } from "./PreviewPanel";
 import { FeedbackPanel } from "./FeedbackPanel";
@@ -164,48 +164,38 @@ export function ProjectWorkspace({
     return { mediaId: data.media_id, path: data.path };
   }, [token]);
 
-  // Capture screenshot from preview iframe
+  // Check if tab capture is available
+  const canTabCapture = isTabCaptureSupported();
+
+  // Capture screenshot using browser tab capture
   const handleCaptureScreenshot = useCallback(async () => {
+    if (!canTabCapture) {
+      toast.error("Screen capture not supported. Please upload a screenshot.");
+      return;
+    }
+
     setIsCapturing(true);
     try {
-      // Try to capture the preview container
-      const container = previewContainerRef.current;
-      if (!container) {
-        toast.error("Could not capture screenshot");
-        return;
-      }
-
-      // Find the iframe
-      const iframe = container.querySelector("iframe");
-      if (iframe) {
-        // Cross-origin iframe - can't capture, prompt upload instead
-        toast.info("Please upload a screenshot instead");
-        setIsCapturing(false);
-        return;
-      }
-
-      // Capture the container (fallback for non-iframe content)
-      const canvas = await html2canvas(container, {
-        useCORS: true,
-        allowTaint: true,
-        logging: false,
-      });
-
-      const imageUrl = canvas.toDataURL("image/png");
+      const result = await captureTab();
       setMode({
         type: "screenshot",
-        image: imageUrl,
-        imageW: canvas.width,
-        imageH: canvas.height,
+        image: result.dataUrl,
+        imageW: result.width,
+        imageH: result.height,
         pin: null,
       });
     } catch (err) {
-      console.error("Screenshot capture failed:", err);
-      toast.error("Screenshot capture failed. Please upload instead.");
+      const captureErr = err as CaptureError;
+      if (captureErr.type === "cancelled") {
+        // User cancelled - no error needed
+        return;
+      }
+      console.error("Screenshot capture failed:", captureErr);
+      toast.error(captureErr.message || "Screenshot capture failed. Please upload instead.");
     } finally {
       setIsCapturing(false);
     }
-  }, []);
+  }, [canTabCapture]);
 
   // Handle file upload for screenshot
   const handleUploadScreenshot = useCallback((file: File) => {

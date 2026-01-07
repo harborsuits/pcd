@@ -1,7 +1,7 @@
 import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ExternalLink, Camera, Upload, Loader2, Maximize2, Minimize2, RefreshCw } from "lucide-react";
-import html2canvas from "html2canvas";
 
 interface PreviewPanelProps {
   url: string;
@@ -66,30 +66,44 @@ export function PreviewPanel({
               </Button>
             </>
           ) : (
-            <>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={onCaptureScreenshot}
-                disabled={isCapturing}
-                className="h-7 text-xs gap-1.5"
-              >
-                {isCapturing ? (
-                  <Loader2 className="h-3 w-3 animate-spin" />
-                ) : (
-                  <Camera className="h-3 w-3" />
-                )}
-                Screenshot Feedback
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => fileInputRef.current?.click()}
-                className="h-7 text-xs gap-1.5"
-              >
-                <Upload className="h-3 w-3" />
-                Upload
-              </Button>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={onCaptureScreenshot}
+                    disabled={isCapturing}
+                    className="h-7 text-xs gap-1.5"
+                  >
+                    {isCapturing ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <Camera className="h-3 w-3" />
+                    )}
+                    Capture
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="text-xs max-w-[200px]">
+                  Take a screenshot of your screen to leave pinned feedback
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="h-7 text-xs gap-1.5"
+                  >
+                    <Upload className="h-3 w-3" />
+                    Upload
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="text-xs">
+                  Upload a screenshot image
+                </TooltipContent>
+              </Tooltip>
               <input
                 ref={fileInputRef}
                 type="file"
@@ -97,7 +111,7 @@ export function PreviewPanel({
                 className="hidden"
                 onChange={handleFileChange}
               />
-            </>
+            </TooltipProvider>
           )}
         </div>
         

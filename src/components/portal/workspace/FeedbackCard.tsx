@@ -137,12 +137,16 @@ export function FeedbackCard({
           </div>
           
           {/* Type indicator */}
-          {hasScreenshot && (
+          {hasScreenshot ? (
             <Badge variant="outline" className="text-[10px] px-1.5 py-0 gap-0.5">
               <ImageIcon className="h-2.5 w-2.5" />
               Screenshot
             </Badge>
-          )}
+          ) : (comment.pin_x !== null && comment.pin_y !== null) ? (
+            <Badge variant="outline" className="text-[10px] px-1.5 py-0 gap-0.5 text-muted-foreground">
+              📍 Pinned
+            </Badge>
+          ) : null}
         </div>
         
         <span className="text-[10px] text-muted-foreground">
