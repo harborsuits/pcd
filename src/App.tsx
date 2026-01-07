@@ -16,6 +16,7 @@ import OnboardingWizard from "./pages/portal/OnboardingWizard";
 import OperatorLayout from "./pages/operator/OperatorLayout";
 import WorkspacePage from "./pages/portal/WorkspacePage";
 import ClientWorkspacePage from "./pages/portal/ClientWorkspacePage";
+import CreatePasswordPage from "./pages/portal/CreatePasswordPage";
 import RooferDemo from "./pages/demos/RooferDemo";
 import RestaurantDemo from "./pages/demos/RestaurantDemo";
 import SalonDemo from "./pages/demos/SalonDemo";
@@ -44,6 +45,7 @@ const App = () => (
           <Route path="/terms" element={<TermsOfService />} />
           <Route path="/portal" element={<PortalHub />} />
           <Route path="/portal/new" element={<OnboardingWizard />} />
+          <Route path="/create-password" element={<CreatePasswordPage />} />
           <Route path="/login" element={<PortalHub />} />
 
           {/* Demo Mockup Pages */}
