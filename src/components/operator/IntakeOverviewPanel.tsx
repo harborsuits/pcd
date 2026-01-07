@@ -45,6 +45,38 @@ interface IntakeData {
   notes?: string;
   colorPreset?: string;
   contactName?: string;
+  // Current intake form fields (snake_case from DB)
+  business_name?: string;
+  your_name?: string;
+  email?: string;
+  phone?: string;
+  city?: string;
+  service_type?: string;
+  services_list?: string;
+  services_offered?: string;
+  website_goal?: string;
+  photo_readiness?: string;
+  logo_status?: string;
+  brand_colors?: string;
+  // AI Receptionist fields
+  preferred_tone?: string;
+  business_hours?: string;
+  call_handling?: string;
+  after_hours_action?: string;
+  text_handling?: string[];
+  handoff_triggers?: string[];
+  handoff_method?: string;
+  escalation_number?: string;
+  pricing_guidance?: string;
+  customer_faqs?: string;
+  do_not_say?: string;
+  booking_link?: string;
+  lead_fields?: string[];
+  team_names?: string;
+  business_phone?: string;
+  business_personality?: string[];
+  guarantees_policies?: string;
+  submitted_at?: string;
 }
 
 interface IntakeOverviewPanelProps {
@@ -194,8 +226,15 @@ export function IntakeOverviewPanel({ intake, intakeCreatedAt, intakeStatus, onA
   const status = intakeStatus || 'submitted';
   const { label, variant, color } = statusConfig[status];
 
-  // Detect if this is the new simplified wizard format
+  // Detect format: current intake uses snake_case fields
+  const isCurrentFormat = !!(intake.service_type || intake.website_goal || intake.preferred_tone);
   const isNewFormat = !!(intake.primaryGoal && !intake.goals);
+
+  // Helper to get display value with fallback label lookup
+  const getLabel = (value: string | undefined, labels: Record<string, string>) => {
+    if (!value) return null;
+    return labels[value] || value;
+  };
 
   return (
     <ScrollArea className="flex-1">
@@ -223,38 +262,288 @@ export function IntakeOverviewPanel({ intake, intakeCreatedAt, intakeStatus, onA
           )}
         </div>
 
-        <Section icon={Building2} title="Business">
-          <div className="space-y-1.5 text-sm">
-            {intake.businessName && <p className="font-medium">{intake.businessName}</p>}
-            {intake.businessType && <p className="text-muted-foreground">{BUSINESS_TYPE_LABELS[intake.businessType] || intake.businessType}</p>}
-            {intake.serviceArea && <p className="text-muted-foreground flex items-center gap-1"><MapPin className="h-3 w-3" />{intake.serviceArea}</p>}
-            {intake.contactEmail && <p className="text-muted-foreground">{intake.contactEmail}{intake.contactPhone ? ` · ${intake.contactPhone}` : ''}</p>}
-            {intake.websiteUrl && <a href={intake.websiteUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1"><Globe className="h-3 w-3" />{intake.websiteUrl}</a>}
-          </div>
-        </Section>
+        {/* Current format - service_type based intake */}
+        {isCurrentFormat && (
+          <>
+            {/* Service Type Badge */}
+            {intake.service_type && (
+              <div className="flex items-center gap-2 mb-4">
+                <Badge variant="default" className="text-xs">
+                  {intake.service_type === 'website' && 'Website Only'}
+                  {intake.service_type === 'ai' && 'AI Receptionist Only'}
+                  {intake.service_type === 'both' && 'Website + AI Receptionist'}
+                  {intake.service_type === 'demo' && 'Demo Request'}
+                  {!['website', 'ai', 'both', 'demo'].includes(intake.service_type) && intake.service_type}
+                </Badge>
+              </div>
+            )}
 
-        {/* New format: Primary Goal */}
-        {isNewFormat && intake.primaryGoal && (
-          <Section icon={Target} title="Goal">
-            <div className="space-y-2">
-              <Badge variant="secondary" className="text-xs">{GOAL_LABELS[intake.primaryGoal] || intake.primaryGoal}</Badge>
-              {intake.sellType && (
-                <p className="text-xs text-muted-foreground">Selling: {SELL_TYPE_LABELS[intake.sellType] || intake.sellType}</p>
-              )}
-            </div>
-          </Section>
+            <Section icon={Building2} title="Business">
+              <div className="space-y-1.5 text-sm">
+                {intake.business_name && <p className="font-medium">{intake.business_name}</p>}
+                {intake.your_name && <p className="text-muted-foreground">Contact: {intake.your_name}</p>}
+                {intake.city && <p className="text-muted-foreground flex items-center gap-1"><MapPin className="h-3 w-3" />{intake.city}</p>}
+                {(intake.email || intake.phone) && (
+                  <p className="text-muted-foreground">
+                    {intake.email}{intake.phone ? ` · ${intake.phone}` : ''}
+                  </p>
+                )}
+                {intake.business_phone && intake.business_phone !== intake.phone && (
+                  <p className="text-muted-foreground">Business: {intake.business_phone}</p>
+                )}
+              </div>
+            </Section>
+
+            {/* Website Info */}
+            {(intake.website_goal || intake.services_list || intake.services_offered) && (
+              <Section icon={Globe} title="Website">
+                <div className="space-y-1.5 text-sm">
+                  {intake.website_goal && (
+                    <Badge variant="secondary" className="text-xs">
+                      {intake.website_goal === 'bookings' && 'Goal: Get Bookings'}
+                      {intake.website_goal === 'calls' && 'Goal: Get Calls'}
+                      {intake.website_goal === 'info' && 'Goal: Provide Info'}
+                      {!['bookings', 'calls', 'info'].includes(intake.website_goal) && intake.website_goal}
+                    </Badge>
+                  )}
+                  {intake.services_list && (
+                    <p className="text-muted-foreground">Services: {intake.services_list}</p>
+                  )}
+                  {intake.services_offered && (
+                    <p className="text-muted-foreground text-xs">{intake.services_offered}</p>
+                  )}
+                </div>
+              </Section>
+            )}
+
+            {/* Photo & Brand Readiness */}
+            {(intake.photo_readiness || intake.logo_status || intake.brand_colors) && (
+              <Section icon={Palette} title="Brand & Assets">
+                <div className="space-y-1.5 text-sm">
+                  {intake.logo_status && (
+                    <p className="text-muted-foreground">
+                      Logo: {intake.logo_status === 'yes' ? '✓ Has logo' : intake.logo_status === 'no' ? '✗ Needs logo' : intake.logo_status}
+                    </p>
+                  )}
+                  {intake.photo_readiness && (
+                    <p className="text-muted-foreground">
+                      Photos: {intake.photo_readiness === 'ready' ? '✓ Ready' : intake.photo_readiness === 'some' ? 'Some available' : intake.photo_readiness === 'need_help' ? 'Needs help' : intake.photo_readiness}
+                    </p>
+                  )}
+                  {intake.brand_colors && (
+                    <p className="text-muted-foreground">Colors: {intake.brand_colors}</p>
+                  )}
+                </div>
+              </Section>
+            )}
+
+            {/* AI Receptionist Settings */}
+            {(intake.preferred_tone || intake.call_handling || intake.text_handling) && (
+              <Section icon={Cog} title="AI Receptionist">
+                <div className="space-y-2 text-sm">
+                  {intake.preferred_tone && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-muted-foreground">Tone:</span>
+                      <Badge variant="outline" className="text-xs capitalize">{intake.preferred_tone}</Badge>
+                    </div>
+                  )}
+                  {intake.business_personality && intake.business_personality.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {intake.business_personality.map((p) => (
+                        <Badge key={p} variant="outline" className="text-xs capitalize">{p.replace('_', ' ')}</Badge>
+                      ))}
+                    </div>
+                  )}
+                  {intake.call_handling && (
+                    <p className="text-muted-foreground">
+                      Call handling: {intake.call_handling === 'after_hours' ? 'After hours only' : intake.call_handling === 'always' ? 'Always on' : intake.call_handling}
+                    </p>
+                  )}
+                  {intake.after_hours_action && (
+                    <p className="text-muted-foreground">
+                      After hours: {intake.after_hours_action === 'book' ? 'Book appointments' : intake.after_hours_action === 'message' ? 'Take messages' : intake.after_hours_action}
+                    </p>
+                  )}
+                  {intake.text_handling && intake.text_handling.length > 0 && (
+                    <div>
+                      <span className="text-muted-foreground">Text handling: </span>
+                      {intake.text_handling.map((t) => (
+                        <Badge key={t} variant="secondary" className="text-xs mr-1">
+                          {t === 'answer_faqs' ? 'Answer FAQs' : t === 'send_booking' ? 'Send booking link' : t === 'collect_info' ? 'Collect info' : t}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                  {intake.handoff_triggers && intake.handoff_triggers.length > 0 && (
+                    <p className="text-muted-foreground">
+                      Handoff when: {intake.handoff_triggers.join(', ')}
+                    </p>
+                  )}
+                  {intake.handoff_method && (
+                    <p className="text-muted-foreground">
+                      Handoff via: {intake.handoff_method === 'message' ? 'Text message' : intake.handoff_method === 'call' ? 'Phone call' : intake.handoff_method}
+                    </p>
+                  )}
+                  {intake.escalation_number && (
+                    <p className="text-muted-foreground">Escalation: {intake.escalation_number}</p>
+                  )}
+                  {intake.pricing_guidance && (
+                    <p className="text-muted-foreground">
+                      Pricing: {intake.pricing_guidance === 'follow_up' ? 'Follow up for quote' : intake.pricing_guidance === 'provide' ? 'Provide prices' : intake.pricing_guidance}
+                    </p>
+                  )}
+                </div>
+              </Section>
+            )}
+
+            {/* Knowledge Base */}
+            {(intake.customer_faqs || intake.guarantees_policies || intake.do_not_say) && (
+              <Section icon={FileText} title="Knowledge Base">
+                <div className="space-y-2 text-sm">
+                  {intake.customer_faqs && (
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground mb-1">FAQs:</p>
+                      <p className="text-sm text-foreground whitespace-pre-wrap bg-muted/30 rounded p-2">{intake.customer_faqs}</p>
+                    </div>
+                  )}
+                  {intake.guarantees_policies && (
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground mb-1">Guarantees/Policies:</p>
+                      <p className="text-sm text-foreground whitespace-pre-wrap bg-muted/30 rounded p-2">{intake.guarantees_policies}</p>
+                    </div>
+                  )}
+                  {intake.do_not_say && (
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground mb-1">Do NOT say:</p>
+                      <p className="text-sm text-foreground whitespace-pre-wrap bg-muted/30 rounded p-2">{intake.do_not_say}</p>
+                    </div>
+                  )}
+                </div>
+              </Section>
+            )}
+
+            {/* Lead Capture */}
+            {(intake.lead_fields || intake.booking_link || intake.team_names) && (
+              <Section icon={Target} title="Lead Capture">
+                <div className="space-y-1.5 text-sm">
+                  {intake.lead_fields && intake.lead_fields.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      <span className="text-muted-foreground">Collect:</span>
+                      {intake.lead_fields.map((f) => (
+                        <Badge key={f} variant="outline" className="text-xs capitalize">{f.replace('_', ' ')}</Badge>
+                      ))}
+                    </div>
+                  )}
+                  {intake.booking_link && (
+                    <p className="text-muted-foreground">Booking: {intake.booking_link}</p>
+                  )}
+                  {intake.team_names && (
+                    <p className="text-muted-foreground">Team: {intake.team_names}</p>
+                  )}
+                </div>
+              </Section>
+            )}
+
+            {intake.business_hours && (
+              <Section icon={Clock} title="Hours">
+                <p className="text-sm text-muted-foreground">{intake.business_hours}</p>
+              </Section>
+            )}
+          </>
         )}
 
-        {/* Legacy format: Goals array */}
-        {!isNewFormat && intake.goals && intake.goals.length > 0 && (
-          <Section icon={Target} title="Goals">
-            <div className="flex flex-wrap gap-1.5">
-              {intake.goals.map((goal) => <Badge key={goal} variant="secondary" className="text-xs">{GOAL_LABELS[goal] || goal}</Badge>)}
-            </div>
-            {intake.websiteStatus && <p className="text-xs text-muted-foreground mt-2">{WEBSITE_STATUS_LABELS[intake.websiteStatus] || intake.websiteStatus}</p>}
-          </Section>
+        {/* Fallback to legacy/new wizard format display */}
+        {!isCurrentFormat && (
+          <>
+            <Section icon={Building2} title="Business">
+              <div className="space-y-1.5 text-sm">
+                {intake.businessName && <p className="font-medium">{intake.businessName}</p>}
+                {intake.businessType && <p className="text-muted-foreground">{BUSINESS_TYPE_LABELS[intake.businessType] || intake.businessType}</p>}
+                {intake.serviceArea && <p className="text-muted-foreground flex items-center gap-1"><MapPin className="h-3 w-3" />{intake.serviceArea}</p>}
+                {intake.contactEmail && <p className="text-muted-foreground">{intake.contactEmail}{intake.contactPhone ? ` · ${intake.contactPhone}` : ''}</p>}
+                {intake.websiteUrl && <a href={intake.websiteUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1"><Globe className="h-3 w-3" />{intake.websiteUrl}</a>}
+              </div>
+            </Section>
+
+            {/* New format: Primary Goal */}
+            {isNewFormat && intake.primaryGoal && (
+              <Section icon={Target} title="Goal">
+                <div className="space-y-2">
+                  <Badge variant="secondary" className="text-xs">{GOAL_LABELS[intake.primaryGoal] || intake.primaryGoal}</Badge>
+                  {intake.sellType && (
+                    <p className="text-xs text-muted-foreground">Selling: {SELL_TYPE_LABELS[intake.sellType] || intake.sellType}</p>
+                  )}
+                </div>
+              </Section>
+            )}
+
+            {/* Legacy format: Goals array */}
+            {!isNewFormat && intake.goals && intake.goals.length > 0 && (
+              <Section icon={Target} title="Goals">
+                <div className="flex flex-wrap gap-1.5">
+                  {intake.goals.map((goal) => <Badge key={goal} variant="secondary" className="text-xs">{GOAL_LABELS[goal] || goal}</Badge>)}
+                </div>
+                {intake.websiteStatus && <p className="text-xs text-muted-foreground mt-2">{WEBSITE_STATUS_LABELS[intake.websiteStatus] || intake.websiteStatus}</p>}
+              </Section>
+            )}
+
+            {intake.budgetRange && (
+              <Section icon={DollarSign} title="Budget">
+                <p className="text-sm font-medium">{BUDGET_LABELS[intake.budgetRange] || intake.budgetRange}</p>
+              </Section>
+            )}
+
+            {/* New format: Readiness */}
+            {isNewFormat && intake.readiness && (
+              <Section icon={Package} title="Readiness">
+                <Badge variant="outline" className="text-xs">{READINESS_LABELS_NEW[intake.readiness] || intake.readiness}</Badge>
+              </Section>
+            )}
+
+            {/* Legacy format: Readiness assets */}
+            {!isNewFormat && intake.readinessAssets && intake.readinessAssets.length > 0 && (
+              <Section icon={Package} title="Assets Ready">
+                <div className="flex flex-wrap gap-1.5">
+                  {intake.readinessAssets.map((asset) => <Badge key={asset} variant="outline" className="text-xs">{READINESS_LABELS[asset] || asset}</Badge>)}
+                </div>
+              </Section>
+            )}
+
+            {/* New format: Involvement */}
+            {isNewFormat && intake.involvement && (
+              <Section icon={Cog} title="Involvement">
+                <Badge variant="outline" className="text-xs">{INVOLVEMENT_LABELS[intake.involvement] || intake.involvement}</Badge>
+              </Section>
+            )}
+
+            {(intake.styleVibe || intake.selectedDemo) && (
+              <Section icon={Palette} title="Style">
+                <div className="space-y-1.5 text-sm">
+                  {intake.selectedDemo && <p className="text-muted-foreground">Demo: {intake.selectedDemo}</p>}
+                  {intake.styleVibe && <p>{STYLE_LABELS[intake.styleVibe] || intake.styleVibe}</p>}
+                  {intake.inspirationLinks && <p className="text-xs text-muted-foreground mt-1">{intake.inspirationLinks}</p>}
+                </div>
+              </Section>
+            )}
+
+            {intake.functionality && intake.functionality.length > 0 && (
+              <Section icon={Cog} title="Features">
+                <div className="flex flex-wrap gap-1.5">
+                  {intake.functionality.map((fn) => <Badge key={fn} variant="outline" className="text-xs">{FUNCTIONALITY_LABELS[fn] || fn}</Badge>)}
+                </div>
+                {intake.hoursType && <p className="text-xs text-muted-foreground mt-2">Hours: {HOURS_LABELS[intake.hoursType] || intake.hoursType}</p>}
+              </Section>
+            )}
+
+            {intake.notes && (
+              <Section icon={FileText} title="Notes">
+                <p className="text-sm text-muted-foreground whitespace-pre-wrap">{intake.notes}</p>
+              </Section>
+            )}
+          </>
         )}
 
+        {/* Timeline - works for all formats */}
         {intake.timeline && (
           <Section icon={Clock} title="Timeline">
             <div className="space-y-1">
@@ -266,60 +555,6 @@ export function IntakeOverviewPanel({ intake, intakeCreatedAt, intakeStatus, onA
                 <p className="text-xs text-muted-foreground">Deadline: {intake.deadlineDate}</p>
               )}
             </div>
-          </Section>
-        )}
-
-        {intake.budgetRange && (
-          <Section icon={DollarSign} title="Budget">
-            <p className="text-sm font-medium">{BUDGET_LABELS[intake.budgetRange] || intake.budgetRange}</p>
-          </Section>
-        )}
-
-        {/* New format: Readiness */}
-        {isNewFormat && intake.readiness && (
-          <Section icon={Package} title="Readiness">
-            <Badge variant="outline" className="text-xs">{READINESS_LABELS_NEW[intake.readiness] || intake.readiness}</Badge>
-          </Section>
-        )}
-
-        {/* Legacy format: Readiness assets */}
-        {!isNewFormat && intake.readinessAssets && intake.readinessAssets.length > 0 && (
-          <Section icon={Package} title="Assets Ready">
-            <div className="flex flex-wrap gap-1.5">
-              {intake.readinessAssets.map((asset) => <Badge key={asset} variant="outline" className="text-xs">{READINESS_LABELS[asset] || asset}</Badge>)}
-            </div>
-          </Section>
-        )}
-
-        {/* New format: Involvement */}
-        {isNewFormat && intake.involvement && (
-          <Section icon={Cog} title="Involvement">
-            <Badge variant="outline" className="text-xs">{INVOLVEMENT_LABELS[intake.involvement] || intake.involvement}</Badge>
-          </Section>
-        )}
-
-        {(intake.styleVibe || intake.selectedDemo) && (
-          <Section icon={Palette} title="Style">
-            <div className="space-y-1.5 text-sm">
-              {intake.selectedDemo && <p className="text-muted-foreground">Demo: {intake.selectedDemo}</p>}
-              {intake.styleVibe && <p>{STYLE_LABELS[intake.styleVibe] || intake.styleVibe}</p>}
-              {intake.inspirationLinks && <p className="text-xs text-muted-foreground mt-1">{intake.inspirationLinks}</p>}
-            </div>
-          </Section>
-        )}
-
-        {intake.functionality && intake.functionality.length > 0 && (
-          <Section icon={Cog} title="Features">
-            <div className="flex flex-wrap gap-1.5">
-              {intake.functionality.map((fn) => <Badge key={fn} variant="outline" className="text-xs">{FUNCTIONALITY_LABELS[fn] || fn}</Badge>)}
-            </div>
-            {intake.hoursType && <p className="text-xs text-muted-foreground mt-2">Hours: {HOURS_LABELS[intake.hoursType] || intake.hoursType}</p>}
-          </Section>
-        )}
-
-        {intake.notes && (
-          <Section icon={FileText} title="Notes">
-            <p className="text-sm text-muted-foreground whitespace-pre-wrap">{intake.notes}</p>
           </Section>
         )}
       </div>
