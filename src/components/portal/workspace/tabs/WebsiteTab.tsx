@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { VersionsList, type Version } from "../VersionsList";
-import { captureTab, isTabCaptureSupported, type CaptureError } from "@/lib/tabCapture";
+import { captureTabCropped, isTabCaptureSupported, type CaptureError } from "@/lib/tabCapture";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -46,6 +46,7 @@ export function WebsiteTab({
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const attachInputRef = useRef<HTMLInputElement>(null);
+  const previewContainerRef = useRef<HTMLDivElement>(null);
   
   const selectedId = selectedVersionId ?? internalSelectedId;
   const handleSelect = onSelectVersion ?? setInternalSelectedId;
@@ -53,7 +54,7 @@ export function WebsiteTab({
   const selectedVersion = versions.find(v => v.id === selectedId);
   const canTabCapture = isTabCaptureSupported();
 
-  // Capture screenshot using browser tab capture
+  // Capture screenshot using browser tab capture (auto-crops to preview area)
   const handleCaptureScreenshot = useCallback(async () => {
     if (!canTabCapture) {
       toast.error("Screen capture not supported. Please upload a screenshot.");
@@ -62,7 +63,8 @@ export function WebsiteTab({
 
     setIsCapturing(true);
     try {
-      const result = await captureTab();
+      // Pass the preview container ref to auto-crop to just the iframe area
+      const result = await captureTabCropped(previewContainerRef.current ?? undefined);
       setMode({
         type: "screenshot",
         image: result.dataUrl,
@@ -346,7 +348,7 @@ export function WebsiteTab({
               </div>
               
               {/* Content area */}
-              <div className="flex-1 bg-muted/20 overflow-hidden">
+              <div ref={previewContainerRef} className="flex-1 bg-muted/20 overflow-hidden">
                 {mode.type === "screenshot" && mode.image ? (
                   /* Screenshot viewer with pin placement */
                   <div 

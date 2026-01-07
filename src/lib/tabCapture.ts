@@ -30,6 +30,14 @@ export function isTabCaptureSupported(): boolean {
  * Uses getDisplayMedia with preferCurrentTab option
  */
 export async function captureTab(): Promise<CaptureResult> {
+  return captureTabCropped();
+}
+
+/**
+ * Capture the current browser tab and optionally crop to a specific element
+ * This allows capturing just the preview area even when running inside Lovable editor
+ */
+export async function captureTabCropped(cropEl?: HTMLElement): Promise<CaptureResult> {
   if (!isTabCaptureSupported()) {
     throw {
       type: "not_supported",
@@ -61,50 +69,87 @@ export async function captureTab(): Promise<CaptureResult> {
       } as CaptureError;
     }
 
-    // Get track settings for dimensions
-    const settings = track.getSettings();
-    const width = settings.width || 1920;
-    const height = settings.height || 1080;
-
-    // Create video element to capture a frame
-    const video = document.createElement("video");
-    video.srcObject = stream;
-    video.muted = true;
-    video.playsInline = true;
-
-    // Wait for video to be ready
-    await new Promise<void>((resolve, reject) => {
-      video.onloadedmetadata = () => {
-        video.play().then(resolve).catch(reject);
-      };
-      video.onerror = () => reject(new Error("Video load failed"));
-    });
-
-    // Small delay to ensure frame is rendered
-    await new Promise((r) => setTimeout(r, 100));
-
-    // Create canvas and draw the frame
-    const canvas = document.createElement("canvas");
-    canvas.width = video.videoWidth || width;
-    canvas.height = video.videoHeight || height;
-
-    const ctx = canvas.getContext("2d");
-    if (!ctx) {
-      throw {
-        type: "unknown",
-        message: "Could not create canvas context",
-      } as CaptureError;
+    // Use ImageCapture API if available, fallback to video element
+    let bitmap: ImageBitmap | null = null;
+    
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if (typeof (window as any).ImageCapture !== "undefined") {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const imageCapture = new (window as any).ImageCapture(track);
+      bitmap = await imageCapture.grabFrame();
     }
 
-    ctx.drawImage(video, 0, 0);
+    // Create canvas for full frame
+    const full = document.createElement("canvas");
+    
+    if (bitmap) {
+      full.width = bitmap.width;
+      full.height = bitmap.height;
+      const fctx = full.getContext("2d");
+      if (!fctx) {
+        throw { type: "unknown", message: "Could not create canvas context" } as CaptureError;
+      }
+      fctx.drawImage(bitmap, 0, 0);
+    } else {
+      // Fallback: use video element
+      const video = document.createElement("video");
+      video.srcObject = stream;
+      video.muted = true;
+      video.playsInline = true;
 
-    // Convert to data URL
-    const dataUrl = canvas.toDataURL("image/png");
+      await new Promise<void>((resolve, reject) => {
+        video.onloadedmetadata = () => {
+          video.play().then(resolve).catch(reject);
+        };
+        video.onerror = () => reject(new Error("Video load failed"));
+      });
+
+      // Small delay to ensure frame is rendered
+      await new Promise((r) => setTimeout(r, 100));
+
+      full.width = video.videoWidth;
+      full.height = video.videoHeight;
+      const fctx = full.getContext("2d");
+      if (!fctx) {
+        throw { type: "unknown", message: "Could not create canvas context" } as CaptureError;
+      }
+      fctx.drawImage(video, 0, 0);
+    }
+
+    // Optional crop to preview region
+    if (cropEl) {
+      const r = cropEl.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+
+      // Scale coordinates to match captured frame resolution
+      const scaleX = full.width / window.innerWidth;
+      const scaleY = full.height / window.innerHeight;
+
+      const sx = Math.max(0, Math.floor(r.left * scaleX));
+      const sy = Math.max(0, Math.floor(r.top * scaleY));
+      const sw = Math.max(1, Math.floor(r.width * scaleX));
+      const sh = Math.max(1, Math.floor(r.height * scaleY));
+
+      const cropped = document.createElement("canvas");
+      cropped.width = sw;
+      cropped.height = sh;
+      const cctx = cropped.getContext("2d");
+      if (!cctx) {
+        throw { type: "unknown", message: "Could not create canvas context" } as CaptureError;
+      }
+      cctx.drawImage(full, sx, sy, sw, sh, 0, 0, sw, sh);
+
+      return {
+        dataUrl: cropped.toDataURL("image/png", 1.0),
+        width: sw,
+        height: sh,
+      };
+    }
 
     return {
-      dataUrl,
-      width: canvas.width,
-      height: canvas.height,
+      dataUrl: full.toDataURL("image/png", 1.0),
+      width: full.width,
+      height: full.height,
     };
   } catch (error: unknown) {
     // Handle known error types
