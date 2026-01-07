@@ -5,13 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, Lock, Mail, ArrowRight, ExternalLink, Sparkles, User as UserIcon, RefreshCw, Plus, Archive, Trash2, ChevronDown, ChevronUp } from "lucide-react";
+import { Loader2, Lock, Mail, ArrowRight, Sparkles, User as UserIcon, RefreshCw, Plus, Archive, Trash2, ChevronDown, ChevronUp } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/hooks/use-toast";
 import type { User, Session } from "@supabase/supabase-js";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { ClientLayout } from "@/components/portal/ClientLayout";
-import { BrandCard, BrandCardHeader, BrandCardContent } from "@/components/portal/BrandCard";
+import { BrandCard } from "@/components/portal/BrandCard";
 import { FcGoogle } from "react-icons/fc";
 import { SEOHead } from "@/components/SEOHead";
 
@@ -24,28 +24,6 @@ interface Portal {
   deleted_at?: string | null;
 }
 
-// Extract token from URL or raw token string
-function extractToken(input: string): string | null {
-  const trimmed = input.trim();
-  if (!trimmed) return null;
-  
-  // Try to parse as URL
-  try {
-    const url = new URL(trimmed);
-    // Match /p/:token or /d/:token/:slug
-    const match = url.pathname.match(/\/(?:p|d)\/([a-zA-Z0-9\-_]+)/);
-    if (match) return match[1];
-  } catch {
-    // Not a URL, check if it's a raw token
-  }
-  
-  // Check if it's a valid token format (alphanumeric + hyphens, 12+ chars)
-  if (/^[a-zA-Z0-9\-_]{12,128}$/.test(trimmed)) {
-    return trimmed;
-  }
-  
-  return null;
-}
 
 export default function PortalHub() {
   const navigate = useNavigate();
@@ -67,8 +45,6 @@ export default function PortalHub() {
   const [loadingPortals, setLoadingPortals] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
   
-  const [linkInput, setLinkInput] = useState("");
-  const [linkError, setLinkError] = useState<string | null>(null);
   
   // OTP verification state (email verified BEFORE account creation)
   const [showOtpVerification, setShowOtpVerification] = useState(false);
@@ -488,16 +464,6 @@ export default function PortalHub() {
     setPortals([]);
   };
 
-  const handleOpenLink = (e: React.FormEvent) => {
-    e.preventDefault();
-    const token = extractToken(linkInput);
-    if (token) {
-      setLinkError(null);
-      navigate(`/p/${token}`);
-    } else {
-      setLinkError("Please paste a valid portal link");
-    }
-  };
 
   // OTP verification screen - HIGHEST PRIORITY (before auth check)
   // This must come first so it doesn't get bypassed by auto-confirm sessions
@@ -615,32 +581,6 @@ export default function PortalHub() {
           }
         >
         <div className="space-y-6">
-          {/* Always show "Open from link" at top */}
-          <BrandCard>
-            <BrandCardHeader
-              title="Open from a link"
-              subtitle="Paste the link from your text message or email"
-              icon={<ExternalLink className="h-5 w-5 text-accent" />}
-            />
-            <BrandCardContent>
-              <form onSubmit={handleOpenLink} className="flex gap-2">
-                <Input
-                  placeholder="https://... or portal code"
-                  value={linkInput}
-                  onChange={(e) => {
-                    setLinkInput(e.target.value);
-                    setLinkError(null);
-                  }}
-                  className="flex-1"
-                />
-                <Button type="submit">Open</Button>
-              </form>
-              {linkError && (
-                <p className="text-sm text-destructive mt-2">{linkError}</p>
-              )}
-            </BrandCardContent>
-          </BrandCard>
-
           {loadingPortals ? (
             <div className="space-y-4">
               {[0, 1, 2].map((i) => (
@@ -653,28 +593,21 @@ export default function PortalHub() {
               ))}
             </div>
           ) : portals.length === 0 ? (
-            <div className="space-y-6">
-              {/* Primary CTA - Start a new project */}
-              <BrandCard variant="highlight" className="text-center py-10">
-                <div className="w-14 h-14 rounded-full bg-accent/10 flex items-center justify-center mx-auto mb-4">
-                  <Plus className="h-7 w-7 text-accent" />
-                </div>
-                <h3 className="font-serif text-xl font-bold mb-2">Start a new project</h3>
-                <p className="text-muted-foreground max-w-sm mx-auto mb-6">
-                  Set up your website in about 5 minutes. We'll guide you through the process.
-                </p>
-                <Button asChild size="lg">
-                  <Link to="/portal/new">
-                    <Sparkles className="mr-2 h-4 w-4" />
-                    Get started
-                  </Link>
-                </Button>
-              </BrandCard>
-
-              <p className="text-center text-sm text-muted-foreground">
-                Already have a demo link? Paste it above.
+            <BrandCard variant="highlight" className="text-center py-10">
+              <div className="w-14 h-14 rounded-full bg-accent/10 flex items-center justify-center mx-auto mb-4">
+                <Plus className="h-7 w-7 text-accent" />
+              </div>
+              <h3 className="font-serif text-xl font-bold mb-2">Start a new project</h3>
+              <p className="text-muted-foreground max-w-sm mx-auto mb-6">
+                Set up your website in about 5 minutes. We'll guide you through the process.
               </p>
-            </div>
+              <Button asChild size="lg">
+                <Link to="/portal/new">
+                  <Sparkles className="mr-2 h-4 w-4" />
+                  Get started
+                </Link>
+              </Button>
+            </BrandCard>
           ) : (
             <div className="space-y-4">
               {/* Start new project button at top when user has portals */}
