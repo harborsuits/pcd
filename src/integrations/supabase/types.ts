@@ -88,6 +88,54 @@ export type Database = {
           },
         ]
       }
+      client_leads: {
+        Row: {
+          business_name: string
+          claimed_at: string | null
+          claimed_by_user_id: string | null
+          created_at: string
+          email: string
+          email_normalized: string | null
+          id: string
+          name: string | null
+          phone: string | null
+          source: string | null
+          utm_campaign: string | null
+          utm_medium: string | null
+          utm_source: string | null
+        }
+        Insert: {
+          business_name: string
+          claimed_at?: string | null
+          claimed_by_user_id?: string | null
+          created_at?: string
+          email: string
+          email_normalized?: string | null
+          id?: string
+          name?: string | null
+          phone?: string | null
+          source?: string | null
+          utm_campaign?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+        }
+        Update: {
+          business_name?: string
+          claimed_at?: string | null
+          claimed_by_user_id?: string | null
+          created_at?: string
+          email?: string
+          email_normalized?: string | null
+          id?: string
+          name?: string | null
+          phone?: string | null
+          source?: string | null
+          utm_campaign?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+        }
+        Relationships: []
+      }
       demos: {
         Row: {
           content: Json
