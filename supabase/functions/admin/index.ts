@@ -1729,10 +1729,11 @@ async function handleUpdatePipelineStage(req: Request, token: string): Promise<R
     const body = await req.json();
     const { stage } = body;
 
-    const validStages = ["new", "demo_requested", "quote_requested", "claimed", "contacted", "qualified", "won", "lost"];
+    // Pipeline stages matching StageBadge.tsx: new, discovery, build, preview, revisions, launch, live, closed
+    const validStages = ["new", "discovery", "build", "preview", "revisions", "launch", "live", "closed"];
     if (!stage || !validStages.includes(stage)) {
       return new Response(
-        JSON.stringify({ error: "Invalid stage value" }),
+        JSON.stringify({ error: "Invalid stage value", validStages }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -1787,13 +1788,13 @@ async function handleUpdatePipelineStage(req: Request, token: string): Promise<R
     // Insert audit message for stage change
     const stageLabels: Record<string, string> = {
       new: "New",
-      demo_requested: "Demo Requested",
-      quote_requested: "Quote Requested",
-      claimed: "Claimed",
-      contacted: "Contacted",
-      qualified: "Qualified",
-      won: "Won",
-      lost: "Lost",
+      discovery: "Discovery",
+      build: "Build",
+      preview: "Preview",
+      revisions: "Revisions",
+      launch: "Launch",
+      live: "Live",
+      closed: "Closed",
     };
 
     const auditContent = `[SYSTEM] Pipeline stage changed: ${stageLabels[previousStage] || previousStage} → ${stageLabels[stage] || stage}`;
@@ -1815,7 +1816,7 @@ async function handleUpdatePipelineStage(req: Request, token: string): Promise<R
     console.log(`Project ${token} pipeline_stage updated: ${previousStage} → ${stage}`);
 
     // Send Telegram notification for high-signal stages only
-    const notifyStages = ["quote_requested", "claimed", "won", "lost"];
+    const notifyStages = ["launch", "live", "closed"];
     if (notifyStages.includes(stage)) {
       const telegramBotToken = Deno.env.get("TELEGRAM_BOT_TOKEN");
       const telegramChatId = Deno.env.get("TELEGRAM_CHAT_ID");
@@ -1829,7 +1830,7 @@ async function handleUpdatePipelineStage(req: Request, token: string): Promise<R
       const contactInfo = contactParts.length > 0 ? contactParts.join(" • ") : "No contact info";
 
       // Build notification message (plain text - Telegram auto-linkifies)
-      const stageEmoji = stage === "won" ? "🎉" : stage === "lost" ? "❌" : stage === "claimed" ? "✅" : "📋";
+      const stageEmoji = stage === "live" ? "🎉" : stage === "closed" ? "❌" : stage === "launch" ? "🚀" : "📋";
       const telegramText = 
         `${stageEmoji} Stage: ${stageLabels[previousStage] || previousStage} → ${stageLabels[stage] || stage}\n\n` +
         `Business: ${currentProject.business_name || "Unknown"}\n` +
