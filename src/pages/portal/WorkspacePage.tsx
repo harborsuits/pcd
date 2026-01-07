@@ -621,16 +621,49 @@ export default function WorkspacePage() {
                     variant="outline" 
                     size="sm" 
                     className="w-full gap-2"
-                    onClick={() => {
-                      // For now, just show a toast - can open a message modal later
-                      toast({
-                        title: "Need to update something?",
-                        description: "Reply to any email from us or we'll reach out before going live.",
-                      });
+                    onClick={async () => {
+                      // Create a change request event via the messaging system
+                      try {
+                        const { data: { session } } = await supabase.auth.getSession();
+                        const authToken = session?.access_token || SUPABASE_ANON_KEY;
+                        
+                        const res = await fetch(
+                          `${SUPABASE_URL}/functions/v1/portal/${token}/help-request`,
+                          {
+                            method: "POST",
+                            headers: {
+                              "Content-Type": "application/json",
+                              apikey: SUPABASE_ANON_KEY,
+                              Authorization: `Bearer ${authToken}`,
+                            },
+                            body: JSON.stringify({ 
+                              type: "change_request",
+                              message: "Client requested a configuration change" 
+                            }),
+                          }
+                        );
+                        
+                        if (res.ok) {
+                          toast({
+                            title: "Request sent!",
+                            description: "We'll reach out before making any changes to confirm details.",
+                          });
+                        } else {
+                          toast({
+                            title: "Request noted",
+                            description: "Reply to any email from us or we'll reach out before going live.",
+                          });
+                        }
+                      } catch (err) {
+                        toast({
+                          title: "Request noted",
+                          description: "Reply to any email from us or we'll reach out before going live.",
+                        });
+                      }
                     }}
                   >
                     <AlertCircle className="h-4 w-4" />
-                    Need to update something?
+                    Request a change
                   </Button>
                 </div>
               </div>
@@ -895,6 +928,7 @@ export default function WorkspacePage() {
           intakeData={projectInfo?.intakeData}
           phaseBStatus={projectInfo?.phaseBStatus}
           phaseBData={projectInfo?.phaseBData}
+          aiStatus={projectInfo?.aiStatus}
           onRefreshProject={fetchProjectInfo}
         />
       </div>

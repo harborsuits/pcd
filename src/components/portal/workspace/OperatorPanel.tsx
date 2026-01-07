@@ -108,6 +108,8 @@ interface DiscoveryItem {
   checked_at: string | null;
 }
 
+type AIStatus = 'intake_received' | 'review' | 'setup' | 'testing' | 'live' | 'paused' | null;
+
 interface OperatorPanelProps {
   token: string;
   projectId?: string;
@@ -117,8 +119,19 @@ interface OperatorPanelProps {
   intakeData?: IntakeData | null;
   phaseBStatus?: 'pending' | 'in_progress' | 'complete' | null;
   phaseBData?: PhaseBData | null;
+  aiStatus?: AIStatus;
   onRefresh: () => void;
 }
+
+// AI Status options for operator dropdown
+const AI_STATUS_OPTIONS: { value: AIStatus; label: string; color: string }[] = [
+  { value: 'intake_received', label: 'Intake Received', color: 'bg-amber-500/10 text-amber-600' },
+  { value: 'review', label: 'Under Review', color: 'bg-amber-500/10 text-amber-600' },
+  { value: 'setup', label: 'Setting Up', color: 'bg-blue-500/10 text-blue-600' },
+  { value: 'testing', label: 'Testing', color: 'bg-purple-500/10 text-purple-600' },
+  { value: 'live', label: 'Live', color: 'bg-green-500/10 text-green-600' },
+  { value: 'paused', label: 'Paused', color: 'bg-muted text-muted-foreground' },
+];
 
 const GOAL_LABELS: Record<string, string> = {
   leads: "Get more leads & calls",
@@ -176,6 +189,7 @@ export function OperatorPanel({
   intakeData,
   phaseBStatus,
   phaseBData,
+  aiStatus,
   onRefresh,
 }: OperatorPanelProps) {
   const [intakeOpen, setIntakeOpen] = useState(true);
@@ -320,6 +334,25 @@ export function OperatorPanel({
     onError: (err: Error) => toast.error(err.message),
   });
 
+  // Update AI status mutation
+  const updateAIStatusMutation = useMutation({
+    mutationFn: async (status: AIStatus) => {
+      const res = await adminFetch(`/admin/projects/${token}/ai-status`, {
+        method: "PATCH",
+        body: JSON.stringify({ status }),
+      });
+      if (!res.ok) throw new Error("Failed to update AI status");
+      return res.json();
+    },
+    onSuccess: (_, status) => {
+      const label = AI_STATUS_OPTIONS.find(o => o.value === status)?.label || status;
+      toast.success(`AI status updated to ${label}`);
+      onRefresh();
+      queryClient.invalidateQueries({ queryKey: ["admin-projects"] });
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
   const handleApproveIntake = useCallback(() => {
     approveIntakeMutation.mutate();
   }, [approveIntakeMutation]);
@@ -371,7 +404,42 @@ export function OperatorPanel({
               
               {/* Pipeline stage */}
               <StageBadge stage={pipelineStage as PipelineStage} />
+
+              {/* AI Status badge (for AI receptionist projects) */}
+              {aiStatus && (
+                <Badge 
+                  variant="outline" 
+                  className={AI_STATUS_OPTIONS.find(o => o.value === aiStatus)?.color || ''}
+                >
+                  <Bot className="h-3 w-3 mr-1" />
+                  AI: {AI_STATUS_OPTIONS.find(o => o.value === aiStatus)?.label || aiStatus}
+                </Badge>
+              )}
             </div>
+
+            {/* AI Status Controls (for AI receptionist projects) */}
+            {intakeData?.service_type === 'ai_receptionist' && (
+              <div className="space-y-1.5 pt-2 border-t border-border">
+                <div className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                  <Bot className="h-3 w-3" />
+                  AI Receptionist Status
+                </div>
+                <div className="flex flex-wrap gap-1">
+                  {AI_STATUS_OPTIONS.map((opt) => (
+                    <Button
+                      key={opt.value}
+                      size="sm"
+                      variant={aiStatus === opt.value ? "default" : "outline"}
+                      className={`text-xs h-7 px-2 ${aiStatus === opt.value ? '' : 'hover:bg-muted'}`}
+                      onClick={() => updateAIStatusMutation.mutate(opt.value)}
+                      disabled={updateAIStatusMutation.isPending || aiStatus === opt.value}
+                    >
+                      {opt.label}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Quick actions */}
             <div className="flex flex-wrap gap-2 pt-2">

@@ -410,6 +410,13 @@ Deno.serve(async (req) => {
     return handlePermanentDeleteProject(req, token);
   }
 
+  // Route: PATCH /admin/projects/:token/ai-status - Update AI receptionist status
+  if (subPath.match(/^projects\/[^\/]+\/ai-status$/) && req.method === "PATCH") {
+    const parts = subPath.split("/");
+    const token = parts[1];
+    return handleUpdateAIStatus(req, token);
+  }
+
   return new Response(
     JSON.stringify({ error: "Not found" }),
     { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -4995,6 +5002,114 @@ async function handlePermanentDeleteProject(req: Request, token: string): Promis
 
   } catch (error) {
     console.error("Permanent delete project error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+}
+
+// PATCH /admin/projects/:token/ai-status - Update AI receptionist status
+async function handleUpdateAIStatus(req: Request, token: string): Promise<Response> {
+  const authError = await validateAdminKey(req);
+  if (authError) return authError;
+
+  if (!isValidToken(token)) {
+    return new Response(
+      JSON.stringify({ error: "Invalid token format" }),
+      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  try {
+    const body = await req.json();
+    const { status } = body;
+
+    const validStatuses = ["intake_received", "review", "setup", "testing", "live", "paused"];
+    if (!status || !validStatuses.includes(status)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid AI status value. Valid values: " + validStatuses.join(", ") }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log(`Updating project ${token} ai_trial_status to: ${status}`);
+
+    const supabase = getSupabaseClient();
+
+    // Get current project info
+    const { data: currentProject, error: fetchError } = await supabase
+      .from("projects")
+      .select("id, project_token, ai_trial_status, business_name")
+      .eq("project_token", token)
+      .is("deleted_at", null)
+      .maybeSingle();
+
+    if (fetchError || !currentProject) {
+      console.error("Project fetch error:", fetchError);
+      return new Response(
+        JSON.stringify({ error: "Project not found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const previousStatus = currentProject.ai_trial_status || "intake_received";
+
+    // Don't update if same status
+    if (previousStatus === status) {
+      return new Response(
+        JSON.stringify({ success: true, project: currentProject, message: "No change" }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Update the AI status
+    const { data, error } = await supabase
+      .from("projects")
+      .update({ ai_trial_status: status, updated_at: new Date().toISOString() })
+      .eq("project_token", token)
+      .is("deleted_at", null)
+      .select("id, project_token, ai_trial_status")
+      .single();
+
+    if (error) {
+      console.error("AI status update error:", error);
+      return new Response(
+        JSON.stringify({ error: "Database error" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Insert audit message for status change
+    const statusLabels: Record<string, string> = {
+      intake_received: "Intake Received",
+      review: "Under Review",
+      setup: "Setting Up",
+      testing: "Testing",
+      live: "Live",
+      paused: "Paused",
+    };
+
+    const auditContent = `[SYSTEM] AI status changed: ${statusLabels[previousStatus] || previousStatus} → ${statusLabels[status] || status}`;
+
+    await supabase
+      .from("messages")
+      .insert({
+        project_id: currentProject.id,
+        project_token: currentProject.project_token,
+        sender_type: "system",
+        content: auditContent,
+      });
+
+    console.log(`AI status updated for ${currentProject.business_name}: ${previousStatus} → ${status}`);
+
+    return new Response(
+      JSON.stringify({ success: true, project: data, previous_status: previousStatus }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+
+  } catch (error) {
+    console.error("Update AI status error:", error);
     return new Response(
       JSON.stringify({ error: "Internal server error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
