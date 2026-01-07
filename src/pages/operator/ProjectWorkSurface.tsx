@@ -676,10 +676,10 @@ export function ProjectWorkSurface({ project, onBack, onStatusChange }: ProjectW
                   className="absolute inset-0 w-full h-full border-0"
                   title="Prototype"
                 />
-                {/* Pin overlay */}
+                {/* Pin overlay - pointer-events-none by default so iframe is interactive, enabled when placing pins */}
                 <div
                   ref={pinOverlayRef}
-                  className={`absolute inset-0 ${pendingCommentMessage ? "cursor-crosshair bg-primary/5" : ""}`}
+                  className={`absolute inset-0 ${pendingCommentMessage ? "cursor-crosshair bg-primary/5 pointer-events-auto" : "pointer-events-none"}`}
                   onClick={(e) => {
                     if (!pendingCommentMessage) return;
                     const rect = e.currentTarget.getBoundingClientRect();
@@ -692,7 +692,7 @@ export function ProjectWorkSurface({ project, onBack, onStatusChange }: ProjectW
                   {comments.filter(c => c.pin_x !== null && c.pin_y !== null).map((comment, idx) => (
                     <div
                       key={comment.id}
-                      className={`absolute w-6 h-6 -ml-3 -mt-3 rounded-full flex items-center justify-center text-[10px] font-bold shadow-md cursor-pointer transition-all ${
+                      className={`absolute w-6 h-6 -ml-3 -mt-3 rounded-full flex items-center justify-center text-[10px] font-bold shadow-md cursor-pointer transition-all pointer-events-auto ${
                         comment.resolved_at 
                           ? "bg-muted text-muted-foreground border border-border" 
                           : "bg-primary text-primary-foreground"
