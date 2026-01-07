@@ -93,12 +93,13 @@ const GetDemo = () => {
     customRequest: "",
   });
 
-// Pre-select service type from URL param (but stay on Choose step)
+  // Pre-select service type from URL param and skip choose step
   useEffect(() => {
     const serviceParam = searchParams.get("service");
     if (serviceParam && SERVICE_PARAM_MAP[serviceParam]) {
       setFormData(prev => ({ ...prev, serviceType: SERVICE_PARAM_MAP[serviceParam] }));
-      // Always stay on step 0 so user sees the full menu
+      // Skip the choose step since they already selected from homepage
+      setCurrentStep(1);
     }
   }, [searchParams]);
 
