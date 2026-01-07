@@ -18,6 +18,7 @@ async function getAuthToken(): Promise<string | null> {
 // Check if user has admin role
 export async function checkAdminRole(): Promise<boolean> {
   const { data: { session } } = await supabase.auth.getSession();
+  console.log("[adminFetch] checkAdminRole - session:", session?.user?.id);
   if (!session?.user?.id) return false;
   
   const { data, error } = await supabase
@@ -27,6 +28,7 @@ export async function checkAdminRole(): Promise<boolean> {
     .eq("role", "admin")
     .maybeSingle();
   
+  console.log("[adminFetch] checkAdminRole - data:", data, "error:", error);
   if (error || !data) return false;
   return true;
 }
