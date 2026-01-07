@@ -109,6 +109,80 @@ interface ProjectInfo {
   needsInfoNote: string | null;
   phaseBStatus: 'pending' | 'in_progress' | 'complete' | null;
   phaseBData: PhaseBData | null;
+  aiStatus: 'intake_received' | 'review' | 'setup' | 'testing' | 'live' | 'paused' | null;
+}
+
+// AI Status configuration - maps ai_trial_status to display
+type AIStatusKey = 'intake_received' | 'review' | 'setup' | 'testing' | 'live' | 'paused';
+
+function getAIStatusConfig(status: string | null): { 
+  label: string; 
+  Icon: typeof Clock; 
+  colorClass: string; 
+  headline: string;
+  description: string;
+  showProgress: boolean;
+  progressStep: number;
+} {
+  const configs: Record<AIStatusKey, ReturnType<typeof getAIStatusConfig>> = {
+    intake_received: {
+      label: "Received",
+      Icon: Clock,
+      colorClass: "bg-amber-500/10 text-amber-600 border-amber-200",
+      headline: "We've received your setup",
+      description: "Your AI receptionist configuration is in our queue. We'll start reviewing it shortly.",
+      showProgress: true,
+      progressStep: 1,
+    },
+    review: {
+      label: "Under Review",
+      Icon: Clock,
+      colorClass: "bg-amber-500/10 text-amber-600 border-amber-200",
+      headline: "We're reviewing your configuration",
+      description: "We're verifying your settings and phone number to make sure everything is correct.",
+      showProgress: true,
+      progressStep: 2,
+    },
+    setup: {
+      label: "Setting Up",
+      Icon: Settings2,
+      colorClass: "bg-blue-500/10 text-blue-600 border-blue-200",
+      headline: "We're configuring your AI",
+      description: "We're programming the AI with your business rules, FAQs, and preferences.",
+      showProgress: true,
+      progressStep: 3,
+    },
+    testing: {
+      label: "Testing",
+      Icon: Phone,
+      colorClass: "bg-purple-500/10 text-purple-600 border-purple-200",
+      headline: "Testing in progress",
+      description: "We're running sample calls to ensure everything works perfectly before going live.",
+      showProgress: true,
+      progressStep: 4,
+    },
+    live: {
+      label: "Live",
+      Icon: CheckCircle2,
+      colorClass: "bg-green-500/10 text-green-600 border-green-200",
+      headline: "Your AI receptionist is live!",
+      description: "Calls are being answered. You'll receive leads and summaries automatically.",
+      showProgress: false,
+      progressStep: 5,
+    },
+    paused: {
+      label: "Paused",
+      Icon: AlertCircle,
+      colorClass: "bg-muted text-muted-foreground border-border",
+      headline: "Service paused",
+      description: "Your AI receptionist is temporarily paused. Contact us to resume.",
+      showProgress: false,
+      progressStep: 0,
+    },
+  };
+
+  const key = (status as AIStatusKey) || 'intake_received';
+  return configs[key] || configs.intake_received;
 }
 
 // Status banner configuration
@@ -272,6 +346,7 @@ export default function WorkspacePage() {
           needsInfoNote: data.business.needs_info_note || null,
           phaseBStatus: data.phase_b_status || null,
           phaseBData: data.phase_b_data || null,
+          aiStatus: data.business.ai_trial_status || null,
         });
       }
     } catch (err) {
@@ -405,6 +480,10 @@ export default function WorkspacePage() {
         text: "Text follow-up",
       };
 
+      // Get status-based config
+      const aiStatusConfig = getAIStatusConfig(projectInfo?.aiStatus);
+      const StatusIcon = aiStatusConfig.Icon;
+
       return (
         <div className="h-screen flex flex-col bg-background">
           {/* Header */}
@@ -418,9 +497,9 @@ export default function WorkspacePage() {
                 <span className="font-medium">Pleasant Cove Design</span>
               </Link>
               <div className="flex items-center gap-3">
-                <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
-                  <Clock className="h-3 w-3 mr-1" />
-                  Setup in Progress
+                <Badge variant="outline" className={aiStatusConfig.colorClass}>
+                  <StatusIcon className="h-3 w-3 mr-1" />
+                  {aiStatusConfig.label}
                 </Badge>
                 <span className="text-sm font-medium">{projectInfo?.businessName}</span>
               </div>
@@ -429,47 +508,66 @@ export default function WorkspacePage() {
 
           <div className="flex-1 overflow-y-auto">
             <div className="max-w-lg mx-auto px-4 py-12">
-              {/* AI Receptionist Setup confirmation */}
+              {/* AI Receptionist Status Card */}
               <div className="bg-card border border-border rounded-xl p-6 text-center mb-6">
-                <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-primary/10 text-primary mb-5">
-                  <Phone className="h-7 w-7" />
+                <div className={`inline-flex items-center justify-center w-14 h-14 rounded-full mb-5 ${
+                  projectInfo?.aiStatus === 'live' 
+                    ? 'bg-green-500/10 text-green-600' 
+                    : 'bg-primary/10 text-primary'
+                }`}>
+                  <StatusIcon className="h-7 w-7" />
                 </div>
 
                 <h2 className="font-serif text-2xl font-bold mb-2">
-                  Your AI receptionist is being set up
+                  {aiStatusConfig.headline}
                 </h2>
                 <p className="text-muted-foreground mb-6">
-                  We're configuring everything based on your preferences.
-                  <br />
-                  <span className="text-foreground/80">You'll be notified when it's ready to go live.</span>
+                  {aiStatusConfig.description}
                 </p>
 
-                {/* What happens next */}
-                <div className="bg-muted/40 rounded-lg p-4 text-left text-sm space-y-2">
-                  <p className="font-medium text-foreground">What happens next:</p>
-                  <ol className="list-decimal list-inside text-muted-foreground space-y-1">
-                    <li>We verify your phone number & settings</li>
-                    <li>We configure the AI with your rules</li>
-                    <li>We test with sample calls</li>
-                    <li>We flip the switch — you're live!</li>
-                  </ol>
-                  <p className="text-xs text-muted-foreground pt-2">
-                    Expected timeline: <span className="font-medium text-foreground">24–48 hours</span>
-                  </p>
-                </div>
+                {/* Progress steps - only show if not live */}
+                {aiStatusConfig.showProgress && (
+                  <div className="bg-muted/40 rounded-lg p-4 text-left text-sm space-y-3">
+                    <p className="font-medium text-foreground">Progress:</p>
+                    <div className="space-y-2">
+                      {[
+                        { step: 1, label: "Intake received" },
+                        { step: 2, label: "Configuration review" },
+                        { step: 3, label: "AI setup" },
+                        { step: 4, label: "Testing" },
+                        { step: 5, label: "Live!" },
+                      ].map(({ step, label }) => (
+                        <div key={step} className="flex items-center gap-2">
+                          <div className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-medium ${
+                            step < aiStatusConfig.progressStep 
+                              ? 'bg-green-500 text-white' 
+                              : step === aiStatusConfig.progressStep 
+                                ? 'bg-primary text-primary-foreground'
+                                : 'bg-muted-foreground/20 text-muted-foreground'
+                          }`}>
+                            {step < aiStatusConfig.progressStep ? '✓' : step}
+                          </div>
+                          <span className={step <= aiStatusConfig.progressStep ? 'text-foreground' : 'text-muted-foreground'}>
+                            {label}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                    <p className="text-xs text-muted-foreground pt-2">
+                      Expected timeline: <span className="font-medium text-foreground">24–48 hours</span>
+                    </p>
+                  </div>
+                )}
 
-                {/* CTA to client portal */}
-                <Button 
-                  onClick={() => navigate(`/p/${token}`)}
-                  className="w-full mt-6"
-                  size="lg"
-                >
-                  Go to your client portal
-                  <ExternalLink className="ml-2 h-4 w-4" />
-                </Button>
-                <p className="text-xs text-muted-foreground mt-2 text-center">
-                  View status updates and manage your account
-                </p>
+                {/* Live status - show dashboard preview */}
+                {projectInfo?.aiStatus === 'live' && (
+                  <div className="bg-green-500/5 border border-green-200 dark:border-green-800 rounded-lg p-4 text-left text-sm">
+                    <p className="font-medium text-green-700 dark:text-green-400 mb-2">🎉 You're live!</p>
+                    <p className="text-muted-foreground">
+                      Your AI receptionist is actively answering calls. Leads and call summaries will appear here soon.
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* Summary of what they submitted */}
