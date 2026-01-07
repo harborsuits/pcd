@@ -171,33 +171,22 @@ export function FeedbackCard({
         {comment.body}
       </p>
 
-      {/* Screenshot thumbnail - show cropped image if available, otherwise full */}
+      {/* Screenshot thumbnail - show cropped image for snips */}
       {hasScreenshot && (
         <button
           onClick={() => onViewScreenshot(comment)}
-          className="relative group w-full max-w-[160px] rounded-md overflow-hidden border border-border hover:border-primary transition-colors mb-2"
+          className="relative group w-full rounded-md overflow-hidden border border-border hover:border-primary transition-colors mb-2"
         >
           <img
             src={`${SUPABASE_URL}/storage/v1/object/public/project-media/${comment.screenshot_path}`}
             alt="Screenshot"
-            className="w-full h-auto object-cover"
+            className="w-full h-auto object-cover max-h-32"
           />
           <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
             <span className="text-white text-xs font-medium">
-              {comment.screenshot_full_path ? "View Full" : "View"}
+              {comment.screenshot_full_path ? "View with Context" : "View"}
             </span>
           </div>
-          {/* Pin marker on thumbnail (only for legacy pin-based comments) */}
-          {!comment.crop_w && comment.pin_x !== null && comment.pin_y !== null && (
-            <div
-              className="absolute w-2.5 h-2.5 bg-primary rounded-full border border-white shadow"
-              style={{
-                left: `${comment.pin_x}%`,
-                top: `${comment.pin_y}%`,
-                transform: "translate(-50%, -50%)",
-              }}
-            />
-          )}
         </button>
       )}
 

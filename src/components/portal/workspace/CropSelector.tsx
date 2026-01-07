@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Crop, X, Check } from "lucide-react";
+import { toast } from "sonner";
 
 interface CropSelection {
   x: number; // percentage 0-1
@@ -15,15 +16,16 @@ interface CropSelectorProps {
   onCancel: () => void;
 }
 
+const MIN_SELECTION_PCT = 0.02; // 2% minimum
+
 export function CropSelector({ imageDataUrl, onConfirm, onCancel }: CropSelectorProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [startPoint, setStartPoint] = useState<{ x: number; y: number } | null>(null);
   const [selection, setSelection] = useState<CropSelection | null>(null);
   const [imageLoaded, setImageLoaded] = useState(false);
 
-  // Get relative position within the image
+  // Get relative position within the IMAGE element (not container)
   const getRelativePosition = useCallback((e: React.MouseEvent | MouseEvent): { x: number; y: number } | null => {
     if (!imageRef.current) return null;
     const rect = imageRef.current.getBoundingClientRect();
@@ -58,8 +60,15 @@ export function CropSelector({ imageDataUrl, onConfirm, onCancel }: CropSelector
   }, [isDrawing, startPoint, getRelativePosition]);
 
   const handleMouseUp = useCallback(() => {
+    if (!isDrawing) return;
     setIsDrawing(false);
-  }, []);
+    
+    // Check minimum size
+    if (selection && (selection.w < MIN_SELECTION_PCT || selection.h < MIN_SELECTION_PCT)) {
+      toast.error("Selection too small. Please draw a larger area.");
+      setSelection(null);
+    }
+  }, [isDrawing, selection]);
 
   // Global mouse events for smooth dragging
   useEffect(() => {
@@ -73,9 +82,29 @@ export function CropSelector({ imageDataUrl, onConfirm, onCancel }: CropSelector
     }
   }, [isDrawing, handleMouseMove, handleMouseUp]);
 
+  // Escape key to cancel
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        if (selection) {
+          setSelection(null);
+        } else {
+          onCancel();
+        }
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [selection, onCancel]);
+
   // Generate cropped image and confirm
   const handleConfirm = useCallback(async () => {
-    if (!selection || !imageRef.current || selection.w < 0.01 || selection.h < 0.01) return;
+    if (!selection || !imageRef.current) return;
+    
+    if (selection.w < MIN_SELECTION_PCT || selection.h < MIN_SELECTION_PCT) {
+      toast.error("Selection too small. Please draw a larger area.");
+      return;
+    }
 
     // Create canvas with cropped region
     const img = imageRef.current;
@@ -84,8 +113,8 @@ export function CropSelector({ imageDataUrl, onConfirm, onCancel }: CropSelector
 
     const sx = Math.round(selection.x * naturalW);
     const sy = Math.round(selection.y * naturalH);
-    const sw = Math.round(selection.w * naturalW);
-    const sh = Math.round(selection.h * naturalH);
+    const sw = Math.max(1, Math.round(selection.w * naturalW));
+    const sh = Math.max(1, Math.round(selection.h * naturalH));
 
     const canvas = document.createElement("canvas");
     canvas.width = sw;
@@ -99,7 +128,7 @@ export function CropSelector({ imageDataUrl, onConfirm, onCancel }: CropSelector
     onConfirm(selection, croppedDataUrl);
   }, [selection, onConfirm]);
 
-  const hasValidSelection = selection && selection.w >= 0.01 && selection.h >= 0.01;
+  const hasValidSelection = selection && selection.w >= MIN_SELECTION_PCT && selection.h >= MIN_SELECTION_PCT;
 
   return (
     <div className="flex flex-col h-full bg-background">
@@ -125,24 +154,21 @@ export function CropSelector({ imageDataUrl, onConfirm, onCancel }: CropSelector
         </div>
       </div>
 
-      {/* Image with crop overlay */}
-      <div 
-        ref={containerRef}
-        className="flex-1 relative overflow-auto bg-black/90 flex items-center justify-center p-4"
-      >
-        <div className="relative inline-block max-w-full max-h-full">
+      {/* Image with crop overlay - overlay is positioned relative to image */}
+      <div className="flex-1 relative overflow-auto bg-black/90 flex items-center justify-center p-4">
+        <div className="relative inline-block">
           <img
             ref={imageRef}
             src={imageDataUrl}
             alt="Screenshot to crop"
-            className="max-w-full max-h-[calc(100vh-200px)] object-contain select-none"
-            style={{ cursor: isDrawing ? "crosshair" : "crosshair" }}
+            className="max-h-[70vh] w-auto max-w-full object-contain select-none"
+            style={{ cursor: "crosshair" }}
             onMouseDown={handleMouseDown}
             onLoad={() => setImageLoaded(true)}
             draggable={false}
           />
           
-          {/* Dark overlay with cutout for selection */}
+          {/* Overlay positioned on the image element */}
           {imageLoaded && selection && selection.w > 0 && selection.h > 0 && (
             <>
               {/* Darkened areas around selection */}
@@ -171,10 +197,10 @@ export function CropSelector({ imageDataUrl, onConfirm, onCancel }: CropSelector
                 }}
               >
                 {/* Corner handles */}
-                <div className="absolute -top-1 -left-1 w-2 h-2 bg-primary rounded-sm" />
-                <div className="absolute -top-1 -right-1 w-2 h-2 bg-primary rounded-sm" />
-                <div className="absolute -bottom-1 -left-1 w-2 h-2 bg-primary rounded-sm" />
-                <div className="absolute -bottom-1 -right-1 w-2 h-2 bg-primary rounded-sm" />
+                <div className="absolute -top-1 -left-1 w-2.5 h-2.5 bg-primary rounded-sm" />
+                <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-primary rounded-sm" />
+                <div className="absolute -bottom-1 -left-1 w-2.5 h-2.5 bg-primary rounded-sm" />
+                <div className="absolute -bottom-1 -right-1 w-2.5 h-2.5 bg-primary rounded-sm" />
               </div>
             </>
           )}
@@ -195,7 +221,7 @@ export function CropSelector({ imageDataUrl, onConfirm, onCancel }: CropSelector
         <p className="text-xs text-muted-foreground">
           {hasValidSelection 
             ? "Selection ready. Click Continue to add your comment." 
-            : "Draw a rectangle around the element you want to change."}
+            : "Draw a rectangle around the element you want to change. Press Esc to cancel."}
         </p>
       </div>
     </div>

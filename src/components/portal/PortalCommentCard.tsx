@@ -37,6 +37,12 @@ interface PortalCommentCardProps {
     screenshot_path?: string | null;
     screenshot_w?: number | null;
     screenshot_h?: number | null;
+    // Snip-first crop fields
+    screenshot_full_path?: string | null;
+    crop_x?: number | null;
+    crop_y?: number | null;
+    crop_w?: number | null;
+    crop_h?: number | null;
   };
   index: number;
   onResolve: (id: string) => void;
