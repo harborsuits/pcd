@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { AIReceptionistSetup } from "@/components/portal/AIReceptionistSetup";
 import { SessionExpiredModal } from "@/components/portal/SessionExpiredModal";
 import { useSessionExpiry, storeAuthReturnPath } from "@/hooks/useSessionExpiry";
+import { useToast } from "@/hooks/use-toast";
 
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
@@ -33,6 +34,8 @@ interface IntakeData {
   serviceArea?: string;
   contactEmail?: string;
   contactPhone?: string;
+  // Service type
+  service_type?: string;
   // Legacy fields
   goals?: string[];
   assetsReadiness?: string;
@@ -40,6 +43,30 @@ interface IntakeData {
   websiteStatus?: string;
   readinessAssets?: string[];
   notes?: string;
+  // AI Receptionist fields
+  business_phone?: string;
+  business_hours?: string;
+  services_offered?: string;
+  escalation_number?: string;
+  emergency_rules?: string;
+  preferred_tone?: string;
+  booking_link?: string;
+  faqs?: string;
+  call_handling?: string;
+  after_hours_action?: string;
+  text_handling?: string[];
+  handoff_method?: string;
+  team_names?: string;
+  customer_faqs?: string;
+  do_not_say?: string;
+  guarantees_policies?: string;
+  business_personality?: string[];
+  lead_fields?: string[];
+  qualified_lead_rules?: string;
+  service_constraints?: string;
+  service_area_rules?: string;
+  pricing_guidance?: string;
+  handoff_triggers?: string[];
 }
 
 interface PhaseBData {
@@ -122,6 +149,7 @@ export default function WorkspacePage() {
   const { token } = useParams<{ token: string }>();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [versions, setVersions] = useState<Version[]>([]);
@@ -350,12 +378,169 @@ export default function WorkspacePage() {
     );
   }
 
+  // Detect if this is an AI receptionist project
+  const isAIReceptionistProject = projectInfo?.intakeData?.service_type === "ai_receptionist" || 
+                                   projectInfo?.intakeData?.service_type === "both";
+
   // Client Portal Home - shown when no versions exist yet (post-intake)
   // Only show this client-facing screen if NOT an operator
   if (versions.length === 0 && !isOperator) {
     const config = getStatusConfig(projectInfo?.intakeStatus || "submitted");
     const Icon = config.Icon;
 
+    // AI Receptionist specific view
+    if (isAIReceptionistProject) {
+      const intake = projectInfo?.intakeData;
+      
+      const CALL_HANDLING_LABELS: Record<string, string> = {
+        always: "Always answer",
+        after_hours: "After hours only",
+        overflow: "Overflow only",
+      };
+      
+      const HANDOFF_LABELS: Record<string, string> = {
+        transfer: "Transfer call",
+        message: "Take message",
+        callback: "Schedule callback",
+        text: "Text follow-up",
+      };
+
+      return (
+        <div className="h-screen flex flex-col bg-background">
+          {/* Header */}
+          <div className="border-b border-border bg-card/80 backdrop-blur-sm px-4 py-3">
+            <div className="max-w-4xl mx-auto flex items-center justify-between gap-4">
+              <Link 
+                to="/portal" 
+                className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors group"
+              >
+                <Home className="h-4 w-4 group-hover:scale-110 transition-transform" />
+                <span className="font-medium">Pleasant Cove Design</span>
+              </Link>
+              <div className="flex items-center gap-3">
+                <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
+                  <Clock className="h-3 w-3 mr-1" />
+                  Setup in Progress
+                </Badge>
+                <span className="text-sm font-medium">{projectInfo?.businessName}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex-1 overflow-y-auto">
+            <div className="max-w-lg mx-auto px-4 py-12">
+              {/* AI Receptionist Setup confirmation */}
+              <div className="bg-card border border-border rounded-xl p-6 text-center mb-6">
+                <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-primary/10 text-primary mb-5">
+                  <Phone className="h-7 w-7" />
+                </div>
+
+                <h2 className="font-serif text-2xl font-bold mb-2">
+                  Your AI receptionist is being set up
+                </h2>
+                <p className="text-muted-foreground mb-6">
+                  We're configuring everything based on your preferences.
+                  <br />
+                  <span className="text-foreground/80">You'll be notified when it's ready to go live.</span>
+                </p>
+
+                {/* What happens next */}
+                <div className="bg-muted/40 rounded-lg p-4 text-left text-sm space-y-2">
+                  <p className="font-medium text-foreground">What happens next:</p>
+                  <ol className="list-decimal list-inside text-muted-foreground space-y-1">
+                    <li>We verify your phone number & settings</li>
+                    <li>We configure the AI with your rules</li>
+                    <li>We test with sample calls</li>
+                    <li>We flip the switch — you're live!</li>
+                  </ol>
+                  <p className="text-xs text-muted-foreground pt-2">
+                    Expected timeline: <span className="font-medium text-foreground">24–48 hours</span>
+                  </p>
+                </div>
+              </div>
+
+              {/* Summary of what they submitted */}
+              <div className="bg-card border border-border rounded-xl p-5 space-y-4">
+                <h3 className="font-medium flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-muted-foreground" />
+                  Your submitted configuration
+                </h3>
+                
+                <div className="space-y-3 text-sm">
+                  {intake?.business_phone && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Business phone</span>
+                      <span className="font-medium">{intake.business_phone}</span>
+                    </div>
+                  )}
+                  {intake?.business_hours && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Hours</span>
+                      <span className="font-medium">{intake.business_hours}</span>
+                    </div>
+                  )}
+                  {intake?.call_handling && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">When AI answers</span>
+                      <span className="font-medium">{CALL_HANDLING_LABELS[intake.call_handling] || intake.call_handling}</span>
+                    </div>
+                  )}
+                  {intake?.handoff_method && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Handoff method</span>
+                      <span className="font-medium">{HANDOFF_LABELS[intake.handoff_method] || intake.handoff_method}</span>
+                    </div>
+                  )}
+                  {intake?.escalation_number && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Escalation number</span>
+                      <span className="font-medium">{intake.escalation_number}</span>
+                    </div>
+                  )}
+                  {intake?.services_offered && (
+                    <div>
+                      <span className="text-muted-foreground">Services</span>
+                      <p className="font-medium mt-1 text-xs">{intake.services_offered}</p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="pt-3 border-t">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="w-full gap-2"
+                    onClick={() => {
+                      // For now, just show a toast - can open a message modal later
+                      toast({
+                        title: "Need to update something?",
+                        description: "Reply to any email from us or we'll reach out before going live.",
+                      });
+                    }}
+                  >
+                    <AlertCircle className="h-4 w-4" />
+                    Need to update something?
+                  </Button>
+                </div>
+              </div>
+
+              {/* Footer note */}
+              <p className="text-center text-xs text-muted-foreground mt-6">
+                Questions? Just reply to any email from us.
+              </p>
+            </div>
+          </div>
+
+          {/* Session Expired Modal */}
+          <SessionExpiredModal
+            open={showAuthModal}
+            onOpenChange={setShowAuthModal}
+          />
+        </div>
+      );
+    }
+
+    // Website/default intake view
     return (
       <div className="h-screen flex flex-col bg-background">
         {/* Header with back navigation */}

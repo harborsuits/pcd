@@ -1385,7 +1385,7 @@ async function handleRequestDemo(req: Request): Promise<Response> {
       brand_colors?: string;
       services_list?: string;
       photo_readiness?: string;
-      // AI fields
+      // AI fields - Basics & Operations
       business_phone?: string;
       business_hours?: string;
       services_offered?: string;
@@ -1394,6 +1394,24 @@ async function handleRequestDemo(req: Request): Promise<Response> {
       preferred_tone?: string;
       booking_link?: string;
       faqs?: string;
+      // AI fields - Call Handling
+      call_handling?: string;
+      after_hours_action?: string;
+      text_handling?: string[];
+      handoff_method?: string;
+      // AI fields - Customer Knowledge
+      team_names?: string;
+      customer_faqs?: string;
+      do_not_say?: string;
+      guarantees_policies?: string;
+      business_personality?: string[];
+      // AI fields - Lead & Ops
+      lead_fields?: string[];
+      qualified_lead_rules?: string;
+      service_constraints?: string;
+      service_area_rules?: string;
+      pricing_guidance?: string;
+      handoff_triggers?: string[];
       // Other fields
       selected_services?: string[];
       custom_request?: string;
@@ -1427,7 +1445,7 @@ async function handleRequestDemo(req: Request): Promise<Response> {
       brand_colors,
       services_list,
       photo_readiness,
-      // AI fields
+      // AI fields - Basics & Operations
       business_phone,
       business_hours,
       services_offered,
@@ -1436,6 +1454,24 @@ async function handleRequestDemo(req: Request): Promise<Response> {
       preferred_tone,
       booking_link,
       faqs,
+      // AI fields - Call Handling
+      call_handling,
+      after_hours_action,
+      text_handling,
+      handoff_method,
+      // AI fields - Customer Knowledge
+      team_names,
+      customer_faqs,
+      do_not_say,
+      guarantees_policies,
+      business_personality,
+      // AI fields - Lead & Ops
+      lead_fields,
+      qualified_lead_rules,
+      service_constraints,
+      service_area_rules,
+      pricing_guidance,
+      handoff_triggers,
       // Other fields
       selected_services,
       custom_request,
@@ -1458,7 +1494,7 @@ async function handleRequestDemo(req: Request): Promise<Response> {
       brand_colors: brand_colors || null,
       services_list: services_list || null,
       photo_readiness: photo_readiness || null,
-      // AI fields
+      // AI fields - Basics & Operations
       business_phone: business_phone || null,
       business_hours: business_hours || null,
       services_offered: services_offered || null,
@@ -1467,6 +1503,24 @@ async function handleRequestDemo(req: Request): Promise<Response> {
       preferred_tone: preferred_tone || null,
       booking_link: booking_link || null,
       faqs: faqs || null,
+      // AI fields - Call Handling
+      call_handling: call_handling || null,
+      after_hours_action: after_hours_action || null,
+      text_handling: text_handling || null,
+      handoff_method: handoff_method || null,
+      // AI fields - Customer Knowledge
+      team_names: team_names || null,
+      customer_faqs: customer_faqs || null,
+      do_not_say: do_not_say || null,
+      guarantees_policies: guarantees_policies || null,
+      business_personality: business_personality || null,
+      // AI fields - Lead & Ops
+      lead_fields: lead_fields || null,
+      qualified_lead_rules: qualified_lead_rules || null,
+      service_constraints: service_constraints || null,
+      service_area_rules: service_area_rules || null,
+      pricing_guidance: pricing_guidance || null,
+      handoff_triggers: handoff_triggers || null,
       // Other fields
       selected_services: selected_services || null,
       custom_request: custom_request || null,
@@ -1722,7 +1776,7 @@ async function handleRequestDemo(req: Request): Promise<Response> {
       brand_colors,
       services_list,
       photo_readiness,
-      // AI fields
+      // AI fields - Basics & Operations
       business_phone,
       business_hours,
       services_offered,
@@ -1731,6 +1785,24 @@ async function handleRequestDemo(req: Request): Promise<Response> {
       preferred_tone,
       booking_link,
       faqs,
+      // AI fields - Call Handling
+      call_handling,
+      after_hours_action,
+      text_handling,
+      handoff_method,
+      // AI fields - Customer Knowledge
+      team_names,
+      customer_faqs,
+      do_not_say,
+      guarantees_policies,
+      business_personality,
+      // AI fields - Lead & Ops
+      lead_fields,
+      qualified_lead_rules,
+      service_constraints,
+      service_area_rules,
+      pricing_guidance,
+      handoff_triggers,
       // Other fields
       selected_services,
       custom_request,

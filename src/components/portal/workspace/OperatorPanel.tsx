@@ -37,6 +37,8 @@ interface IntakeData {
   serviceArea?: string;
   contactEmail?: string;
   contactPhone?: string;
+  // Service type
+  service_type?: string;
   // Legacy fields
   goals?: string[];
   assetsReadiness?: string;
@@ -44,6 +46,30 @@ interface IntakeData {
   websiteStatus?: string;
   readinessAssets?: string[];
   notes?: string;
+  // AI Receptionist fields
+  business_phone?: string;
+  business_hours?: string;
+  services_offered?: string;
+  escalation_number?: string;
+  emergency_rules?: string;
+  preferred_tone?: string;
+  booking_link?: string;
+  faqs?: string;
+  call_handling?: string;
+  after_hours_action?: string;
+  text_handling?: string[];
+  handoff_method?: string;
+  team_names?: string;
+  customer_faqs?: string;
+  do_not_say?: string;
+  guarantees_policies?: string;
+  business_personality?: string[];
+  lead_fields?: string[];
+  qualified_lead_rules?: string;
+  service_constraints?: string;
+  service_area_rules?: string;
+  pricing_guidance?: string;
+  handoff_triggers?: string[];
 }
 
 interface PhaseBData {
