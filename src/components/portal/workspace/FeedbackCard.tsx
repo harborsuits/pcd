@@ -21,6 +21,12 @@ export interface CommentData {
   screenshot_media_id?: string | null;
   screenshot_w?: number | null;
   screenshot_h?: number | null;
+  // Snip-first crop fields
+  screenshot_full_path?: string | null;
+  crop_x?: number | null;
+  crop_y?: number | null;
+  crop_w?: number | null;
+  crop_h?: number | null;
 }
 
 interface FeedbackCardProps {
@@ -140,7 +146,7 @@ export function FeedbackCard({
           {hasScreenshot ? (
             <Badge variant="outline" className="text-[10px] px-1.5 py-0 gap-0.5">
               <ImageIcon className="h-2.5 w-2.5" />
-              Screenshot
+              {comment.crop_w ? "Snip" : "Screenshot"}
             </Badge>
           ) : (comment.pin_x !== null && comment.pin_y !== null) ? (
             <Badge variant="outline" className="text-[10px] px-1.5 py-0 gap-0.5 text-muted-foreground">
@@ -165,7 +171,7 @@ export function FeedbackCard({
         {comment.body}
       </p>
 
-      {/* Screenshot thumbnail */}
+      {/* Screenshot thumbnail - show cropped image if available, otherwise full */}
       {hasScreenshot && (
         <button
           onClick={() => onViewScreenshot(comment)}
@@ -177,10 +183,12 @@ export function FeedbackCard({
             className="w-full h-auto object-cover"
           />
           <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-            <span className="text-white text-xs font-medium">View</span>
+            <span className="text-white text-xs font-medium">
+              {comment.screenshot_full_path ? "View Full" : "View"}
+            </span>
           </div>
-          {/* Pin marker on thumbnail */}
-          {comment.pin_x !== null && comment.pin_y !== null && (
+          {/* Pin marker on thumbnail (only for legacy pin-based comments) */}
+          {!comment.crop_w && comment.pin_x !== null && comment.pin_y !== null && (
             <div
               className="absolute w-2.5 h-2.5 bg-primary rounded-full border border-white shadow"
               style={{

@@ -1777,6 +1777,12 @@ async function handleCommentAction(
       screenshot_w,
       screenshot_h,
       screenshot_media_id,
+      // Snip-first crop fields
+      screenshot_full_path,
+      crop_x,
+      crop_y,
+      crop_w,
+      crop_h,
       // Attachment media IDs (for multi-file attachments)
       attachment_media_ids,
     } = body;
@@ -1851,6 +1857,12 @@ async function handleCommentAction(
           screenshot_path: screenshot_path ?? null,
           screenshot_w: screenshot_w ?? null,
           screenshot_h: screenshot_h ?? null,
+          // Snip-first crop fields
+          screenshot_full_path: screenshot_full_path ?? null,
+          crop_x: crop_x ?? null,
+          crop_y: crop_y ?? null,
+          crop_w: crop_w ?? null,
+          crop_h: crop_h ?? null,
         })
         .select()
         .single();

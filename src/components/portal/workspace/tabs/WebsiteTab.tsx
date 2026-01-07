@@ -1,11 +1,12 @@
 import { useState, useRef, useCallback } from "react";
-import { Clock, ExternalLink, RefreshCw, Camera, Upload, Loader2, X, Send, Paperclip, MapPin } from "lucide-react";
+import { Clock, ExternalLink, RefreshCw, Camera, Upload, Loader2, X, Send, Paperclip } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { VersionsList, type Version } from "../VersionsList";
+import { CropSelector } from "../CropSelector";
 import { captureTabCropped, isTabCaptureSupported, type CaptureError } from "@/lib/tabCapture";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
@@ -21,9 +22,17 @@ interface WebsiteTabProps {
   onRefreshComments?: () => void;
 }
 
+interface CropSelection {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
 type FeedbackMode = 
   | { type: "preview" }
-  | { type: "screenshot"; image: string; imageW: number; imageH: number; pin: { x: number; y: number } | null };
+  | { type: "cropping"; fullImage: string; fullImageW: number; fullImageH: number }
+  | { type: "compose"; fullImage: string; fullImageW: number; fullImageH: number; crop: CropSelection; croppedImage: string };
 
 export function WebsiteTab({
   versions,
@@ -65,12 +74,12 @@ export function WebsiteTab({
     try {
       // Pass the preview container ref to auto-crop to just the iframe area
       const result = await captureTabCropped(previewContainerRef.current ?? undefined);
+      // Go straight to cropping mode
       setMode({
-        type: "screenshot",
-        image: result.dataUrl,
-        imageW: result.width,
-        imageH: result.height,
-        pin: null,
+        type: "cropping",
+        fullImage: result.dataUrl,
+        fullImageW: result.width,
+        fullImageH: result.height,
       });
     } catch (err) {
       const captureErr = err as CaptureError;
@@ -90,12 +99,12 @@ export function WebsiteTab({
     reader.onload = (e) => {
       const img = new Image();
       img.onload = () => {
+        // Go to cropping mode with uploaded image
         setMode({
-          type: "screenshot",
-          image: e.target?.result as string,
-          imageW: img.naturalWidth,
-          imageH: img.naturalHeight,
-          pin: null,
+          type: "cropping",
+          fullImage: e.target?.result as string,
+          fullImageW: img.naturalWidth,
+          fullImageH: img.naturalHeight,
         });
       };
       img.src = e.target?.result as string;
@@ -111,14 +120,18 @@ export function WebsiteTab({
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  // Handle pin placement on screenshot
-  const handlePinPlace = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (mode.type !== "screenshot") return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = ((e.clientX - rect.left) / rect.width) * 100;
-    const y = ((e.clientY - rect.top) / rect.height) * 100;
-    setMode(prev => prev.type === "screenshot" ? { ...prev, pin: { x, y } } : prev);
-  };
+  // Handle crop selection confirmed
+  const handleCropConfirm = useCallback((selection: CropSelection, croppedDataUrl: string) => {
+    if (mode.type !== "cropping") return;
+    setMode({
+      type: "compose",
+      fullImage: mode.fullImage,
+      fullImageW: mode.fullImageW,
+      fullImageH: mode.fullImageH,
+      crop: selection,
+      croppedImage: croppedDataUrl,
+    });
+  }, [mode]);
 
   // Handle attachment selection
   const handleAttachmentSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -153,18 +166,23 @@ export function WebsiteTab({
     return { mediaId: data.media_id, path: data.path };
   };
 
-  // Submit feedback
+  // Submit feedback with snip (cropped region)
   const handleSubmitFeedback = async () => {
-    if (mode.type !== "screenshot" || !mode.pin || !commentText.trim() || !selectedVersion) return;
+    if (mode.type !== "compose" || !commentText.trim() || !selectedVersion) return;
 
     setIsSubmitting(true);
     try {
-      // Convert base64 to blob and upload
-      const response = await fetch(mode.image);
-      const blob = await response.blob();
-      const { mediaId, path } = await uploadScreenshot(blob);
+      // Upload the cropped image (this becomes the main screenshot_path)
+      const croppedResponse = await fetch(mode.croppedImage);
+      const croppedBlob = await croppedResponse.blob();
+      const { mediaId, path } = await uploadScreenshot(croppedBlob);
 
-      // Create comment with screenshot
+      // Optionally upload full screenshot for context
+      const fullResponse = await fetch(mode.fullImage);
+      const fullBlob = await fullResponse.blob();
+      const fullUpload = await uploadScreenshot(fullBlob);
+
+      // Create comment with cropped screenshot + crop coordinates
       const res = await fetch(
         `${SUPABASE_URL}/functions/v1/portal/${token}/comments`,
         {
@@ -178,13 +196,18 @@ export function WebsiteTab({
             action: "create",
             prototype_id: selectedVersion.id,
             body: commentText.trim(),
-            pin_x: mode.pin.x,
-            pin_y: mode.pin.y,
             author_type: "client",
+            // Cropped image is the main screenshot
             screenshot_media_id: mediaId,
             screenshot_path: path,
-            screenshot_w: mode.imageW,
-            screenshot_h: mode.imageH,
+            screenshot_w: Math.round(mode.crop.w * mode.fullImageW),
+            screenshot_h: Math.round(mode.crop.h * mode.fullImageH),
+            // Store full screenshot and crop coordinates
+            screenshot_full_path: fullUpload.path,
+            crop_x: mode.crop.x,
+            crop_y: mode.crop.y,
+            crop_w: mode.crop.w,
+            crop_h: mode.crop.h,
           }),
         }
       );
@@ -250,9 +273,11 @@ export function WebsiteTab({
               {/* Preview header with feedback tools */}
               <div className="p-3 border-b border-border bg-muted/30 flex items-center justify-between flex-shrink-0">
                 <div className="flex items-center gap-3">
-                  {mode.type === "screenshot" ? (
+                  {mode.type !== "preview" ? (
                     <>
-                      <span className="text-sm font-medium text-primary">Screenshot Mode</span>
+                      <span className="text-sm font-medium text-primary">
+                        {mode.type === "cropping" ? "Select Area" : "Add Comment"}
+                      </span>
                       <Button
                         variant="ghost"
                         size="sm"
@@ -260,7 +285,7 @@ export function WebsiteTab({
                         className="h-7 text-xs"
                       >
                         <X className="h-3 w-3 mr-1" />
-                        Exit
+                        Cancel
                       </Button>
                     </>
                   ) : (
@@ -291,7 +316,7 @@ export function WebsiteTab({
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent side="bottom" className="text-xs max-w-[220px]">
-                            Take a screenshot, place a pin, and tell us what you'd like changed
+                            Take a screenshot and select the area you want changed
                           </TooltipContent>
                         </Tooltip>
                         <Tooltip>
@@ -349,47 +374,13 @@ export function WebsiteTab({
               
               {/* Content area */}
               <div ref={previewContainerRef} className="flex-1 bg-muted/20 overflow-hidden">
-                {mode.type === "screenshot" && mode.image ? (
-                  /* Screenshot viewer with pin placement */
-                  <div 
-                    className="w-full h-full overflow-auto cursor-crosshair"
-                    onClick={handlePinPlace}
-                  >
-                    <div className="relative inline-block min-w-full">
-                      <img
-                        src={mode.image}
-                        alt="Screenshot for feedback"
-                        className="max-w-none"
-                        style={{ maxHeight: "none" }}
-                      />
-                      {/* Pin marker */}
-                      {mode.pin && (
-                        <div
-                          className="absolute pointer-events-none z-10"
-                          style={{
-                            left: `${mode.pin.x}%`,
-                            top: `${mode.pin.y}%`,
-                            transform: "translate(-50%, -100%)",
-                          }}
-                        >
-                          <div className="relative">
-                            <div className="w-6 h-6 bg-primary rounded-full border-2 border-white shadow-lg flex items-center justify-center">
-                              <span className="text-[10px] font-bold text-primary-foreground">1</span>
-                            </div>
-                            <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-primary" />
-                          </div>
-                        </div>
-                      )}
-                      {/* Click hint */}
-                      {!mode.pin && (
-                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                          <div className="bg-black/70 text-white px-4 py-2 rounded-lg text-sm font-medium">
-                            Click to place your pin on what you want changed
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
+                {mode.type === "cropping" ? (
+                  /* Crop selector for snip-first feedback */
+                  <CropSelector
+                    imageDataUrl={mode.fullImage}
+                    onConfirm={handleCropConfirm}
+                    onCancel={exitScreenshotMode}
+                  />
                 ) : (
                   /* Live preview iframe */
                   <iframe
@@ -405,42 +396,41 @@ export function WebsiteTab({
         </div>
       </div>
 
-      {/* Bottom: Comment composer when pin is placed */}
-      {mode.type === "screenshot" && mode.pin && (
+      {/* Bottom: Comment composer when crop is selected */}
+      {mode.type === "compose" && (
         <div className="flex-shrink-0 p-4 border-t border-border bg-background">
-          {/* Screenshot preview with pin */}
+          {/* Cropped preview */}
           <div className="mb-3 flex items-start gap-3">
-            <div className="relative inline-block rounded-lg overflow-hidden border border-border flex-shrink-0">
+            <div className="relative inline-block rounded-lg overflow-hidden border border-border flex-shrink-0 bg-muted">
               <img
-                src={mode.image}
-                alt="Screenshot preview"
-                className="h-16 w-auto object-contain"
-              />
-              <div
-                className="absolute w-3 h-3 bg-primary rounded-full border border-white shadow"
-                style={{
-                  left: `${mode.pin.x}%`,
-                  top: `${mode.pin.y}%`,
-                  transform: "translate(-50%, -50%)",
-                }}
+                src={mode.croppedImage}
+                alt="Selected area"
+                className="h-20 w-auto object-contain"
               />
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-6 text-xs"
-              onClick={() => setMode(prev => prev.type === "screenshot" ? { ...prev, pin: null } : prev)}
-            >
-              <MapPin className="h-3 w-3 mr-1" />
-              Move pin
-            </Button>
+            <div className="flex-1">
+              <p className="text-xs text-muted-foreground mb-1">Selected area to change:</p>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 text-xs"
+                onClick={() => setMode({ 
+                  type: "cropping", 
+                  fullImage: mode.fullImage, 
+                  fullImageW: mode.fullImageW, 
+                  fullImageH: mode.fullImageH 
+                })}
+              >
+                Re-select area
+              </Button>
+            </div>
           </div>
 
           {/* Comment input */}
           <Textarea
             value={commentText}
             onChange={(e) => setCommentText(e.target.value)}
-            placeholder="What would you like changed? (e.g., 'Change this logo to...' or 'Make this text larger')"
+            placeholder="What would you like changed? (e.g., 'Replace this logo with...' or 'Make this text larger')"
             className="min-h-[80px] resize-none mb-3"
             autoFocus
           />
@@ -484,7 +474,7 @@ export function WebsiteTab({
                 onClick={() => attachInputRef.current?.click()}
               >
                 <Paperclip className="h-3.5 w-3.5" />
-                Attach file (e.g., logo you want)
+                Attach file (e.g., new logo)
               </Button>
             </div>
 
