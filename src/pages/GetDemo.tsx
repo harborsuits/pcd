@@ -19,6 +19,10 @@ type Timeline = "asap" | "2-4weeks" | "1-2months" | "unsure" | "";
 type LogoStatus = "yes" | "no" | "refresh" | "";
 type PhotoReadiness = "ready" | "some" | "none" | "";
 type Tone = "friendly" | "professional" | "direct" | "";
+type CallHandling = "always" | "after_hours" | "overflow" | "";
+type AfterHoursAction = "message" | "book" | "emergency_only" | "callback_info" | "";
+type PricingGuidance = "ranges" | "follow_up" | "never" | "";
+type HandoffMethod = "transfer" | "message" | "callback" | "text" | "";
 
 // Map query param values to form values
 const SERVICE_PARAM_MAP: Record<string, ServiceType> = {
@@ -46,7 +50,7 @@ interface FormData {
   servicesList: string;
   photoReadiness: PhotoReadiness;
   
-  // AI Receptionist fields
+  // AI Receptionist fields - Basics
   businessPhone: string;
   businessHours: string;
   servicesOffered: string;
@@ -55,6 +59,20 @@ interface FormData {
   preferredTone: Tone;
   bookingLink: string;
   faqs: string;
+  
+  // AI Receptionist fields - Handling
+  callHandling: CallHandling;
+  afterHoursAction: AfterHoursAction;
+  textHandling: string[];
+  
+  // AI Receptionist fields - Ops
+  leadFields: string[];
+  qualifiedLeadRules: string;
+  serviceConstraints: string;
+  serviceAreaRules: string;
+  pricingGuidance: PricingGuidance;
+  handoffTriggers: string[];
+  handoffMethod: HandoffMethod;
   
   // Other/à la carte fields
   selectedServices: string[];
@@ -89,6 +107,16 @@ const GetDemo = () => {
     preferredTone: "",
     bookingLink: "",
     faqs: "",
+    callHandling: "",
+    afterHoursAction: "",
+    textHandling: [],
+    leadFields: [],
+    qualifiedLeadRules: "",
+    serviceConstraints: "",
+    serviceAreaRules: "",
+    pricingGuidance: "",
+    handoffTriggers: [],
+    handoffMethod: "",
     selectedServices: [],
     customRequest: "",
   });
@@ -132,7 +160,9 @@ const GetDemo = () => {
     }
     
     if (formData.serviceType === "ai" || formData.serviceType === "both") {
-      steps.push({ id: "ai", label: "AI Setup" });
+      steps.push({ id: "ai-basics", label: "AI Basics" });
+      steps.push({ id: "ai-handling", label: "Call Handling" });
+      steps.push({ id: "ai-ops", label: "Operations" });
     }
     
     if (formData.serviceType === "other") {
@@ -155,10 +185,14 @@ const GetDemo = () => {
         return !!formData.websiteGoal && formData.serviceArea.trim() && !!formData.timeline;
       case "brand":
         return !!formData.logoStatus && !!formData.photoReadiness;
-      case "ai":
+      case "ai-basics":
         return formData.businessPhone.trim() && formData.businessHours.trim() && 
                formData.servicesOffered.trim() && formData.escalationNumber.trim() && 
                formData.emergencyRules.trim() && !!formData.preferredTone;
+      case "ai-handling":
+        return !!formData.callHandling && !!formData.afterHoursAction;
+      case "ai-ops":
+        return formData.leadFields.length > 0 && !!formData.handoffMethod;
       case "other":
         return formData.selectedServices.length > 0 || formData.customRequest.trim().length > 0;
       default:
@@ -208,6 +242,18 @@ const GetDemo = () => {
           preferred_tone: formData.preferredTone || null,
           booking_link: formData.bookingLink.trim() || null,
           faqs: formData.faqs.trim() || null,
+          // AI handling fields
+          call_handling: formData.callHandling || null,
+          after_hours_action: formData.afterHoursAction || null,
+          text_handling: formData.textHandling.length > 0 ? formData.textHandling : null,
+          // AI ops fields
+          lead_fields: formData.leadFields.length > 0 ? formData.leadFields : null,
+          qualified_lead_rules: formData.qualifiedLeadRules.trim() || null,
+          service_constraints: formData.serviceConstraints.trim() || null,
+          service_area_rules: formData.serviceAreaRules.trim() || null,
+          pricing_guidance: formData.pricingGuidance || null,
+          handoff_triggers: formData.handoffTriggers.length > 0 ? formData.handoffTriggers : null,
+          handoff_method: formData.handoffMethod || null,
           selected_services: formData.selectedServices.length > 0 ? formData.selectedServices : null,
           custom_request: formData.customRequest.trim() || null,
         },
@@ -557,11 +603,21 @@ const GetDemo = () => {
     </div>
   );
 
-  const renderAIStep = () => (
+  // Helper to toggle array field values
+  const toggleArrayField = (field: "textHandling" | "leadFields" | "handoffTriggers", value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: prev[field].includes(value)
+        ? prev[field].filter((v: string) => v !== value)
+        : [...prev[field], value]
+    }));
+  };
+
+  const renderAIBasicsStep = () => (
     <div className="space-y-6">
       <div>
-        <h2 className="font-serif text-2xl font-bold mb-2">AI Receptionist setup</h2>
-        <p className="text-muted-foreground">This is the info we use to answer calls, texts, and form leads correctly.</p>
+        <h2 className="font-serif text-2xl font-bold mb-2">AI Receptionist basics</h2>
+        <p className="text-muted-foreground">Core info we need to answer calls, texts, and leads correctly.</p>
       </div>
       
       <div className="space-y-5">
@@ -587,7 +643,6 @@ const GetDemo = () => {
             onChange={(e) => updateField("businessHours", e.target.value)}
             disabled={isLoading}
           />
-          <p className="text-xs text-muted-foreground">When you want calls handled normally</p>
         </div>
 
         <div className="space-y-2">
@@ -601,7 +656,6 @@ const GetDemo = () => {
             rows={3}
             className="resize-none"
           />
-          <p className="text-xs text-muted-foreground">A quick list is fine</p>
         </div>
 
         <div className="space-y-2">
@@ -675,6 +729,239 @@ const GetDemo = () => {
             rows={3}
             className="resize-none"
           />
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderAIHandlingStep = () => (
+    <div className="space-y-6">
+      <div>
+        <h2 className="font-serif text-2xl font-bold mb-2">Call & message handling</h2>
+        <p className="text-muted-foreground">Tell us how the AI should handle different situations.</p>
+      </div>
+      
+      <div className="space-y-5">
+        <div className="space-y-3">
+          <Label>When should the AI answer calls? *</Label>
+          <RadioGroup
+            value={formData.callHandling}
+            onValueChange={(v: CallHandling) => updateField("callHandling", v)}
+            className="grid gap-2"
+            disabled={isLoading}
+          >
+            {[
+              { value: "always", label: "Always answer", desc: "AI picks up every call" },
+              { value: "after_hours", label: "After hours only", desc: "AI answers when you're closed" },
+              { value: "overflow", label: "Overflow only", desc: "AI answers missed calls" },
+            ].map((opt) => (
+              <div key={opt.value} className="flex items-start space-x-3 p-3 rounded-lg border border-border hover:bg-secondary/50 transition-colors cursor-pointer">
+                <RadioGroupItem value={opt.value} id={`call-${opt.value}`} className="mt-0.5" />
+                <div>
+                  <Label htmlFor={`call-${opt.value}`} className="cursor-pointer font-medium">{opt.label}</Label>
+                  <p className="text-xs text-muted-foreground">{opt.desc}</p>
+                </div>
+              </div>
+            ))}
+          </RadioGroup>
+        </div>
+
+        <div className="space-y-3">
+          <Label>After-hours behavior *</Label>
+          <RadioGroup
+            value={formData.afterHoursAction}
+            onValueChange={(v: AfterHoursAction) => updateField("afterHoursAction", v)}
+            className="grid gap-2"
+            disabled={isLoading}
+          >
+            {[
+              { value: "message", label: "Take a message" },
+              { value: "book", label: "Book appointments" },
+              { value: "emergency_only", label: "Emergency escalation only" },
+              { value: "callback_info", label: "Tell callers when to call back" },
+            ].map((opt) => (
+              <div key={opt.value} className="flex items-center space-x-3 p-3 rounded-lg border border-border hover:bg-secondary/50 transition-colors cursor-pointer">
+                <RadioGroupItem value={opt.value} id={`after-${opt.value}`} />
+                <Label htmlFor={`after-${opt.value}`} className="cursor-pointer font-normal flex-1">{opt.label}</Label>
+              </div>
+            ))}
+          </RadioGroup>
+        </div>
+
+        <div className="space-y-3">
+          <Label>What should the AI do via text/chat? (select all that apply)</Label>
+          <div className="grid gap-2">
+            {[
+              { value: "answer_faqs", label: "Answer FAQs" },
+              { value: "collect_lead", label: "Collect lead info" },
+              { value: "send_booking", label: "Send booking links" },
+              { value: "follow_up", label: "Follow up missed calls" },
+            ].map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => toggleArrayField("textHandling", opt.value)}
+                className={cn(
+                  "flex items-center space-x-3 p-3 rounded-lg border text-left transition-colors",
+                  formData.textHandling.includes(opt.value)
+                    ? "border-primary bg-primary/5"
+                    : "border-border hover:bg-secondary/50"
+                )}
+              >
+                <Checkbox checked={formData.textHandling.includes(opt.value)} />
+                <span className="font-normal">{opt.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderAIOpsStep = () => (
+    <div className="space-y-6">
+      <div>
+        <h2 className="font-serif text-2xl font-bold mb-2">Operations & handoffs</h2>
+        <p className="text-muted-foreground">Help the AI qualify leads and know when to escalate.</p>
+      </div>
+      
+      <div className="space-y-5">
+        <div className="space-y-3">
+          <Label>What info should we collect from new leads? *</Label>
+          <div className="grid grid-cols-2 gap-2">
+            {[
+              { value: "name", label: "Name" },
+              { value: "phone", label: "Phone" },
+              { value: "email", label: "Email" },
+              { value: "address", label: "Address" },
+              { value: "service_type", label: "Type of service" },
+              { value: "urgency", label: "Urgency" },
+              { value: "budget", label: "Budget range" },
+            ].map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => toggleArrayField("leadFields", opt.value)}
+                className={cn(
+                  "flex items-center space-x-2 p-3 rounded-lg border text-left text-sm transition-colors",
+                  formData.leadFields.includes(opt.value)
+                    ? "border-primary bg-primary/5"
+                    : "border-border hover:bg-secondary/50"
+                )}
+              >
+                <Checkbox checked={formData.leadFields.includes(opt.value)} />
+                <span>{opt.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="qualifiedLeadRules">What makes a "good lead"? (optional)</Label>
+          <Textarea
+            id="qualifiedLeadRules"
+            placeholder="e.g. Residential only, within 30 miles, jobs over $300..."
+            value={formData.qualifiedLeadRules}
+            onChange={(e) => updateField("qualifiedLeadRules", e.target.value)}
+            disabled={isLoading}
+            rows={2}
+            className="resize-none"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="serviceAreaRules">Service area rules (optional)</Label>
+          <Input
+            id="serviceAreaRules"
+            placeholder="e.g. Within 25 miles, excludes downtown, certain zip codes only..."
+            value={formData.serviceAreaRules}
+            onChange={(e) => updateField("serviceAreaRules", e.target.value)}
+            disabled={isLoading}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="serviceConstraints">Service limitations (optional)</Label>
+          <Textarea
+            id="serviceConstraints"
+            placeholder="e.g. No work on Sundays, no high-rise buildings, no warranty calls..."
+            value={formData.serviceConstraints}
+            onChange={(e) => updateField("serviceConstraints", e.target.value)}
+            disabled={isLoading}
+            rows={2}
+            className="resize-none"
+          />
+        </div>
+
+        <div className="space-y-3">
+          <Label>Can the AI discuss pricing?</Label>
+          <RadioGroup
+            value={formData.pricingGuidance}
+            onValueChange={(v: PricingGuidance) => updateField("pricingGuidance", v)}
+            className="grid gap-2"
+            disabled={isLoading}
+          >
+            {[
+              { value: "ranges", label: "Yes, give ranges" },
+              { value: "follow_up", label: 'Only say "we\'ll follow up"' },
+              { value: "never", label: "Never discuss pricing" },
+            ].map((opt) => (
+              <div key={opt.value} className="flex items-center space-x-3 p-3 rounded-lg border border-border hover:bg-secondary/50 transition-colors cursor-pointer">
+                <RadioGroupItem value={opt.value} id={`pricing-${opt.value}`} />
+                <Label htmlFor={`pricing-${opt.value}`} className="cursor-pointer font-normal flex-1">{opt.label}</Label>
+              </div>
+            ))}
+          </RadioGroup>
+        </div>
+
+        <div className="space-y-3">
+          <Label>When should the AI hand off to a human? (select all)</Label>
+          <div className="grid grid-cols-2 gap-2">
+            {[
+              { value: "angry", label: "Angry caller" },
+              { value: "repeated", label: "Repeated questions" },
+              { value: "complex", label: "Complex request" },
+              { value: "payment", label: "Payment questions" },
+              { value: "legal", label: "Legal / safety" },
+            ].map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => toggleArrayField("handoffTriggers", opt.value)}
+                className={cn(
+                  "flex items-center space-x-2 p-3 rounded-lg border text-left text-sm transition-colors",
+                  formData.handoffTriggers.includes(opt.value)
+                    ? "border-primary bg-primary/5"
+                    : "border-border hover:bg-secondary/50"
+                )}
+              >
+                <Checkbox checked={formData.handoffTriggers.includes(opt.value)} />
+                <span>{opt.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          <Label>Preferred handoff method *</Label>
+          <RadioGroup
+            value={formData.handoffMethod}
+            onValueChange={(v: HandoffMethod) => updateField("handoffMethod", v)}
+            className="grid gap-2"
+            disabled={isLoading}
+          >
+            {[
+              { value: "transfer", label: "Transfer call" },
+              { value: "message", label: "Take message" },
+              { value: "callback", label: "Schedule callback" },
+              { value: "text", label: "Send text follow-up" },
+            ].map((opt) => (
+              <div key={opt.value} className="flex items-center space-x-3 p-3 rounded-lg border border-border hover:bg-secondary/50 transition-colors cursor-pointer">
+                <RadioGroupItem value={opt.value} id={`handoff-${opt.value}`} />
+                <Label htmlFor={`handoff-${opt.value}`} className="cursor-pointer font-normal flex-1">{opt.label}</Label>
+              </div>
+            ))}
+          </RadioGroup>
         </div>
       </div>
     </div>
@@ -773,8 +1060,12 @@ const GetDemo = () => {
         return renderWebsiteStep();
       case "brand":
         return renderBrandStep();
-      case "ai":
-        return renderAIStep();
+      case "ai-basics":
+        return renderAIBasicsStep();
+      case "ai-handling":
+        return renderAIHandlingStep();
+      case "ai-ops":
+        return renderAIOpsStep();
       case "other":
         return renderOtherStep();
       default:
