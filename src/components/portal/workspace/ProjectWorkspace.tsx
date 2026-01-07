@@ -525,8 +525,17 @@ export function ProjectWorkspace({
           open={!!viewingScreenshot}
           onOpenChange={(open) => !open && setViewingScreenshot(null)}
           screenshotUrl={`${SUPABASE_URL}/storage/v1/object/public/project-media/${viewingScreenshot.screenshot_path}`}
-          pinX={viewingScreenshot.pin_x ?? 50}
-          pinY={viewingScreenshot.pin_y ?? 50}
+          fullScreenshotUrl={
+            viewingScreenshot.screenshot_full_path
+              ? `${SUPABASE_URL}/storage/v1/object/public/project-media/${viewingScreenshot.screenshot_full_path}`
+              : undefined
+          }
+          cropX={viewingScreenshot.crop_x}
+          cropY={viewingScreenshot.crop_y}
+          cropW={viewingScreenshot.crop_w}
+          cropH={viewingScreenshot.crop_h}
+          pinX={viewingScreenshot.pin_x}
+          pinY={viewingScreenshot.pin_y}
           commentBody={viewingScreenshot.body}
           commentIndex={versionComments.findIndex(c => c.id === viewingScreenshot.id)}
         />
