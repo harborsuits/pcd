@@ -93,22 +93,29 @@ const GetDemo = () => {
     customRequest: "",
   });
 
+  // Track if service came from URL param (skip choose step)
+  const [skipChoose, setSkipChoose] = useState(false);
+
   // Pre-select service type from URL param and skip choose step
   useEffect(() => {
     const serviceParam = searchParams.get("service");
     if (serviceParam && SERVICE_PARAM_MAP[serviceParam]) {
       setFormData(prev => ({ ...prev, serviceType: SERVICE_PARAM_MAP[serviceParam] }));
-      // Skip the choose step since they already selected from homepage
-      setCurrentStep(1);
+      setSkipChoose(true);
     }
   }, [searchParams]);
 
   // Determine steps based on service type
   const getSteps = () => {
-    const steps = [{ id: "choose", label: "Choose" }];
+    const steps: { id: string; label: string }[] = [];
+    
+    // Only show choose step if service wasn't pre-selected via URL
+    if (!skipChoose) {
+      steps.push({ id: "choose", label: "Choose" });
+    }
     
     if (!formData.serviceType) {
-      return steps;
+      return steps.length ? steps : [{ id: "choose", label: "Choose" }];
     }
     
     // Demo only needs basics (quick form to generate demo)
