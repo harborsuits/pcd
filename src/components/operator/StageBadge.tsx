@@ -2,7 +2,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
 // Service types for projects
-export type ServiceType = "website" | "ai" | "both";
+export type ServiceType = "website" | "ai" | "both" | "other";
 
 // Unified pipeline stages (works for all service types)
 export type PipelineStage = 
@@ -93,6 +93,11 @@ export const SERVICE_TYPE_CONFIG: Record<ServiceType, { label: string; className
     label: "Website + AI",
     className: "bg-indigo-500/10 text-indigo-600 border-indigo-200",
     icon: "⚡",
+  },
+  other: {
+    label: "À la carte",
+    className: "bg-amber-500/10 text-amber-700 border-amber-200",
+    icon: "✨",
   },
 };
 
@@ -209,6 +214,7 @@ export const SERVICE_TYPE_FILTERS = [
   { value: "website", label: "🌐 Website" },
   { value: "ai", label: "🤖 AI" },
   { value: "both", label: "⚡ Both" },
+  { value: "other", label: "✨ À la carte" },
 ] as const;
 
 export type PipelineFilter = typeof PIPELINE_FILTERS[number]["value"];
