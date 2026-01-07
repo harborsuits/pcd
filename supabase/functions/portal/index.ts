@@ -70,6 +70,18 @@ Deno.serve(async (req) => {
   const helpRequestIdx = pathParts.indexOf("help-request");
   const archiveIdx = pathParts.indexOf("archive");
   const whoamiIdx = pathParts.indexOf("whoami");
+  const startIdx = pathParts.indexOf("start");
+  const claimLeadIdx = pathParts.indexOf("claim-lead");
+
+  // POST /portal/start - Public lead capture (no auth required)
+  if (startIdx > portalIdx && req.method === "POST") {
+    return handleStart(req, corsHeaders);
+  }
+
+  // POST /portal/claim-lead - Claim a lead after auth
+  if (claimLeadIdx > portalIdx && req.method === "POST") {
+    return handleClaimLead(req, corsHeaders);
+  }
 
   // GET /portal/:token/whoami - Check if user is operator (server-verified)
   if (whoamiIdx > portalIdx && req.method === "GET") {
@@ -3543,6 +3555,244 @@ async function handleCreateAccount(
 
   } catch (error) {
     console.error("Create account error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+}
+
+// POST /portal/start - Public lead capture (no auth required)
+async function handleStart(
+  req: Request,
+  corsHeaders: Record<string, string>
+): Promise<Response> {
+  try {
+    const body = await req.json();
+    const { name, email, phone, business_name, utm_source, utm_medium, utm_campaign } = body;
+
+    // Validate required fields
+    if (!email || !business_name) {
+      return new Response(
+        JSON.stringify({ error: "Email and business name are required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid email format" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Check for existing unclaimed lead with same email
+    const normalizedEmail = email.toLowerCase().trim();
+    const { data: existingLead } = await supabase
+      .from("client_leads")
+      .select("id")
+      .eq("email_normalized", normalizedEmail)
+      .is("claimed_by_user_id", null)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    let leadId: string;
+
+    if (existingLead) {
+      // Update existing unclaimed lead
+      const { data: updated, error: updateError } = await supabase
+        .from("client_leads")
+        .update({
+          name: name || null,
+          phone: phone || null,
+          business_name: business_name,
+          utm_source: utm_source || null,
+          utm_medium: utm_medium || null,
+          utm_campaign: utm_campaign || null,
+        })
+        .eq("id", existingLead.id)
+        .select("id")
+        .single();
+
+      if (updateError) {
+        console.error("Lead update error:", updateError);
+        return new Response(
+          JSON.stringify({ error: "Failed to save lead" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      leadId = updated.id;
+      console.log(`Updated existing lead: ${leadId}`);
+    } else {
+      // Create new lead
+      const { data: newLead, error: insertError } = await supabase
+        .from("client_leads")
+        .insert({
+          email,
+          name: name || null,
+          phone: phone || null,
+          business_name,
+          source: "get-started",
+          utm_source: utm_source || null,
+          utm_medium: utm_medium || null,
+          utm_campaign: utm_campaign || null,
+        })
+        .select("id")
+        .single();
+
+      if (insertError) {
+        console.error("Lead insert error:", insertError);
+        return new Response(
+          JSON.stringify({ error: "Failed to save lead" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      leadId = newLead.id;
+      console.log(`Created new lead: ${leadId}`);
+    }
+
+    // Send Telegram notification
+    const telegramBotToken = Deno.env.get("TELEGRAM_BOT_TOKEN");
+    const telegramChatId = Deno.env.get("TELEGRAM_CHAT_ID");
+    if (telegramBotToken && telegramChatId) {
+      const msg = `📥 <b>New Lead</b>\n` +
+        `• <b>Business:</b> ${business_name}\n` +
+        `• <b>Name:</b> ${name || "—"}\n` +
+        `• <b>Email:</b> ${email}\n` +
+        `• <b>Phone:</b> ${phone || "—"}\n` +
+        `• <b>Source:</b> ${utm_source || "direct"}`;
+
+      try {
+        await fetch(`https://api.telegram.org/bot${telegramBotToken}/sendMessage`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            chat_id: telegramChatId,
+            text: msg,
+            parse_mode: "HTML",
+          }),
+        });
+      } catch (e) {
+        console.error("Telegram notification failed:", e);
+      }
+    }
+
+    return new Response(
+      JSON.stringify({ ok: true, lead_id: leadId }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  } catch (error) {
+    console.error("Start error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+}
+
+// POST /portal/claim-lead - Claim a lead after auth (get lead data for prefill)
+async function handleClaimLead(
+  req: Request,
+  corsHeaders: Record<string, string>
+): Promise<Response> {
+  try {
+    // Verify auth
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    const jwt = authHeader.replace("Bearer ", "");
+    const { data: { user }, error: authError } = await supabase.auth.getUser(jwt);
+
+    if (authError || !user) {
+      return new Response(
+        JSON.stringify({ error: "Invalid or expired token" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const body = await req.json();
+    const { lead_id } = body;
+
+    if (!lead_id) {
+      return new Response(
+        JSON.stringify({ error: "lead_id required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Fetch the lead
+    const { data: lead, error: leadError } = await supabase
+      .from("client_leads")
+      .select("*")
+      .eq("id", lead_id)
+      .maybeSingle();
+
+    if (leadError || !lead) {
+      return new Response(
+        JSON.stringify({ error: "Lead not found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Verify email matches (or lead is unclaimed)
+    const userEmail = user.email?.toLowerCase().trim();
+    const leadEmail = lead.email_normalized;
+
+    if (lead.claimed_by_user_id && lead.claimed_by_user_id !== user.id) {
+      return new Response(
+        JSON.stringify({ error: "Lead already claimed by another user" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Claim the lead if not yet claimed
+    if (!lead.claimed_by_user_id) {
+      const { error: claimError } = await supabase
+        .from("client_leads")
+        .update({
+          claimed_by_user_id: user.id,
+          claimed_at: new Date().toISOString(),
+        })
+        .eq("id", lead_id);
+
+      if (claimError) {
+        console.error("Claim error:", claimError);
+        // Non-fatal, still return lead data
+      } else {
+        console.log(`Lead ${lead_id} claimed by user ${user.id}`);
+      }
+    }
+
+    return new Response(
+      JSON.stringify({
+        ok: true,
+        lead: {
+          name: lead.name,
+          email: lead.email,
+          phone: lead.phone,
+          business_name: lead.business_name,
+        },
+      }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  } catch (error) {
+    console.error("Claim lead error:", error);
     return new Response(
       JSON.stringify({ error: "Internal server error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }

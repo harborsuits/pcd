@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,6 +27,7 @@ interface Portal {
 
 export default function PortalHub() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [mode, setMode] = useState<"login" | "signup">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -44,6 +45,17 @@ export default function PortalHub() {
   const [archivedPortals, setArchivedPortals] = useState<Portal[]>([]);
   const [loadingPortals, setLoadingPortals] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
+
+  // Handle prefilled params from /start page
+  useEffect(() => {
+    const prefillEmail = searchParams.get("email");
+    const prefillName = searchParams.get("name");
+    const tab = searchParams.get("tab");
+    
+    if (prefillEmail) setEmail(prefillEmail);
+    if (prefillName) setFullName(prefillName);
+    if (tab === "signup") setMode("signup");
+  }, [searchParams]);
   
   
   // OTP verification state (email verified BEFORE account creation)
