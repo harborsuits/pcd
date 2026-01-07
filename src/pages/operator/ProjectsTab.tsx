@@ -416,7 +416,7 @@ function PhaseBModal({
 
 export function ProjectsTab() {
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
-  const [phaseBProject, setPhaseBProject] = useState<Project | null>(null);
+  
   const [deleteConfirmProject, setDeleteConfirmProject] = useState<Project | null>(null);
   const [pipelineFilter, setPipelineFilter] = useState<PipelineFilter>("all");
   const [serviceTypeFilter, setServiceTypeFilter] = useState<ServiceTypeFilter>("all");
@@ -658,10 +658,10 @@ export function ProjectsTab() {
     }));
   }, [projects]);
 
-  // Check if project needs a nudge (Phase B incomplete)
+  // Check if project needs a nudge (incomplete intake)
   const needsNudge = (project: Project): boolean => {
-    const status = project.intake?.phase_b_status;
-    return status !== "complete" && 
+    const intakeStatus = project.intake?.intake_status;
+    return intakeStatus !== "approved" && 
       ["new", "discovery", "build"].includes(project.pipeline_stage || "new");
   };
 
@@ -881,47 +881,28 @@ export function ProjectsTab() {
                         )}
                       </div>
                       
-                      {/* Row 3: Phase B Progress / Status */}
+                      {/* Row 3: Intake Status */}
                       {(() => {
-                        const progress = getPhaseBProgress(project.intake);
-                        const phaseBStatus = project.intake?.phase_b_status;
+                        const intakeStatus = project.intake?.intake_status;
                         
-                        if (phaseBStatus === "complete") {
+                        if (intakeStatus === "approved") {
                           return (
                             <div className="mt-1.5 flex items-center gap-1.5 text-xs">
                               <span className="flex items-center gap-1 text-green-600 bg-green-500/10 px-2 py-0.5 rounded-full">
                                 <CheckCircle2 className="h-3 w-3" />
-                                Setup Complete
+                                Intake Approved
                               </span>
                             </div>
                           );
                         }
                         
-                        if (phaseBStatus === "in_progress" || (project.intake && progress.completed > 0)) {
-                          const photoPlanLabel = progress.photosPlan === "upload" 
-                            ? `Upload (${project.intake?.phase_b_json?.photosUploaded || 0}/3)`
-                            : progress.photosPlan === "generate" 
-                              ? "Generate"
-                              : progress.photosPlan === "none"
-                                ? "Placeholders"
-                                : null;
-                          
+                        if (intakeStatus === "submitted") {
                           return (
-                            <div className="mt-1.5 flex items-center gap-2 text-xs flex-wrap">
+                            <div className="mt-1.5 flex items-center gap-1.5 text-xs">
                               <span className="flex items-center gap-1 text-amber-600 bg-amber-500/10 px-2 py-0.5 rounded-full">
-                                <Circle className="h-3 w-3" />
-                                Setup: {progress.completed}/4
+                                <Clock className="h-3 w-3" />
+                                Intake Submitted
                               </span>
-                              {photoPlanLabel && (
-                                <span className="text-muted-foreground">
-                                  Photos: {photoPlanLabel}
-                                </span>
-                              )}
-                              {progress.missing.length > 0 && progress.missing.length < 4 && (
-                                <span className="text-muted-foreground hidden sm:inline">
-                                  Missing: {progress.missing.join(", ")}
-                                </span>
-                              )}
                             </div>
                           );
                         }
@@ -932,7 +913,7 @@ export function ProjectsTab() {
                             <div className="mt-1.5 flex items-center gap-1.5 text-xs">
                               <span className="flex items-center gap-1 text-muted-foreground bg-muted/50 px-2 py-0.5 rounded-full">
                                 <AlertCircle className="h-3 w-3" />
-                                Awaiting Setup
+                                Awaiting Intake
                               </span>
                             </div>
                           );
@@ -981,22 +962,6 @@ export function ProjectsTab() {
                         <ExternalLink className="h-3 w-3" />
                         <span className="hidden sm:inline">Workspace</span>
                       </Button>
-                      
-                      {/* 2. Phase B / Discovery button */}
-                      {project.intake?.phase_b_json && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="gap-1 text-xs h-7 px-2"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setPhaseBProject(project);
-                          }}
-                        >
-                          <FileText className="h-3 w-3" />
-                          <span className="hidden sm:inline">Discovery</span>
-                        </Button>
-                      )}
                       
                       {/* Preview Demo removed - source is acquisition channel, not demo indicator */}
                       
@@ -1098,12 +1063,6 @@ export function ProjectsTab() {
         )}
       </CardContent>
       
-      {/* Phase B Details Modal */}
-      <PhaseBModal 
-        project={phaseBProject} 
-        open={!!phaseBProject} 
-        onOpenChange={(open) => !open && setPhaseBProject(null)} 
-      />
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={!!deleteConfirmProject} onOpenChange={(open) => !open && setDeleteConfirmProject(null)}>
