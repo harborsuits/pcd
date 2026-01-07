@@ -867,7 +867,7 @@ export function ProjectsTab() {
                       
                       {/* Demo badge removed - source=request_demo just indicates acquisition channel, not project type */}
                       
-                      {/* Row 3: Meta info - simplified on mobile */}
+                      {/* Row 2: Status & Meta */}
                       <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm text-muted-foreground flex-wrap">
                         <span className="flex items-center gap-1">
                           <Clock className="h-3 w-3" />
@@ -879,14 +879,9 @@ export function ProjectsTab() {
                             {project.unread_count}
                           </span>
                         )}
-                        {project.contact_phone && (
-                          <span className="truncate max-w-[120px] sm:max-w-[150px]">
-                            {project.contact_phone}
-                          </span>
-                        )}
                       </div>
                       
-                      {/* Row 4: Phase B Progress */}
+                      {/* Row 3: Phase B Progress / Status */}
                       {(() => {
                         const progress = getPhaseBProgress(project.intake);
                         const phaseBStatus = project.intake?.phase_b_status;
@@ -946,15 +941,25 @@ export function ProjectsTab() {
                         return null;
                       })()}
                       
-                      {/* Row 5: Email - own row on mobile for readability */}
-                      {project.contact_email && (
-                        <div className="mt-1 text-xs sm:text-sm text-muted-foreground truncate">
-                          {project.contact_email}
+                      {/* Row 4: Contact Info - compact inline display */}
+                      {(project.contact_name || project.contact_email || project.contact_phone) && (
+                        <div className="mt-2 text-xs text-muted-foreground bg-muted/30 rounded-md px-2.5 py-1.5 space-y-0.5">
+                          {project.contact_name && (
+                            <div className="font-medium text-foreground/80">{project.contact_name}</div>
+                          )}
+                          <div className="flex flex-wrap gap-x-3 gap-y-0.5">
+                            {project.contact_email && (
+                              <span className="truncate max-w-[200px]">{project.contact_email}</span>
+                            )}
+                            {project.contact_phone && (
+                              <span>{project.contact_phone}</span>
+                            )}
+                          </div>
                         </div>
                       )}
                       
-                      {/* Notes preview */}
-                      {project.notes && (
+                      {/* Row 5: Notes preview - only if notes exist and aren't just contact info */}
+                      {project.notes && !project.notes.toLowerCase().includes('contact:') && (
                         <div className="mt-2 text-xs text-muted-foreground bg-muted/50 rounded px-2 py-1 whitespace-pre-line line-clamp-2">
                           {project.notes}
                         </div>
