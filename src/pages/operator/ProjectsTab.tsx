@@ -865,15 +865,7 @@ export function ProjectsTab() {
                         )}
                       </div>
                       
-                      {/* Row 2: Demo request badge (mobile: own row) */}
-                      {project.source === "request_demo" && (
-                        <div className="mb-1.5">
-                          <Badge variant="outline" className="text-xs gap-1">
-                            <Sparkles className="h-3 w-3" />
-                            Demo Request
-                          </Badge>
-                        </div>
-                      )}
+                      {/* Demo badge removed - source=request_demo just indicates acquisition channel, not project type */}
                       
                       {/* Row 3: Meta info - simplified on mobile */}
                       <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm text-muted-foreground flex-wrap">
@@ -969,44 +961,57 @@ export function ProjectsTab() {
                       )}
                     </div>
                     
-                    {/* Actions - simplified on mobile, handle overflow */}
+                    {/* Actions - reordered: Workspace first, Archive last */}
                     <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0 flex-wrap justify-end max-w-[50%] sm:max-w-none overflow-hidden">
-                      {/* Archive/Unarchive button - FIRST for visibility */}
+                      {/* 1. Workspace button - PRIMARY */}
                       <Button
-                        variant="outline"
+                        variant="default"
                         size="sm"
-                        className={`gap-1 text-xs h-7 px-2 ${project.is_archived ? 'text-green-600 border-green-300 hover:bg-green-50' : 'text-muted-foreground hover:text-destructive hover:border-destructive'}`}
-                        disabled={archiveMutation.isPending}
-                        onClick={(e) => handleArchive(e, project)}
-                        title={project.is_archived ? "Restore project" : "Archive project"}
+                        className="gap-1 text-xs h-7 px-2"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          window.open(`/w/${project.project_token}`, "_blank");
+                        }}
                       >
-                        {project.is_archived ? (
-                          <>
-                            <ArchiveRestore className="h-3 w-3" />
-                            <span className="hidden sm:inline">Restore</span>
-                          </>
-                        ) : (
-                          <>
-                            <Archive className="h-3 w-3" />
-                            <span className="hidden sm:inline">Archive</span>
-                          </>
-                        )}
+                        <ExternalLink className="h-3 w-3" />
+                        <span className="hidden sm:inline">Workspace</span>
                       </Button>
-                      {/* Permanent delete button - only for archived projects */}
-                      {project.is_archived && (
+                      
+                      {/* 2. Phase B / Discovery button */}
+                      {project.intake?.phase_b_json && (
                         <Button
                           variant="outline"
                           size="sm"
-                          className="gap-1 text-xs h-7 px-2 text-destructive border-destructive/50 hover:bg-destructive hover:text-destructive-foreground"
-                          disabled={deleteMutation.isPending}
-                          onClick={(e) => handleDelete(e, project)}
-                          title="Permanently delete project"
+                          className="gap-1 text-xs h-7 px-2"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setPhaseBProject(project);
+                          }}
                         >
-                          <Trash2 className="h-3 w-3" />
-                          <span className="hidden sm:inline">Delete</span>
+                          <FileText className="h-3 w-3" />
+                          <span className="hidden sm:inline">Discovery</span>
                         </Button>
                       )}
-                      {/* Nudge dropdown - show when Phase B incomplete */}
+                      
+                      {/* Preview Demo removed - source is acquisition channel, not demo indicator */}
+                      
+                      {/* 4. Advance stage button */}
+                      {getNextStage(project.pipeline_stage) && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-1 text-xs h-7 px-2"
+                          disabled={advanceStageMutation.isPending}
+                          onClick={(e) => handleAdvanceStage(e, project)}
+                        >
+                          <ArrowRight className="h-3 w-3" />
+                          <span className="hidden sm:inline">
+                            {STAGE_CONFIG[getNextStage(project.pipeline_stage)!]?.label}
+                          </span>
+                        </Button>
+                      )}
+                      
+                      {/* 5. Nudge dropdown - show when Phase B incomplete */}
                       {needsNudge(project) && (
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -1041,64 +1046,42 @@ export function ProjectsTab() {
                           </DropdownMenuContent>
                         </DropdownMenu>
                       )}
-                      {/* Phase B Details button */}
-                      {project.intake?.phase_b_json && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="gap-1 text-xs h-7 px-2"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setPhaseBProject(project);
-                          }}
-                        >
-                          <FileText className="h-3 w-3" />
-                          <span className="hidden sm:inline">Phase B</span>
-                        </Button>
-                      )}
-                      {/* Advance stage button */}
-                      {getNextStage(project.pipeline_stage) && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="gap-1 text-xs h-7 px-2"
-                          disabled={advanceStageMutation.isPending}
-                          onClick={(e) => handleAdvanceStage(e, project)}
-                        >
-                          <ArrowRight className="h-3 w-3" />
-                          <span className="hidden sm:inline">
-                            {STAGE_CONFIG[getNextStage(project.pipeline_stage)!]?.label}
-                          </span>
-                        </Button>
-                      )}
-                      {/* Preview demo button - hidden on mobile, shown on hover */}
-                      {project.source === "request_demo" && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="gap-1.5 hidden sm:flex"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            window.open(`/d/${project.project_token}/${project.business_slug}`, "_blank");
-                          }}
-                        >
-                          <Eye className="h-4 w-4" />
-                          <span className="hidden md:inline">Preview Demo</span>
-                        </Button>
-                      )}
-                      {/* Workspace button */}
+                      
+                      {/* 6. Archive/Unarchive button - LAST (destructive) */}
                       <Button
-                        variant="outline"
+                        variant="ghost"
                         size="sm"
-                        className="gap-1 text-xs h-7 px-2 hidden sm:flex"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          window.open(`/w/${project.project_token}`, "_blank");
-                        }}
+                        className={`gap-1 text-xs h-7 px-2 ${project.is_archived ? 'text-green-600 hover:bg-green-50' : 'text-muted-foreground hover:text-destructive'}`}
+                        disabled={archiveMutation.isPending}
+                        onClick={(e) => handleArchive(e, project)}
+                        title={project.is_archived ? "Restore project" : "Archive project"}
                       >
-                        <ExternalLink className="h-3 w-3" />
-                        <span className="hidden md:inline">Workspace</span>
+                        {project.is_archived ? (
+                          <>
+                            <ArchiveRestore className="h-3 w-3" />
+                            <span className="hidden sm:inline">Restore</span>
+                          </>
+                        ) : (
+                          <>
+                            <Archive className="h-3 w-3" />
+                          </>
+                        )}
                       </Button>
+                      
+                      {/* Permanent delete button - only for archived projects */}
+                      {project.is_archived && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="gap-1 text-xs h-7 px-2 text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                          disabled={deleteMutation.isPending}
+                          onClick={(e) => handleDelete(e, project)}
+                          title="Permanently delete project"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      )}
+                      
                       <ChevronRight className="h-4 w-4 text-muted-foreground" />
                     </div>
                   </div>
