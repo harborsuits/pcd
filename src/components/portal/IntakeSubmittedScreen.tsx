@@ -1,7 +1,5 @@
-import { useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, ArrowRight } from "lucide-react";
+import { CheckCircle2 } from "lucide-react";
 import { ClientLayout } from "@/components/portal/ClientLayout";
 import { BrandCard } from "@/components/portal/BrandCard";
 
@@ -10,9 +8,7 @@ interface IntakeSubmittedScreenProps {
   projectToken: string;
 }
 
-export function IntakeSubmittedScreen({ businessName, projectToken }: IntakeSubmittedScreenProps) {
-  const navigate = useNavigate();
-
+export function IntakeSubmittedScreen({ businessName }: IntakeSubmittedScreenProps) {
   return (
     <ClientLayout
       title={businessName}
@@ -46,22 +42,12 @@ export function IntakeSubmittedScreen({ businessName, projectToken }: IntakeSubm
           <ul className="text-muted-foreground space-y-1.5 list-none">
             <li>• We configure your AI based on your answers</li>
             <li>• You'll get a notification when testing begins (usually 24–48 hours)</li>
-            <li>• Track status and make updates in your client portal</li>
+            <li>• Track status and make updates right here</li>
           </ul>
         </div>
-
-        {/* Primary CTA - Go to portal */}
-        <Button 
-          onClick={() => navigate(`/p/${projectToken}`)}
-          className="w-full"
-          size="lg"
-        >
-          Go to your client portal
-          <ArrowRight className="ml-2 h-4 w-4" />
-        </Button>
         
-        <p className="text-xs text-muted-foreground mt-3">
-          You can review your setup and see status updates there.
+        <p className="text-xs text-muted-foreground">
+          This page will update as we make progress. You can close it and come back anytime.
         </p>
       </BrandCard>
     </ClientLayout>

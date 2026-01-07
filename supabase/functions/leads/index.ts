@@ -1748,6 +1748,8 @@ async function handleRequestDemo(req: Request): Promise<Response> {
         service_type: service_type || "demo",
         status: "lead",
         notes: projectNotes,
+        // Set AI status for AI receptionist projects
+        ai_trial_status: (service_type === "ai_receptionist" || service_type === "both") ? "intake_received" : null,
       })
       .select("id, project_token")
       .single();
