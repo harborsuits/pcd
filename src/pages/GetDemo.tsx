@@ -65,6 +65,13 @@ interface FormData {
   afterHoursAction: AfterHoursAction;
   textHandling: string[];
   
+  // AI Receptionist fields - Customer Knowledge
+  teamNames: string;
+  customerFaqs: string;
+  doNotSay: string;
+  guaranteesPolicies: string;
+  businessPersonality: string[];
+  
   // AI Receptionist fields - Ops
   leadFields: string[];
   qualifiedLeadRules: string;
@@ -110,6 +117,11 @@ const GetDemo = () => {
     callHandling: "",
     afterHoursAction: "",
     textHandling: [],
+    teamNames: "",
+    customerFaqs: "",
+    doNotSay: "",
+    guaranteesPolicies: "",
+    businessPersonality: [],
     leadFields: [],
     qualifiedLeadRules: "",
     serviceConstraints: "",
@@ -161,6 +173,7 @@ const GetDemo = () => {
     
     if (formData.serviceType === "ai" || formData.serviceType === "both") {
       steps.push({ id: "ai-basics", label: "AI Basics" });
+      steps.push({ id: "ai-knowledge", label: "Customer Info" });
       steps.push({ id: "ai-handling", label: "Call Handling" });
       steps.push({ id: "ai-ops", label: "Operations" });
     }
@@ -189,6 +202,8 @@ const GetDemo = () => {
         return formData.businessPhone.trim() && formData.businessHours.trim() && 
                formData.servicesOffered.trim() && formData.escalationNumber.trim() && 
                formData.emergencyRules.trim() && !!formData.preferredTone;
+      case "ai-knowledge":
+        return true; // All fields optional on this step
       case "ai-handling":
         return !!formData.callHandling && !!formData.afterHoursAction;
       case "ai-ops":
@@ -246,6 +261,12 @@ const GetDemo = () => {
           call_handling: formData.callHandling || null,
           after_hours_action: formData.afterHoursAction || null,
           text_handling: formData.textHandling.length > 0 ? formData.textHandling : null,
+          // AI customer knowledge fields
+          team_names: formData.teamNames.trim() || null,
+          customer_faqs: formData.customerFaqs.trim() || null,
+          do_not_say: formData.doNotSay.trim() || null,
+          guarantees_policies: formData.guaranteesPolicies.trim() || null,
+          business_personality: formData.businessPersonality.length > 0 ? formData.businessPersonality : null,
           // AI ops fields
           lead_fields: formData.leadFields.length > 0 ? formData.leadFields : null,
           qualified_lead_rules: formData.qualifiedLeadRules.trim() || null,
@@ -604,12 +625,12 @@ const GetDemo = () => {
   );
 
   // Helper to toggle array field values
-  const toggleArrayField = (field: "textHandling" | "leadFields" | "handoffTriggers", value: string) => {
+  const toggleArrayField = (field: "textHandling" | "leadFields" | "handoffTriggers" | "businessPersonality", value: string) => {
     setFormData(prev => ({
       ...prev,
-      [field]: prev[field].includes(value)
-        ? prev[field].filter((v: string) => v !== value)
-        : [...prev[field], value]
+      [field]: (prev[field] as string[]).includes(value)
+        ? (prev[field] as string[]).filter((v: string) => v !== value)
+        : [...(prev[field] as string[]), value]
     }));
   };
 
@@ -729,6 +750,100 @@ const GetDemo = () => {
             rows={3}
             className="resize-none"
           />
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderAIKnowledgeStep = () => (
+    <div className="space-y-6">
+      <div>
+        <h2 className="font-serif text-2xl font-bold mb-2">Business info for customers</h2>
+        <p className="text-muted-foreground">This helps the AI sound accurate and confident.</p>
+      </div>
+      
+      <div className="space-y-5">
+        <div className="space-y-2">
+          <Label htmlFor="teamNames">Who might customers speak to or hear about?</Label>
+          <Textarea
+            id="teamNames"
+            placeholder="John – Owner&#10;Sarah – Office Manager&#10;Mike – Lead Technician"
+            value={formData.teamNames}
+            onChange={(e) => updateField("teamNames", e.target.value)}
+            disabled={isLoading}
+            rows={3}
+            className="resize-none"
+          />
+          <p className="text-xs text-muted-foreground">AI can say "I'll pass this to Mike" — sounds human instantly</p>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="customerFaqs">What do customers ask all the time?</Label>
+          <Textarea
+            id="customerFaqs"
+            placeholder="Do you offer emergency service?&#10;Do you work weekends?&#10;Do you give free estimates?"
+            value={formData.customerFaqs}
+            onChange={(e) => updateField("customerFaqs", e.target.value)}
+            disabled={isLoading}
+            rows={3}
+            className="resize-none"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="doNotSay">Anything the AI should avoid saying?</Label>
+          <Textarea
+            id="doNotSay"
+            placeholder="Don't quote prices&#10;Don't promise same-day service&#10;Don't mention competitors"
+            value={formData.doNotSay}
+            onChange={(e) => updateField("doNotSay", e.target.value)}
+            disabled={isLoading}
+            rows={3}
+            className="resize-none"
+          />
+          <p className="text-xs text-muted-foreground">Prevents brand damage</p>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="guaranteesPolicies">Any guarantees or policies worth mentioning?</Label>
+          <Textarea
+            id="guaranteesPolicies"
+            placeholder="Licensed & insured&#10;Satisfaction guarantee&#10;No weekend fees&#10;Family-owned"
+            value={formData.guaranteesPolicies}
+            onChange={(e) => updateField("guaranteesPolicies", e.target.value)}
+            disabled={isLoading}
+            rows={3}
+            className="resize-none"
+          />
+          <p className="text-xs text-muted-foreground">Becomes part of the AI's default pitch</p>
+        </div>
+
+        <div className="space-y-3">
+          <Label>How should the business feel to customers?</Label>
+          <div className="grid grid-cols-2 gap-2">
+            {[
+              { value: "family_owned", label: "Family-owned & personal" },
+              { value: "fast", label: "Fast & no-nonsense" },
+              { value: "calm", label: "Calm & professional" },
+              { value: "friendly", label: "Friendly & casual" },
+            ].map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => toggleArrayField("businessPersonality", opt.value)}
+                className={cn(
+                  "flex items-center space-x-2 p-3 rounded-lg border text-left text-sm transition-colors",
+                  formData.businessPersonality.includes(opt.value)
+                    ? "border-primary bg-primary/5"
+                    : "border-border hover:bg-secondary/50"
+                )}
+              >
+                <Checkbox checked={formData.businessPersonality.includes(opt.value)} />
+                <span>{opt.label}</span>
+              </button>
+            ))}
+          </div>
+          <p className="text-xs text-muted-foreground">Guides phrasing, not just tone</p>
         </div>
       </div>
     </div>
@@ -1062,6 +1177,8 @@ const GetDemo = () => {
         return renderBrandStep();
       case "ai-basics":
         return renderAIBasicsStep();
+      case "ai-knowledge":
+        return renderAIKnowledgeStep();
       case "ai-handling":
         return renderAIHandlingStep();
       case "ai-ops":
