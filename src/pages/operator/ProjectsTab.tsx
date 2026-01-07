@@ -438,17 +438,26 @@ export function ProjectsTab() {
   }, [selectedProject, setCurrentProjectToken, setCurrentProjectName, registerCloseProject]);
 
   // Fetch all projects with intake data - always include archived for proper filtering
-  const { data: projectsData, isLoading, refetch } = useQuery({
+  const { data: projectsData, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["admin-projects"],
     queryFn: async () => {
+      console.log("[ProjectsTab] Fetching projects...");
       const res = await adminFetch("/admin/projects?includeArchived=true");
-      if (!res.ok) throw new Error("Failed to fetch projects");
-      return res.json() as Promise<{ projects: Project[] }>;
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        console.error("[ProjectsTab] Fetch failed:", res.status, errorData);
+        throw new Error(errorData.message || "Failed to fetch projects");
+      }
+      const data = await res.json() as { projects: Project[] };
+      console.log("[ProjectsTab] Fetched", data.projects?.length, "projects");
+      return data;
     },
     refetchInterval: 15000, // 15 second refresh
     retry: (failureCount, error) => {
       // Don't retry on auth errors
-      if (error?.message?.includes("Admin key invalid")) return false;
+      if (error?.message?.includes("Admin key invalid") || 
+          error?.message?.includes("authentication") ||
+          error?.message?.includes("Session expired")) return false;
       return failureCount < 3;
     },
   });
@@ -814,6 +823,15 @@ export function ProjectsTab() {
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
               </div>
+            ) : isError ? (
+              <div className="text-center py-12 text-muted-foreground">
+                <AlertCircle className="h-10 w-10 mx-auto mb-3 text-destructive opacity-70" />
+                <p className="text-destructive mb-2">Failed to load projects</p>
+                <p className="text-sm mb-4">{error?.message || "Unknown error"}</p>
+                <Button variant="outline" size="sm" onClick={() => refetch()}>
+                  Try Again
+                </Button>
+              </div>
             ) : (
               <KanbanBoard
                 projects={kanbanProjects}
@@ -829,6 +847,15 @@ export function ProjectsTab() {
           {isLoading ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : isError ? (
+            <div className="text-center py-12 text-muted-foreground">
+              <AlertCircle className="h-10 w-10 mx-auto mb-3 text-destructive opacity-70" />
+              <p className="text-destructive mb-2">Failed to load projects</p>
+              <p className="text-sm mb-4">{error?.message || "Unknown error"}</p>
+              <Button variant="outline" size="sm" onClick={() => refetch()}>
+                Try Again
+              </Button>
             </div>
           ) : filteredProjects.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
