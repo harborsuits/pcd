@@ -53,6 +53,7 @@ export default function OperatorLayout() {
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [currentProjectToken, setCurrentProjectToken] = useState<string | null>(null);
   const [currentProjectName, setCurrentProjectName] = useState<string | null>(null);
+  const [isSignUp, setIsSignUp] = useState(false);
   const closeProjectRef = useRef<() => void>(() => {});
   const queryClient = useQueryClient();
 
@@ -184,6 +185,40 @@ export default function OperatorLayout() {
     setIsValidating(false);
   };
 
+  const handleSignUp = async () => {
+    if (!email.trim() || !password.trim()) return;
+    if (password.length < 6) {
+      setLoginError("Password must be at least 6 characters");
+      return;
+    }
+    
+    setIsValidating(true);
+    setLoginError(null);
+    
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: `${window.location.origin}/operator`,
+      },
+    });
+    
+    if (error) {
+      setLoginError(error.message);
+      setIsValidating(false);
+      return;
+    }
+
+    if (data.user) {
+      // Account created, now try to sign in
+      toast.success("Account created! You can now sign in.");
+      setIsSignUp(false);
+      setLoginError("Account created. Please sign in, then ask me to grant you admin access.");
+    }
+    
+    setIsValidating(false);
+  };
+
   const handleLogout = async () => {
     await signOutAdmin();
     setIsAuthed(false);
@@ -226,7 +261,7 @@ export default function OperatorLayout() {
                   placeholder="Email"
                   value={email}
                   onChange={(e) => { setEmail(e.target.value); setLoginError(null); }}
-                  onKeyDown={(e) => e.key === "Enter" && !isValidating && handleLogin()}
+                  onKeyDown={(e) => e.key === "Enter" && !isValidating && (isSignUp ? handleSignUp() : handleLogin())}
                   disabled={isValidating}
                 />
               </div>
@@ -236,18 +271,31 @@ export default function OperatorLayout() {
                   placeholder="Password"
                   value={password}
                   onChange={(e) => { setPassword(e.target.value); setLoginError(null); }}
-                  onKeyDown={(e) => e.key === "Enter" && !isValidating && handleLogin()}
+                  onKeyDown={(e) => e.key === "Enter" && !isValidating && (isSignUp ? handleSignUp() : handleLogin())}
                   disabled={isValidating}
                 />
               </div>
               {loginError && <p className="text-sm text-destructive">{loginError}</p>}
-              <Button className="w-full" onClick={handleLogin} disabled={isValidating}>
+              <Button 
+                className="w-full" 
+                onClick={isSignUp ? handleSignUp : handleLogin} 
+                disabled={isValidating}
+              >
                 {isValidating ? (
-                  <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Signing in...</>
+                  <><Loader2 className="h-4 w-4 mr-2 animate-spin" />{isSignUp ? "Creating account..." : "Signing in..."}</>
                 ) : (
-                  <><Rocket className="h-4 w-4 mr-2" />Sign In</>
+                  <><Rocket className="h-4 w-4 mr-2" />{isSignUp ? "Create Account" : "Sign In"}</>
                 )}
               </Button>
+              <div className="text-center">
+                <button
+                  type="button"
+                  className="text-sm text-muted-foreground hover:text-foreground underline"
+                  onClick={() => { setIsSignUp(!isSignUp); setLoginError(null); }}
+                >
+                  {isSignUp ? "Already have an account? Sign in" : "Need an account? Sign up"}
+                </button>
+              </div>
             </CardContent>
           </Card>
         </div>
