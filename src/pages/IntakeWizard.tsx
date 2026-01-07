@@ -224,6 +224,63 @@ const GetDemo = () => {
   const steps = getSteps();
   const currentStepId = steps[currentStep]?.id;
 
+  // Validation helpers
+  const isValidPhone = (phone: string) => {
+    if (!phone.trim()) return true; // Empty is handled by required check
+    // Must have at least 10 digits and contain letters is suspicious
+    const digitsOnly = phone.replace(/\D/g, '');
+    const hasEnoughDigits = digitsOnly.length >= 10 && digitsOnly.length <= 15;
+    const isMostlyNumbers = phone.replace(/[\s\-().+]/g, '').length > 0;
+    return hasEnoughDigits && isMostlyNumbers;
+  };
+
+  const isValidBusinessHours = (hours: string) => {
+    if (!hours.trim()) return true; // Empty is handled by required check
+    // Should contain time-related words or patterns, not just random numbers
+    const hasTimeIndicators = /\d/.test(hours) && (/am|pm|:\d{2}|morning|afternoon|evening|mon|tue|wed|thu|fri|sat|sun|week|day|hour|open|close|-/i.test(hours));
+    const isNotJustNumbers = !/^\d+$/.test(hours.replace(/\s/g, ''));
+    return hasTimeIndicators && isNotJustNumbers;
+  };
+
+  const isValidTextContent = (text: string, minWords: number = 1) => {
+    if (!text.trim()) return true; // Empty is handled by required check
+    // Should contain actual words, not just random characters/numbers
+    const words = text.trim().split(/\s+/);
+    const hasRealWords = words.some(w => /^[a-zA-Z]{2,}/.test(w));
+    const isNotJustNumbers = !/^\d+$/.test(text.replace(/\s/g, ''));
+    return hasRealWords && isNotJustNumbers && words.length >= minWords;
+  };
+
+  // Track which fields have been touched
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const markTouched = (field: string) => setTouched(prev => ({ ...prev, [field]: true }));
+
+  // Field-level validation errors
+  const getFieldError = (field: string): string | null => {
+    if (!touched[field]) return null;
+    
+    switch (field) {
+      case 'businessPhone':
+        if (!formData.businessPhone.trim()) return 'Phone number is required';
+        if (!isValidPhone(formData.businessPhone)) return 'Please enter a valid phone number (e.g. 207-555-1234)';
+        return null;
+      case 'businessHours':
+        if (!formData.businessHours.trim()) return 'Business hours are required';
+        if (!isValidBusinessHours(formData.businessHours)) return 'Please enter valid hours (e.g. Mon-Fri 8am-5pm)';
+        return null;
+      case 'servicesOffered':
+        if (!formData.servicesOffered.trim()) return 'Services are required';
+        if (!isValidTextContent(formData.servicesOffered, 1)) return 'Please describe your services in words';
+        return null;
+      case 'escalationNumber':
+        if (!formData.escalationNumber.trim()) return 'Escalation number is required';
+        if (!isValidPhone(formData.escalationNumber)) return 'Please enter a valid phone number';
+        return null;
+      default:
+        return null;
+    }
+  };
+
   const canProceed = () => {
     switch (currentStepId) {
       case "choose":
@@ -240,9 +297,16 @@ const GetDemo = () => {
       case "ai-coverage":
         return !!formData.callHandling && !!formData.handoffMethod;
       case "ai-operations":
-        return formData.businessPhone.trim() && formData.businessHours.trim() && formData.servicesOffered.trim();
+        return (
+          formData.businessPhone.trim() && 
+          isValidPhone(formData.businessPhone) &&
+          formData.businessHours.trim() && 
+          isValidBusinessHours(formData.businessHours) &&
+          formData.servicesOffered.trim() &&
+          isValidTextContent(formData.servicesOffered)
+        );
       case "ai-emergency":
-        return formData.escalationNumber.trim() && formData.emergencyTriggers.length > 0;
+        return formData.escalationNumber.trim() && isValidPhone(formData.escalationNumber) && formData.emergencyTriggers.length > 0;
       case "ai-leads":
         return formData.leadFields.length > 0;
       case "ai-voice":
@@ -910,9 +974,15 @@ const GetDemo = () => {
             placeholder="(207) 555-1234"
             value={formData.businessPhone}
             onChange={(e) => updateField("businessPhone", e.target.value)}
+            onBlur={() => markTouched("businessPhone")}
             disabled={isLoading}
+            className={getFieldError("businessPhone") ? "border-destructive" : ""}
           />
-          <p className="text-xs text-muted-foreground">The number customers already call</p>
+          {getFieldError("businessPhone") ? (
+            <p className="text-xs text-destructive">{getFieldError("businessPhone")}</p>
+          ) : (
+            <p className="text-xs text-muted-foreground">The number customers already call</p>
+          )}
         </div>
 
         <div className="space-y-2">
@@ -922,8 +992,13 @@ const GetDemo = () => {
             placeholder="e.g. Mon-Fri 8am-5pm, Sat 9am-12pm"
             value={formData.businessHours}
             onChange={(e) => updateField("businessHours", e.target.value)}
+            onBlur={() => markTouched("businessHours")}
             disabled={isLoading}
+            className={getFieldError("businessHours") ? "border-destructive" : ""}
           />
+          {getFieldError("businessHours") && (
+            <p className="text-xs text-destructive">{getFieldError("businessHours")}</p>
+          )}
         </div>
 
         <div className="space-y-2">
@@ -933,10 +1008,14 @@ const GetDemo = () => {
             placeholder="e.g. Emergency plumbing, Water heater repair, Drain cleaning..."
             value={formData.servicesOffered}
             onChange={(e) => updateField("servicesOffered", e.target.value)}
+            onBlur={() => markTouched("servicesOffered")}
             disabled={isLoading}
             rows={3}
-            className="resize-none"
+            className={cn("resize-none", getFieldError("servicesOffered") && "border-destructive")}
           />
+          {getFieldError("servicesOffered") && (
+            <p className="text-xs text-destructive">{getFieldError("servicesOffered")}</p>
+          )}
         </div>
 
         <div className="space-y-2">
@@ -987,9 +1066,15 @@ const GetDemo = () => {
             placeholder="(207) 555-9999"
             value={formData.escalationNumber}
             onChange={(e) => updateField("escalationNumber", e.target.value)}
+            onBlur={() => markTouched("escalationNumber")}
             disabled={isLoading}
+            className={getFieldError("escalationNumber") ? "border-destructive" : ""}
           />
-          <p className="text-xs text-muted-foreground">Where emergencies / handoffs should go</p>
+          {getFieldError("escalationNumber") ? (
+            <p className="text-xs text-destructive">{getFieldError("escalationNumber")}</p>
+          ) : (
+            <p className="text-xs text-muted-foreground">Where emergencies / handoffs should go</p>
+          )}
         </div>
 
         <div className="space-y-3">
