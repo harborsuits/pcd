@@ -212,6 +212,13 @@ Deno.serve(async (req) => {
     return handleAITrialSetup(req, token, corsHeaders);
   }
 
+  // POST /portal/:token/create-account - Create auth user account for client
+  const createAccountIdx = pathParts.indexOf("create-account");
+  if (createAccountIdx > portalIdx && req.method === "POST") {
+    const token = pathParts[portalIdx + 1];
+    return handleCreateAccount(req, token, corsHeaders);
+  }
+
   if (req.method !== "GET") {
     return new Response(
       JSON.stringify({ error: "Method not allowed" }),
@@ -3349,6 +3356,202 @@ async function handleAITrialSetup(
 
   } catch (error) {
     console.error("AI trial setup error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+}
+
+// POST /portal/:token/create-account - Create auth user account for client portal access
+async function handleCreateAccount(
+  req: Request,
+  token: string,
+  corsHeaders: Record<string, string>
+): Promise<Response> {
+  try {
+    // Validate token format
+    if (!isValidToken(token)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid token" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Parse request body
+    let body: { email?: string; password?: string; name?: string };
+    try {
+      body = await req.json();
+    } catch {
+      return new Response(
+        JSON.stringify({ error: "Invalid JSON body" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const { email, password, name } = body;
+
+    if (!email || !password) {
+      return new Response(
+        JSON.stringify({ error: "Email and password are required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Validate password length
+    if (password.length < 8) {
+      return new Response(
+        JSON.stringify({ error: "Password must be at least 8 characters" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Verify project exists and matches the email in project_clients
+    const { data: project, error: projectError } = await supabase
+      .from("projects")
+      .select("id, project_token, business_name, contact_email, owner_user_id")
+      .eq("project_token", token)
+      .is("deleted_at", null)
+      .maybeSingle();
+
+    if (projectError || !project) {
+      console.error("Project not found:", projectError);
+      return new Response(
+        JSON.stringify({ error: "Project not found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Verify the email matches project contact or a project_clients record
+    const { data: clientRecord, error: clientError } = await supabase
+      .from("project_clients")
+      .select("id, email")
+      .eq("project_token", token)
+      .eq("email", email.toLowerCase().trim())
+      .maybeSingle();
+
+    // Check if email matches project contact or client record
+    const emailMatches = 
+      project.contact_email?.toLowerCase() === email.toLowerCase().trim() ||
+      clientRecord?.email?.toLowerCase() === email.toLowerCase().trim();
+
+    if (!emailMatches) {
+      console.log(`Email mismatch: ${email} not found for project ${token}`);
+      return new Response(
+        JSON.stringify({ error: "Email does not match project records" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Check if user already exists by trying to get user by email
+    const { data: existingUsers } = await supabase.auth.admin.listUsers({ perPage: 1000 });
+    const existingUser = existingUsers?.users?.find(
+      (u) => u.email?.toLowerCase() === email.toLowerCase().trim()
+    );
+
+    if (existingUser) {
+      // User already exists - just link them to the project
+      console.log(`User ${email} already exists, linking to project`);
+
+      // Update project owner if not set
+      if (!project.owner_user_id) {
+        await supabase
+          .from("projects")
+          .update({ owner_user_id: existingUser.id })
+          .eq("id", project.id);
+      }
+
+      // Update client record invite status
+      if (clientRecord) {
+        await supabase
+          .from("project_clients")
+          .update({ invite_status: "accepted" })
+          .eq("id", clientRecord.id);
+      }
+
+      return new Response(
+        JSON.stringify({ 
+          ok: true, 
+          message: "Account already exists. Please sign in with your existing password.",
+          existing: true 
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Create new auth user
+    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+      email: email.toLowerCase().trim(),
+      password,
+      email_confirm: true, // Auto-confirm since they just went through intake
+      user_metadata: {
+        name: name || undefined,
+        project_token: token,
+        business_name: project.business_name,
+      },
+    });
+
+    if (authError) {
+      console.error("Auth user creation error:", authError);
+      return new Response(
+        JSON.stringify({ error: authError.message || "Failed to create account" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const userId = authData.user.id;
+    console.log(`Created auth user ${userId} for ${email}`);
+
+    // Link user to project as owner
+    const { error: linkError } = await supabase
+      .from("projects")
+      .update({ 
+        owner_user_id: userId,
+        email_verified: true,
+      })
+      .eq("id", project.id);
+
+    if (linkError) {
+      console.error("Failed to link user to project:", linkError);
+      // Non-fatal - user was created
+    }
+
+    // Update client record invite status
+    if (clientRecord) {
+      await supabase
+        .from("project_clients")
+        .update({ invite_status: "accepted" })
+        .eq("id", clientRecord.id);
+    }
+
+    // Log the event
+    await supabase.from("project_events").insert({
+      project_token: token,
+      event_name: "client_account_created",
+      metadata: { 
+        user_id: userId,
+        email: email.toLowerCase().trim(),
+        business_name: project.business_name 
+      }
+    });
+
+    console.log(`Account created and linked for project ${token}`);
+
+    return new Response(
+      JSON.stringify({ 
+        ok: true, 
+        message: "Account created successfully",
+        user_id: userId 
+      }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+
+  } catch (error) {
+    console.error("Create account error:", error);
     return new Response(
       JSON.stringify({ error: "Internal server error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }

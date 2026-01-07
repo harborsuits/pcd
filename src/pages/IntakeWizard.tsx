@@ -336,15 +336,22 @@ const GetDemo = () => {
           description: "Redirecting you to your personalized demo...",
         });
         navigate(data.demo_url);
-      } else if (data?.project_token && (formData.serviceType === "ai" || formData.serviceType === "both")) {
-        // AI receptionist - redirect to client portal
+      } else if (data?.project_token && formData.email) {
+        // Non-demo service types with email - redirect to create password page
+        // This allows the client to set up their portal account
         toast({
-          title: "You're all set!",
-          description: "Redirecting you to your project portal...",
+          title: "Almost there!",
+          description: "Let's set up your portal access...",
         });
-        navigate(`/p/${data.project_token}`);
+        const params = new URLSearchParams({
+          token: data.project_token,
+          email: formData.email.trim(),
+          name: formData.yourName?.trim() || "",
+          business: formData.businessName.trim(),
+        });
+        navigate(`/create-password?${params.toString()}`);
       } else if (data?.project_token) {
-        // Website or other - redirect to portal
+        // Fallback for projects without email - direct to portal
         toast({
           title: getSuccessTitle(),
           description: getSuccessDescription(),
