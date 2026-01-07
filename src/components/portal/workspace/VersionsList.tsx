@@ -40,11 +40,11 @@ export function VersionsList({ versions, selectedId, onSelect }: VersionsListPro
   }
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="flex flex-col flex-shrink-0 max-h-[50%]">
       <div className="px-4 py-3 border-b border-border">
         <h3 className="text-sm font-semibold text-foreground">Versions</h3>
       </div>
-      <ScrollArea className="flex-1">
+      <ScrollArea className="flex-1 min-h-0">
         <div className="p-2 space-y-1">
           {versions.map((version, index) => {
             const isSelected = version.id === selectedId;
