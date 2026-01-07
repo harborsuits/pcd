@@ -417,6 +417,11 @@ Deno.serve(async (req) => {
     return handleUpdateAIStatus(req, token);
   }
 
+  // Route: POST /admin/bootstrap - Create first admin user (only works if no admins exist)
+  if (subPath === "bootstrap" && req.method === "POST") {
+    return handleBootstrap(req);
+  }
+
   return new Response(
     JSON.stringify({ error: "Not found" }),
     { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -5110,6 +5115,109 @@ async function handleUpdateAIStatus(req: Request, token: string): Promise<Respon
 
   } catch (error) {
     console.error("Update AI status error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+}
+
+// POST /admin/bootstrap - Create first admin user (only works if no admins exist)
+async function handleBootstrap(req: Request): Promise<Response> {
+  try {
+    const body = await req.json();
+    const { email, password }: { email?: string; password?: string } = body;
+
+    if (!email || !password) {
+      return new Response(
+        JSON.stringify({ error: "Email and password are required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (password.length < 6) {
+      return new Response(
+        JSON.stringify({ error: "Password must be at least 6 characters" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const supabase = getSupabaseClient();
+
+    // Check if any admins exist
+    const { count, error: countError } = await supabase
+      .from("user_roles")
+      .select("id", { count: "exact", head: true })
+      .eq("role", "admin");
+
+    if (countError) {
+      console.error("Error checking admin count:", countError);
+      return new Response(
+        JSON.stringify({ error: "Database error" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if ((count || 0) > 0) {
+      return new Response(
+        JSON.stringify({ error: "Bootstrap disabled - admin users already exist" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Create the user via admin API
+    const { data: userData, error: createError } = await supabase.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true, // Auto-confirm email
+    });
+
+    if (createError) {
+      console.error("Error creating user:", createError);
+      return new Response(
+        JSON.stringify({ error: createError.message }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (!userData.user) {
+      return new Response(
+        JSON.stringify({ error: "Failed to create user" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Grant admin role
+    const { error: roleError } = await supabase
+      .from("user_roles")
+      .insert({
+        user_id: userData.user.id,
+        role: "admin",
+      });
+
+    if (roleError) {
+      console.error("Error granting admin role:", roleError);
+      // Try to clean up the user
+      await supabase.auth.admin.deleteUser(userData.user.id);
+      return new Response(
+        JSON.stringify({ error: "Failed to grant admin role" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log(`Bootstrap complete: Admin user created for ${email}`);
+
+    return new Response(
+      JSON.stringify({ 
+        ok: true, 
+        message: "Admin user created successfully",
+        email: email 
+      }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+
+  } catch (error) {
+    console.error("Bootstrap error:", error);
     return new Response(
       JSON.stringify({ error: "Internal server error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
