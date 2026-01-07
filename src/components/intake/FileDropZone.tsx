@@ -1,6 +1,5 @@
 import { useState, useRef, useCallback } from "react";
 import { Upload, X, FileText, Image as ImageIcon, Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 interface UploadedFile {
@@ -9,6 +8,7 @@ interface UploadedFile {
   type: string;
   size: number;
   preview?: string;
+  file?: File; // Keep the actual File object for uploading
 }
 
 interface FileDropZoneProps {
@@ -60,6 +60,7 @@ export function FileDropZone({
         name: file.name,
         type: file.type,
         size: file.size,
+        file, // Store the actual File object
       };
       
       // Create preview for images
@@ -107,7 +108,6 @@ export function FileDropZone({
     onFilesChange(files.filter(f => f.id !== id));
   }, [files, onFilesChange]);
 
-  const isImage = (type: string) => type.startsWith("image/");
   const isPdf = (type: string) => type === "application/pdf";
 
   return (
@@ -221,6 +221,52 @@ export function FileDropZone({
       )}
     </div>
   );
+}
+
+// Helper to upload files to the files edge function
+export async function uploadIntakeFiles(
+  projectToken: string,
+  files: UploadedFile[],
+  category: string
+): Promise<{ uploaded: string[]; errors: string[] }> {
+  const uploaded: string[] = [];
+  const errors: string[] = [];
+  
+  const baseUrl = import.meta.env.VITE_SUPABASE_URL;
+  const uploadUrl = `${baseUrl}/functions/v1/files/${projectToken}/upload`;
+  
+  for (const file of files) {
+    if (!file.file) {
+      errors.push(`${file.name}: No file data`);
+      continue;
+    }
+    
+    try {
+      const formData = new FormData();
+      formData.append("file", file.file);
+      formData.append("description", `[${category}] ${file.name}`);
+      
+      const response = await fetch(uploadUrl, {
+        method: "POST",
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({ error: "Upload failed" }));
+        errors.push(`${file.name}: ${err.error || "Upload failed"}`);
+        continue;
+      }
+      
+      const result = await response.json();
+      if (result.file?.id) {
+        uploaded.push(result.file.id);
+      }
+    } catch (e) {
+      errors.push(`${file.name}: ${e instanceof Error ? e.message : "Unknown error"}`);
+    }
+  }
+  
+  return { uploaded, errors };
 }
 
 export type { UploadedFile };

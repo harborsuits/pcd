@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowLeft, ArrowRight, Loader2, Sparkles, Check, Bot, Globe, Package, Palette, Image, Search, Phone, Clock, AlertTriangle, Users, MessageSquare, FileText, CheckCircle2, Upload } from "lucide-react";
-import { FileDropZone, UploadedFile } from "@/components/intake/FileDropZone";
+import { FileDropZone, UploadedFile, uploadIntakeFiles } from "@/components/intake/FileDropZone";
 import pcdLogo from "@/assets/pcd-logo.jpeg";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -333,6 +333,28 @@ const GetDemo = () => {
       });
 
       if (error) throw error;
+
+      // Upload files if we have a project token and files to upload
+      if (data?.project_token) {
+        const filesToUpload = [
+          { files: formData.photoFiles, category: "Photos" },
+          { files: formData.policyFiles, category: "Policy" },
+        ].filter(g => g.files.length > 0);
+
+        if (filesToUpload.length > 0) {
+          console.log(`Uploading ${filesToUpload.reduce((sum, g) => sum + g.files.length, 0)} files to project ${data.project_token}`);
+          
+          for (const group of filesToUpload) {
+            const result = await uploadIntakeFiles(data.project_token, group.files, group.category);
+            if (result.errors.length > 0) {
+              console.warn(`File upload errors (${group.category}):`, result.errors);
+            }
+            if (result.uploaded.length > 0) {
+              console.log(`Uploaded ${result.uploaded.length} ${group.category} files`);
+            }
+          }
+        }
+      }
 
       if (data?.demo_url) {
         // Demo service type - redirect to generated demo

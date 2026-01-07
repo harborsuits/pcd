@@ -20,7 +20,8 @@ import {
   MessageSquare, Send, Loader2, ExternalLink, Building2,
   Palette, Settings, CheckCircle, StickyNote, ListTodo, Trash2,
   Link, Plus, Eye, MessageCirclePlus, X, MessageSquareDot,
-  ChevronRight, ChevronLeft, Hammer, Bot, Power, AlertTriangle
+  ChevronRight, ChevronLeft, Hammer, Bot, Power, AlertTriangle,
+  Image as ImageIcon, Download, File
 } from "lucide-react";
 import { ServiceTypeBadge } from "@/components/operator/StageBadge";
 import { IntakeSummary } from "@/components/intake/IntakeSummary";
@@ -118,6 +119,15 @@ interface PrototypeComment {
   pin_x: number | null;
   pin_y: number | null;
   resolved_at: string | null;
+}
+
+interface ProjectFile {
+  id: string;
+  file_name: string;
+  file_type: string;
+  storage_path: string;
+  description: string | null;
+  created_at: string;
 }
 
 const STATUS_OPTIONS = [
@@ -327,6 +337,24 @@ export function ProjectDetailDrawer({ project, open, onClose, onStatusChange }: 
     },
     enabled: !!project && open,
   });
+
+  // Fetch project files
+  const { data: filesData, isLoading: filesLoading } = useQuery({
+    queryKey: ["project-files", project?.id],
+    queryFn: async () => {
+      if (!project) return [];
+      const { data, error } = await supabase
+        .from("files")
+        .select("id, file_name, file_type, storage_path, description, created_at")
+        .eq("project_id", project.id)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data as ProjectFile[];
+    },
+    enabled: !!project && open,
+  });
+
+  const projectFiles = filesData || [];
 
   // Update status mutation
   const updateStatusMutation = useMutation({
@@ -927,6 +955,72 @@ export function ProjectDetailDrawer({ project, open, onClose, onStatusChange }: 
                     phone: project.contact_phone || undefined,
                   }}
                 />
+              )}
+
+              {/* Uploaded Files Section */}
+              {projectFiles.length > 0 && (
+                <div className="mt-6 pt-4 border-t">
+                  <h4 className="font-medium flex items-center gap-2 text-sm mb-3">
+                    <ImageIcon className="h-4 w-4 text-muted-foreground" />
+                    Uploaded Files ({projectFiles.length})
+                  </h4>
+                  <div className="grid grid-cols-2 gap-2">
+                    {projectFiles.map((file) => {
+                      const isImage = file.file_type.startsWith("image/");
+                      const isPdf = file.file_type === "application/pdf";
+                      // Extract category from description if present (format: "[Category] filename")
+                      const categoryMatch = file.description?.match(/^\[([^\]]+)\]/);
+                      const category = categoryMatch?.[1];
+                      
+                      // Build signed URL or public URL for storage
+                      const storageUrl = `${SUPABASE_URL}/storage/v1/object/authenticated/${file.storage_path}`;
+                      
+                      return (
+                        <a
+                          key={file.id}
+                          href={storageUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="group border rounded-lg p-2 hover:border-primary/50 transition-colors flex items-center gap-2"
+                        >
+                          <div className="w-10 h-10 rounded bg-muted/50 flex items-center justify-center flex-shrink-0">
+                            {isImage ? (
+                              <ImageIcon className="h-5 w-5 text-muted-foreground" />
+                            ) : isPdf ? (
+                              <FileText className="h-5 w-5 text-muted-foreground" />
+                            ) : (
+                              <File className="h-5 w-5 text-muted-foreground" />
+                            )}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs font-medium truncate group-hover:text-primary">
+                              {file.file_name}
+                            </p>
+                            {category && (
+                              <Badge variant="secondary" className="text-[10px] px-1 py-0 mt-0.5">
+                                {category}
+                              </Badge>
+                            )}
+                            <p className="text-[10px] text-muted-foreground">
+                              {format(new Date(file.created_at), "MMM d")}
+                            </p>
+                          </div>
+                          <Download className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
+                        </a>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Loading state for files */}
+              {filesLoading && (
+                <div className="mt-6 pt-4 border-t">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Loading files...
+                  </div>
+                </div>
               )}
             </ScrollArea>
           </TabsContent>
