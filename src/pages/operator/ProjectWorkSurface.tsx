@@ -135,14 +135,6 @@ interface MediaItem {
   signed_url: string | null;
 }
 
-const STATUS_OPTIONS = [
-  { value: "lead", label: "Lead" },
-  { value: "contacted", label: "Contacted" },
-  { value: "interested", label: "Interested" },
-  { value: "client", label: "Client" },
-  { value: "completed", label: "Completed" },
-  { value: "archived", label: "Archived" },
-];
 
 interface ProjectWorkSurfaceProps {
   project: Project;
@@ -274,24 +266,6 @@ export function ProjectWorkSurface({ project, onBack, onStatusChange }: ProjectW
       if (!res.ok) throw new Error("Failed to fetch comments");
       return res.json() as Promise<{ comments: PrototypeComment[] }>;
     },
-  });
-
-  // Update status mutation
-  const updateStatusMutation = useMutation({
-    mutationFn: async (newStatus: string) => {
-      const res = await adminFetch(`/admin/projects/${project.project_token}/status`, {
-        method: "PATCH",
-        body: JSON.stringify({ status: newStatus }),
-      });
-      if (!res.ok) throw new Error("Failed to update status");
-      return res.json();
-    },
-    onSuccess: () => {
-      toast.success("Status updated");
-      queryClient.invalidateQueries({ queryKey: ["admin-projects"] });
-      onStatusChange();
-    },
-    onError: (error: Error) => toast.error(error.message),
   });
 
   // Update pipeline stage mutation
@@ -598,18 +572,6 @@ export function ProjectWorkSurface({ project, onBack, onStatusChange }: ProjectW
             </Select>
           </div>
           
-          <div className="h-4 w-px bg-border hidden sm:block" />
-          
-          <Select value={project.status} onValueChange={(v) => updateStatusMutation.mutate(v)} disabled={updateStatusMutation.isPending}>
-            <SelectTrigger className="w-[100px] h-8 text-xs hidden sm:flex">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {STATUS_OPTIONS.map(opt => (
-                <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
           <Button variant="outline" size="sm" onClick={() => window.open(`/p/${project.project_token}`, "_blank")}>
             <ExternalLink className="h-4 w-4 mr-1" /> Portal
           </Button>
