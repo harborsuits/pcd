@@ -1177,6 +1177,10 @@ export type Database = {
           body: string
           breakpoint: string | null
           created_at: string
+          crop_h: number | null
+          crop_w: number | null
+          crop_x: number | null
+          crop_y: number | null
           id: string
           is_internal: boolean
           page_path: string | null
@@ -1189,6 +1193,7 @@ export type Database = {
           resolution_note: string | null
           resolved_at: string | null
           resolved_by: string | null
+          screenshot_full_path: string | null
           screenshot_h: number | null
           screenshot_media_id: string | null
           screenshot_path: string | null
@@ -1212,6 +1217,10 @@ export type Database = {
           body: string
           breakpoint?: string | null
           created_at?: string
+          crop_h?: number | null
+          crop_w?: number | null
+          crop_x?: number | null
+          crop_y?: number | null
           id?: string
           is_internal?: boolean
           page_path?: string | null
@@ -1224,6 +1233,7 @@ export type Database = {
           resolution_note?: string | null
           resolved_at?: string | null
           resolved_by?: string | null
+          screenshot_full_path?: string | null
           screenshot_h?: number | null
           screenshot_media_id?: string | null
           screenshot_path?: string | null
@@ -1247,6 +1257,10 @@ export type Database = {
           body?: string
           breakpoint?: string | null
           created_at?: string
+          crop_h?: number | null
+          crop_w?: number | null
+          crop_x?: number | null
+          crop_y?: number | null
           id?: string
           is_internal?: boolean
           page_path?: string | null
@@ -1259,6 +1273,7 @@ export type Database = {
           resolution_note?: string | null
           resolved_at?: string | null
           resolved_by?: string | null
+          screenshot_full_path?: string | null
           screenshot_h?: number | null
           screenshot_media_id?: string | null
           screenshot_path?: string | null
