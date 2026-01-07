@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, ArrowRight, Loader2, Sparkles, Check, Bot, Globe, Package, Palette, Image, Search, Phone, Clock, AlertTriangle, Users, MessageSquare, FileText, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Loader2, Sparkles, Check, Bot, Globe, Package, Palette, Image, Search, Phone, Clock, AlertTriangle, Users, MessageSquare, FileText, CheckCircle2, Upload } from "lucide-react";
+import { FileDropZone, UploadedFile } from "@/components/intake/FileDropZone";
 import pcdLogo from "@/assets/pcd-logo.jpeg";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -49,6 +50,7 @@ interface FormData {
   brandColors: string;
   servicesList: string;
   photoReadiness: PhotoReadiness;
+  photoFiles: UploadedFile[]; // NEW: photo uploads
   
   // AI Receptionist fields - Call Coverage
   callHandling: CallHandling;
@@ -79,6 +81,7 @@ interface FormData {
   businessPersonality: string[];
   doNotSay: string;
   guaranteesPolicies: string;
+  policyFiles: UploadedFile[]; // NEW: policy/terms uploads
   
   // AI Receptionist fields - FAQs & Human Context
   faqs: string;
@@ -114,6 +117,7 @@ const GetDemo = () => {
     brandColors: "",
     servicesList: "",
     photoReadiness: "",
+    photoFiles: [],
     callHandling: "",
     handoffMethod: "",
     textHandling: [],
@@ -134,6 +138,7 @@ const GetDemo = () => {
     businessPersonality: [],
     doNotSay: "",
     guaranteesPolicies: "",
+    policyFiles: [],
     faqs: "",
     customerFaqs: "",
     teamNames: "",
@@ -683,9 +688,9 @@ const GetDemo = () => {
             disabled={isLoading}
           >
             {[
-              { value: "ready", label: "Ready" },
-              { value: "some", label: "Some" },
-              { value: "none", label: "None yet" },
+              { value: "ready", label: "Ready — I have photos to upload" },
+              { value: "some", label: "Some — I have a few to share" },
+              { value: "none", label: "None yet — I'll need help" },
             ].map((opt) => (
               <div key={opt.value} className="flex items-center space-x-3 p-3 rounded-lg border border-border hover:bg-secondary/50 transition-colors cursor-pointer">
                 <RadioGroupItem value={opt.value} id={`photo-${opt.value}`} />
@@ -694,6 +699,21 @@ const GetDemo = () => {
             ))}
           </RadioGroup>
         </div>
+
+        {/* Photo upload dropzone - shown when ready or some selected */}
+        {(formData.photoReadiness === "ready" || formData.photoReadiness === "some") && (
+          <FileDropZone
+            label="Upload your photos"
+            hint="Photos of your work, team, storefront, before/after shots, etc. (Max 10 files, 10MB each)"
+            accept="image/*"
+            multiple={true}
+            maxFiles={10}
+            maxSizeMB={10}
+            files={formData.photoFiles}
+            onFilesChange={(files) => updateField("photoFiles", files)}
+            disabled={isLoading}
+          />
+        )}
       </div>
     </div>
   );
@@ -1195,6 +1215,22 @@ const GetDemo = () => {
             className="resize-none"
           />
           <p className="text-xs text-muted-foreground">Becomes part of the AI's default pitch</p>
+          
+          {/* Policy/terms file upload */}
+          <div className="mt-3 pt-3 border-t border-border/50">
+            <FileDropZone
+              label="Or upload policy documents"
+              hint="Terms of service, warranty info, pricing sheets, etc. (PDF or images)"
+              accept="application/pdf,image/*"
+              multiple={true}
+              maxFiles={5}
+              maxSizeMB={10}
+              files={formData.policyFiles}
+              onFilesChange={(files) => updateField("policyFiles", files)}
+              disabled={isLoading}
+              compact
+            />
+          </div>
         </div>
       </div>
     </div>
