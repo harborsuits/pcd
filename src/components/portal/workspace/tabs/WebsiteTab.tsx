@@ -263,13 +263,48 @@ export function WebsiteTab({
   return (
     <div className="h-full flex flex-col">
       <div className="flex-1 flex min-h-0">
-        {/* Left: Version list */}
-        <div className="w-48 border-r border-border flex-shrink-0 overflow-y-auto">
+        {/* Left: Version list + pending feedback card */}
+        <div className="w-48 border-r border-border flex-shrink-0 overflow-y-auto flex flex-col">
           <VersionsList
             versions={versions}
             selectedId={selectedId}
             onSelect={handleSelect}
           />
+          
+          {/* Pending feedback mini card */}
+          {mode.type === "compose" && (
+            <div className="border-t border-border p-2 bg-muted/30">
+              <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide mb-2">
+                Your Feedback
+              </div>
+              <div className="rounded-md border border-primary/30 bg-background overflow-hidden">
+                <div className="relative aspect-video">
+                  <img
+                    src={mode.croppedImage}
+                    alt="Your selection"
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+                  <div className="absolute bottom-1 left-1 right-1">
+                    <span className="text-[9px] text-white/90 font-medium truncate block">
+                      {commentText.trim() ? commentText.slice(0, 30) + (commentText.length > 30 ? '...' : '') : 'Add a comment...'}
+                    </span>
+                  </div>
+                </div>
+                {attachments.length > 0 && (
+                  <div className="px-2 py-1 border-t border-border bg-muted/50 flex items-center gap-1">
+                    <Paperclip className="h-2.5 w-2.5 text-muted-foreground" />
+                    <span className="text-[9px] text-muted-foreground">
+                      {attachments.length} file{attachments.length > 1 ? 's' : ''}
+                    </span>
+                  </div>
+                )}
+              </div>
+              <p className="text-[9px] text-muted-foreground mt-1.5 text-center">
+                Complete your comment →
+              </p>
+            </div>
+          )}
         </div>
         
         {/* Right: Preview or Screenshot mode */}
