@@ -335,10 +335,10 @@ export default function WorkspacePage() {
       <div className="border-b border-border bg-card/80 backdrop-blur-sm px-4 py-3 flex-shrink-0">
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <Link to="/portal">
+            <Link to={isOperator ? "/operator" : "/portal"}>
               <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground hover:text-foreground">
                 <ArrowLeft className="h-4 w-4" />
-                <span className="hidden sm:inline">My Projects</span>
+                <span className="hidden sm:inline">{isOperator ? "Operator" : "My Projects"}</span>
               </Button>
             </Link>
             <div className="h-4 w-px bg-border hidden sm:block" />
