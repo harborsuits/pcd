@@ -230,7 +230,7 @@ async function handleGetMessages(
   }
 }
 
-// POST /messages/:token - Send a client message
+// POST /messages/:token - Send a message (client or admin)
 async function handleSendMessage(
   req: Request,
   token: string,
@@ -238,7 +238,7 @@ async function handleSendMessage(
 ): Promise<Response> {
   try {
     // Parse request body
-    let body: { content?: string };
+    let body: { content?: string; sender_type?: string };
     try {
       body = await req.json();
     } catch {
@@ -263,7 +263,22 @@ async function handleSendMessage(
       );
     }
 
-    console.log(`Client message for token: ${token.slice(0, 8)}...`);
+    // Determine sender type - admin can send as "admin", everyone else sends as "client"
+    let senderType = "client";
+    if (body.sender_type === "admin") {
+      // Validate admin auth if trying to send as admin
+      const isAdmin = await validateAdminKey(req);
+      if (!isAdmin) {
+        return new Response(
+          JSON.stringify({ error: "Unauthorized - admin access required" }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      senderType = "admin";
+      console.log(`Admin message for token: ${token.slice(0, 8)}...`);
+    } else {
+      console.log(`Client message for token: ${token.slice(0, 8)}...`);
+    }
 
     const supabase = getSupabaseClient();
 
@@ -297,7 +312,7 @@ async function handleSendMessage(
       .insert({
         project_id: project.id,
         project_token: project.project_token,
-        sender_type: "client",
+        sender_type: senderType,
         content: content,
       })
       .select("id, sender_type, content, created_at, read_at")
@@ -311,7 +326,7 @@ async function handleSendMessage(
       );
     }
 
-    console.log("Client message sent successfully");
+    console.log(`${senderType === "admin" ? "Admin" : "Client"} message sent successfully`);
 
     return new Response(
       JSON.stringify({
