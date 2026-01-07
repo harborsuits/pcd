@@ -464,6 +464,16 @@ export function ProjectsTab() {
 
   const projects = projectsData?.projects || [];
 
+  // Sync selectedProject with latest data from query to pick up intake status changes
+  useEffect(() => {
+    if (selectedProject && projects.length > 0) {
+      const updated = projects.find(p => p.id === selectedProject.id);
+      if (updated && JSON.stringify(updated) !== JSON.stringify(selectedProject)) {
+        setSelectedProject(updated);
+      }
+    }
+  }, [projects, selectedProject]);
+
   // Mutation to advance pipeline stage
   const advanceStageMutation = useMutation({
     mutationFn: async ({ token, stage }: { token: string; stage: PipelineStage }) => {
