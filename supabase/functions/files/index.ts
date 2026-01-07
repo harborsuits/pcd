@@ -1,4 +1,4 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "npm:@supabase/supabase-js@2";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
@@ -70,7 +70,8 @@ function isAllowedContentType(ct: string): boolean {
 }
 
 // Verify admin/operator role from auth token
-async function verifyOperatorAuth(req: Request, supabase: ReturnType<typeof createClient>): Promise<{ valid: boolean; userId?: string }> {
+// deno-lint-ignore no-explicit-any
+async function verifyOperatorAuth(req: Request, supabase: any): Promise<{ valid: boolean; userId?: string }> {
   const authHeader = req.headers.get("Authorization");
   if (!authHeader?.startsWith("Bearer ")) {
     return { valid: false };
@@ -89,7 +90,9 @@ async function verifyOperatorAuth(req: Request, supabase: ReturnType<typeof crea
     .select("role")
     .eq("user_id", data.user.id);
 
-  const hasPermission = roles?.some(r => r.role === "admin" || r.role === "operator");
+  const hasPermission = (roles as { role: string }[] | null)?.some(
+    (r) => r.role === "admin" || r.role === "operator"
+  );
   
   return { valid: !!hasPermission, userId: data.user.id };
 }

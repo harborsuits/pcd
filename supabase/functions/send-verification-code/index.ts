@@ -1,13 +1,30 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { Resend } from "https://esm.sh/resend@2.0.0";
+import { createClient } from "npm:@supabase/supabase-js@2";
 
-const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
+const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
+
+// Helper to send email via Resend API directly
+async function sendEmail(options: { from: string; to: string[]; subject: string; html: string }) {
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${RESEND_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(options),
+  });
+  
+  const data = await response.json();
+  if (!response.ok) {
+    return { data: null, error: data };
+  }
+  return { data, error: null };
+}
 
 // Generate a 6-digit code
 function generateCode(): string {
@@ -215,8 +232,8 @@ serve(async (req) => {
     console.log("🔑 HAS RESEND KEY:", Boolean(Deno.env.get("RESEND_API_KEY")));
     console.log(`📨 Attempting to send email via Resend`, { from: emailFrom, to: normalizedEmail });
 
-    const emailResult = await resend.emails.send({
-      from: emailFrom, // EMAIL_FROM already includes display name
+    const emailResult = await sendEmail({
+      from: emailFrom,
       to: [normalizedEmail],
       subject: `Your verification code: ${code}`,
       html: `
