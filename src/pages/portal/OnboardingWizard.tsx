@@ -1,15 +1,18 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, ArrowRight, Loader2, Sparkles, Check, Bot, Globe, Package, Palette, Image, Search, HelpCircle } from "lucide-react";
+import { ArrowLeft, ArrowRight, Loader2, Sparkles, Check, Bot, Globe, Package, Palette, Image, Search, HelpCircle, DollarSign, Wrench } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { ClientLayout } from "@/components/portal/ClientLayout";
 import { cn } from "@/lib/utils";
+import { getPricingTiersForService, RETAINER_ADDONS } from "@/lib/pricingMenu";
+import { PricingSummary } from "@/components/intake/PricingSummary";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -60,6 +63,12 @@ interface FormData {
   // Other/à la carte fields
   selectedServices: string[];
   customRequest: string;
+  
+  // Pricing
+  pricingTier: string;
+  pricingNotes: string;
+  retainerAddons: string[];
+  addonNotes: string;
 }
 
 export default function OnboardingWizard() {
@@ -93,6 +102,10 @@ export default function OnboardingWizard() {
     faqs: "",
     selectedServices: [],
     customRequest: "",
+    pricingTier: "",
+    pricingNotes: "",
+    retainerAddons: [],
+    addonNotes: "",
   });
 
   // Auth guard
@@ -137,7 +150,7 @@ export default function OnboardingWizard() {
     }
   }, [searchParams]);
 
-  // Determine steps based on service type (same as GetDemo)
+  // Determine steps based on service type
   const getSteps = () => {
     const steps = [{ id: "choose", label: "Choose" }];
     
@@ -158,6 +171,12 @@ export default function OnboardingWizard() {
     
     if (formData.serviceType === "other") {
       steps.push({ id: "other", label: "Services" });
+    }
+    
+    // Add pricing/addons for ai, website, both only
+    if (formData.serviceType === "ai" || formData.serviceType === "website" || formData.serviceType === "both") {
+      steps.push({ id: "pricing", label: "Pricing" });
+      steps.push({ id: "addons", label: "Addons" });
     }
     
     return steps;
@@ -182,6 +201,10 @@ export default function OnboardingWizard() {
                formData.emergencyRules.trim() && !!formData.preferredTone;
       case "other":
         return formData.selectedServices.length > 0 || formData.customRequest.trim().length > 0;
+      case "pricing":
+        return !!formData.pricingTier;
+      case "addons":
+        return true; // Optional step
       default:
         return true;
     }
@@ -252,6 +275,11 @@ export default function OnboardingWizard() {
             // Other fields
             selectedServices: formData.selectedServices.length > 0 ? formData.selectedServices : null,
             customRequest: formData.customRequest.trim() || null,
+            // Pricing fields
+            pricingTier: formData.pricingTier || null,
+            pricingNotes: formData.pricingNotes.trim() || null,
+            retainerAddons: formData.retainerAddons.length > 0 ? formData.retainerAddons : null,
+            addonNotes: formData.addonNotes.trim() || null,
           },
         }),
       });
@@ -805,6 +833,157 @@ export default function OnboardingWizard() {
     </div>
   );
 
+  // Get pricing tiers from shared module
+  const pricingTiers = getPricingTiersForService(formData.serviceType);
+
+  const renderPricingStep = () => {
+    const serviceLabel = formData.serviceType === "ai" 
+      ? "AI Receptionist" 
+      : formData.serviceType === "website" 
+        ? "Website" 
+        : "Full Package";
+
+    return (
+      <div className="space-y-6">
+        <div>
+          <h2 className="font-serif text-2xl font-bold mb-2">Select your tier</h2>
+          <p className="text-muted-foreground">
+            Choose a {serviceLabel} tier that fits your needs. We'll discuss details on our call.
+          </p>
+        </div>
+
+        <div className="space-y-3">
+          {pricingTiers.map((tier) => {
+            const isSelected = formData.pricingTier === tier.id;
+            return (
+              <button
+                key={tier.id}
+                type="button"
+                onClick={() => updateField("pricingTier", tier.id)}
+                disabled={isLoading}
+                className={cn(
+                  "relative w-full flex flex-col items-start gap-1 rounded-xl border-2 p-4 text-left transition-all hover:border-primary/50",
+                  isSelected
+                    ? "border-primary bg-primary/5 ring-2 ring-primary/20"
+                    : "border-border bg-card hover:bg-accent/50"
+                )}
+              >
+                <div className="flex items-center justify-between w-full">
+                  <h3 className="font-semibold text-foreground">{tier.label}</h3>
+                  <span className={cn(
+                    "text-sm font-medium",
+                    isSelected ? "text-primary" : "text-muted-foreground"
+                  )}>
+                    {tier.price}
+                  </span>
+                </div>
+                <p className="text-sm text-muted-foreground">{tier.description}</p>
+                {isSelected && (
+                  <div className="absolute top-3 right-3">
+                    <Check className="h-5 w-5 text-primary" />
+                  </div>
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="pricingNotes">Budget or timing notes (optional)</Label>
+          <Textarea
+            id="pricingNotes"
+            value={formData.pricingNotes}
+            onChange={(e) => updateField("pricingNotes", e.target.value)}
+            placeholder="Comparing options? Let us know what you're aiming for..."
+            disabled={isLoading}
+            rows={2}
+            className="resize-none"
+          />
+        </div>
+      </div>
+    );
+  };
+
+  const renderAddonsStep = () => (
+    <div className="space-y-6">
+      <div>
+        <h2 className="font-serif text-2xl font-bold mb-2">Ongoing support (optional)</h2>
+        <p className="text-muted-foreground">
+          Add monthly retainers to keep things running smoothly. Skip if you're not sure yet.
+        </p>
+      </div>
+
+      <div className="space-y-3">
+        {RETAINER_ADDONS.map((addon) => {
+          const isChecked = formData.retainerAddons.includes(addon.id);
+          return (
+            <div
+              key={addon.id}
+              className={cn(
+                "flex items-start gap-3 rounded-xl border-2 p-4 transition-all cursor-pointer",
+                isChecked
+                  ? "border-primary bg-primary/5"
+                  : "border-border bg-card hover:border-primary/30"
+              )}
+              onClick={() => {
+                if (isChecked) {
+                  updateField("retainerAddons", formData.retainerAddons.filter(id => id !== addon.id));
+                } else {
+                  updateField("retainerAddons", [...formData.retainerAddons, addon.id]);
+                }
+              }}
+            >
+              <Checkbox
+                id={addon.id}
+                checked={isChecked}
+                onCheckedChange={(checked) => {
+                  if (checked) {
+                    updateField("retainerAddons", [...formData.retainerAddons, addon.id]);
+                  } else {
+                    updateField("retainerAddons", formData.retainerAddons.filter(id => id !== addon.id));
+                  }
+                }}
+                className="mt-0.5"
+              />
+              <div className="flex-1">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor={addon.id} className="font-semibold cursor-pointer">
+                    {addon.label}
+                  </Label>
+                  <span className="text-sm text-muted-foreground">{addon.price}</span>
+                </div>
+                <p className="text-sm text-muted-foreground mt-0.5">{addon.description}</p>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="addonNotes">Anything specific you want covered? (optional)</Label>
+        <Textarea
+          id="addonNotes"
+          value={formData.addonNotes}
+          onChange={(e) => updateField("addonNotes", e.target.value)}
+          placeholder="Tell us what matters most for ongoing support..."
+          disabled={isLoading}
+          rows={2}
+          className="resize-none"
+        />
+      </div>
+
+      {/* Pricing Summary before submit */}
+      <PricingSummary
+        serviceType={formData.serviceType}
+        pricingTier={formData.pricingTier}
+        pricingNotes={formData.pricingNotes}
+        retainerAddons={formData.retainerAddons}
+        addonNotes={formData.addonNotes}
+        className="mt-6"
+      />
+    </div>
+  );
+
   const renderCurrentStep = () => {
     switch (currentStepId) {
       case "choose":
@@ -819,6 +998,10 @@ export default function OnboardingWizard() {
         return renderAIStep();
       case "other":
         return renderOtherStep();
+      case "pricing":
+        return renderPricingStep();
+      case "addons":
+        return renderAddonsStep();
       default:
         return renderChooseStep();
     }
