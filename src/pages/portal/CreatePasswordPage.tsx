@@ -29,9 +29,10 @@ export default function CreatePasswordPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [checkingExisting, setCheckingExisting] = useState(true);
   const [created, setCreated] = useState(false);
 
-  // Redirect if missing required params
+  // Check if user already has an account - if so, redirect to login
   useEffect(() => {
     if (!projectToken || !email) {
       toast({
@@ -40,7 +41,21 @@ export default function CreatePasswordPage() {
         variant: "destructive",
       });
       navigate("/get-demo");
+      return;
     }
+
+    // Check if already logged in
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        // Already logged in - go straight to workspace
+        navigate(`/w/${projectToken}`, { replace: true });
+        return;
+      }
+      setCheckingExisting(false);
+    };
+
+    checkAuth();
   }, [projectToken, email, navigate, toast]);
 
   const passwordsMatch = password === confirmPassword;
@@ -75,6 +90,16 @@ export default function CreatePasswordPage() {
 
       if (!res.ok) {
         throw new Error(data.error || "Failed to create account");
+      }
+
+      // If user already exists, redirect to login
+      if (data.existing) {
+        toast({
+          title: "Account already exists",
+          description: "Please log in with your existing password.",
+        });
+        navigate(`/portal?email=${encodeURIComponent(email)}`);
+        return;
       }
 
       // Sign in with the new credentials
@@ -116,6 +141,15 @@ export default function CreatePasswordPage() {
       setIsLoading(false);
     }
   };
+
+  // Show loading while checking if user is already logged in
+  if (checkingExisting) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   if (created) {
     return (
