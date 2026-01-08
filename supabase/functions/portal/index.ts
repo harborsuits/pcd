@@ -1562,16 +1562,30 @@ async function handleGetComments(
       }
     }
 
-    // Merge screenshot paths from media records into comments
-    const enrichedComments = (comments || []).map(c => {
+    // Merge screenshot paths from media records into comments and generate signed URLs
+    const enrichedComments = await Promise.all((comments || []).map(async (c) => {
+      let screenshotPath = c.screenshot_path;
+      
+      // Get path from media record if needed
       if (c.screenshot_media_id && screenshotMediaMap[c.screenshot_media_id]) {
-        return {
-          ...c,
-          screenshot_path: screenshotMediaMap[c.screenshot_media_id].storage_path,
-        };
+        screenshotPath = screenshotMediaMap[c.screenshot_media_id].storage_path;
       }
-      return c;
-    });
+      
+      // Generate signed URL for screenshot if path exists
+      let signedUrl: string | null = null;
+      if (screenshotPath) {
+        const { data: signedData } = await supabase.storage
+          .from("project-media")
+          .createSignedUrl(screenshotPath, 3600); // 1 hour expiry
+        signedUrl = signedData?.signedUrl || null;
+      }
+      
+      return {
+        ...c,
+        screenshot_path: screenshotPath,
+        screenshot_signed_url: signedUrl,
+      };
+    }));
 
     return new Response(
       JSON.stringify({ comments: enrichedComments }),
