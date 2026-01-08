@@ -239,7 +239,10 @@ export default function PricingSection() {
                 </CardHeader>
 
                 <CardContent className="flex-1 flex flex-col">
-                  <Link to="/get-demo" className="block mb-6">
+                  <Link 
+                    to={`/get-demo?service=both&tier=${index === 0 ? 'starter' : index === 1 ? 'growth' : 'full_ops'}`} 
+                    className="block mb-6"
+                  >
                     <LiquidButton 
                       variant={plan.popular ? "dark" : "default"} 
                       size="lg" 
@@ -279,7 +282,7 @@ export default function PricingSection() {
             </div>
             
             <div className="grid sm:grid-cols-2 gap-6">
-              {CARE_PLANS.map((plan) => (
+              {CARE_PLANS.map((plan, index) => (
                 <Card key={plan.id} className="hover:shadow-md transition-shadow">
                   <CardContent className="p-6">
                     <h4 className="font-semibold text-foreground mb-1">{plan.label}</h4>
@@ -300,7 +303,7 @@ export default function PricingSection() {
                       </p>
                     )}
                     <p className="text-sm text-muted-foreground mb-4">{plan.description}</p>
-                    <ul className="space-y-2">
+                    <ul className="space-y-2 mb-4">
                       {plan.features.map((feature, i) => (
                         <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
                           <Check className="h-4 w-4 text-accent mt-0.5 flex-shrink-0" />
@@ -308,6 +311,11 @@ export default function PricingSection() {
                         </li>
                       ))}
                     </ul>
+                    <Link to={`/get-demo?product=care_plan&tier=${index === 0 ? 'care_starter' : 'care_growth'}`}>
+                      <LiquidButton variant="default" size="sm" className="w-full">
+                        Get Started
+                      </LiquidButton>
+                    </Link>
                   </CardContent>
                 </Card>
               ))}
@@ -365,7 +373,7 @@ export default function PricingSection() {
             <p className="text-sm text-muted-foreground/70 italic mb-6">
               Limited availability — select businesses only.
             </p>
-            <Link to="/get-demo">
+            <Link to="/get-demo?product=pilot">
               <LiquidButton size="lg">
                 Request a Pilot
               </LiquidButton>
