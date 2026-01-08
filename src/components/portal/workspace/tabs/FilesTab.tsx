@@ -27,6 +27,102 @@ function getFileIcon(mimeType: string) {
   return File;
 }
 
+function isImageType(mimeType: string): boolean {
+  return mimeType.startsWith('image/');
+}
+
+// Component for image thumbnail with lazy loading
+function FileThumbnail({ 
+  file, 
+  token 
+}: { 
+  file: FileItem; 
+  token: string;
+}) {
+  const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    if (!isImageType(file.file_type)) {
+      setLoading(false);
+      return;
+    }
+
+    const fetchThumbnail = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const authToken = session?.access_token || SUPABASE_ANON_KEY;
+        
+        const res = await fetch(
+          `${SUPABASE_URL}/functions/v1/files/${token}/${file.id}/download`,
+          {
+            method: "GET",
+            headers: {
+              apikey: SUPABASE_ANON_KEY,
+              Authorization: `Bearer ${authToken}`,
+            },
+          }
+        );
+
+        if (res.ok) {
+          const data = await res.json();
+          if (data.url) {
+            setThumbnailUrl(data.url);
+          }
+        }
+      } catch (err) {
+        console.error("Thumbnail fetch error:", err);
+        setError(true);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchThumbnail();
+  }, [file.id, file.file_type, token]);
+
+  // For non-images, show the icon
+  if (!isImageType(file.file_type)) {
+    const FileIcon = getFileIcon(file.file_type);
+    return (
+      <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
+        <FileIcon className="h-5 w-5 text-muted-foreground" />
+      </div>
+    );
+  }
+
+  // Loading state for images
+  if (loading) {
+    return (
+      <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
+        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  // Error state or no URL - fall back to icon
+  if (error || !thumbnailUrl) {
+    return (
+      <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
+        <Image className="h-5 w-5 text-muted-foreground" />
+      </div>
+    );
+  }
+
+  // Show the actual thumbnail
+  return (
+    <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-muted">
+      <img
+        src={thumbnailUrl}
+        alt={file.file_name}
+        className="w-full h-full object-cover"
+        onError={() => setError(true)}
+      />
+    </div>
+  );
+}
+
 export function FilesTab({ token }: FilesTabProps) {
   const [files, setFiles] = useState<FileItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -200,15 +296,12 @@ export function FilesTab({ token }: FilesTabProps) {
         ) : (
           <div className="space-y-2">
             {files.map((file) => {
-              const FileIcon = getFileIcon(file.file_type);
               return (
                 <div
                   key={file.id}
                   className="flex items-center gap-3 p-3 rounded-lg border border-border bg-card hover:bg-muted/50 transition-colors"
                 >
-                  <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
-                    <FileIcon className="h-5 w-5 text-muted-foreground" />
-                  </div>
+                  <FileThumbnail file={file} token={token} />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">{file.file_name}</p>
                     <p className="text-xs text-muted-foreground">
