@@ -80,7 +80,8 @@ export const WEBSITE_TIERS: PricingTier[] = [
 export interface CarePlan {
   id: string;
   label: string;
-  price: string;
+  monthlyPrice: number;
+  yearlyPrice: number;
   description: string;
   features: string[];
 }
@@ -89,7 +90,8 @@ export const CARE_PLANS: CarePlan[] = [
   {
     id: "care_starter",
     label: "Care Plan – Starter",
-    price: "$95/mo",
+    monthlyPrice: 95,
+    yearlyPrice: 1010, // ~$84/mo, saves ~$130
     description: "Ongoing maintenance so your site doesn't rot.",
     features: [
       "Monthly content or copy updates (small changes)",
@@ -102,7 +104,8 @@ export const CARE_PLANS: CarePlan[] = [
   {
     id: "care_growth",
     label: "Care Plan – Growth",
-    price: "$145/mo",
+    monthlyPrice: 145,
+    yearlyPrice: 1550, // ~$129/mo, saves ~$190
     description: "Everything in Starter, plus priority support.",
     features: [
       "Everything in Starter, plus:",
