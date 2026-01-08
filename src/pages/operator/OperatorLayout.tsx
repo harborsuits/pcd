@@ -21,6 +21,7 @@ import {
   getAdminEmail,
 } from "@/lib/adminFetch";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuthReady } from "@/hooks/useAuthReady";
 
 // Context to track currently open project for global shortcuts
 interface OperatorContextValue {
@@ -55,6 +56,7 @@ export default function OperatorLayout() {
   const [currentProjectName, setCurrentProjectName] = useState<string | null>(null);
   const closeProjectRef = useRef<() => void>(() => {});
   const queryClient = useQueryClient();
+  const isAuthReady = useAuthReady();
 
   const registerCloseProject = useCallback((fn: () => void) => {
     closeProjectRef.current = fn;
@@ -193,8 +195,8 @@ export default function OperatorLayout() {
     toast.success("Logged out");
   };
 
-  // Show loading state
-  if (isLoading) {
+  // Show loading state - wait for both auth check AND token hydration
+  if (isLoading || (isAuthed && !isAuthReady)) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />

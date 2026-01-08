@@ -34,7 +34,7 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Users, Search, Trash2, Pencil, RefreshCw, FolderOpen, Mail, Phone, AlertTriangle, CheckCircle2, XCircle, Clock, Send } from "lucide-react";
 import { toast } from "sonner";
-import { adminFetch } from "@/lib/adminFetch";
+import { adminFetch, AdminAuthError } from "@/lib/adminFetch";
 import { format, differenceInDays } from "date-fns";
 
 interface AuthUser {
@@ -131,6 +131,11 @@ export function AccountsTab() {
     queryKey: ["admin-accounts"],
     queryFn: fetchAccounts,
     staleTime: 30_000,
+    retry: (failureCount, err) => {
+      // Don't retry auth errors
+      if (err instanceof AdminAuthError) return false;
+      return failureCount < 2;
+    },
   });
 
   const updateMutation = useMutation({
@@ -269,13 +274,19 @@ export function AccountsTab() {
         </div>
       </CardHeader>
       <CardContent>
-        {error && (
-          <div className="text-destructive text-sm py-4">
-            Failed to load accounts: {(error as Error).message}
+        {/* Error state */}
+        {error && !isLoading && (
+          <div className="text-destructive text-sm py-4 flex flex-col gap-2">
+            <span>Failed to load accounts: {(error as Error).message}</span>
+            <Button variant="outline" size="sm" onClick={() => refetch()} className="w-fit">
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Retry
+            </Button>
           </div>
         )}
 
-        {isLoading && (
+        {/* Loading state */}
+        {isLoading && !error && (
           <div className="space-y-3">
             {[1, 2, 3].map((i) => (
               <Skeleton key={i} className="h-16 w-full" />
