@@ -1513,9 +1513,10 @@ async function handleGetComments(
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Build query - clients should never see internal comments
+  // Build query - clients should never see internal comments
     // IMPORTANT: Include all anchor/pin fields needed for pin persistence!
     // Include screenshot_media_id and legacy screenshot_path for backwards compatibility
+    // Include new versioning fields: edited_at, version_count, is_relevant
     let query = supabase
       .from("prototype_comments")
       .select(`
@@ -1524,7 +1525,8 @@ async function handleGetComments(
         status, archived_at,
         page_url, page_path, scroll_y, viewport_w, viewport_h, breakpoint,
         anchor_id, anchor_selector, x_pct, y_pct, text_hint, text_offset, text_context,
-        screenshot_path, screenshot_w, screenshot_h, screenshot_media_id
+        screenshot_path, screenshot_w, screenshot_h, screenshot_media_id,
+        edited_at, version_count, is_relevant
       `)
       .eq("project_token", token)
       .eq("is_internal", false) // Filter out internal operator notes for clients
@@ -1987,7 +1989,7 @@ if (action === "resolve" || action === "unresolve") {
       );
     }
 
-    // Edit comment body (clients can only edit their own comments)
+    // Edit comment body (clients can only edit their own comments) - VERSIONED
     if (action === "edit") {
       if (!comment_id || !commentBody) {
         return new Response(
@@ -1996,10 +1998,14 @@ if (action === "resolve" || action === "unresolve") {
         );
       }
 
-      // Verify the comment belongs to this project and is a client comment
+      // Fetch existing comment with all fields needed for versioning
       const { data: existingComment, error: fetchError } = await supabase
         .from("prototype_comments")
-        .select("id, author_type")
+        .select(`
+          id, author_type, body, version_count,
+          screenshot_path, screenshot_full_path, screenshot_w, screenshot_h,
+          crop_x, crop_y, crop_w, crop_h
+        `)
         .eq("id", comment_id)
         .eq("project_token", token)
         .maybeSingle();
@@ -2019,9 +2025,77 @@ if (action === "resolve" || action === "unresolve") {
         );
       }
 
+      // Get the next version number
+      const { data: maxVersionRow } = await supabase
+        .from("comment_versions")
+        .select("version_number")
+        .eq("comment_id", comment_id)
+        .order("version_number", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      const currentVersion = maxVersionRow?.version_number || 0;
+      const nextVersion = currentVersion + 1;
+
+      // If this is the first edit (no versions yet), save the original as version 1
+      if (currentVersion === 0) {
+        await supabase.from("comment_versions").insert({
+          comment_id,
+          version_number: 1,
+          author_type: existingComment.author_type,
+          body: existingComment.body,
+          screenshot_path: existingComment.screenshot_path,
+          screenshot_full_path: existingComment.screenshot_full_path,
+          screenshot_w: existingComment.screenshot_w,
+          screenshot_h: existingComment.screenshot_h,
+          crop_x: existingComment.crop_x,
+          crop_y: existingComment.crop_y,
+          crop_w: existingComment.crop_w,
+          crop_h: existingComment.crop_h,
+          change_type: "original",
+          project_token: token,
+        });
+      }
+
+      // Insert new version with the edit
+      const actualNextVersion = currentVersion === 0 ? 2 : nextVersion;
+      await supabase.from("comment_versions").insert({
+        comment_id,
+        version_number: actualNextVersion,
+        author_type: "client",
+        body: commentBody,
+        screenshot_path: body.screenshot_path || existingComment.screenshot_path,
+        screenshot_full_path: body.screenshot_full_path || existingComment.screenshot_full_path,
+        screenshot_w: body.screenshot_w || existingComment.screenshot_w,
+        screenshot_h: body.screenshot_h || existingComment.screenshot_h,
+        crop_x: body.crop_x ?? existingComment.crop_x,
+        crop_y: body.crop_y ?? existingComment.crop_y,
+        crop_w: body.crop_w ?? existingComment.crop_w,
+        crop_h: body.crop_h ?? existingComment.crop_h,
+        change_type: "edit",
+        project_token: token,
+      });
+
+      // Update the canonical comment
+      const updateData: Record<string, unknown> = {
+        body: commentBody,
+        edited_at: new Date().toISOString(),
+        version_count: actualNextVersion,
+      };
+
+      // Update screenshot if provided
+      if (body.screenshot_path) updateData.screenshot_path = body.screenshot_path;
+      if (body.screenshot_full_path) updateData.screenshot_full_path = body.screenshot_full_path;
+      if (body.screenshot_w) updateData.screenshot_w = body.screenshot_w;
+      if (body.screenshot_h) updateData.screenshot_h = body.screenshot_h;
+      if (body.crop_x !== undefined) updateData.crop_x = body.crop_x;
+      if (body.crop_y !== undefined) updateData.crop_y = body.crop_y;
+      if (body.crop_w !== undefined) updateData.crop_w = body.crop_w;
+      if (body.crop_h !== undefined) updateData.crop_h = body.crop_h;
+
       const { data: updatedComment, error: updateError } = await supabase
         .from("prototype_comments")
-        .update({ body: commentBody })
+        .update(updateData)
         .eq("id", comment_id)
         .eq("project_token", token)
         .select()
@@ -2035,8 +2109,274 @@ if (action === "resolve" || action === "unresolve") {
         );
       }
 
+      console.log(`Comment ${comment_id.slice(0, 8)} edited, now at version ${actualNextVersion}`);
+
       return new Response(
         JSON.stringify({ ok: true, comment: updatedComment }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Add clarification to a comment (creates new version without replacing body)
+    if (action === "add_clarification") {
+      if (!comment_id || !commentBody) {
+        return new Response(
+          JSON.stringify({ error: "comment_id and body are required" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Fetch existing comment
+      const { data: existingComment, error: fetchError } = await supabase
+        .from("prototype_comments")
+        .select("id, author_type, body, version_count")
+        .eq("id", comment_id)
+        .eq("project_token", token)
+        .maybeSingle();
+
+      if (fetchError || !existingComment) {
+        return new Response(
+          JSON.stringify({ error: "Comment not found" }),
+          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Only allow clients to add clarifications to their own comments
+      if (existingComment.author_type !== "client") {
+        return new Response(
+          JSON.stringify({ error: "Can only add clarifications to your own comments" }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Get the next version number
+      const { data: maxVersionRow } = await supabase
+        .from("comment_versions")
+        .select("version_number")
+        .eq("comment_id", comment_id)
+        .order("version_number", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      const currentVersion = maxVersionRow?.version_number || 0;
+
+      // If no versions yet, save original first
+      if (currentVersion === 0) {
+        await supabase.from("comment_versions").insert({
+          comment_id,
+          version_number: 1,
+          author_type: existingComment.author_type,
+          body: existingComment.body,
+          change_type: "original",
+          project_token: token,
+        });
+      }
+
+      // Insert clarification as new version
+      const clarificationVersion = currentVersion === 0 ? 2 : currentVersion + 1;
+      await supabase.from("comment_versions").insert({
+        comment_id,
+        version_number: clarificationVersion,
+        author_type: "client",
+        body: commentBody, // The clarification text
+        change_type: "clarification",
+        project_token: token,
+      });
+
+      // Update version_count but NOT the canonical body (clarification is additive)
+      const { data: updatedComment, error: updateError } = await supabase
+        .from("prototype_comments")
+        .update({ 
+          version_count: clarificationVersion,
+          edited_at: new Date().toISOString(),
+        })
+        .eq("id", comment_id)
+        .eq("project_token", token)
+        .select()
+        .single();
+
+      if (updateError) {
+        console.error("Add clarification error:", updateError);
+        return new Response(
+          JSON.stringify({ error: "Failed to add clarification" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      console.log(`Clarification added to comment ${comment_id.slice(0, 8)}, version ${clarificationVersion}`);
+
+      return new Response(
+        JSON.stringify({ ok: true, comment: updatedComment }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Mark a comment as "no longer relevant" (soft status, not delete)
+    if (action === "mark_not_relevant") {
+      if (!comment_id) {
+        return new Response(
+          JSON.stringify({ error: "comment_id is required" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Fetch existing comment
+      const { data: existingComment, error: fetchError } = await supabase
+        .from("prototype_comments")
+        .select("id, author_type, body, version_count")
+        .eq("id", comment_id)
+        .eq("project_token", token)
+        .maybeSingle();
+
+      if (fetchError || !existingComment) {
+        return new Response(
+          JSON.stringify({ error: "Comment not found" }),
+          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Only allow clients to mark their own comments as not relevant
+      if (existingComment.author_type !== "client") {
+        return new Response(
+          JSON.stringify({ error: "Can only mark your own comments as not relevant" }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Get the next version number
+      const { data: maxVersionRow } = await supabase
+        .from("comment_versions")
+        .select("version_number")
+        .eq("comment_id", comment_id)
+        .order("version_number", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      const currentVersion = maxVersionRow?.version_number || 0;
+      const nextVersion = currentVersion === 0 ? 1 : currentVersion + 1;
+
+      // Log the status change as a version entry
+      await supabase.from("comment_versions").insert({
+        comment_id,
+        version_number: nextVersion,
+        author_type: "client",
+        body: "Marked as no longer relevant",
+        change_type: "status_change",
+        project_token: token,
+      });
+
+      // Update the canonical comment
+      const { data: updatedComment, error: updateError } = await supabase
+        .from("prototype_comments")
+        .update({ 
+          is_relevant: false,
+          version_count: nextVersion,
+        })
+        .eq("id", comment_id)
+        .eq("project_token", token)
+        .select()
+        .single();
+
+      if (updateError) {
+        console.error("Mark not relevant error:", updateError);
+        return new Response(
+          JSON.stringify({ error: "Failed to mark as not relevant" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      console.log(`Comment ${comment_id.slice(0, 8)} marked as not relevant`);
+
+      return new Response(
+        JSON.stringify({ ok: true, comment: updatedComment }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Restore a comment from "no longer relevant" status
+    if (action === "restore_relevant") {
+      if (!comment_id) {
+        return new Response(
+          JSON.stringify({ error: "comment_id is required" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const { data: updatedComment, error: updateError } = await supabase
+        .from("prototype_comments")
+        .update({ is_relevant: true })
+        .eq("id", comment_id)
+        .eq("project_token", token)
+        .select()
+        .single();
+
+      if (updateError) {
+        console.error("Restore relevant error:", updateError);
+        return new Response(
+          JSON.stringify({ error: "Failed to restore comment" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      return new Response(
+        JSON.stringify({ ok: true, comment: updatedComment }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Get comment version history
+    if (action === "get_versions") {
+      if (!comment_id) {
+        return new Response(
+          JSON.stringify({ error: "comment_id is required" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Verify comment belongs to project
+      const { data: comment, error: commentError } = await supabase
+        .from("prototype_comments")
+        .select("id")
+        .eq("id", comment_id)
+        .eq("project_token", token)
+        .maybeSingle();
+
+      if (commentError || !comment) {
+        return new Response(
+          JSON.stringify({ error: "Comment not found" }),
+          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Fetch all versions ordered by version_number desc (newest first)
+      const { data: versions, error: versionsError } = await supabase
+        .from("comment_versions")
+        .select("*")
+        .eq("comment_id", comment_id)
+        .order("version_number", { ascending: false });
+
+      if (versionsError) {
+        console.error("Get versions error:", versionsError);
+        return new Response(
+          JSON.stringify({ error: "Failed to get versions" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Generate signed URLs for screenshots in each version
+      const versionsWithUrls = await Promise.all((versions || []).map(async (v) => {
+        let signedUrl: string | null = null;
+        if (v.screenshot_path) {
+          const { data: signedData } = await supabase.storage
+            .from("project-media")
+            .createSignedUrl(v.screenshot_path, 3600);
+          signedUrl = signedData?.signedUrl || null;
+        }
+        return { ...v, screenshot_signed_url: signedUrl };
+      }));
+
+      return new Response(
+        JSON.stringify({ versions: versionsWithUrls }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }

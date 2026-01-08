@@ -217,6 +217,71 @@ export type Database = {
         }
         Relationships: []
       }
+      comment_versions: {
+        Row: {
+          author_type: string
+          body: string
+          change_type: string
+          comment_id: string
+          created_at: string
+          crop_h: number | null
+          crop_w: number | null
+          crop_x: number | null
+          crop_y: number | null
+          id: string
+          project_token: string
+          screenshot_full_path: string | null
+          screenshot_h: number | null
+          screenshot_path: string | null
+          screenshot_w: number | null
+          version_number: number
+        }
+        Insert: {
+          author_type: string
+          body: string
+          change_type?: string
+          comment_id: string
+          created_at?: string
+          crop_h?: number | null
+          crop_w?: number | null
+          crop_x?: number | null
+          crop_y?: number | null
+          id?: string
+          project_token: string
+          screenshot_full_path?: string | null
+          screenshot_h?: number | null
+          screenshot_path?: string | null
+          screenshot_w?: number | null
+          version_number?: number
+        }
+        Update: {
+          author_type?: string
+          body?: string
+          change_type?: string
+          comment_id?: string
+          created_at?: string
+          crop_h?: number | null
+          crop_w?: number | null
+          crop_x?: number | null
+          crop_y?: number | null
+          id?: string
+          project_token?: string
+          screenshot_full_path?: string | null
+          screenshot_h?: number | null
+          screenshot_path?: string | null
+          screenshot_w?: number | null
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_comment_versions_comment"
+            columns: ["comment_id"]
+            isOneToOne: false
+            referencedRelation: "prototype_comments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       demos: {
         Row: {
           content: Json
@@ -1362,8 +1427,10 @@ export type Database = {
           crop_w: number | null
           crop_x: number | null
           crop_y: number | null
+          edited_at: string | null
           id: string
           is_internal: boolean
+          is_relevant: boolean | null
           page_path: string | null
           page_url: string | null
           parent_comment_id: string | null
@@ -1385,6 +1452,7 @@ export type Database = {
           text_context: string | null
           text_hint: string | null
           text_offset: number | null
+          version_count: number | null
           viewport_h: number | null
           viewport_w: number | null
           x_pct: number | null
@@ -1402,8 +1470,10 @@ export type Database = {
           crop_w?: number | null
           crop_x?: number | null
           crop_y?: number | null
+          edited_at?: string | null
           id?: string
           is_internal?: boolean
+          is_relevant?: boolean | null
           page_path?: string | null
           page_url?: string | null
           parent_comment_id?: string | null
@@ -1425,6 +1495,7 @@ export type Database = {
           text_context?: string | null
           text_hint?: string | null
           text_offset?: number | null
+          version_count?: number | null
           viewport_h?: number | null
           viewport_w?: number | null
           x_pct?: number | null
@@ -1442,8 +1513,10 @@ export type Database = {
           crop_w?: number | null
           crop_x?: number | null
           crop_y?: number | null
+          edited_at?: string | null
           id?: string
           is_internal?: boolean
+          is_relevant?: boolean | null
           page_path?: string | null
           page_url?: string | null
           parent_comment_id?: string | null
@@ -1465,6 +1538,7 @@ export type Database = {
           text_context?: string | null
           text_hint?: string | null
           text_offset?: number | null
+          version_count?: number | null
           viewport_h?: number | null
           viewport_w?: number | null
           x_pct?: number | null

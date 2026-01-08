@@ -1,6 +1,5 @@
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Check, Clock, CircleDot, XCircle, Image as ImageIcon } from "lucide-react";
+import { Check, Clock, CircleDot, XCircle, Image as ImageIcon, Pencil, MinusCircle } from "lucide-react";
 
 export type CommentStatus = "open" | "in_progress" | "resolved" | "wont_do";
 
@@ -27,19 +26,20 @@ export interface CommentData {
   crop_y?: number | null;
   crop_w?: number | null;
   crop_h?: number | null;
+  // Versioning fields
+  edited_at?: string | null;
+  version_count?: number;
+  is_relevant?: boolean;
+  // Signed URL from backend
+  screenshot_signed_url?: string | null;
 }
 
 interface FeedbackCardProps {
   comment: CommentData;
   index: number;
   token: string;
-  onResolve: (id: string) => void;
-  onUnresolve: (id: string) => void;
-  onMarkInProgress: (id: string) => void;
-  onViewScreenshot: (comment: CommentData) => void;
+  onClick?: (comment: CommentData) => void;
 }
-
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 
 function getEffectiveStatus(c: CommentData): CommentStatus {
   if (c.status === "wont_do") return "wont_do";
@@ -61,16 +61,13 @@ export function FeedbackCard({
   comment,
   index,
   token,
-  onResolve,
-  onUnresolve,
-  onMarkInProgress,
-  onViewScreenshot,
+  onClick,
 }: FeedbackCardProps) {
   const status = getEffectiveStatus(comment);
   const isResolved = status === "resolved" || status === "wont_do";
-  const isInProgress = status === "in_progress";
-  const hasScreenshot = !!comment.screenshot_path;
-  const isClient = comment.author_type === "client";
+  const hasScreenshot = !!comment.screenshot_path || !!comment.screenshot_signed_url;
+  const isEdited = !!comment.edited_at;
+  const isNotRelevant = comment.is_relevant === false;
 
   const getStatusBadge = () => {
     switch (status) {
@@ -120,12 +117,20 @@ export function FeedbackCard({
     );
   };
 
+  // Get screenshot URL - prefer signed URL, fallback to public URL
+  const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+  const screenshotUrl = comment.screenshot_signed_url || 
+    (comment.screenshot_path ? `${SUPABASE_URL}/storage/v1/object/public/project-media/${comment.screenshot_path}` : null);
+
   return (
     <div
-      className={`p-3 rounded-lg border transition-colors ${
-        isResolved
+      onClick={() => onClick?.(comment)}
+      className={`p-3 rounded-lg border transition-colors cursor-pointer ${
+        isNotRelevant
+          ? "bg-muted/30 border-border/30 opacity-60"
+          : isResolved
           ? "bg-muted/50 border-border/50"
-          : "bg-card border-border hover:border-primary/50"
+          : "bg-card border-border hover:border-primary/50 hover:bg-accent/50"
       }`}
     >
       {/* Header */}
@@ -134,7 +139,7 @@ export function FeedbackCard({
           {/* Index badge */}
           <div
             className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold ${
-              isResolved
+              isResolved || isNotRelevant
                 ? "bg-muted text-muted-foreground"
                 : "bg-primary text-primary-foreground"
             }`}
@@ -164,75 +169,43 @@ export function FeedbackCard({
       <div className="flex items-center gap-1.5 mb-2 flex-wrap">
         {getRoleBadge()}
         {getStatusBadge()}
+        
+        {/* Edited badge */}
+        {isEdited && (
+          <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-700">
+            <Pencil className="h-2 w-2 mr-0.5" />
+            Edited
+          </Badge>
+        )}
+        
+        {/* Not relevant badge */}
+        {isNotRelevant && (
+          <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-gray-100 text-gray-500 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700">
+            <MinusCircle className="h-2 w-2 mr-0.5" />
+            Not Relevant
+          </Badge>
+        )}
       </div>
 
-      {/* Body */}
-      <p className={`text-sm mb-2 line-clamp-3 ${isResolved ? "text-muted-foreground" : ""}`}>
+      {/* Body - truncated preview */}
+      <p className={`text-sm mb-2 line-clamp-2 ${isResolved || isNotRelevant ? "text-muted-foreground" : ""}`}>
         {comment.body}
       </p>
 
-      {/* Screenshot thumbnail - show cropped image for snips */}
-      {hasScreenshot && (
-        <button
-          onClick={() => onViewScreenshot(comment)}
-          className="relative group w-full rounded-md overflow-hidden border border-border hover:border-primary transition-colors mb-2"
-        >
+      {/* Screenshot thumbnail - compact preview */}
+      {screenshotUrl && (
+        <div className="relative w-full rounded-md overflow-hidden border border-border mb-2">
           <img
-            src={`${SUPABASE_URL}/storage/v1/object/public/project-media/${comment.screenshot_path}`}
+            src={screenshotUrl}
             alt="Screenshot"
-            className="w-full h-auto object-cover max-h-32"
+            className="w-full h-auto object-cover max-h-20"
           />
-          <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-            <span className="text-white text-xs font-medium">
-              {comment.screenshot_full_path ? "View with Context" : "View"}
-            </span>
-          </div>
-        </button>
-      )}
-
-      {/* Resolution note */}
-      {comment.resolution_note && (
-        <div className="mb-2 p-2 rounded bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800">
-          <p className="text-xs text-green-700 dark:text-green-400 font-medium mb-0.5">Resolution:</p>
-          <p className="text-xs text-green-600 dark:text-green-300">{comment.resolution_note}</p>
         </div>
       )}
 
-      {/* Actions */}
-      <div className="flex items-center gap-1 pt-1">
-        {isResolved ? (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-6 px-2 text-xs text-orange-600 hover:text-orange-700 hover:bg-orange-50 dark:hover:bg-orange-900/20"
-            onClick={() => onUnresolve(comment.id)}
-          >
-            Reopen
-          </Button>
-        ) : (
-          <>
-            {!isInProgress && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-6 px-2 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20"
-                onClick={() => onMarkInProgress(comment.id)}
-              >
-                <Clock className="h-3 w-3 mr-1" />
-                Working
-              </Button>
-            )}
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-6 px-2 text-xs text-green-600 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-900/20"
-              onClick={() => onResolve(comment.id)}
-            >
-              <Check className="h-3 w-3 mr-1" />
-              Resolve
-            </Button>
-          </>
-        )}
+      {/* Click to view hint */}
+      <div className="text-[10px] text-muted-foreground text-center pt-1">
+        Click to view details
       </div>
     </div>
   );
