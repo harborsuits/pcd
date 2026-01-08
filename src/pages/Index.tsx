@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
-import { useMemo, lazy, Suspense } from "react";
-import { ArrowRight, MessageSquare, FolderOpen, Sparkles, Shield, Smartphone, CreditCard, LogIn, Globe, CalendarCheck, Zap, Bot, Clock, CheckCircle, Phone, Brain, Clock3, Calendar } from "lucide-react";
+import { useMemo, lazy, Suspense, useState } from "react";
+import { ArrowRight, MessageSquare, FolderOpen, Sparkles, Shield, Smartphone, CreditCard, LogIn, Globe, CalendarCheck, Zap, Bot, Clock, CheckCircle, Phone, Brain, Clock3, Calendar, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LiquidButton } from "@/components/ui/liquid-glass-button";
 import { GlowCard } from "@/components/ui/spotlight-card";
@@ -12,6 +12,7 @@ import { Footer } from "@/components/ui/footer";
 import { Typewriter } from "@/components/ui/typewriter-text";
 import pcdLogo from "@/assets/pcd-logo.jpeg";
 import { SEOHead } from "@/components/SEOHead";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
 // Lazy load 3D component to isolate React Three Fiber from crashing the whole app
 const Hero3DModel = lazy(() => import("@/components/Hero3DModel").then(m => ({ default: m.Hero3DModel })));
@@ -95,6 +96,8 @@ const Index = () => {
     );
   };
 
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
   return (
     <div className="min-h-screen flex flex-col bg-page-bg text-foreground">
       <SEOHead
@@ -108,17 +111,53 @@ const Index = () => {
           <Link to="/" className="font-serif text-lg md:text-xl font-bold tracking-tight text-foreground whitespace-nowrap">
             Pleasant Cove Design
           </Link>
-          <nav className="flex items-center gap-2 md:gap-4">
-            <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex text-muted-foreground hover:text-foreground">
+          
+          {/* Desktop nav */}
+          <nav className="hidden sm:flex items-center gap-4">
+            <Button asChild variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
               <Link to="/what-we-build">What We Build</Link>
             </Button>
-            <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex text-muted-foreground hover:text-foreground">
+            <Button asChild variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
               <Link to="/pricing">Pricing</Link>
             </Button>
             <Button asChild variant="outline" size="sm" className="whitespace-nowrap">
               <Link to="/portal">Client Portal</Link>
             </Button>
           </nav>
+          
+          {/* Mobile nav */}
+          <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+            <SheetTrigger asChild className="sm:hidden">
+              <Button variant="ghost" size="icon">
+                <Menu className="h-5 w-5" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="right" className="w-64">
+              <nav className="flex flex-col gap-4 mt-8">
+                <Link 
+                  to="/what-we-build" 
+                  className="text-lg font-medium hover:text-accent transition-colors"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  What We Build
+                </Link>
+                <Link 
+                  to="/pricing" 
+                  className="text-lg font-medium hover:text-accent transition-colors"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Pricing
+                </Link>
+                <Link 
+                  to="/portal" 
+                  className="text-lg font-medium hover:text-accent transition-colors"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Client Portal
+                </Link>
+              </nav>
+            </SheetContent>
+          </Sheet>
         </div>
       </header>
 
