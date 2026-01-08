@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, MessageCircle, Image as ImageIcon, Check, Clock, CircleDot } from "lucide-react";
+import { Plus, MessageCircle, Check, Clock, CircleDot, MinusCircle } from "lucide-react";
 import { FeedbackCard, type CommentData } from "./FeedbackCard";
 
 export type CommentStatus = "open" | "in_progress" | "resolved" | "wont_do";
@@ -11,10 +11,7 @@ export type CommentStatus = "open" | "in_progress" | "resolved" | "wont_do";
 interface FeedbackPanelProps {
   comments: CommentData[];
   onAddFeedback: () => void;
-  onResolve: (id: string) => void;
-  onUnresolve: (id: string) => void;
-  onMarkInProgress: (id: string) => void;
-  onViewScreenshot: (comment: CommentData) => void;
+  onCommentClick: (comment: CommentData) => void;
   token: string;
 }
 
@@ -28,25 +25,29 @@ function getEffectiveStatus(c: CommentData): CommentStatus {
 export function FeedbackPanel({
   comments,
   onAddFeedback,
-  onResolve,
-  onUnresolve,
-  onMarkInProgress,
-  onViewScreenshot,
+  onCommentClick,
   token,
 }: FeedbackPanelProps) {
   const [activeTab, setActiveTab] = useState<string>("open");
 
-  // Group comments by status
+  // Group comments by status (exclude is_relevant === false from default view)
   const grouped = useMemo(() => {
     const result = {
       open: [] as CommentData[],
       in_progress: [] as CommentData[],
       resolved: [] as CommentData[],
+      not_relevant: [] as CommentData[],
     };
 
     comments
       .filter(c => !c.archived_at)
       .forEach(c => {
+        // Handle "not relevant" as a separate category
+        if (c.is_relevant === false) {
+          result.not_relevant.push(c);
+          return;
+        }
+        
         const status = getEffectiveStatus(c);
         if (status === "open") result.open.push(c);
         else if (status === "in_progress") result.in_progress.push(c);
@@ -59,6 +60,7 @@ export function FeedbackPanel({
   const totalOpen = grouped.open.length;
   const totalInProgress = grouped.in_progress.length;
   const totalResolved = grouped.resolved.length;
+  const totalNotRelevant = grouped.not_relevant.length;
   const total = totalOpen + totalInProgress + totalResolved;
 
   const renderCommentList = (list: CommentData[], emptyMessage: string) => {
@@ -79,10 +81,7 @@ export function FeedbackPanel({
             comment={comment}
             index={index}
             token={token}
-            onResolve={onResolve}
-            onUnresolve={onUnresolve}
-            onMarkInProgress={onMarkInProgress}
-            onViewScreenshot={onViewScreenshot}
+            onClick={onCommentClick}
           />
         ))}
       </div>
@@ -145,6 +144,16 @@ export function FeedbackPanel({
                 <span className="ml-1.5 text-muted-foreground">({totalResolved})</span>
               )}
             </TabsTrigger>
+            {totalNotRelevant > 0 && (
+              <TabsTrigger
+                value="not_relevant"
+                className="text-xs data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-3"
+              >
+                <MinusCircle className="h-3 w-3 mr-1.5 text-gray-400" />
+                Not Relevant
+                <span className="ml-1.5 text-muted-foreground">({totalNotRelevant})</span>
+              </TabsTrigger>
+            )}
           </TabsList>
         </div>
 
@@ -157,6 +166,9 @@ export function FeedbackPanel({
           </TabsContent>
           <TabsContent value="resolved" className="mt-0 h-full">
             {renderCommentList(grouped.resolved, "No resolved feedback yet")}
+          </TabsContent>
+          <TabsContent value="not_relevant" className="mt-0 h-full">
+            {renderCommentList(grouped.not_relevant, "No feedback marked as not relevant")}
           </TabsContent>
         </ScrollArea>
       </Tabs>

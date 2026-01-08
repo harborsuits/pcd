@@ -10,6 +10,7 @@ import { ScreenshotComposer } from "./ScreenshotComposer";
 import { CommentComposer } from "./CommentComposer";
 import { ScreenshotViewer } from "../ScreenshotViewer";
 import { OperatorPanel } from "./OperatorPanel";
+import { FeedbackDetailModal } from "./FeedbackDetailModal";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { MessageCircle, Settings2, Home } from "lucide-react";
@@ -116,6 +117,7 @@ export function ProjectWorkspace({
   const [showAddFeedbackModal, setShowAddFeedbackModal] = useState(false);
   const [isCapturing, setIsCapturing] = useState(false);
   const [viewingScreenshot, setViewingScreenshot] = useState<CommentData | null>(null);
+  const [selectedCommentForDetail, setSelectedCommentForDetail] = useState<CommentData | null>(null);
   const [rightPanelTab, setRightPanelTab] = useState<string>("feedback");
   const [isOperatorChecked, setIsOperatorChecked] = useState(false);
   const [isOperator, setIsOperator] = useState(false);
@@ -473,10 +475,7 @@ export function ProjectWorkspace({
               <FeedbackPanel
                 comments={versionComments}
                 onAddFeedback={() => setShowAddFeedbackModal(true)}
-                onResolve={handleResolve}
-                onUnresolve={handleUnresolve}
-                onMarkInProgress={handleMarkInProgress}
-                onViewScreenshot={handleViewScreenshot}
+                onCommentClick={setSelectedCommentForDetail}
                 token={token}
               />
             </TabsContent>
@@ -500,14 +499,20 @@ export function ProjectWorkspace({
           <FeedbackPanel
             comments={versionComments}
             onAddFeedback={() => setShowAddFeedbackModal(true)}
-            onResolve={handleResolve}
-            onUnresolve={handleUnresolve}
-            onMarkInProgress={handleMarkInProgress}
-            onViewScreenshot={handleViewScreenshot}
+            onCommentClick={setSelectedCommentForDetail}
             token={token}
           />
         )}
       </div>
+
+      {/* Feedback detail modal */}
+      <FeedbackDetailModal
+        comment={selectedCommentForDetail}
+        open={!!selectedCommentForDetail}
+        onClose={() => setSelectedCommentForDetail(null)}
+        token={token}
+        onCommentUpdated={onRefreshComments}
+      />
 
       {/* Add feedback modal */}
       <AddFeedbackModal
