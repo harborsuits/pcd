@@ -91,17 +91,49 @@ export default function PortalHub() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Fetch user's portals when logged in and auto-redirect if only one
+  // Claim orphaned projects and fetch user's portals when logged in
   useEffect(() => {
     if (user && session?.access_token) {
-      fetchMyPortals(session.access_token).then((projects) => {
-        // Auto-redirect if user has exactly 1 project (they just came from intake)
-        if (projects && projects.length === 1) {
-          navigate(`/p/${projects[0].project_token}`, { replace: true });
-        }
+      // First, try to claim any orphaned projects for this email
+      claimOrphanedProjects(session.access_token).then(() => {
+        // Then fetch all projects (including newly claimed ones)
+        fetchMyPortals(session.access_token).then((projects) => {
+          // Auto-redirect if user has exactly 1 project
+          if (projects && projects.length === 1) {
+            navigate(`/p/${projects[0].project_token}`, { replace: true });
+          }
+        });
       });
     }
   }, [user, session?.access_token, navigate]);
+
+  // Claim orphaned projects that match user's email
+  const claimOrphanedProjects = async (accessToken: string): Promise<void> => {
+    try {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/portal/claim-projects`, {
+        method: "POST",
+        headers: {
+          "apikey": SUPABASE_ANON_KEY,
+          "Authorization": `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
+        if (data.claimed > 0) {
+          console.log(`Auto-claimed ${data.claimed} project(s)`);
+          toast({
+            title: "Projects found!",
+            description: `We found ${data.claimed} project${data.claimed > 1 ? 's' : ''} linked to your email.`,
+          });
+        }
+      }
+    } catch (err) {
+      console.error("Failed to claim projects:", err);
+      // Non-fatal, continue with fetch
+    }
+  };
 
   const fetchMyPortals = async (accessToken: string): Promise<Portal[]> => {
     if (!accessToken) return [];
