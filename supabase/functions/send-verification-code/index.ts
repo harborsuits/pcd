@@ -83,7 +83,17 @@ serve(async (req) => {
       );
     }
 
-    const normalizedEmail = String(email).toLowerCase();
+    const normalizedEmail = String(email).toLowerCase().trim();
+    
+    // Validate email format to prevent invalid data in database
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(normalizedEmail)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid email format" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    
     const token = project_token ?? null; // Explicitly allow null
     
     // Get client IP for rate limiting (check common headers)
