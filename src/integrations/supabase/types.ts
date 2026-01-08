@@ -136,6 +136,39 @@ export type Database = {
         }
         Relationships: []
       }
+      client_accounts: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          name: string | null
+          phone: string | null
+          stripe_customer_id: string | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          name?: string | null
+          phone?: string | null
+          stripe_customer_id?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          name?: string | null
+          phone?: string | null
+          stripe_customer_id?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       client_leads: {
         Row: {
           business_name: string
@@ -954,6 +987,95 @@ export type Database = {
           },
         ]
       }
+      project_line_items: {
+        Row: {
+          accepted_at: string | null
+          amount_cents: number
+          billing_interval: string | null
+          billing_mode: string
+          cancelled_at: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          invoiced_at: string | null
+          label: string
+          notes: string | null
+          paid_at: string | null
+          project_id: string
+          project_token: string
+          quantity: number
+          status: string
+          stripe_invoice_id: string | null
+          stripe_invoice_item_id: string | null
+          stripe_payment_intent_id: string | null
+          stripe_price_id: string | null
+          stripe_subscription_id: string | null
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          amount_cents: number
+          billing_interval?: string | null
+          billing_mode?: string
+          cancelled_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          invoiced_at?: string | null
+          label: string
+          notes?: string | null
+          paid_at?: string | null
+          project_id: string
+          project_token: string
+          quantity?: number
+          status?: string
+          stripe_invoice_id?: string | null
+          stripe_invoice_item_id?: string | null
+          stripe_payment_intent_id?: string | null
+          stripe_price_id?: string | null
+          stripe_subscription_id?: string | null
+          type?: string
+          updated_at?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          amount_cents?: number
+          billing_interval?: string | null
+          billing_mode?: string
+          cancelled_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          invoiced_at?: string | null
+          label?: string
+          notes?: string | null
+          paid_at?: string | null
+          project_id?: string
+          project_token?: string
+          quantity?: number
+          status?: string
+          stripe_invoice_id?: string | null
+          stripe_invoice_item_id?: string | null
+          stripe_payment_intent_id?: string | null
+          stripe_price_id?: string | null
+          stripe_subscription_id?: string | null
+          type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_line_items_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_media: {
         Row: {
           created_at: string
@@ -1058,6 +1180,7 @@ export type Database = {
           business_name: string
           business_slug: string
           city: string | null
+          client_account_id: string | null
           contact_email: string | null
           contact_name: string | null
           contact_phone: string | null
@@ -1093,6 +1216,7 @@ export type Database = {
           business_name: string
           business_slug: string
           city?: string | null
+          client_account_id?: string | null
           contact_email?: string | null
           contact_name?: string | null
           contact_phone?: string | null
@@ -1128,6 +1252,7 @@ export type Database = {
           business_name?: string
           business_slug?: string
           city?: string | null
+          client_account_id?: string | null
           contact_email?: string | null
           contact_name?: string | null
           contact_phone?: string | null
@@ -1157,7 +1282,15 @@ export type Database = {
           website?: string | null
           zip?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "projects_client_account_id_fkey"
+            columns: ["client_account_id"]
+            isOneToOne: false
+            referencedRelation: "client_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       prototype_comment_media: {
         Row: {
