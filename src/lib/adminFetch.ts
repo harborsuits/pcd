@@ -9,10 +9,20 @@ export class AdminAuthError extends Error {
   }
 }
 
-// Get current session token for admin requests
+// Get current session token for admin requests with retry for hydration
 async function getAuthToken(): Promise<string | null> {
-  const { data: { session } } = await supabase.auth.getSession();
-  return session?.access_token || null;
+  // Try up to 3 times with small delays to handle session hydration
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.access_token) {
+      return session.access_token;
+    }
+    // Wait 100ms before retry (except on last attempt)
+    if (attempt < 2) {
+      await new Promise(r => setTimeout(r, 100));
+    }
+  }
+  return null;
 }
 
 // Check if user has admin role
@@ -125,6 +135,13 @@ export async function isAuthenticatedAdmin(): Promise<boolean> {
       return false;
     }
     
+    // CRITICAL: Validate that access_token actually exists (handles hydration race)
+    if (!session.access_token) {
+      console.log("[adminFetch] Session exists but no access_token yet (hydration pending)");
+      sessionStorage.removeItem("admin_verified");
+      return false;
+    }
+    
     // Check if session is expired
     const expiresAt = session.expires_at;
     if (expiresAt && expiresAt * 1000 < Date.now()) {
@@ -140,8 +157,13 @@ export async function isAuthenticatedAdmin(): Promise<boolean> {
     // Check if we've already verified admin status for this session
     const cachedUserId = sessionStorage.getItem("admin_verified");
     if (cachedUserId === session.user.id) {
-      console.log("[adminFetch] Using cached admin verification");
-      return true;
+      // Double-check token still exists before trusting cache
+      if (session.access_token) {
+        console.log("[adminFetch] Using cached admin verification");
+        return true;
+      }
+      // Cache invalid - token missing
+      sessionStorage.removeItem("admin_verified");
     }
     
     // Verify admin role and cache result
