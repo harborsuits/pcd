@@ -1527,11 +1527,15 @@ async function handleRequestDemo(req: Request): Promise<Response> {
       requested_at: new Date().toISOString(),
     };
 
+    // Log incoming request for debugging
+    console.log(`Request demo received - business_name: "${business_name}", city: "${city}", service_type: "${service_type}", email: "${email}"`);
+    
     // business_name is always required
-    // city is required for demo, website, both; optional for ai and other
+    // city is required for demo, website, both; optional for ai, ai_receptionist, and other
     const cityRequired = !service_type || service_type === "demo" || service_type === "website" || service_type === "both";
     
     if (!business_name) {
+      console.log("Validation failed: business_name is required");
       return new Response(
         JSON.stringify({ error: "business_name is required" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -1539,8 +1543,9 @@ async function handleRequestDemo(req: Request): Promise<Response> {
     }
     
     if (cityRequired && !city) {
+      console.log(`Validation failed: city is required for service_type "${service_type}"`);
       return new Response(
-        JSON.stringify({ error: "city is required for this service type" }),
+        JSON.stringify({ error: `city is required for this service type (${service_type || "none"})` }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
