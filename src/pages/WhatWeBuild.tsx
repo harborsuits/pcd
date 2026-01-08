@@ -577,7 +577,7 @@ const WhatWeBuild = () => {
               <Link to="/pricing">Pricing</Link>
             </Button>
             <Button asChild variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
-              <Link to="/demos">Demos</Link>
+              <Link to="/#demos">Demos</Link>
             </Button>
             <Button asChild variant="outline" size="sm">
               <Link to="/portal">Client Portal</Link>
