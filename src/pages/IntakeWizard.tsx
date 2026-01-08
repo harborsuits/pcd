@@ -103,6 +103,28 @@ const GetDemo = () => {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [accessToken, setAccessToken] = useState<string | null>(null);
+
+  // Check if user is logged in
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        setIsLoggedIn(true);
+        setAccessToken(session.access_token);
+      }
+    };
+    checkAuth();
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
+      setIsLoggedIn(!!session);
+      setAccessToken(session?.access_token ?? null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
   
   const [formData, setFormData] = useState<FormData>({
     businessName: "",
@@ -351,7 +373,14 @@ const GetDemo = () => {
     setIsLoading(true);
 
     try {
+      // Build headers - include auth token if user is logged in
+      const headers: Record<string, string> = {};
+      if (accessToken) {
+        headers.Authorization = `Bearer ${accessToken}`;
+      }
+
       const { data, error } = await supabase.functions.invoke("leads/request-demo", {
+        headers,
         body: {
           business_name: formData.businessName.trim(),
           city: formData.serviceArea.trim() || null,
@@ -430,8 +459,16 @@ const GetDemo = () => {
           description: "Redirecting you to your personalized demo...",
         });
         navigate(data.demo_url);
+      } else if (data?.project_token && isLoggedIn) {
+        // User is already logged in - project ownership was set by backend
+        // Go directly to workspace (skip create-password)
+        toast({
+          title: "Project created!",
+          description: "Redirecting to your workspace...",
+        });
+        navigate(`/w/${data.project_token}`);
       } else if (data?.project_token && formData.email) {
-        // Non-demo service types with email - redirect to create password page
+        // Not logged in - redirect to create password page
         // This allows the client to set up their portal account
         toast({
           title: "Almost there!",
