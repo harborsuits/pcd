@@ -286,7 +286,10 @@ const GetDemo = () => {
       case "choose":
         return !!formData.serviceType;
       case "basics":
-        return formData.businessName.trim() && formData.email.trim() && formData.phone.trim();
+        // For demo, website, both - require serviceArea; for AI-only, it's optional (collected later as serviceAreaRules)
+        const needsServiceArea = formData.serviceType === "demo" || formData.serviceType === "website" || formData.serviceType === "both";
+        const basicsValid = formData.businessName.trim() && formData.email.trim() && formData.phone.trim();
+        return needsServiceArea ? basicsValid && formData.serviceArea.trim() : basicsValid;
       case "website":
         return !!formData.websiteGoal && formData.serviceArea.trim() && !!formData.timeline;
       case "brand":
@@ -583,65 +586,84 @@ const GetDemo = () => {
     </div>
   );
 
-  const renderBasicsStep = () => (
-    <div className="space-y-6">
-      <div>
-        <h2 className="font-serif text-2xl font-bold mb-2">Business basics</h2>
-        <p className="text-muted-foreground">Just enough to set things up and follow up with you.</p>
+  const renderBasicsStep = () => {
+    // Show serviceArea field for demo, website, both (needed for demo generation/personalization)
+    const showServiceArea = formData.serviceType === "demo" || formData.serviceType === "website" || formData.serviceType === "both";
+    
+    return (
+      <div className="space-y-6">
+        <div>
+          <h2 className="font-serif text-2xl font-bold mb-2">Business basics</h2>
+          <p className="text-muted-foreground">Just enough to set things up and follow up with you.</p>
+        </div>
+        
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="businessName">Business name *</Label>
+            <Input
+              id="businessName"
+              placeholder="e.g. Smith Plumbing"
+              value={formData.businessName}
+              onChange={(e) => updateField("businessName", e.target.value)}
+              disabled={isLoading}
+            />
+          </div>
+
+          {showServiceArea && (
+            <div className="space-y-2">
+              <Label htmlFor="serviceArea">Where do you serve customers? *</Label>
+              <Input
+                id="serviceArea"
+                placeholder="e.g. Portland, ME"
+                value={formData.serviceArea}
+                onChange={(e) => updateField("serviceArea", e.target.value)}
+                disabled={isLoading}
+              />
+              <p className="text-xs text-muted-foreground">City, county, or general area</p>
+            </div>
+          )}
+
+          <div className="space-y-2">
+            <Label htmlFor="yourName">Your name</Label>
+            <Input
+              id="yourName"
+              placeholder="e.g. John Smith"
+              value={formData.yourName}
+              onChange={(e) => updateField("yourName", e.target.value)}
+              disabled={isLoading}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="email">Email *</Label>
+            <Input
+              id="email"
+              type="email"
+              placeholder="john@smithplumbing.com"
+              value={formData.email}
+              onChange={(e) => updateField("email", e.target.value)}
+              disabled={isLoading}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="phone">Best phone number *</Label>
+            <Input
+              id="phone"
+              type="tel"
+              placeholder="(207) 555-1234"
+              value={formData.phone}
+              onChange={(e) => updateField("phone", e.target.value)}
+              disabled={isLoading}
+            />
+            <p className="text-xs text-muted-foreground">
+              Where we can reach you (not necessarily the number customers call)
+            </p>
+          </div>
+        </div>
       </div>
-      
-      <div className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="businessName">Business name *</Label>
-          <Input
-            id="businessName"
-            placeholder="e.g. Smith Plumbing"
-            value={formData.businessName}
-            onChange={(e) => updateField("businessName", e.target.value)}
-            disabled={isLoading}
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="yourName">Your name</Label>
-          <Input
-            id="yourName"
-            placeholder="e.g. John Smith"
-            value={formData.yourName}
-            onChange={(e) => updateField("yourName", e.target.value)}
-            disabled={isLoading}
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="email">Email *</Label>
-          <Input
-            id="email"
-            type="email"
-            placeholder="john@smithplumbing.com"
-            value={formData.email}
-            onChange={(e) => updateField("email", e.target.value)}
-            disabled={isLoading}
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="phone">Best phone number *</Label>
-          <Input
-            id="phone"
-            type="tel"
-            placeholder="(207) 555-1234"
-            value={formData.phone}
-            onChange={(e) => updateField("phone", e.target.value)}
-            disabled={isLoading}
-          />
-          <p className="text-xs text-muted-foreground">
-            Where we can reach you (not necessarily the number customers call)
-          </p>
-        </div>
-      </div>
-    </div>
-  );
+    );
+  };
 
   const renderWebsiteStep = () => (
     <div className="space-y-6">
