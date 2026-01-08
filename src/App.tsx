@@ -12,7 +12,7 @@ import NotFound from "./pages/NotFound";
 import DemoPage from "./pages/demo/DemoPage";
 import PortalPage from "./pages/portal/PortalPage";
 import PortalHub from "./pages/PortalHub";
-import OnboardingWizard from "./pages/portal/OnboardingWizard";
+// OnboardingWizard removed - all new projects go through /get-demo
 import OperatorLayout from "./pages/operator/OperatorLayout";
 import WorkspacePage from "./pages/portal/WorkspacePage";
 import ClientWorkspacePage from "./pages/portal/ClientWorkspacePage";
@@ -45,7 +45,7 @@ const App = () => (
           <Route path="/privacy" element={<PrivacyPolicy />} />
           <Route path="/terms" element={<TermsOfService />} />
           <Route path="/portal" element={<PortalHub />} />
-          <Route path="/portal/new" element={<OnboardingWizard />} />
+          {/* /portal/new removed - all new projects go through /get-demo */}
           <Route path="/start" element={<GetStartedPage />} />
           <Route path="/create-password" element={<CreatePasswordPage />} />
           <Route path="/login" element={<PortalHub />} />
