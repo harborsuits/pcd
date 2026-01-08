@@ -19,7 +19,7 @@ export function PortalHeader({ rightSlot }: PortalHeaderProps) {
               Pricing
             </Link>
             <Link to="/#demos" className="hover:text-foreground transition-colors">
-              Demos
+              See a Demo
             </Link>
             <Link to="/portal" className="hover:text-foreground transition-colors">
               Client Portal
