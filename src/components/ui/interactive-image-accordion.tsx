@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
-import rooferImage from '@/assets/demos/roofer-hero.jpeg';
+import rooferCoverVideo from '@/assets/demos/roofer-cover.mp4';
 import galleryCoverVideo from '@/assets/demos/gallery-cover.mp4';
 import salonCoverVideo from '@/assets/demos/salon-cover.mp4';
 import boutiqueCoverVideo from '@/assets/demos/boutique-cover.mp4';
@@ -96,7 +96,7 @@ const defaultItems: AccordionItemData[] = [
     id: 1,
     category: 'Contractor',
     title: 'Roofer',
-    imageUrl: rooferImage,
+    videoUrl: rooferCoverVideo,
     demoUrl: '/demos/roofer',
   },
   {
