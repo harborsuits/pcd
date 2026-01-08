@@ -8,9 +8,10 @@ import { cn } from "@/lib/utils";
 import NumberFlow from "@number-flow/react";
 import { motion } from "framer-motion";
 import { useRef, useState } from "react";
-import { Check } from "lucide-react";
+import { Check, ArrowRight } from "lucide-react";
 import { LiquidButton } from "@/components/ui/liquid-glass-button";
 import { Link } from "react-router-dom";
+import { ALACARTE_SERVICES } from "@/lib/pricingMenu";
 
 type Period = "monthly" | "yearly";
 
@@ -264,8 +265,38 @@ export default function PricingSection() {
           ))}
         </div>
 
-        {/* Pilot section */}
+        {/* À la carte section */}
         <TimelineContent animationNum={7} timelineRef={pricingRef}>
+          <div className="mt-20 max-w-4xl mx-auto">
+            <div className="text-center mb-10">
+              <h3 className="font-serif text-2xl font-bold mb-2">À La Carte Services</h3>
+              <p className="text-muted-foreground">
+                Not ready for a bundle? Pick individual services that fit your needs.
+              </p>
+            </div>
+            
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {ALACARTE_SERVICES.map((service) => (
+                <Card key={service.id} className="hover:shadow-md transition-shadow">
+                  <CardContent className="p-5">
+                    <h4 className="font-semibold text-foreground mb-1">{service.label}</h4>
+                    <p className="text-sm text-accent font-medium mb-2">{service.price}</p>
+                    <p className="text-sm text-muted-foreground">{service.description}</p>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+            
+            <div className="text-center mt-6">
+              <Link to="/get-demo" className="inline-flex items-center gap-2 text-sm text-primary hover:underline">
+                Have something else in mind? Let's talk <ArrowRight className="h-4 w-4" />
+              </Link>
+            </div>
+          </div>
+        </TimelineContent>
+
+        {/* Pilot section */}
+        <TimelineContent animationNum={8} timelineRef={pricingRef}>
           <div className="text-center mt-16 max-w-xl mx-auto p-8 rounded-xl bg-card/50 border border-border/50 backdrop-blur-sm">
             <h3 className="font-serif text-2xl font-bold mb-3">7-Day Pilot</h3>
             <p className="text-muted-foreground mb-2">
@@ -283,7 +314,7 @@ export default function PricingSection() {
         </TimelineContent>
 
         {/* Boundaries note */}
-        <TimelineContent animationNum={8} timelineRef={pricingRef}>
+        <TimelineContent animationNum={9} timelineRef={pricingRef}>
           <div className="text-center mt-8 max-w-2xl mx-auto">
             <p className="text-sm text-muted-foreground">
               <span className="font-medium">Important Boundaries:</span> PCD provides coverage, responsiveness, and operational relief — 
