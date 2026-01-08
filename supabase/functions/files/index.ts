@@ -23,6 +23,7 @@ const ALLOWED_ORIGINS: RegExp[] = [
   /^https:\/\/.*\.squarespace\.com$/,
   /^https:\/\/.*\.squarespace-cdn\.com$/,
   /^https:\/\/(www\.)?pleasantcove\.design$/,
+  /^https:\/\/(www\.)?pleasantcovedesign\.com$/,
   /^http:\/\/localhost:\d+$/,
   /^http:\/\/127\.0\.0\.1:\d+$/,
 ];
