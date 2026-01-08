@@ -24,6 +24,9 @@ type CallHandling = "always" | "after_hours" | "overflow" | "";
 type AfterHoursAction = "message" | "book" | "emergency_only" | "callback_info" | "";
 type PricingGuidance = "ranges" | "follow_up" | "never" | "";
 type HandoffMethod = "transfer" | "message" | "callback" | "text" | "";
+type IntakeTrack = "new_site" | "improve_existing" | "";
+type VibeOption = "clean" | "bold" | "rustic" | "luxury" | "playful" | "modern" | "";
+type AccessMethod = "collaborator" | "dns_only" | "password" | "none" | "";
 
 // Map query param values to form values
 const SERVICE_PARAM_MAP: Record<string, ServiceType> = {
@@ -34,6 +37,11 @@ const SERVICE_PARAM_MAP: Record<string, ServiceType> = {
   other: "other",
 };
 
+interface ServiceItem {
+  name: string;
+  description: string;
+}
+
 interface FormData {
   // Basics
   businessName: string;
@@ -41,6 +49,11 @@ interface FormData {
   email: string;
   phone: string;
   serviceType: ServiceType;
+  
+  // Template routing (NEW)
+  intakeTrack: IntakeTrack;
+  productKey: string;
+  intakeTemplate: string;
   
   // Website fields
   websiteGoal: WebsiteGoal;
@@ -50,7 +63,52 @@ interface FormData {
   brandColors: string;
   servicesList: string;
   photoReadiness: PhotoReadiness;
-  photoFiles: UploadedFile[]; // NEW: photo uploads
+  photoFiles: UploadedFile[];
+  
+  // Track A: Content (NEW)
+  heroLine: string;
+  aboutBlurb: string;
+  servicesDetailed: ServiceItem[];
+  primaryCta: string;
+  secondaryCta: string;
+  
+  // Track A: Links (NEW)
+  gbpLink: string;
+  facebookHandle: string;
+  instagramHandle: string;
+  tiktokHandle: string;
+  reviewsGoogleLink: string;
+  reviewsYelpLink: string;
+  inspirationSites: string[];
+  
+  // Track A: Hours (NEW)
+  businessHoursDetailed: Record<string, string>;
+  serviceAreaDetailed: string;
+  preferredContactMethod: string;
+  
+  // Track A: Design (NEW)
+  vibe: VibeOption;
+  fontPreference: string;
+  
+  // Track A: Features (NEW)
+  featuresNeeded: string[];
+  
+  // Track A: Trust signals (NEW)
+  yearsInBusiness: string;
+  awards: string;
+  teamSize: string;
+  reviewCount: string;
+  averageRating: string;
+  testimonials: string;
+  
+  // Track B: Existing site (NEW)
+  existingPlatform: string;
+  existingPlatformOther: string;
+  existingSiteUrl: string;
+  workRequested: string[];
+  accessMethod: AccessMethod;
+  accessInstructions: string;
+  accessChecklist: Record<string, string>;
   
   // AI Receptionist fields - Call Coverage
   callHandling: CallHandling;
@@ -81,7 +139,7 @@ interface FormData {
   businessPersonality: string[];
   doNotSay: string;
   guaranteesPolicies: string;
-  policyFiles: UploadedFile[]; // NEW: policy/terms uploads
+  policyFiles: UploadedFile[];
   
   // AI Receptionist fields - FAQs & Human Context
   faqs: string;
@@ -132,6 +190,11 @@ const GetDemo = () => {
     email: "",
     phone: "",
     serviceType: "",
+    // Template routing (NEW)
+    intakeTrack: "",
+    productKey: "",
+    intakeTemplate: "",
+    // Website fields
     websiteGoal: "",
     serviceArea: "",
     timeline: "",
@@ -140,6 +203,45 @@ const GetDemo = () => {
     servicesList: "",
     photoReadiness: "",
     photoFiles: [],
+    // Track A: Content (NEW)
+    heroLine: "",
+    aboutBlurb: "",
+    servicesDetailed: [],
+    primaryCta: "",
+    secondaryCta: "",
+    // Track A: Links (NEW)
+    gbpLink: "",
+    facebookHandle: "",
+    instagramHandle: "",
+    tiktokHandle: "",
+    reviewsGoogleLink: "",
+    reviewsYelpLink: "",
+    inspirationSites: [],
+    // Track A: Hours (NEW)
+    businessHoursDetailed: {},
+    serviceAreaDetailed: "",
+    preferredContactMethod: "",
+    // Track A: Design (NEW)
+    vibe: "",
+    fontPreference: "",
+    // Track A: Features (NEW)
+    featuresNeeded: [],
+    // Track A: Trust signals (NEW)
+    yearsInBusiness: "",
+    awards: "",
+    teamSize: "",
+    reviewCount: "",
+    averageRating: "",
+    testimonials: "",
+    // Track B: Existing site (NEW)
+    existingPlatform: "",
+    existingPlatformOther: "",
+    existingSiteUrl: "",
+    workRequested: [],
+    accessMethod: "",
+    accessInstructions: "",
+    accessChecklist: {},
+    // AI fields
     callHandling: "",
     handoffMethod: "",
     textHandling: [],

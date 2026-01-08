@@ -1391,6 +1391,7 @@ async function handleRequestDemo(req: Request): Promise<Response> {
   }
 
   try {
+    // Define body type with all fields including new intake_details structure
     let body: { 
       business_name?: string; 
       city?: string; 
@@ -1404,6 +1405,10 @@ async function handleRequestDemo(req: Request): Promise<Response> {
       website_style?: string;
       receptionist_focus?: string;
       service_type?: string;
+      // Template routing fields (NEW)
+      product_key?: string;
+      intake_template?: string;
+      intake_track?: string; // "new_site" | "improve_existing"
       // Website fields
       website_goal?: string;
       timeline?: string;
@@ -1411,6 +1416,44 @@ async function handleRequestDemo(req: Request): Promise<Response> {
       brand_colors?: string;
       services_list?: string;
       photo_readiness?: string;
+      // Track A: Content fields (NEW)
+      hero_line?: string;
+      about_blurb?: string;
+      services_detailed?: Array<{ name: string; description: string }>;
+      primary_cta?: string;
+      secondary_cta?: string;
+      // Track A: Links fields (NEW)
+      gbp_link?: string;
+      facebook_handle?: string;
+      instagram_handle?: string;
+      tiktok_handle?: string;
+      reviews_google_link?: string;
+      reviews_yelp_link?: string;
+      inspiration_sites?: string[];
+      // Track A: Hours fields (NEW)
+      business_hours_detailed?: Record<string, string>;
+      service_area_detailed?: string;
+      preferred_contact_method?: string;
+      // Track A: Design fields (NEW)
+      vibe?: string;
+      font_preference?: string;
+      // Track A: Features (NEW)
+      features_needed?: string[];
+      // Track A: Trust signals (NEW)
+      years_in_business?: string;
+      awards?: string;
+      team_size?: string;
+      review_count?: string;
+      average_rating?: string;
+      testimonials?: string[];
+      // Track B: Existing site fields (NEW)
+      existing_platform?: string;
+      existing_platform_other?: string;
+      existing_site_url?: string;
+      work_requested?: string[];
+      access_method?: string;
+      access_instructions?: string;
+      access_checklist?: Record<string, string>;
       // AI fields - Basics & Operations
       business_phone?: string;
       business_hours?: string;
@@ -1420,6 +1463,7 @@ async function handleRequestDemo(req: Request): Promise<Response> {
       preferred_tone?: string;
       booking_link?: string;
       faqs?: string;
+      emergency_triggers?: string[];
       // AI fields - Call Handling
       call_handling?: string;
       after_hours_action?: string;
@@ -1464,6 +1508,10 @@ async function handleRequestDemo(req: Request): Promise<Response> {
       website_style,
       receptionist_focus,
       service_type,
+      // Template routing (NEW)
+      product_key,
+      intake_template,
+      intake_track,
       // Website fields
       website_goal,
       timeline,
@@ -1471,6 +1519,44 @@ async function handleRequestDemo(req: Request): Promise<Response> {
       brand_colors,
       services_list,
       photo_readiness,
+      // Track A: Content (NEW)
+      hero_line,
+      about_blurb,
+      services_detailed,
+      primary_cta,
+      secondary_cta,
+      // Track A: Links (NEW)
+      gbp_link,
+      facebook_handle,
+      instagram_handle,
+      tiktok_handle,
+      reviews_google_link,
+      reviews_yelp_link,
+      inspiration_sites,
+      // Track A: Hours (NEW)
+      business_hours_detailed,
+      service_area_detailed,
+      preferred_contact_method,
+      // Track A: Design (NEW)
+      vibe,
+      font_preference,
+      // Track A: Features (NEW)
+      features_needed,
+      // Track A: Trust signals (NEW)
+      years_in_business,
+      awards,
+      team_size,
+      review_count,
+      average_rating,
+      testimonials,
+      // Track B: Existing site (NEW)
+      existing_platform,
+      existing_platform_other,
+      existing_site_url,
+      work_requested,
+      access_method,
+      access_instructions,
+      access_checklist,
       // AI fields - Basics & Operations
       business_phone,
       business_hours,
@@ -1480,6 +1566,7 @@ async function handleRequestDemo(req: Request): Promise<Response> {
       preferred_tone,
       booking_link,
       faqs,
+      emergency_triggers,
       // AI fields - Call Handling
       call_handling,
       after_hours_action,
@@ -1502,8 +1589,85 @@ async function handleRequestDemo(req: Request): Promise<Response> {
       selected_services,
       custom_request,
     } = body;
+
+    // Compute required sections based on template
+    const computeRequiredSections = (template: string | undefined): string[] => {
+      switch (template) {
+        case "web_new_build":
+          return ["content", "links", "hours", "design"];
+        case "web_existing":
+          return ["existing_site", "access_checklist"];
+        case "ai_receptionist":
+          return ["ai_coverage", "ai_operations", "ai_leads", "ai_voice"];
+        case "bundle_web_ai":
+        case "bundle_starter":
+        case "bundle_growth":
+        case "bundle_full_ops":
+          return ["content", "links", "hours", "design", "ai_coverage", "ai_operations"];
+        default:
+          return [];
+      }
+    };
+
+    // Build structured intake_details object (NEW)
+    const intakeDetails = {
+      required_sections: computeRequiredSections(intake_template),
+      // Track A: Content
+      content: hero_line || services_detailed?.length ? {
+        hero_line: hero_line || null,
+        about_blurb: about_blurb || null,
+        services: services_detailed || [],
+        primary_cta: primary_cta || website_goal || null,
+        secondary_cta: secondary_cta || null,
+      } : null,
+      // Track A: Links
+      links: gbp_link || facebook_handle || instagram_handle ? {
+        current_website: website || null,
+        gbp: gbp_link || null,
+        facebook: facebook_handle || null,
+        instagram: instagram_handle || null,
+        tiktok: tiktok_handle || null,
+        reviews_google: reviews_google_link || null,
+        reviews_yelp: reviews_yelp_link || null,
+        inspiration_sites: inspiration_sites || [],
+      } : null,
+      // Track A: Hours
+      hours: business_hours_detailed || service_area_detailed ? {
+        ...business_hours_detailed,
+        service_area: service_area_detailed || city || null,
+        preferred_contact_method: preferred_contact_method || null,
+      } : null,
+      // Track A: Design
+      design: vibe ? {
+        vibe: vibe || null,
+        must_colors: brand_colors || null,
+        font_preference: font_preference || null,
+      } : null,
+      // Track A: Features
+      features_needed: features_needed || [],
+      // Track A: Trust signals
+      trust_signals: years_in_business || awards || review_count ? {
+        years_in_business: years_in_business || null,
+        awards: awards || null,
+        team_size: team_size || null,
+        review_count: review_count || null,
+        average_rating: average_rating || null,
+        testimonials: testimonials || [],
+      } : null,
+      // Track B: Existing site
+      existing_site: existing_platform || existing_site_url ? {
+        platform: existing_platform || null,
+        platform_other: existing_platform_other || null,
+        url: existing_site_url || website || null,
+        work_requested: work_requested || [],
+        access_method: access_method || null,
+        access_instructions: access_instructions || null,
+      } : null,
+      // Track B: Access checklist
+      access_checklist: access_checklist || null,
+    };
     
-    // Build request metadata for operator visibility
+    // Build request metadata for operator visibility (legacy support)
     const requestMeta = {
       occupation: occupation || null,
       expectations: expectations || null,
@@ -1795,8 +1959,15 @@ async function handleRequestDemo(req: Request): Promise<Response> {
       );
     }
 
-    // Create intake record with all the form data
+    // Create intake record with all the form data including new intake_details structure
     const intakeData = {
+      // Template routing (NEW)
+      product_key: product_key || null,
+      intake_template: intake_template || null,
+      intake_track: intake_track || null,
+      // Structured intake details (NEW)
+      intake_details: intakeDetails,
+      // Legacy flat fields for backwards compatibility
       service_type: service_type || "demo",
       business_name,
       city,
@@ -1817,6 +1988,7 @@ async function handleRequestDemo(req: Request): Promise<Response> {
       services_offered,
       escalation_number,
       emergency_rules,
+      emergency_triggers,
       preferred_tone,
       booking_link,
       faqs,
