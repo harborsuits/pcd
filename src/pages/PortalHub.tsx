@@ -91,21 +91,26 @@ export default function PortalHub() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Fetch user's portals when logged in
+  // Fetch user's portals when logged in and auto-redirect if only one
   useEffect(() => {
     if (user && session?.access_token) {
-      fetchMyPortals(session.access_token);
+      fetchMyPortals(session.access_token).then((projects) => {
+        // Auto-redirect if user has exactly 1 project (they just came from intake)
+        if (projects && projects.length === 1) {
+          navigate(`/p/${projects[0].project_token}`, { replace: true });
+        }
+      });
     }
-  }, [user, session?.access_token]);
+  }, [user, session?.access_token, navigate]);
 
-  const fetchMyPortals = async (accessToken: string) => {
-    if (!accessToken) return;
+  const fetchMyPortals = async (accessToken: string): Promise<Portal[]> => {
+    if (!accessToken) return [];
     
     // Verify session is still valid before fetching
     const { data: { session: currentSession } } = await supabase.auth.getSession();
     if (!currentSession) {
       console.log("No active session, skipping fetch");
-      return;
+      return [];
     }
     
     setLoadingPortals(true);
@@ -133,20 +138,25 @@ export default function PortalHub() {
         console.log("Session expired, clearing state");
         setPortals([]);
         setArchivedPortals([]);
-        return;
+        return [];
       }
 
+      let activeProjects: Portal[] = [];
       if (res.ok) {
         const data = await res.json();
-        setPortals(data.projects || []);
+        activeProjects = data.projects || [];
+        setPortals(activeProjects);
       }
 
       if (archivedRes.ok) {
         const archivedData = await archivedRes.json();
         setArchivedPortals(archivedData.projects || []);
       }
+      
+      return activeProjects;
     } catch (err) {
       console.error("Failed to fetch portals:", err);
+      return [];
     } finally {
       setLoadingPortals(false);
     }
@@ -616,16 +626,16 @@ export default function PortalHub() {
           ) : portals.length === 0 ? (
             <BrandCard variant="highlight" className="text-center py-10">
               <div className="w-14 h-14 rounded-full bg-accent/10 flex items-center justify-center mx-auto mb-4">
-                <Plus className="h-7 w-7 text-accent" />
+                <Sparkles className="h-7 w-7 text-accent" />
               </div>
-              <h3 className="font-serif text-xl font-bold mb-2">Start a new project</h3>
+              <h3 className="font-serif text-xl font-bold mb-2">No projects yet</h3>
               <p className="text-muted-foreground max-w-sm mx-auto mb-6">
-                Set up your website in about 5 minutes. We'll guide you through the process.
+                Fill out our quick intake form to get started with your project.
               </p>
               <Button asChild size="lg">
-                <Link to="/portal/new">
+                <Link to="/get-demo?service=both">
                   <Sparkles className="mr-2 h-4 w-4" />
-                  Get started
+                  Start your project
                 </Link>
               </Button>
             </BrandCard>
@@ -637,7 +647,7 @@ export default function PortalHub() {
                   Ready for another project?
                 </p>
                 <Button asChild variant="outline" size="sm">
-                  <Link to="/portal/new">
+                  <Link to="/get-demo?service=both">
                     <Plus className="mr-2 h-4 w-4" />
                     New project
                   </Link>
