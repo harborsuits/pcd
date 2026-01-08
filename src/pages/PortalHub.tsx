@@ -50,6 +50,7 @@ export default function PortalHub() {
   // Track if user was redirected from create-password (existing account)
   const [showExistingAccountMessage, setShowExistingAccountMessage] = useState(false);
   const emailInputRef = useRef<HTMLInputElement>(null);
+  const passwordInputRef = useRef<HTMLInputElement>(null);
 
   // Handle prefilled params from /start page or /create-password redirect
   useEffect(() => {
@@ -62,12 +63,12 @@ export default function PortalHub() {
     if (prefillName) setFullName(prefillName);
     if (tab === "signup") setMode("signup");
     
-    // If redirected from create-password because account exists, show message and auto-focus
+    // If redirected from create-password because account exists, show message and auto-focus password
     if (fromCreatePassword && prefillEmail) {
       setShowExistingAccountMessage(true);
       setMode("login");
-      // Auto-focus email input after render
-      setTimeout(() => emailInputRef.current?.focus(), 100);
+      // Auto-focus password input after render (email is already pre-filled)
+      setTimeout(() => passwordInputRef.current?.focus(), 100);
     }
   }, [searchParams]);
   
@@ -934,6 +935,7 @@ export default function PortalHub() {
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                       id="login-password"
+                      ref={passwordInputRef}
                       type="password"
                       placeholder="Your password"
                       value={password}
