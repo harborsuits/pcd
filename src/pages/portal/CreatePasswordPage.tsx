@@ -31,6 +31,7 @@ export default function CreatePasswordPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [checkingExisting, setCheckingExisting] = useState(true);
   const [created, setCreated] = useState(false);
+  const [existingAccount, setExistingAccount] = useState(false);
 
   // Check if user already has an account - if so, redirect to login
   useEffect(() => {
@@ -44,7 +45,7 @@ export default function CreatePasswordPage() {
       return;
     }
 
-    // Check if already logged in
+    // Check if already logged in OR if account already exists
     const checkAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
@@ -52,11 +53,53 @@ export default function CreatePasswordPage() {
         navigate(`/w/${projectToken}`, { replace: true });
         return;
       }
+
+      // Check if email already has an account by attempting a password reset
+      // If account exists, signInWithOtp will succeed (send email)
+      // We use a different approach: just try to check via the backend
+      try {
+        const res = await fetch(
+          `${SUPABASE_URL}/functions/v1/portal/${projectToken}/create-account`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              apikey: SUPABASE_ANON_KEY,
+            },
+            body: JSON.stringify({
+              email,
+              password: "check_only_placeholder_12345678", // Dummy password for check
+              name: name || undefined,
+              check_only: true, // Backend should recognize this flag
+            }),
+          }
+        );
+
+        const data = await res.json();
+        
+        // If account exists, redirect to login
+        if (data.existing) {
+          setExistingAccount(true);
+          toast({
+            title: "Account already exists",
+            description: "Please log in with your existing password.",
+          });
+          // Short delay then redirect
+          setTimeout(() => {
+            navigate(`/portal?email=${encodeURIComponent(email)}`);
+          }, 1500);
+          return;
+        }
+      } catch (err) {
+        console.error("Check existing account error:", err);
+        // Non-fatal, continue with form
+      }
+
       setCheckingExisting(false);
     };
 
     checkAuth();
-  }, [projectToken, email, navigate, toast]);
+  }, [projectToken, email, name, navigate, toast]);
 
   const passwordsMatch = password === confirmPassword;
   const passwordValid = password.length >= 8;
@@ -142,11 +185,29 @@ export default function CreatePasswordPage() {
     }
   };
 
-  // Show loading while checking if user is already logged in
+  // Show loading while checking if user is already logged in or account exists
   if (checkingExisting) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  // Show message when existing account detected
+  if (existingAccount) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background px-4">
+        <div className="w-full max-w-md text-center space-y-6">
+          <div className="w-16 h-16 mx-auto rounded-full bg-primary/10 flex items-center justify-center">
+            <Lock className="h-8 w-8 text-primary" />
+          </div>
+          <h1 className="text-2xl font-bold">Account already exists</h1>
+          <p className="text-muted-foreground">
+            You already have an account with this email. Redirecting to login...
+          </p>
+          <Loader2 className="h-6 w-6 mx-auto animate-spin text-primary" />
+        </div>
       </div>
     );
   }

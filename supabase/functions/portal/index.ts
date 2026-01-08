@@ -3400,7 +3400,7 @@ async function handleCreateAccount(
     }
 
     // Parse request body
-    let body: { email?: string; password?: string; name?: string };
+    let body: { email?: string; password?: string; name?: string; check_only?: boolean };
     try {
       body = await req.json();
     } catch {
@@ -3410,12 +3410,53 @@ async function handleCreateAccount(
       );
     }
 
-    const { email, password, name } = body;
+    const { email, password, name, check_only } = body;
 
     if (!email || !password) {
       return new Response(
         JSON.stringify({ error: "Email and password are required" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // If check_only mode, just verify if the email already exists
+    if (check_only) {
+      const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+      const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+      const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+      // Check if user already exists
+      const { data: existingUsers } = await supabase.auth.admin.listUsers({ perPage: 1000 });
+      const existingUser = existingUsers?.users?.find(
+        (u) => u.email?.toLowerCase() === email.toLowerCase().trim()
+      );
+
+      if (existingUser) {
+        // Also link the user to the project if not already linked
+        const { data: project } = await supabase
+          .from("projects")
+          .select("id, owner_user_id")
+          .eq("project_token", token)
+          .is("deleted_at", null)
+          .maybeSingle();
+
+        if (project && !project.owner_user_id) {
+          await supabase
+            .from("projects")
+            .update({ owner_user_id: existingUser.id })
+            .eq("id", project.id);
+          console.log(`Linked existing user ${existingUser.id} to project ${token}`);
+        }
+
+        return new Response(
+          JSON.stringify({ existing: true }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      return new Response(
+        JSON.stringify({ existing: false }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
