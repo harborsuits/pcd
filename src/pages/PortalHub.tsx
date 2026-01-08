@@ -14,6 +14,7 @@ import { ClientLayout } from "@/components/portal/ClientLayout";
 import { BrandCard } from "@/components/portal/BrandCard";
 import { FcGoogle } from "react-icons/fc";
 import { SEOHead } from "@/components/SEOHead";
+import { getAuthReturnPath } from "@/hooks/useSessionExpiry";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -93,6 +94,14 @@ export default function PortalHub() {
       setSession(session);
       setUser(session?.user ?? null);
       setAuthChecking(false);
+      
+      // On successful sign in, check if we need to redirect back to a stored path
+      if (event === "SIGNED_IN" && session) {
+        const returnPath = getAuthReturnPath();
+        if (returnPath && returnPath !== "/portal") {
+          navigate(returnPath, { replace: true });
+        }
+      }
     });
 
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -102,7 +111,7 @@ export default function PortalHub() {
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [navigate]);
 
   // Claim orphaned projects and fetch user's portals when logged in
   useEffect(() => {
@@ -536,6 +545,15 @@ export default function PortalHub() {
     setPortals([]);
   };
 
+
+  // Show loading while checking auth state - prevents flash of login form
+  if (authChecking) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   // OTP verification screen - HIGHEST PRIORITY (before auth check)
   // This must come first so it doesn't get bypassed by auto-confirm sessions
