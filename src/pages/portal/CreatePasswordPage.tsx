@@ -84,9 +84,10 @@ export default function CreatePasswordPage() {
             title: "Account already exists",
             description: "Please log in with your existing password.",
           });
-          // Short delay then redirect (include existing=true to show message)
+          // Short delay then redirect (include existing=true to show message + business name)
           setTimeout(() => {
-            navigate(`/portal?email=${encodeURIComponent(email)}&existing=true`);
+            const businessParam = businessName ? `&business=${encodeURIComponent(businessName)}` : "";
+            navigate(`/portal?email=${encodeURIComponent(email)}&existing=true${businessParam}`);
           }, 1500);
           return;
         }
@@ -210,7 +211,10 @@ export default function CreatePasswordPage() {
           <div className="pt-2">
             <button
               type="button"
-              onClick={() => navigate(`/portal?email=${encodeURIComponent(email)}&existing=true`)}
+              onClick={() => {
+                const businessParam = businessName ? `&business=${encodeURIComponent(businessName)}` : "";
+                navigate(`/portal?email=${encodeURIComponent(email)}&existing=true${businessParam}`);
+              }}
               className="text-sm text-primary hover:underline"
             >
               Go to login now →
