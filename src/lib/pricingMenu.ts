@@ -10,7 +10,8 @@ export type PricingTierId =
   | "ai_booking"
   | "ai_full"
   | "bundle_starter"
-  | "bundle_growth";
+  | "bundle_growth"
+  | "bundle_full_ops";
 
 export type RetainerAddonId = "maintenance" | "ai_tuning" | "operations";
 
@@ -39,18 +40,86 @@ export const WEBSITE_TIERS: PricingTier[] = [
     label: "Essential Website",
     price: "Starting at $750",
     description: "Fast, mobile-optimized site with core pages",
+    features: [
+      "1–5 pages, mobile-friendly",
+      "Click-to-call + contact forms",
+      "Google Maps embed",
+      "Basic SEO setup",
+    ],
   },
   {
     id: "website_growth",
     label: "Growth Website",
     price: "Starting at $1,500",
     description: "Extended pages, forms, and conversion focus",
+    features: [
+      "5–8 pages with conversion focus",
+      "Booking or intake integration",
+      "Lead capture flows",
+      "Light animations",
+    ],
   },
   {
     id: "website_premium",
     label: "Premium / Interactive",
     price: "Starting at $2,500",
     description: "Custom features, animations, and integrations",
+    features: [
+      "Advanced interactions",
+      "Custom user flows",
+      "Third-party integrations",
+      "CRM or scheduling connections",
+    ],
+  },
+];
+
+// ─────────────────────────────────────────────────────────────────────────────
+// À LA CARTE SERVICES (Individual services outside bundles)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface AlaCarteService {
+  id: string;
+  label: string;
+  price: string;
+  description: string;
+}
+
+export const ALACARTE_SERVICES: AlaCarteService[] = [
+  {
+    id: "seo_audit",
+    label: "SEO Audit & Optimization",
+    price: "Starting at $350",
+    description: "One-time technical SEO review + local search optimization",
+  },
+  {
+    id: "landing_page",
+    label: "Landing Page",
+    price: "Starting at $500",
+    description: "Single conversion-focused page for campaigns or promos",
+  },
+  {
+    id: "content_refresh",
+    label: "Content Refresh",
+    price: "Starting at $250",
+    description: "Update copy, images, and calls-to-action on existing pages",
+  },
+  {
+    id: "booking_integration",
+    label: "Booking Integration",
+    price: "Starting at $300",
+    description: "Connect your existing scheduler to your website",
+  },
+  {
+    id: "google_business_setup",
+    label: "Google Business Profile Setup",
+    price: "Starting at $150",
+    description: "Claim, optimize, and configure your Google listing",
+  },
+  {
+    id: "call_routing_setup",
+    label: "Call Routing Setup",
+    price: "Starting at $200",
+    description: "Configure phone routing without full AI Front Door",
   },
 ];
 
@@ -87,28 +156,46 @@ export const BUNDLE_TIERS: PricingTier[] = [
   {
     id: "bundle_starter",
     label: "PCD Starter System",
-    price: "Starting at $1,200 + $450/mo",
-    description: "Essential Website + AI Front Door",
+    price: "$575/mo + one-time build: $750–$1,250",
+    description: "Essential website + hosting + AI Front Door. The clean baseline for owner-operators.",
     features: [
-      "Fast, mobile-optimized website (3-5 pages)",
-      "AI receptionist: 24/7 call answering & routing",
-      "Missed-call text-back",
-      "Lead notifications to your phone/email",
-      "Basic SEO setup",
+      "Essential website build (1–5 pages)",
+      "Mobile-friendly, fast loading",
+      "Click-to-call + contact forms",
+      "Google Maps embed + basic SEO setup",
+      "Hosting + maintenance (backups, uptime, minor updates)",
+      "AI Front Door (answers calls, captures info, FAQs, after-hours)",
+      "Call summaries + emergency routing",
     ],
   },
   {
     id: "bundle_growth",
     label: "PCD Growth System",
-    price: "Starting at $2,200 + $700/mo",
-    description: "Growth Website + AI Front Door + Booking",
+    price: "$875/mo + one-time build: $1,500–$2,500",
+    description: "Booking + stronger lead capture + CRM basics. Built for businesses that live on appointments.",
     features: [
-      "Extended website (5-8 pages) with conversion focus",
-      "AI receptionist: 24/7 call answering & routing",
-      "Booking integration (directs callers to your scheduler)",
-      "Lead capture forms with smart follow-up",
-      "Priority support & faster turnaround",
-      "Advanced SEO & local search optimization",
+      "Everything in Starter, plus:",
+      "Conversion-focused layout",
+      "Booking or intake integration",
+      "Lead capture flows + light animations",
+      "AI Front Door + Booking (single or multi-staff scheduling)",
+      "Confirmation texts/emails",
+      "CRM basics (lead tracking + tagging)",
+    ],
+  },
+  {
+    id: "bundle_full_ops",
+    label: "PCD Full Operations",
+    price: "$1,100/mo + one-time build: $2,500–$4,000+",
+    description: "Premium site + AI + booking + CRM context + managed updates. The full system.",
+    features: [
+      "Everything in Growth, plus:",
+      "Advanced interactions + custom user flows",
+      "CRM pipelines + dashboards",
+      "AI + Booking + CRM Context (logging, tagging, follow-ups)",
+      "Priority routing + reporting",
+      "Managed updates & tuning (pricing, seasonal messaging)",
+      "Priority support for digital operations",
     ],
   },
 ];
