@@ -88,6 +88,54 @@ export type Database = {
           },
         ]
       }
+      alacarte_requests: {
+        Row: {
+          contact_method: string
+          contact_value: string
+          created_at: string
+          handled_at: string | null
+          handled_by: string | null
+          has_website: boolean | null
+          id: string
+          is_existing_client: boolean | null
+          note: string | null
+          service_key: string
+          service_label: string
+          status: string
+          website_url: string | null
+        }
+        Insert: {
+          contact_method: string
+          contact_value: string
+          created_at?: string
+          handled_at?: string | null
+          handled_by?: string | null
+          has_website?: boolean | null
+          id?: string
+          is_existing_client?: boolean | null
+          note?: string | null
+          service_key: string
+          service_label: string
+          status?: string
+          website_url?: string | null
+        }
+        Update: {
+          contact_method?: string
+          contact_value?: string
+          created_at?: string
+          handled_at?: string | null
+          handled_by?: string | null
+          has_website?: boolean | null
+          id?: string
+          is_existing_client?: boolean | null
+          note?: string | null
+          service_key?: string
+          service_label?: string
+          status?: string
+          website_url?: string | null
+        }
+        Relationships: []
+      }
       client_leads: {
         Row: {
           business_name: string

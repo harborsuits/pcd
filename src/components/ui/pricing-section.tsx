@@ -3,7 +3,6 @@
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Sparkles } from "@/components/ui/sparkles";
 import { TimelineContent } from "@/components/ui/timeline-animation";
-import { VerticalCutReveal } from "@/components/ui/vertical-cut-reveal";
 import { cn } from "@/lib/utils";
 import NumberFlow from "@number-flow/react";
 import { motion } from "framer-motion";
@@ -11,7 +10,8 @@ import { useRef, useState } from "react";
 import { Check, ArrowRight } from "lucide-react";
 import { LiquidButton } from "@/components/ui/liquid-glass-button";
 import { Link } from "react-router-dom";
-import { ALACARTE_SERVICES, CARE_PLANS } from "@/lib/pricingMenu";
+import { ALACARTE_SERVICES, CARE_PLANS, AlaCarteService } from "@/lib/pricingMenu";
+import { AlaCarteRequestModal } from "@/components/AlaCarteRequestModal";
 
 type Period = "monthly" | "yearly";
 
@@ -138,6 +138,9 @@ function PricingSwitch({
 export default function PricingSection() {
   const [period, setPeriod] = useState<Period>("monthly");
   const pricingRef = useRef<HTMLDivElement>(null);
+  
+  // À la carte request modal state
+  const [selectedService, setSelectedService] = useState<AlaCarteService | null>(null);
 
   const revealVariants = {
     visible: (i: number) => ({
@@ -327,11 +330,18 @@ export default function PricingSection() {
             
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {ALACARTE_SERVICES.map((service) => (
-                <Card key={service.id} className="hover:shadow-md transition-shadow">
+                <Card 
+                  key={service.id} 
+                  className="hover:shadow-md transition-shadow cursor-pointer group"
+                  onClick={() => setSelectedService(service)}
+                >
                   <CardContent className="p-5">
                     <h4 className="font-semibold text-foreground mb-1">{service.label}</h4>
                     <p className="text-sm text-accent font-medium mb-2">{service.price}</p>
-                    <p className="text-sm text-muted-foreground">{service.description}</p>
+                    <p className="text-sm text-muted-foreground mb-3">{service.description}</p>
+                    <p className="text-xs text-primary font-medium opacity-0 group-hover:opacity-100 transition-opacity">
+                      Request this service →
+                    </p>
                   </CardContent>
                 </Card>
               ))}
@@ -373,6 +383,14 @@ export default function PricingSection() {
           </div>
         </TimelineContent>
       </div>
+
+      {/* À la carte request modal */}
+      <AlaCarteRequestModal
+        open={!!selectedService}
+        onOpenChange={(open) => !open && setSelectedService(null)}
+        serviceKey={selectedService?.id ?? ""}
+        serviceLabel={selectedService?.label ?? ""}
+      />
     </section>
   );
 }
