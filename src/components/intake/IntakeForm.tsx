@@ -30,6 +30,8 @@ import { cn } from "@/lib/utils";
 import { 
   getPricingTiersForService, 
   RETAINER_ADDONS,
+  ALACARTE_SERVICES,
+  CARE_PLANS,
   type ServiceType as PricingServiceType 
 } from "@/lib/pricingMenu";
 import { PricingSummary } from "./PricingSummary";
@@ -80,6 +82,10 @@ export interface IntakeFormData {
   // Retainer add-ons
   retainerAddons: string[];
   addonNotes: string;
+  
+  // À la carte add-ons and care plans
+  alacarteAddons: string[];
+  carePlan: string;
 }
 
 export const DEFAULT_INTAKE_DATA: IntakeFormData = {
@@ -109,6 +115,8 @@ export const DEFAULT_INTAKE_DATA: IntakeFormData = {
   pricingNotes: "",
   retainerAddons: [],
   addonNotes: "",
+  alacarteAddons: [],
+  carePlan: "",
 };
 
 interface IntakeFormProps {
@@ -832,61 +840,156 @@ export function IntakeForm({
   };
 
   const renderAddonsStep = () => (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div className="mb-6">
         <div className="flex items-center gap-2 mb-2">
           <Wrench className="h-5 w-5 text-primary" />
-          <h2 className="text-xl font-bold text-foreground">Ongoing support (optional)</h2>
+          <h2 className="text-xl font-bold text-foreground">Add-ons & ongoing support</h2>
         </div>
         <p className="text-muted-foreground text-sm">
-          Add monthly retainers to keep things running smoothly. Skip if you're not sure yet.
+          Enhance your package with additional services. All optional.
         </p>
       </div>
 
+      {/* Care Plans Section */}
       <div className="space-y-3">
-        {RETAINER_ADDONS.map((addon) => {
-          const isChecked = formData.retainerAddons.includes(addon.id);
-          return (
-            <div
-              key={addon.id}
-              className={cn(
-                "flex items-start gap-3 rounded-xl border-2 p-4 transition-all cursor-pointer",
-                isChecked
-                  ? "border-primary bg-primary/5"
-                  : "border-border bg-card hover:border-primary/30"
-              )}
-              onClick={() => {
-                if (isChecked) {
-                  updateField("retainerAddons", formData.retainerAddons.filter(id => id !== addon.id));
-                } else {
-                  updateField("retainerAddons", [...formData.retainerAddons, addon.id]);
-                }
-              }}
-            >
-              <Checkbox
-                id={addon.id}
-                checked={isChecked}
-                onCheckedChange={(checked) => {
-                  if (checked) {
-                    updateField("retainerAddons", [...formData.retainerAddons, addon.id]);
+        <Label className="text-base font-semibold">Website Care Plan</Label>
+        <p className="text-sm text-muted-foreground -mt-1">
+          Ongoing maintenance so your site doesn't rot.
+        </p>
+        <div className="grid gap-3">
+          {CARE_PLANS.map((plan) => {
+            const isSelected = formData.carePlan === plan.id;
+            return (
+              <button
+                key={plan.id}
+                type="button"
+                onClick={() => updateField("carePlan", isSelected ? "" : plan.id)}
+                className={cn(
+                  "flex items-start gap-3 rounded-xl border-2 p-4 text-left transition-all",
+                  isSelected
+                    ? "border-primary bg-primary/5"
+                    : "border-border bg-card hover:border-primary/30"
+                )}
+              >
+                <div className="flex-1">
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold">{plan.label}</span>
+                    <span className="text-sm font-medium text-primary">${plan.monthlyPrice}/mo</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground mt-0.5">{plan.description}</p>
+                </div>
+                {isSelected && <Check className="h-5 w-5 text-primary shrink-0" />}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* À La Carte Services */}
+      <div className="space-y-3">
+        <Label className="text-base font-semibold">À La Carte Services</Label>
+        <p className="text-sm text-muted-foreground -mt-1">
+          One-time services to enhance your project.
+        </p>
+        <div className="grid gap-2">
+          {ALACARTE_SERVICES.map((service) => {
+            const isChecked = formData.alacarteAddons.includes(service.id);
+            return (
+              <div
+                key={service.id}
+                className={cn(
+                  "flex items-start gap-3 rounded-lg border p-3 transition-all cursor-pointer",
+                  isChecked
+                    ? "border-primary bg-primary/5"
+                    : "border-border bg-card hover:border-primary/30"
+                )}
+                onClick={() => {
+                  if (isChecked) {
+                    updateField("alacarteAddons", formData.alacarteAddons.filter(id => id !== service.id));
                   } else {
-                    updateField("retainerAddons", formData.retainerAddons.filter(id => id !== addon.id));
+                    updateField("alacarteAddons", [...formData.alacarteAddons, service.id]);
                   }
                 }}
-                className="mt-0.5"
-              />
-              <div className="flex-1">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor={addon.id} className="font-semibold cursor-pointer">
-                    {addon.label}
-                  </Label>
-                  <span className="text-sm text-muted-foreground">{addon.price}</span>
+              >
+                <Checkbox
+                  id={`alacarte-${service.id}`}
+                  checked={isChecked}
+                  onCheckedChange={(checked) => {
+                    if (checked) {
+                      updateField("alacarteAddons", [...formData.alacarteAddons, service.id]);
+                    } else {
+                      updateField("alacarteAddons", formData.alacarteAddons.filter(id => id !== service.id));
+                    }
+                  }}
+                  className="mt-0.5"
+                />
+                <div className="flex-1">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor={`alacarte-${service.id}`} className="font-medium cursor-pointer text-sm">
+                      {service.label}
+                    </Label>
+                    <span className="text-xs text-muted-foreground">{service.price}</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-0.5">{service.description}</p>
                 </div>
-                <p className="text-sm text-muted-foreground mt-0.5">{addon.description}</p>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Retainer Add-ons */}
+      <div className="space-y-3">
+        <Label className="text-base font-semibold">Monthly Retainers</Label>
+        <p className="text-sm text-muted-foreground -mt-1">
+          Ongoing support to keep things running smoothly.
+        </p>
+        <div className="grid gap-2">
+          {RETAINER_ADDONS.map((addon) => {
+            const isChecked = formData.retainerAddons.includes(addon.id);
+            return (
+              <div
+                key={addon.id}
+                className={cn(
+                  "flex items-start gap-3 rounded-lg border p-3 transition-all cursor-pointer",
+                  isChecked
+                    ? "border-primary bg-primary/5"
+                    : "border-border bg-card hover:border-primary/30"
+                )}
+                onClick={() => {
+                  if (isChecked) {
+                    updateField("retainerAddons", formData.retainerAddons.filter(id => id !== addon.id));
+                  } else {
+                    updateField("retainerAddons", [...formData.retainerAddons, addon.id]);
+                  }
+                }}
+              >
+                <Checkbox
+                  id={addon.id}
+                  checked={isChecked}
+                  onCheckedChange={(checked) => {
+                    if (checked) {
+                      updateField("retainerAddons", [...formData.retainerAddons, addon.id]);
+                    } else {
+                      updateField("retainerAddons", formData.retainerAddons.filter(id => id !== addon.id));
+                    }
+                  }}
+                  className="mt-0.5"
+                />
+                <div className="flex-1">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor={addon.id} className="font-medium cursor-pointer text-sm">
+                      {addon.label}
+                    </Label>
+                    <span className="text-xs text-muted-foreground">{addon.price}</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-0.5">{addon.description}</p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       <div className="pt-4">
@@ -895,7 +998,7 @@ export function IntakeForm({
           id="addonNotes"
           value={formData.addonNotes}
           onChange={(e) => updateField("addonNotes", e.target.value)}
-          placeholder="Tell us what matters most for ongoing support..."
+          placeholder="Tell us what matters most..."
           rows={2}
           className="mt-1.5"
         />
