@@ -17,7 +17,7 @@ import OperatorLayout from "./pages/operator/OperatorLayout";
 import WorkspacePage from "./pages/portal/WorkspacePage";
 import ClientWorkspacePage from "./pages/portal/ClientWorkspacePage";
 import CreatePasswordPage from "./pages/portal/CreatePasswordPage";
-import GetStartedPage from "./pages/GetStartedPage";
+// GetStartedPage removed - /start now redirects to /get-demo
 import RooferDemo from "./pages/demos/RooferDemo";
 import RestaurantDemo from "./pages/demos/RestaurantDemo";
 import SalonDemo from "./pages/demos/SalonDemo";
@@ -46,7 +46,7 @@ const App = () => (
           <Route path="/terms" element={<TermsOfService />} />
           <Route path="/portal" element={<PortalHub />} />
           {/* /portal/new removed - all new projects go through /get-demo */}
-          <Route path="/start" element={<GetStartedPage />} />
+          <Route path="/start" element={<Navigate to="/get-demo" replace />} />
           <Route path="/create-password" element={<CreatePasswordPage />} />
           <Route path="/login" element={<PortalHub />} />
 
