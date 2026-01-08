@@ -11,7 +11,7 @@ import { useRef, useState } from "react";
 import { Check, ArrowRight } from "lucide-react";
 import { LiquidButton } from "@/components/ui/liquid-glass-button";
 import { Link } from "react-router-dom";
-import { ALACARTE_SERVICES } from "@/lib/pricingMenu";
+import { ALACARTE_SERVICES, CARE_PLANS } from "@/lib/pricingMenu";
 
 type Period = "monthly" | "yearly";
 
@@ -265,13 +265,48 @@ export default function PricingSection() {
           ))}
         </div>
 
-        {/* À la carte section */}
+        {/* Website Care Plans */}
         <TimelineContent animationNum={7} timelineRef={pricingRef}>
-          <div className="mt-20 max-w-4xl mx-auto">
+          <div className="mt-20 max-w-3xl mx-auto">
+            <div className="text-center mb-10">
+              <h3 className="font-serif text-2xl font-bold mb-2">Website Care Plans</h3>
+              <p className="text-muted-foreground">
+                Ongoing maintenance, updates, and oversight — so your site doesn't rot.
+              </p>
+            </div>
+            
+            <div className="grid sm:grid-cols-2 gap-6">
+              {CARE_PLANS.map((plan) => (
+                <Card key={plan.id} className="hover:shadow-md transition-shadow">
+                  <CardContent className="p-6">
+                    <h4 className="font-semibold text-foreground mb-1">{plan.label}</h4>
+                    <p className="text-2xl text-accent font-bold mb-2">{plan.price}</p>
+                    <p className="text-sm text-muted-foreground mb-4">{plan.description}</p>
+                    <ul className="space-y-2">
+                      {plan.features.map((feature, i) => (
+                        <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
+                          <Check className="h-4 w-4 text-accent mt-0.5 flex-shrink-0" />
+                          <span>{feature}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        </TimelineContent>
+
+        {/* À la carte section */}
+        <TimelineContent animationNum={8} timelineRef={pricingRef}>
+          <div className="mt-16 max-w-4xl mx-auto">
             <div className="text-center mb-10">
               <h3 className="font-serif text-2xl font-bold mb-2">À La Carte Services</h3>
               <p className="text-muted-foreground">
                 Not ready for a bundle? Pick individual services that fit your needs.
+              </p>
+              <p className="text-xs text-muted-foreground/70 mt-2">
+                Most services are built & managed — we don't just build and disappear.
               </p>
             </div>
             
@@ -296,7 +331,7 @@ export default function PricingSection() {
         </TimelineContent>
 
         {/* Pilot section */}
-        <TimelineContent animationNum={8} timelineRef={pricingRef}>
+        <TimelineContent animationNum={9} timelineRef={pricingRef}>
           <div className="text-center mt-16 max-w-xl mx-auto p-8 rounded-xl bg-card/50 border border-border/50 backdrop-blur-sm">
             <h3 className="font-serif text-2xl font-bold mb-3">7-Day Pilot</h3>
             <p className="text-muted-foreground mb-2">
@@ -314,7 +349,7 @@ export default function PricingSection() {
         </TimelineContent>
 
         {/* Boundaries note */}
-        <TimelineContent animationNum={9} timelineRef={pricingRef}>
+        <TimelineContent animationNum={10} timelineRef={pricingRef}>
           <div className="text-center mt-8 max-w-2xl mx-auto">
             <p className="text-sm text-muted-foreground">
               <span className="font-medium">Important Boundaries:</span> PCD provides coverage, responsiveness, and operational relief — 
