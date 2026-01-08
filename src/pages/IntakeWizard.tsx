@@ -37,6 +37,19 @@ const SERVICE_PARAM_MAP: Record<string, ServiceType> = {
   other: "other",
 };
 
+// Map tier query param values
+type TierType = "starter" | "growth" | "full_ops" | "care_starter" | "care_growth" | "";
+const TIER_PARAM_MAP: Record<string, TierType> = {
+  starter: "starter",
+  growth: "growth",
+  full_ops: "full_ops",
+  care_starter: "care_starter",
+  care_growth: "care_growth",
+};
+
+// Product types from pricing page
+type ProductType = "bundle" | "care_plan" | "pilot" | "";
+
 interface ServiceItem {
   name: string;
   description: string;
@@ -50,7 +63,11 @@ interface FormData {
   phone: string;
   serviceType: ServiceType;
   
-  // Template routing (NEW)
+  // Tier selection (NEW)
+  tier: TierType;
+  productType: ProductType;
+  
+  // Template routing
   intakeTrack: IntakeTrack;
   productKey: string;
   intakeTemplate: string;
@@ -190,7 +207,10 @@ const GetDemo = () => {
     email: "",
     phone: "",
     serviceType: "",
-    // Template routing (NEW)
+    // Tier selection (NEW)
+    tier: "",
+    productType: "",
+    // Template routing
     intakeTrack: "",
     productKey: "",
     intakeTemplate: "",
@@ -275,12 +295,35 @@ const GetDemo = () => {
   // Track if service came from URL param (skip choose step)
   const [skipChoose, setSkipChoose] = useState(false);
 
-  // Pre-select service type from URL param and skip choose step
+  // Pre-select service type, tier, and product from URL params and skip choose step
   useEffect(() => {
     const serviceParam = searchParams.get("service");
+    const tierParam = searchParams.get("tier");
+    const productParam = searchParams.get("product");
+    
+    const updates: Partial<FormData> = {};
+    
     if (serviceParam && SERVICE_PARAM_MAP[serviceParam]) {
-      setFormData(prev => ({ ...prev, serviceType: SERVICE_PARAM_MAP[serviceParam] }));
+      updates.serviceType = SERVICE_PARAM_MAP[serviceParam];
       setSkipChoose(true);
+    }
+    
+    if (tierParam && TIER_PARAM_MAP[tierParam]) {
+      updates.tier = TIER_PARAM_MAP[tierParam];
+    }
+    
+    if (productParam) {
+      if (productParam === "care_plan") {
+        updates.productType = "care_plan";
+      } else if (productParam === "pilot") {
+        updates.productType = "pilot";
+        updates.serviceType = "ai"; // Pilot is AI-only
+        setSkipChoose(true);
+      }
+    }
+    
+    if (Object.keys(updates).length > 0) {
+      setFormData(prev => ({ ...prev, ...updates }));
     }
   }, [searchParams]);
 
@@ -310,6 +353,12 @@ const GetDemo = () => {
     }
     
     steps.push({ id: "basics", label: "Basics" });
+    
+    // For "both" (Full Package), add tier step if tier wasn't pre-selected
+    if (formData.serviceType === "both" && !formData.tier) {
+      steps.push({ id: "tier", label: "System" });
+      return steps; // Don't show further steps until tier is selected
+    }
     
     if (formData.serviceType === "website" || formData.serviceType === "both") {
       // First ask which track they want
@@ -430,6 +479,9 @@ const GetDemo = () => {
         const needsServiceArea = formData.serviceType === "demo" || formData.serviceType === "website" || formData.serviceType === "both";
         const basicsValid = formData.businessName.trim() && formData.email.trim() && formData.phone.trim();
         return needsServiceArea ? basicsValid && formData.serviceArea.trim() : basicsValid;
+      // Tier selection step (for "both" without pre-selected tier)
+      case "tier":
+        return !!formData.tier;
       // Track selection step
       case "track":
         return !!formData.intakeTrack;
@@ -525,6 +577,9 @@ const GetDemo = () => {
           email: formData.email.trim(),
           your_name: formData.yourName.trim() || null,
           service_type: mapServiceType(formData.serviceType),
+          // Tier and product type (NEW)
+          tier: formData.tier || null,
+          product_type: formData.productType || null,
           // Track routing
           intake_track: formData.intakeTrack || null,
           // Track A: Content
@@ -867,6 +922,84 @@ const GetDemo = () => {
       </div>
     );
   };
+
+  // Tier selection for "Full Package" (both) when tier not pre-selected
+  const TIER_OPTIONS = [
+    { 
+      value: "starter", 
+      label: "Starter System", 
+      price: "$575/mo",
+      description: "Essential website + AI Front Door. Clean baseline for owner-operators.",
+      buildRange: "$750–$1,250",
+    },
+    { 
+      value: "growth", 
+      label: "Growth System", 
+      price: "$875/mo",
+      description: "Booking + stronger lead capture + CRM basics. For businesses that live on appointments.",
+      buildRange: "$1,500–$2,500",
+      popular: true,
+    },
+    { 
+      value: "full_ops", 
+      label: "Full Operations", 
+      price: "$1,100/mo",
+      description: "Premium site + AI + booking + CRM context + managed updates. The full system.",
+      buildRange: "$2,500–$4,000+",
+    },
+  ];
+
+  const renderTierStep = () => (
+    <div className="space-y-6">
+      <div className="text-center mb-8">
+        <h2 className="font-serif text-2xl font-bold mb-2">Which system fits your needs?</h2>
+        <p className="text-muted-foreground">Choose a tier to get started — you can adjust later.</p>
+      </div>
+      
+      <div className="grid gap-4">
+        {TIER_OPTIONS.map((tier) => (
+          <button
+            key={tier.value}
+            type="button"
+            onClick={() => updateField("tier", tier.value as TierType)}
+            className={cn(
+              "relative p-5 rounded-xl border-2 text-left transition-all duration-200",
+              "hover:border-primary/50 hover:shadow-md",
+              formData.tier === tier.value 
+                ? "border-primary bg-primary/5" 
+                : "border-border bg-card"
+            )}
+          >
+            {tier.popular && (
+              <span className="absolute -top-2.5 left-4 px-2 py-0.5 text-xs font-medium rounded-full bg-primary text-primary-foreground">
+                Recommended
+              </span>
+            )}
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex-1">
+                <h3 className="font-semibold text-lg">{tier.label}</h3>
+                <p className="text-sm text-muted-foreground mt-1">{tier.description}</p>
+                <p className="text-xs text-muted-foreground/70 mt-2">One-time build: {tier.buildRange}</p>
+              </div>
+              <div className="text-right shrink-0">
+                <p className="text-xl font-bold text-primary">{tier.price}</p>
+                <p className="text-xs text-muted-foreground">monthly</p>
+              </div>
+            </div>
+            {formData.tier === tier.value && (
+              <div className="absolute top-4 right-4">
+                <Check className="w-5 h-5 text-primary" />
+              </div>
+            )}
+          </button>
+        ))}
+      </div>
+      
+      <p className="text-xs text-muted-foreground text-center">
+        All tiers include website + AI receptionist. Higher tiers include more features and support.
+      </p>
+    </div>
+  );
 
   const renderWebsiteStep = () => (
     <div className="space-y-6">
@@ -2847,6 +2980,9 @@ const GetDemo = () => {
         return renderChooseStep();
       case "basics":
         return renderBasicsStep();
+      // Tier selection (for "both" without pre-selected tier)
+      case "tier":
+        return renderTierStep();
       // Track selection
       case "track":
         return renderTrackStep();

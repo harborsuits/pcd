@@ -18,6 +18,10 @@ import {
 } from "lucide-react";
 
 interface IntakeData {
+  // Tier and product type (NEW)
+  tier?: string;
+  product_type?: string;
+  intake_track?: string;
   // NEW simplified wizard fields
   businessName?: string;
   businessType?: string;
@@ -77,6 +81,12 @@ interface IntakeData {
   business_personality?: string[];
   guarantees_policies?: string;
   submitted_at?: string;
+  // Structured intake details (NEW)
+  intake_details?: {
+    content?: { hero_line?: string; services?: Array<{ name: string; description: string }> };
+    existing_site?: { platform?: string; url?: string; work_requested?: string[] };
+    access_checklist?: Record<string, string>;
+  };
 }
 
 interface IntakeOverviewPanelProps {
@@ -267,7 +277,7 @@ export function IntakeOverviewPanel({ intake, intakeCreatedAt, intakeStatus, onA
           <>
             {/* Service Type Badge */}
             {intake.service_type && (
-              <div className="flex items-center gap-2 mb-4">
+              <div className="flex flex-wrap items-center gap-2 mb-4">
                 <Badge variant="default" className="text-xs">
                   {intake.service_type === 'website' && 'Website Only'}
                   {intake.service_type === 'ai' && 'AI Receptionist Only'}
@@ -275,6 +285,20 @@ export function IntakeOverviewPanel({ intake, intakeCreatedAt, intakeStatus, onA
                   {intake.service_type === 'demo' && 'Demo Request'}
                   {!['website', 'ai', 'both', 'demo'].includes(intake.service_type) && intake.service_type}
                 </Badge>
+                {intake.tier && (
+                  <Badge variant="outline" className="text-xs font-medium">
+                    {intake.tier === 'starter' && 'Starter System'}
+                    {intake.tier === 'growth' && 'Growth System'}
+                    {intake.tier === 'full_ops' && 'Full Operations'}
+                    {intake.tier === 'care_starter' && 'Care Plan – Starter'}
+                    {intake.tier === 'care_growth' && 'Care Plan – Growth'}
+                  </Badge>
+                )}
+                {intake.intake_track && (
+                  <Badge variant={intake.intake_track === 'new_site' ? 'secondary' : 'outline'} className="text-xs">
+                    {intake.intake_track === 'new_site' ? 'New Build' : 'Existing Site'}
+                  </Badge>
+                )}
               </div>
             )}
 

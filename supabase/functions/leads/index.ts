@@ -1405,7 +1405,10 @@ async function handleRequestDemo(req: Request): Promise<Response> {
       website_style?: string;
       receptionist_focus?: string;
       service_type?: string;
-      // Template routing fields (NEW)
+      // Tier and product type (NEW)
+      tier?: string;
+      product_type?: string;
+      // Template routing fields
       product_key?: string;
       intake_template?: string;
       intake_track?: string; // "new_site" | "improve_existing"
@@ -1508,7 +1511,10 @@ async function handleRequestDemo(req: Request): Promise<Response> {
       website_style,
       receptionist_focus,
       service_type,
-      // Template routing (NEW)
+      // Tier and product type (NEW)
+      tier,
+      product_type,
+      // Template routing
       product_key,
       intake_template,
       intake_track,
@@ -1961,11 +1967,14 @@ async function handleRequestDemo(req: Request): Promise<Response> {
 
     // Create intake record with all the form data including new intake_details structure
     const intakeData = {
-      // Template routing (NEW)
+      // Tier and pricing (NEW)
+      tier: tier || null,
+      product_type: product_type || null,
+      // Template routing
       product_key: product_key || null,
       intake_template: intake_template || null,
       intake_track: intake_track || null,
-      // Structured intake details (NEW)
+      // Structured intake details
       intake_details: intakeDetails,
       // Legacy flat fields for backwards compatibility
       service_type: service_type || "demo",
