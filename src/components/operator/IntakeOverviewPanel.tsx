@@ -294,8 +294,9 @@ export function IntakeOverviewPanel({ intake, intakeCreatedAt, intakeStatus, onA
               </div>
             </Section>
 
-            {/* Website Info */}
-            {(intake.website_goal || intake.services_list || intake.services_offered) && (
+            {/* Website Info - only show for website or both service types */}
+            {(intake.service_type === 'website' || intake.service_type === 'both') && 
+             (intake.website_goal || intake.services_list) && (
               <Section icon={Globe} title="Website">
                 <div className="space-y-1.5 text-sm">
                   {intake.website_goal && (
@@ -303,14 +304,12 @@ export function IntakeOverviewPanel({ intake, intakeCreatedAt, intakeStatus, onA
                       {intake.website_goal === 'bookings' && 'Goal: Get Bookings'}
                       {intake.website_goal === 'calls' && 'Goal: Get Calls'}
                       {intake.website_goal === 'info' && 'Goal: Provide Info'}
-                      {!['bookings', 'calls', 'info'].includes(intake.website_goal) && intake.website_goal}
+                      {intake.website_goal === 'quotes' && 'Goal: Get Quotes'}
+                      {!['bookings', 'calls', 'info', 'quotes'].includes(intake.website_goal) && intake.website_goal}
                     </Badge>
                   )}
                   {intake.services_list && (
                     <p className="text-muted-foreground">Services: {intake.services_list}</p>
-                  )}
-                  {intake.services_offered && (
-                    <p className="text-muted-foreground text-xs">{intake.services_offered}</p>
                   )}
                 </div>
               </Section>
