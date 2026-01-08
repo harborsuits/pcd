@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { adminFetch } from "@/lib/adminFetch";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
@@ -28,6 +29,7 @@ import { IntakeSummary } from "@/components/intake/IntakeSummary";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
+// SUPABASE_URL is still needed for files endpoint that uses different auth
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 
 interface ProjectIntake {
@@ -228,13 +230,8 @@ export function ProjectDetailDrawer({ project, open, onClose, onStatusChange }: 
   // Mark messages as read mutation
   const markReadMutation = useMutation({
     mutationFn: async (token: string) => {
-      const adminKey = localStorage.getItem("admin_key") || "";
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/admin/messages/mark-read`, {
+      const res = await adminFetch("/admin/messages/mark-read", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-admin-key": adminKey,
-        },
         body: JSON.stringify({ project_token: token }),
       });
       if (!res.ok) throw new Error("Failed to mark messages as read");
@@ -252,10 +249,7 @@ export function ProjectDetailDrawer({ project, open, onClose, onStatusChange }: 
     queryKey: ["project-messages", project?.project_token],
     queryFn: async () => {
       if (!project) return { messages: [] };
-      const adminKey = localStorage.getItem("admin_key") || "";
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/messages/${project.project_token}`, {
-        headers: { "x-admin-key": adminKey },
-      });
+      const res = await adminFetch(`/messages/${project.project_token}`);
       if (!res.ok) throw new Error("Failed to fetch messages");
       return res.json() as Promise<{ messages: Message[] }>;
     },
@@ -283,10 +277,7 @@ export function ProjectDetailDrawer({ project, open, onClose, onStatusChange }: 
     queryKey: ["project-notes", project?.project_token],
     queryFn: async () => {
       if (!project) return { notes: [] };
-      const adminKey = localStorage.getItem("admin_key") || "";
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/admin/notes/${project.project_token}`, {
-        headers: { "x-admin-key": adminKey },
-      });
+      const res = await adminFetch(`/admin/notes/${project.project_token}`);
       if (!res.ok) throw new Error("Failed to fetch notes");
       return res.json() as Promise<{ notes: Note[] }>;
     },
@@ -298,10 +289,7 @@ export function ProjectDetailDrawer({ project, open, onClose, onStatusChange }: 
     queryKey: ["project-checklist", project?.project_token],
     queryFn: async () => {
       if (!project) return { items: [] };
-      const adminKey = localStorage.getItem("admin_key") || "";
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/admin/checklist/${project.project_token}`, {
-        headers: { "x-admin-key": adminKey },
-      });
+      const res = await adminFetch(`/admin/checklist/${project.project_token}`);
       if (!res.ok) throw new Error("Failed to fetch checklist");
       return res.json() as Promise<{ items: ChecklistItem[] }>;
     },
@@ -313,10 +301,7 @@ export function ProjectDetailDrawer({ project, open, onClose, onStatusChange }: 
     queryKey: ["project-prototypes", project?.project_token],
     queryFn: async () => {
       if (!project) return { prototypes: [] };
-      const adminKey = localStorage.getItem("admin_key") || "";
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/admin/prototypes/${project.project_token}`, {
-        headers: { "x-admin-key": adminKey },
-      });
+      const res = await adminFetch(`/admin/prototypes/${project.project_token}`);
       if (!res.ok) throw new Error("Failed to fetch prototypes");
       return res.json() as Promise<{ prototypes: Prototype[] }>;
     },
@@ -328,10 +313,7 @@ export function ProjectDetailDrawer({ project, open, onClose, onStatusChange }: 
     queryKey: ["project-comments", project?.project_token],
     queryFn: async () => {
       if (!project) return { comments: [] };
-      const adminKey = localStorage.getItem("admin_key") || "";
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/admin/comments/${project.project_token}`, {
-        headers: { "x-admin-key": adminKey },
-      });
+      const res = await adminFetch(`/admin/comments/${project.project_token}`);
       if (!res.ok) throw new Error("Failed to fetch comments");
       return res.json() as Promise<{ comments: PrototypeComment[] }>;
     },
@@ -377,13 +359,8 @@ export function ProjectDetailDrawer({ project, open, onClose, onStatusChange }: 
   const updateStatusMutation = useMutation({
     mutationFn: async (newStatus: string) => {
       if (!project) throw new Error("No project");
-      const adminKey = localStorage.getItem("admin_key") || "";
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/admin/projects/${project.project_token}/status`, {
+      const res = await adminFetch(`/admin/projects/${project.project_token}/status`, {
         method: "PATCH",
-        headers: { 
-          "Content-Type": "application/json",
-          "x-admin-key": adminKey 
-        },
         body: JSON.stringify({ status: newStatus }),
       });
       if (!res.ok) throw new Error("Failed to update status");
@@ -403,13 +380,8 @@ export function ProjectDetailDrawer({ project, open, onClose, onStatusChange }: 
   const updatePortalStageMutation = useMutation({
     mutationFn: async ({ stage, reason }: { stage: string; reason?: string }) => {
       if (!project) throw new Error("No project");
-      const adminKey = localStorage.getItem("admin_key") || "";
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/admin/projects/${project.project_token}/portal-stage`, {
+      const res = await adminFetch(`/admin/projects/${project.project_token}/portal-stage`, {
         method: "PATCH",
-        headers: { 
-          "Content-Type": "application/json",
-          "x-admin-key": adminKey 
-        },
         body: JSON.stringify({ stage, reason }),
       });
       if (!res.ok) throw new Error("Failed to update portal stage");
@@ -429,13 +401,8 @@ export function ProjectDetailDrawer({ project, open, onClose, onStatusChange }: 
   const updateAiStatusMutation = useMutation({
     mutationFn: async ({ status, ulioBusinessId, ulioSetupUrl }: { status: string; ulioBusinessId?: string; ulioSetupUrl?: string }) => {
       if (!project) throw new Error("No project");
-      const adminKey = localStorage.getItem("admin_key") || "";
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/admin/projects/${project.project_token}/ai-status`, {
+      const res = await adminFetch(`/admin/projects/${project.project_token}/ai-status`, {
         method: "PATCH",
-        headers: { 
-          "Content-Type": "application/json",
-          "x-admin-key": adminKey 
-        },
         body: JSON.stringify({ 
           ai_trial_status: status,
           ulio_business_id: ulioBusinessId,
@@ -459,13 +426,8 @@ export function ProjectDetailDrawer({ project, open, onClose, onStatusChange }: 
   const sendMessageMutation = useMutation({
     mutationFn: async (content: string) => {
       if (!project) throw new Error("No project");
-      const adminKey = localStorage.getItem("admin_key") || "";
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/messages/${project.project_token}`, {
+      const res = await adminFetch(`/messages/${project.project_token}`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-admin-key": adminKey,
-        },
         body: JSON.stringify({ content, sender_type: "admin" }),
       });
       if (!res.ok) throw new Error("Failed to send message");
@@ -486,13 +448,8 @@ export function ProjectDetailDrawer({ project, open, onClose, onStatusChange }: 
   const addNoteMutation = useMutation({
     mutationFn: async (content: string) => {
       if (!project) throw new Error("No project");
-      const adminKey = localStorage.getItem("admin_key") || "";
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/admin/notes/${project.project_token}`, {
+      const res = await adminFetch(`/admin/notes/${project.project_token}`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-admin-key": adminKey,
-        },
         body: JSON.stringify({ content }),
       });
       if (!res.ok) throw new Error("Failed to add note");
@@ -512,10 +469,8 @@ export function ProjectDetailDrawer({ project, open, onClose, onStatusChange }: 
   const deleteNoteMutation = useMutation({
     mutationFn: async (noteId: string) => {
       if (!project) throw new Error("No project");
-      const adminKey = localStorage.getItem("admin_key") || "";
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/admin/notes/${project.project_token}/${noteId}`, {
+      const res = await adminFetch(`/admin/notes/${project.project_token}/${noteId}`, {
         method: "DELETE",
-        headers: { "x-admin-key": adminKey },
       });
       if (!res.ok) throw new Error("Failed to delete note");
     },
@@ -532,13 +487,8 @@ export function ProjectDetailDrawer({ project, open, onClose, onStatusChange }: 
   const addChecklistMutation = useMutation({
     mutationFn: async (label: string) => {
       if (!project) throw new Error("No project");
-      const adminKey = localStorage.getItem("admin_key") || "";
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/admin/checklist/${project.project_token}`, {
+      const res = await adminFetch(`/admin/checklist/${project.project_token}`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-admin-key": adminKey,
-        },
         body: JSON.stringify({ label }),
       });
       if (!res.ok) throw new Error("Failed to add task");
@@ -558,13 +508,8 @@ export function ProjectDetailDrawer({ project, open, onClose, onStatusChange }: 
   const toggleChecklistMutation = useMutation({
     mutationFn: async ({ itemId, is_done }: { itemId: string; is_done: boolean }) => {
       if (!project) throw new Error("No project");
-      const adminKey = localStorage.getItem("admin_key") || "";
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/admin/checklist/${project.project_token}/${itemId}`, {
+      const res = await adminFetch(`/admin/checklist/${project.project_token}/${itemId}`, {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          "x-admin-key": adminKey,
-        },
         body: JSON.stringify({ is_done }),
       });
       if (!res.ok) throw new Error("Failed to update task");
@@ -581,10 +526,8 @@ export function ProjectDetailDrawer({ project, open, onClose, onStatusChange }: 
   const deleteChecklistMutation = useMutation({
     mutationFn: async (itemId: string) => {
       if (!project) throw new Error("No project");
-      const adminKey = localStorage.getItem("admin_key") || "";
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/admin/checklist/${project.project_token}/${itemId}`, {
+      const res = await adminFetch(`/admin/checklist/${project.project_token}/${itemId}`, {
         method: "DELETE",
-        headers: { "x-admin-key": adminKey },
       });
       if (!res.ok) throw new Error("Failed to delete task");
     },
@@ -601,10 +544,8 @@ export function ProjectDetailDrawer({ project, open, onClose, onStatusChange }: 
   const addDefaultsMutation = useMutation({
     mutationFn: async () => {
       if (!project) throw new Error("No project");
-      const adminKey = localStorage.getItem("admin_key") || "";
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/admin/checklist/${project.project_token}/defaults`, {
+      const res = await adminFetch(`/admin/checklist/${project.project_token}/defaults`, {
         method: "POST",
-        headers: { "x-admin-key": adminKey },
       });
       if (!res.ok) throw new Error("Failed to add defaults");
     },
@@ -621,13 +562,8 @@ export function ProjectDetailDrawer({ project, open, onClose, onStatusChange }: 
   const addPrototypeMutation = useMutation({
     mutationFn: async ({ url, version_label }: { url: string; version_label?: string }) => {
       if (!project) throw new Error("No project");
-      const adminKey = localStorage.getItem("admin_key") || "";
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/admin/prototypes/${project.project_token}`, {
+      const res = await adminFetch(`/admin/prototypes/${project.project_token}`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-admin-key": adminKey,
-        },
         body: JSON.stringify({ url, version_label, status: "sent" }),
       });
       if (!res.ok) throw new Error("Failed to add prototype");
@@ -648,13 +584,8 @@ export function ProjectDetailDrawer({ project, open, onClose, onStatusChange }: 
   const updatePrototypeMutation = useMutation({
     mutationFn: async ({ prototypeId, status }: { prototypeId: string; status: string }) => {
       if (!project) throw new Error("No project");
-      const adminKey = localStorage.getItem("admin_key") || "";
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/admin/prototypes/${project.project_token}/${prototypeId}`, {
+      const res = await adminFetch(`/admin/prototypes/${project.project_token}/${prototypeId}`, {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          "x-admin-key": adminKey,
-        },
         body: JSON.stringify({ status }),
       });
       if (!res.ok) throw new Error("Failed to update prototype");
@@ -673,10 +604,8 @@ export function ProjectDetailDrawer({ project, open, onClose, onStatusChange }: 
   const deletePrototypeMutation = useMutation({
     mutationFn: async (prototypeId: string) => {
       if (!project) throw new Error("No project");
-      const adminKey = localStorage.getItem("admin_key") || "";
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/admin/prototypes/${project.project_token}/${prototypeId}`, {
+      const res = await adminFetch(`/admin/prototypes/${project.project_token}/${prototypeId}`, {
         method: "DELETE",
-        headers: { "x-admin-key": adminKey },
       });
       if (!res.ok) throw new Error("Failed to delete prototype");
     },
@@ -699,13 +628,8 @@ export function ProjectDetailDrawer({ project, open, onClose, onStatusChange }: 
       sourceMessageId: string;
     }) => {
       if (!project) throw new Error("No project");
-      const adminKey = localStorage.getItem("admin_key") || "";
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/admin/comments/${project.project_token}`, {
+      const res = await adminFetch(`/admin/comments/${project.project_token}`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-admin-key": adminKey,
-        },
         body: JSON.stringify({
           prototype_id: prototypeId,
           body,
