@@ -665,7 +665,7 @@ export default function PortalHub() {
                 Fill out our quick intake form to get started with your project.
               </p>
               <Button asChild size="lg">
-                <Link to="/get-demo?service=both">
+                <Link to="/get-demo">
                   <Sparkles className="mr-2 h-4 w-4" />
                   Start your project
                 </Link>
@@ -679,7 +679,7 @@ export default function PortalHub() {
                   Ready for another project?
                 </p>
                 <Button asChild variant="outline" size="sm">
-                  <Link to="/get-demo?service=both">
+                  <Link to="/get-demo">
                     <Plus className="mr-2 h-4 w-4" />
                     New project
                   </Link>
