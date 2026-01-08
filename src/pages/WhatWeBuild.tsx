@@ -746,52 +746,7 @@ const WhatWeBuild = () => {
         </div>
       </section>
 
-      {/* What Clients Say */}
-      <section className="py-16 border-t border-border">
-        <div className="container mx-auto px-6">
-          <div className="text-center mb-4">
-            <p className="text-sm uppercase tracking-wider text-accent mb-2">What Clients Say</p>
-            <h2 className="font-serif text-2xl md:text-3xl font-bold text-foreground">
-              Real Results, Real Feedback
-            </h2>
-          </div>
-          <AnimatedTestimonials
-            testimonials={[
-              {
-                quote: "The attention to detail and innovative features have completely transformed our workflow. This is exactly what we've been looking for.",
-                name: "Sarah Chen",
-                designation: "Product Manager at TechFlow",
-                src: "https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=800&auto=format&fit=crop",
-              },
-              {
-                quote: "Implementation was seamless and the results exceeded our expectations. The platform's flexibility is remarkable.",
-                name: "Michael Rodriguez",
-                designation: "CTO at InnovateSphere",
-                src: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?q=80&w=800&auto=format&fit=crop",
-              },
-              {
-                quote: "This solution has significantly improved our team's productivity. The intuitive interface makes complex tasks simple.",
-                name: "Emily Watson",
-                designation: "Operations Director at CloudScale",
-                src: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=800&auto=format&fit=crop",
-              },
-              {
-                quote: "Outstanding support and robust features. It's rare to find a product that delivers on all its promises.",
-                name: "James Kim",
-                designation: "Engineering Lead at DataPro",
-                src: "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?q=80&w=800&auto=format&fit=crop",
-              },
-              {
-                quote: "The scalability and performance have been game-changing for our organization. Highly recommend to any growing business.",
-                name: "Lisa Thompson",
-                designation: "VP of Technology at FutureNet",
-                src: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?q=80&w=800&auto=format&fit=crop",
-              },
-            ]}
-            autoplay
-          />
-        </div>
-      </section>
+      {/* Testimonials section - uncomment when real testimonials are available */}
 
       {/* CTA */}
       <section className="py-20 border-t border-border">
