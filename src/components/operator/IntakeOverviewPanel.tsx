@@ -83,9 +83,22 @@ interface IntakeData {
   submitted_at?: string;
   // Structured intake details (NEW)
   intake_details?: {
-    content?: { hero_line?: string; services?: Array<{ name: string; description: string }> };
-    existing_site?: { platform?: string; url?: string; work_requested?: string[] };
+    content?: { hero_line?: string; services?: Array<{ name: string; description?: string }> };
+    existing_site?: { 
+      platform?: string; 
+      platform_other?: string;
+      url?: string; 
+      work_requested?: string[];
+      access_method?: string;
+      access_instructions?: string;
+    };
     access_checklist?: Record<string, string>;
+    design?: Record<string, unknown>;
+    hours?: Record<string, unknown>;
+    links?: Record<string, unknown>;
+    required_sections?: string[];
+    features_needed?: string[];
+    trust_signals?: Record<string, unknown>;
   };
 }
 
@@ -286,12 +299,27 @@ export function IntakeOverviewPanel({ intake, intakeCreatedAt, intakeStatus, onA
                   {!['website', 'ai', 'both', 'demo'].includes(intake.service_type) && intake.service_type}
                 </Badge>
                 {intake.tier && (
-                  <Badge variant="outline" className="text-xs font-medium">
+                  <Badge variant="outline" className="text-xs font-medium bg-primary/5">
+                    {/* Website tiers */}
+                    {intake.tier === 'website_starter' && '🌱 Website Starter'}
+                    {intake.tier === 'website_growth' && '📈 Website Growth'}
+                    {intake.tier === 'website_full_ops' && '🚀 Website Full Ops'}
+                    {/* AI tiers */}
+                    {intake.tier === 'ai_starter' && '🤖 AI Starter'}
+                    {intake.tier === 'ai_growth' && '📞 AI Growth'}
+                    {intake.tier === 'ai_full_ops' && '⚡ AI Full Ops'}
+                    {/* Bundle tiers */}
+                    {intake.tier === 'bundle_starter' && '📦 Bundle Starter'}
+                    {intake.tier === 'bundle_growth' && '📦 Bundle Growth'}
+                    {intake.tier === 'bundle_full_ops' && '📦 Bundle Full Ops'}
+                    {/* Legacy tiers */}
                     {intake.tier === 'starter' && 'Starter System'}
                     {intake.tier === 'growth' && 'Growth System'}
                     {intake.tier === 'full_ops' && 'Full Operations'}
                     {intake.tier === 'care_starter' && 'Care Plan – Starter'}
                     {intake.tier === 'care_growth' && 'Care Plan – Growth'}
+                    {/* Fallback for unknown tiers */}
+                    {!['website_starter', 'website_growth', 'website_full_ops', 'ai_starter', 'ai_growth', 'ai_full_ops', 'bundle_starter', 'bundle_growth', 'bundle_full_ops', 'starter', 'growth', 'full_ops', 'care_starter', 'care_growth'].includes(intake.tier) && intake.tier}
                   </Badge>
                 )}
                 {intake.intake_track && (
@@ -334,6 +362,106 @@ export function IntakeOverviewPanel({ intake, intakeCreatedAt, intakeStatus, onA
                   )}
                   {intake.services_list && (
                     <p className="text-muted-foreground">Services: {intake.services_list}</p>
+                  )}
+                </div>
+              </Section>
+            )}
+
+            {/* Existing Site Details (from intake_details) */}
+            {intake.intake_details?.existing_site && (
+              <Section icon={Globe} title="Existing Site">
+                <div className="space-y-2 text-sm">
+                  {intake.intake_details.existing_site.url && (
+                    <a 
+                      href={intake.intake_details.existing_site.url} 
+                      target="_blank" 
+                      rel="noopener noreferrer" 
+                      className="text-primary hover:underline block"
+                    >
+                      {intake.intake_details.existing_site.url}
+                    </a>
+                  )}
+                  {intake.intake_details.existing_site.platform && (
+                    <p className="text-muted-foreground">
+                      Platform: <span className="capitalize">{intake.intake_details.existing_site.platform === 'platform_other' 
+                        ? intake.intake_details.existing_site.platform_other 
+                        : intake.intake_details.existing_site.platform}</span>
+                    </p>
+                  )}
+                  {intake.intake_details.existing_site.work_requested && intake.intake_details.existing_site.work_requested.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      <span className="text-muted-foreground">Work requested:</span>
+                      {intake.intake_details.existing_site.work_requested.map((w: string) => (
+                        <Badge key={w} variant="outline" className="text-xs">
+                          {w === 'domain_dns' && 'Domain/DNS'}
+                          {w === 'tracking' && 'Analytics/Tracking'}
+                          {w === 'redesign' && 'Redesign'}
+                          {w === 'content' && 'Content Updates'}
+                          {w === 'seo' && 'SEO'}
+                          {w === 'speed' && 'Speed Optimization'}
+                          {!['domain_dns', 'tracking', 'redesign', 'content', 'seo', 'speed'].includes(w) && w}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                  {intake.intake_details.existing_site.access_method && (
+                    <p className="text-muted-foreground">
+                      Access: {intake.intake_details.existing_site.access_method === 'share' ? 'Will share credentials' : intake.intake_details.existing_site.access_method === 'none' ? 'No access yet' : intake.intake_details.existing_site.access_method}
+                    </p>
+                  )}
+                  {intake.intake_details.existing_site.access_instructions && (
+                    <p className="text-muted-foreground text-xs bg-muted/30 rounded p-2">
+                      {intake.intake_details.existing_site.access_instructions}
+                    </p>
+                  )}
+                </div>
+              </Section>
+            )}
+
+            {/* Access Checklist (from intake_details) */}
+            {intake.intake_details?.access_checklist && Object.keys(intake.intake_details.access_checklist).length > 0 && (
+              <Section icon={CheckCircle2} title="Access Status">
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  {Object.entries(intake.intake_details.access_checklist).map(([key, value]) => (
+                    <div key={key} className="flex items-center gap-2">
+                      <span className={value === 'granted' ? 'text-green-600' : value === 'pending' ? 'text-amber-600' : 'text-muted-foreground'}>
+                        {value === 'granted' ? '✓' : value === 'pending' ? '⏳' : '○'}
+                      </span>
+                      <span className="capitalize text-muted-foreground">
+                        {key === 'analytics' && 'Google Analytics'}
+                        {key === 'search_console' && 'Search Console'}
+                        {key === 'hosting' && 'Hosting'}
+                        {key === 'domain' && 'Domain'}
+                        {!['analytics', 'search_console', 'hosting', 'domain'].includes(key) && key.replace('_', ' ')}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </Section>
+            )}
+
+            {/* Content from intake_details */}
+            {intake.intake_details?.content && (
+              <Section icon={FileText} title="Content">
+                <div className="space-y-2 text-sm">
+                  {intake.intake_details.content.hero_line && (
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground mb-1">Hero Line:</p>
+                      <p className="text-foreground italic">"{intake.intake_details.content.hero_line}"</p>
+                    </div>
+                  )}
+                  {intake.intake_details.content.services && intake.intake_details.content.services.length > 0 && (
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground mb-1">Services ({intake.intake_details.content.services.length}):</p>
+                      <ul className="list-disc list-inside space-y-0.5">
+                        {intake.intake_details.content.services.map((svc: { name: string; description?: string }, i: number) => (
+                          <li key={i} className="text-muted-foreground">
+                            <span className="font-medium text-foreground">{svc.name}</span>
+                            {svc.description && <span className="text-xs"> — {svc.description}</span>}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
                   )}
                 </div>
               </Section>
