@@ -1364,6 +1364,32 @@ async function handleGenerateDemo(req: Request, leadId: string): Promise<Respons
 
 // POST /leads/request-demo - Public endpoint for lead capture + auto demo generation
 async function handleRequestDemo(req: Request): Promise<Response> {
+  // Check if user is authenticated (for immediate owner_user_id assignment)
+  let authenticatedUserId: string | null = null;
+  const authHeader = req.headers.get("Authorization");
+  
+  if (authHeader?.startsWith("Bearer ")) {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    
+    try {
+      const supabaseWithAuth = createClient(supabaseUrl, supabaseAnonKey, {
+        global: { headers: { Authorization: authHeader } }
+      });
+      
+      const token = authHeader.replace("Bearer ", "");
+      const { data: claimsData, error: claimsError } = await supabaseWithAuth.auth.getClaims(token);
+      
+      if (!claimsError && claimsData?.claims?.sub) {
+        authenticatedUserId = claimsData.claims.sub as string;
+        console.log(`Authenticated user creating project: ${authenticatedUserId}`);
+      }
+    } catch (err) {
+      console.log("Auth check failed (non-fatal):", err);
+      // Non-fatal - continue as unauthenticated
+    }
+  }
+
   try {
     let body: { 
       business_name?: string; 
@@ -1737,7 +1763,7 @@ async function handleRequestDemo(req: Request): Promise<Response> {
     if (custom_request) notesLines.push(`Custom request: ${custom_request}`);
     const projectNotes = notesLines.length > 0 ? notesLines.join('\n') : null;
 
-    // Create project
+    // Create project (with owner_user_id if user is authenticated)
     const { data: newProject, error: projectError } = await supabase
       .from("projects")
       .insert({
@@ -1755,6 +1781,8 @@ async function handleRequestDemo(req: Request): Promise<Response> {
         notes: projectNotes,
         // Set AI status for AI receptionist projects
         ai_trial_status: (service_type === "ai_receptionist" || service_type === "both") ? "intake_received" : null,
+        // Set owner immediately if user is authenticated
+        owner_user_id: authenticatedUserId,
       })
       .select("id, project_token")
       .single();
@@ -1840,7 +1868,8 @@ async function handleRequestDemo(req: Request): Promise<Response> {
           phone: bestPhone || null,
           name: your_name || null,
           role: "owner",
-          invite_status: "invited",
+          // Mark as accepted if user is already authenticated
+          invite_status: authenticatedUserId ? "accepted" : "invited",
           invite_sent_at: new Date().toISOString(),
         });
 
@@ -1848,7 +1877,7 @@ async function handleRequestDemo(req: Request): Promise<Response> {
         console.error("Failed to create client record:", clientError);
         // Non-fatal - project was created
       } else {
-        console.log(`Client record created for ${email} on project ${projectToken}`);
+        console.log(`Client record created for ${email} on project ${projectToken} (status: ${authenticatedUserId ? "accepted" : "invited"})`);
       }
 
       // Trigger welcome email notification

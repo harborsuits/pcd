@@ -84,9 +84,9 @@ export default function CreatePasswordPage() {
             title: "Account already exists",
             description: "Please log in with your existing password.",
           });
-          // Short delay then redirect
+          // Short delay then redirect (include existing=true to show message)
           setTimeout(() => {
-            navigate(`/portal?email=${encodeURIComponent(email)}`);
+            navigate(`/portal?email=${encodeURIComponent(email)}&existing=true`);
           }, 1500);
           return;
         }
@@ -207,6 +207,33 @@ export default function CreatePasswordPage() {
             You already have an account with this email. Redirecting to login...
           </p>
           <Loader2 className="h-6 w-6 mx-auto animate-spin text-primary" />
+          <div className="pt-2">
+            <button
+              type="button"
+              onClick={() => navigate(`/portal?email=${encodeURIComponent(email)}&existing=true`)}
+              className="text-sm text-primary hover:underline"
+            >
+              Go to login now →
+            </button>
+            <span className="mx-2 text-muted-foreground">·</span>
+            <button
+              type="button"
+              onClick={async () => {
+                const { error } = await supabase.auth.resetPasswordForEmail(email, {
+                  redirectTo: `${window.location.origin}/portal`,
+                });
+                if (!error) {
+                  toast({
+                    title: "Reset link sent",
+                    description: "Check your email for a password reset link.",
+                  });
+                }
+              }}
+              className="text-sm text-muted-foreground hover:text-foreground"
+            >
+              Forgot your password?
+            </button>
+          </div>
         </div>
       </div>
     );

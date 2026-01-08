@@ -46,15 +46,28 @@ export default function PortalHub() {
   const [loadingPortals, setLoadingPortals] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
 
-  // Handle prefilled params from /start page
+  // Track if user was redirected from create-password (existing account)
+  const [showExistingAccountMessage, setShowExistingAccountMessage] = useState(false);
+  const emailInputRef = useRef<HTMLInputElement>(null);
+
+  // Handle prefilled params from /start page or /create-password redirect
   useEffect(() => {
     const prefillEmail = searchParams.get("email");
     const prefillName = searchParams.get("name");
     const tab = searchParams.get("tab");
+    const fromCreatePassword = searchParams.get("existing") === "true";
     
     if (prefillEmail) setEmail(prefillEmail);
     if (prefillName) setFullName(prefillName);
     if (tab === "signup") setMode("signup");
+    
+    // If redirected from create-password because account exists, show message and auto-focus
+    if (fromCreatePassword && prefillEmail) {
+      setShowExistingAccountMessage(true);
+      setMode("login");
+      // Auto-focus email input after render
+      setTimeout(() => emailInputRef.current?.focus(), 100);
+    }
   }, [searchParams]);
   
   
@@ -867,16 +880,25 @@ export default function PortalHub() {
               </form>
             ) : (
               <form onSubmit={handleLogin} className="space-y-4">
+                {/* Message when redirected from create-password */}
+                {showExistingAccountMessage && (
+                  <div className="p-3 rounded-lg bg-accent/10 border border-accent/20 text-sm text-accent-foreground mb-4">
+                    <p className="font-medium">You already have an account!</p>
+                    <p className="text-muted-foreground mt-1">Please log in with your existing password.</p>
+                  </div>
+                )}
+                
                 <div className="space-y-2">
                   <Label htmlFor="login-email">Email</Label>
                   <div className="relative">
                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                       id="login-email"
+                      ref={emailInputRef}
                       type="email"
                       placeholder="you@example.com"
                       value={email}
-                      onChange={(e) => setEmail(e.target.value)}
+                      onChange={(e) => { setEmail(e.target.value); setShowExistingAccountMessage(false); }}
                       className="pl-10"
                       required
                     />
