@@ -133,6 +133,8 @@ interface MediaItem {
   uploader_type: string;
   created_at: string;
   signed_url: string | null;
+  source?: "media" | "intake";
+  description?: string | null;
 }
 
 
@@ -1074,9 +1076,22 @@ export function ProjectWorkSurface({ project, onBack, onStatusChange }: ProjectW
                           <div className="p-2">
                             <p className="text-xs font-medium truncate" title={item.filename}>{item.filename}</p>
                             <p className="text-[10px] text-muted-foreground flex items-center justify-between">
-                              <span>{item.uploader_type === "client" ? "Client" : "Admin"}</span>
+                              <span className="flex items-center gap-1">
+                                {item.source === "intake" ? (
+                                  <span className="inline-flex items-center gap-0.5 px-1 py-0.5 bg-amber-500/10 text-amber-600 rounded text-[9px] font-medium">
+                                    Intake
+                                  </span>
+                                ) : (
+                                  <span>{item.uploader_type === "client" ? "Client" : "Admin"}</span>
+                                )}
+                              </span>
                               <span>{formatFileSize(item.size_bytes)}</span>
                             </p>
+                            {item.description && (
+                              <p className="text-[10px] text-muted-foreground mt-0.5 truncate" title={item.description}>
+                                {item.description}
+                              </p>
+                            )}
                           </div>
                         </div>
                       ))}

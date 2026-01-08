@@ -2935,7 +2935,7 @@ async function handleGetMedia(req: Request, token: string): Promise<Response> {
       );
     }
 
-    // Fetch media items
+    // Fetch media items from project_media table
     const { data: media, error: mediaError } = await supabase
       .from("project_media")
       .select("*")
@@ -2950,7 +2950,19 @@ async function handleGetMedia(req: Request, token: string): Promise<Response> {
       );
     }
 
-    // Generate signed URLs for each media item
+    // Also fetch files from files table (intake uploads)
+    const { data: files, error: filesError } = await supabase
+      .from("files")
+      .select("*")
+      .eq("project_id", project.id)
+      .order("created_at", { ascending: false });
+
+    if (filesError) {
+      console.error("Files fetch error:", filesError);
+      // Don't fail, just log - files table may not have data
+    }
+
+    // Generate signed URLs for each media item from project_media
     const mediaWithUrls = await Promise.all((media || []).map(async (item) => {
       const { data: signedData } = await supabase.storage
         .from("project-media")
@@ -2959,11 +2971,45 @@ async function handleGetMedia(req: Request, token: string): Promise<Response> {
       return {
         ...item,
         signed_url: signedData?.signedUrl || null,
+        source: "media" as const,
       };
     }));
 
+    // Generate signed URLs for files from files table (stored in project-files bucket)
+    const filesWithUrls = await Promise.all((files || []).map(async (file) => {
+      // storage_path format is "project-files/token/timestamp-random-filename"
+      // We need just "token/timestamp-random-filename" for the bucket
+      const pathInBucket = file.storage_path.replace("project-files/", "");
+      
+      const { data: signedData } = await supabase.storage
+        .from("project-files")
+        .createSignedUrl(pathInBucket, 3600); // 1 hour expiry
+
+      return {
+        id: file.id,
+        project_id: file.project_id,
+        project_token: file.project_token,
+        filename: file.file_name,
+        mime_type: file.file_type,
+        storage_path: file.storage_path,
+        size_bytes: 0, // files table doesn't store size, we could add it later
+        created_at: file.created_at,
+        uploader_type: "client",
+        description: file.description,
+        signed_url: signedData?.signedUrl || null,
+        source: "intake" as const,
+      };
+    }));
+
+    // Combine both sources and sort by created_at
+    const allMedia = [...mediaWithUrls, ...filesWithUrls].sort(
+      (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
+
+    console.log(`Found ${mediaWithUrls.length} media + ${filesWithUrls.length} intake files for project ${token.slice(0, 8)}...`);
+
     return new Response(
-      JSON.stringify({ media: mediaWithUrls }),
+      JSON.stringify({ media: allMedia }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
 
