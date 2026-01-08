@@ -4,6 +4,7 @@ import { ArrowRight } from 'lucide-react';
 import rooferImage from '@/assets/demos/roofer-hero.jpeg';
 import galleryCoverVideo from '@/assets/demos/gallery-cover.mp4';
 import salonCoverVideo from '@/assets/demos/salon-cover.mp4';
+import boutiqueCoverVideo from '@/assets/demos/boutique-cover.mp4';
 
 interface AccordionItemData {
   id: number;
@@ -122,7 +123,7 @@ const defaultItems: AccordionItemData[] = [
     id: 5,
     category: 'Retail',
     title: 'Boutique',
-    imageUrl: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=800&auto=format&fit=crop',
+    videoUrl: boutiqueCoverVideo,
     demoUrl: '/demos/boutique',
   },
 ];
