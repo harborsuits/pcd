@@ -112,13 +112,15 @@ export default function PortalHub() {
         // Then fetch all projects (including newly claimed ones)
         fetchMyPortals(session.access_token).then((projects) => {
           // Auto-redirect if user has exactly 1 project
-          if (projects && projects.length === 1) {
+          // BUT skip if user explicitly navigated to /portal (e.g., "← My Projects" link)
+          const skipAutoRedirect = searchParams.get("list") === "true";
+          if (projects && projects.length === 1 && !skipAutoRedirect) {
             navigate(`/p/${projects[0].project_token}`, { replace: true });
           }
         });
       });
     }
-  }, [user, session?.access_token, navigate]);
+  }, [user, session?.access_token, navigate, searchParams]);
 
   // Claim orphaned projects that match user's email
   const claimOrphanedProjects = async (accessToken: string): Promise<void> => {
