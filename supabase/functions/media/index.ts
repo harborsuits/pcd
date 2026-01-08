@@ -34,6 +34,7 @@ const ALLOWED_ORIGINS: RegExp[] = [
   /^https:\/\/.*\.squarespace\.com$/,
   /^https:\/\/.*\.squarespace-cdn\.com$/,
   /^https:\/\/(www\.)?pleasantcove\.design$/,
+  /^https:\/\/(www\.)?pleasantcovedesign\.com$/,
   /^http:\/\/localhost:\d+$/,
   /^http:\/\/127\.0\.0\.1:\d+$/,
 ];
@@ -46,6 +47,8 @@ const FRAME_ANCESTORS = [
   "https://*.squarespace-cdn.com",
   "https://pleasantcove.design",
   "https://www.pleasantcove.design",
+  "https://pleasantcovedesign.com",
+  "https://www.pleasantcovedesign.com",
   "http://localhost:*",
   "http://127.0.0.1:*",
 ].join(" ");
