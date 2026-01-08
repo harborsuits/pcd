@@ -74,7 +74,48 @@ export const WEBSITE_TIERS: PricingTier[] = [
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
-// À LA CARTE SERVICES (Individual services outside bundles)
+// WEBSITE CARE PLANS (Monthly Maintenance)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface CarePlan {
+  id: string;
+  label: string;
+  price: string;
+  description: string;
+  features: string[];
+}
+
+export const CARE_PLANS: CarePlan[] = [
+  {
+    id: "care_starter",
+    label: "Care Plan – Starter",
+    price: "$95/mo",
+    description: "Ongoing maintenance so your site doesn't rot.",
+    features: [
+      "Monthly content or copy updates (small changes)",
+      "Plugin / dependency updates",
+      "Uptime monitoring",
+      "Security checks",
+      "Minor fixes (typos, broken links, form issues)",
+    ],
+  },
+  {
+    id: "care_growth",
+    label: "Care Plan – Growth",
+    price: "$145/mo",
+    description: "Everything in Starter, plus priority support.",
+    features: [
+      "Everything in Starter, plus:",
+      "Priority change requests",
+      "Monthly performance review",
+      "Conversion tracking check-ins",
+      "Direct line for urgent issues",
+    ],
+  },
+];
+
+// ─────────────────────────────────────────────────────────────────────────────
+// À LA CARTE SERVICES (Built & Managed — Individual services outside bundles)
 // ─────────────────────────────────────────────────────────────────────────────
 
 export interface AlaCarteService {
@@ -87,25 +128,25 @@ export interface AlaCarteService {
 export const ALACARTE_SERVICES: AlaCarteService[] = [
   {
     id: "seo_audit",
-    label: "SEO Audit & Optimization",
+    label: "SEO Audit & Optimization (Built & Managed)",
     price: "Starting at $350",
     description: "One-time technical SEO review + local search optimization",
   },
   {
     id: "landing_page",
-    label: "Landing Page",
+    label: "Landing Page (Built & Managed)",
     price: "Starting at $500",
     description: "Single conversion-focused page for campaigns or promos",
   },
   {
     id: "content_refresh",
-    label: "Content Refresh",
+    label: "Content Refresh (Built & Managed)",
     price: "Starting at $250",
     description: "Update copy, images, and calls-to-action on existing pages",
   },
   {
     id: "booking_integration",
-    label: "Booking Integration",
+    label: "Booking Integration (Built & Managed)",
     price: "Starting at $300",
     description: "Connect your existing scheduler to your website",
   },
@@ -120,6 +161,24 @@ export const ALACARTE_SERVICES: AlaCarteService[] = [
     label: "Call Routing Setup",
     price: "Starting at $200",
     description: "Configure phone routing without full AI Front Door",
+  },
+  {
+    id: "conversion_tracking",
+    label: "Conversion Tracking Setup",
+    price: "Starting at $200",
+    description: "Google Analytics, Search Console, call tracking + goal setup",
+  },
+  {
+    id: "forms_routing",
+    label: "Forms & Lead Routing",
+    price: "Starting at $200",
+    description: "Contact forms, email routing, SMS alerts, CRM connection",
+  },
+  {
+    id: "website_cleanup",
+    label: "Website Cleanup / Fixes",
+    price: "Starting at $300",
+    description: "Broken links, speed improvements, mobile fixes, outdated content",
   },
 ];
 
