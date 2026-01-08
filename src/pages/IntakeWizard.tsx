@@ -312,8 +312,24 @@ const GetDemo = () => {
     steps.push({ id: "basics", label: "Basics" });
     
     if (formData.serviceType === "website" || formData.serviceType === "both") {
-      steps.push({ id: "website", label: "Website" });
-      steps.push({ id: "brand", label: "Brand" });
+      // First ask which track they want
+      steps.push({ id: "track", label: "Track" });
+      
+      if (formData.intakeTrack === "new_site") {
+        // Track A: New Site flow
+        steps.push({ id: "content", label: "Content" });
+        steps.push({ id: "links", label: "Links" });
+        steps.push({ id: "hours", label: "Hours" });
+        steps.push({ id: "design", label: "Design" });
+        steps.push({ id: "features", label: "Features" });
+      } else if (formData.intakeTrack === "improve_existing") {
+        // Track B: Improve Existing Site flow
+        steps.push({ id: "platform", label: "Platform" });
+        steps.push({ id: "work-needed", label: "Work" });
+        steps.push({ id: "access", label: "Access" });
+        steps.push({ id: "access-checklist", label: "Checklist" });
+      }
+      // If intakeTrack not yet selected, just show the track step
     }
     
     if (formData.serviceType === "ai" || formData.serviceType === "both") {
@@ -414,10 +430,29 @@ const GetDemo = () => {
         const needsServiceArea = formData.serviceType === "demo" || formData.serviceType === "website" || formData.serviceType === "both";
         const basicsValid = formData.businessName.trim() && formData.email.trim() && formData.phone.trim();
         return needsServiceArea ? basicsValid && formData.serviceArea.trim() : basicsValid;
-      case "website":
-        return !!formData.websiteGoal && formData.serviceArea.trim() && !!formData.timeline;
-      case "brand":
-        return !!formData.logoStatus && !!formData.photoReadiness;
+      // Track selection step
+      case "track":
+        return !!formData.intakeTrack;
+      // Track A: New Site steps
+      case "content":
+        return formData.heroLine.trim().length > 0 && formData.servicesDetailed.length > 0;
+      case "links":
+        return true; // All optional
+      case "hours":
+        return Object.keys(formData.businessHoursDetailed).length > 0;
+      case "design":
+        return !!formData.vibe && !!formData.logoStatus && !!formData.photoReadiness;
+      case "features":
+        return true; // All optional
+      // Track B: Existing Site steps
+      case "platform":
+        return !!formData.existingPlatform && formData.existingSiteUrl.trim().length > 0;
+      case "work-needed":
+        return formData.workRequested.length > 0;
+      case "access":
+        return !!formData.accessMethod;
+      case "access-checklist":
+        return true; // All optional but informative
       // AI Steps - new order
       case "ai-framing":
         return true; // Just context, always can proceed
@@ -490,13 +525,42 @@ const GetDemo = () => {
           email: formData.email.trim(),
           your_name: formData.yourName.trim() || null,
           service_type: mapServiceType(formData.serviceType),
-          // Website fields
-          website_goal: formData.websiteGoal || null,
-          timeline: formData.timeline || null,
+          // Track routing
+          intake_track: formData.intakeTrack || null,
+          // Track A: Content
+          hero_line: formData.heroLine.trim() || null,
+          about_blurb: formData.aboutBlurb.trim() || null,
+          services_detailed: formData.servicesDetailed.length > 0 ? formData.servicesDetailed : null,
+          primary_cta: formData.primaryCta || null,
+          // Track A: Links
+          gbp_link: formData.gbpLink.trim() || null,
+          facebook_handle: formData.facebookHandle.trim() || null,
+          instagram_handle: formData.instagramHandle.trim() || null,
+          reviews_google_link: formData.reviewsGoogleLink.trim() || null,
+          reviews_yelp_link: formData.reviewsYelpLink.trim() || null,
+          // Track A: Hours
+          business_hours_detailed: Object.keys(formData.businessHoursDetailed).length > 0 ? formData.businessHoursDetailed : null,
+          service_area_detailed: formData.serviceAreaDetailed.trim() || null,
+          preferred_contact_method: formData.preferredContactMethod || null,
+          // Track A: Design
+          vibe: formData.vibe || null,
           logo_status: formData.logoStatus || null,
           brand_colors: formData.brandColors.trim() || null,
-          services_list: formData.servicesList.trim() || null,
           photo_readiness: formData.photoReadiness || null,
+          // Track A: Features
+          features_needed: formData.featuresNeeded.length > 0 ? formData.featuresNeeded : null,
+          // Track B: Existing Site
+          existing_platform: formData.existingPlatform || null,
+          existing_platform_other: formData.existingPlatformOther.trim() || null,
+          existing_site_url: formData.existingSiteUrl.trim() || null,
+          work_requested: formData.workRequested.length > 0 ? formData.workRequested : null,
+          access_method: formData.accessMethod || null,
+          access_instructions: formData.accessInstructions.trim() || null,
+          access_checklist: Object.keys(formData.accessChecklist).length > 0 ? formData.accessChecklist : null,
+          // Website fields (legacy)
+          website_goal: formData.websiteGoal || formData.primaryCta || null,
+          timeline: formData.timeline || null,
+          services_list: formData.servicesList.trim() || null,
           // AI fields
           business_phone: formData.businessPhone.trim() || null,
           business_hours: formData.businessHours.trim() || null,
@@ -978,6 +1042,814 @@ const GetDemo = () => {
           />
         )}
       </div>
+    </div>
+  );
+
+  // =====================================================
+  // TRACK SELECTION & NEW SITE / EXISTING SITE STEPS
+  // =====================================================
+
+  const VIBE_OPTIONS = [
+    { value: "clean", label: "Clean & Minimal", desc: "Simple, spacious, professional" },
+    { value: "bold", label: "Bold & Modern", desc: "Strong colors, dynamic layouts" },
+    { value: "rustic", label: "Rustic & Warm", desc: "Earthy tones, textured feel" },
+    { value: "luxury", label: "Luxury & Elegant", desc: "Refined, high-end aesthetic" },
+    { value: "playful", label: "Playful & Friendly", desc: "Bright, approachable, casual" },
+    { value: "modern", label: "Modern & Sleek", desc: "Contemporary, tech-forward" },
+  ];
+
+  const PLATFORM_OPTIONS = [
+    { value: "squarespace", label: "Squarespace" },
+    { value: "wix", label: "Wix" },
+    { value: "wordpress", label: "WordPress" },
+    { value: "shopify", label: "Shopify" },
+    { value: "godaddy", label: "GoDaddy" },
+    { value: "weebly", label: "Weebly" },
+    { value: "other", label: "Other / Not sure" },
+  ];
+
+  const WORK_REQUESTED_OPTIONS = [
+    { value: "content_edits", label: "Content edits", desc: "Update text, images, pages" },
+    { value: "seo", label: "SEO improvements", desc: "Better Google rankings" },
+    { value: "design_refresh", label: "Design refresh", desc: "Modernize look & feel" },
+    { value: "booking_forms", label: "Add booking/forms", desc: "Contact forms, scheduling" },
+    { value: "new_pages", label: "New pages", desc: "Add services, about, etc." },
+    { value: "speed", label: "Speed optimization", desc: "Faster load times" },
+    { value: "tracking", label: "Tracking/analytics", desc: "GA4, conversion tracking" },
+    { value: "domain_dns", label: "Domain/DNS changes", desc: "Domain setup or transfer" },
+  ];
+
+  const FEATURE_OPTIONS = [
+    { value: "contact_form", label: "Contact form" },
+    { value: "quote_form", label: "Quote request form" },
+    { value: "booking", label: "Booking integration" },
+    { value: "menu_page", label: "Menu page" },
+    { value: "gallery", label: "Photo gallery" },
+    { value: "events", label: "Events/promos page" },
+    { value: "newsletter", label: "Newsletter signup" },
+    { value: "faq", label: "FAQ page" },
+    { value: "job_form", label: "Job application form" },
+    { value: "popup", label: "Popup banner" },
+  ];
+
+  const ACCESS_CHECKLIST_ITEMS = [
+    { key: "website_editor", label: "Website editor access", desc: "Required for content changes" },
+    { key: "domain_dns", label: "Domain/DNS access", desc: "For technical changes, new domains" },
+    { key: "search_console", label: "Google Search Console", desc: "For SEO visibility" },
+    { key: "analytics", label: "Google Analytics (GA4)", desc: "For conversion tracking" },
+    { key: "gbp", label: "Google Business Profile", desc: "For map/local SEO" },
+  ];
+
+  const DAYS_OF_WEEK = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
+
+  // Toggle helpers for new array fields
+  const toggleWorkRequested = (value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      workRequested: prev.workRequested.includes(value)
+        ? prev.workRequested.filter(v => v !== value)
+        : [...prev.workRequested, value]
+    }));
+  };
+
+  const toggleFeaturesNeeded = (value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      featuresNeeded: prev.featuresNeeded.includes(value)
+        ? prev.featuresNeeded.filter(v => v !== value)
+        : [...prev.featuresNeeded, value]
+    }));
+  };
+
+  const updateAccessChecklist = (key: string, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      accessChecklist: { ...prev.accessChecklist, [key]: value }
+    }));
+  };
+
+  const updateBusinessHoursDetailed = (day: string, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      businessHoursDetailed: { ...prev.businessHoursDetailed, [day]: value }
+    }));
+  };
+
+  const addServiceItem = () => {
+    setFormData(prev => ({
+      ...prev,
+      servicesDetailed: [...prev.servicesDetailed, { name: "", description: "" }]
+    }));
+  };
+
+  const updateServiceItem = (index: number, field: "name" | "description", value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      servicesDetailed: prev.servicesDetailed.map((item, i) => 
+        i === index ? { ...item, [field]: value } : item
+      )
+    }));
+  };
+
+  const removeServiceItem = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      servicesDetailed: prev.servicesDetailed.filter((_, i) => i !== index)
+    }));
+  };
+
+  // Track Selection Step
+  const renderTrackStep = () => (
+    <div className="space-y-6">
+      <div className="text-center mb-8">
+        <h2 className="font-serif text-2xl font-bold mb-2">How can we help?</h2>
+        <p className="text-muted-foreground">Choose the path that fits your situation.</p>
+      </div>
+      
+      <div className="grid gap-4">
+        <button
+          type="button"
+          onClick={() => updateField("intakeTrack", "new_site")}
+          className={cn(
+            "relative p-6 rounded-xl border-2 text-left transition-all duration-200",
+            "hover:border-primary/50 hover:shadow-md",
+            formData.intakeTrack === "new_site" 
+              ? "border-primary bg-primary/5" 
+              : "border-border bg-card"
+          )}
+        >
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 rounded-lg bg-secondary/50 flex items-center justify-center shrink-0">
+              <Globe className="w-6 h-6 text-primary" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-lg mb-1">Build me a new website</h3>
+              <p className="text-sm text-muted-foreground">We handle everything: design, hosting, and updates. Recommended for most businesses.</p>
+            </div>
+          </div>
+          <span className="absolute top-4 right-4 px-2 py-1 text-xs font-medium rounded-full bg-primary/10 text-primary">
+            Recommended
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => updateField("intakeTrack", "improve_existing")}
+          className={cn(
+            "relative p-6 rounded-xl border-2 text-left transition-all duration-200",
+            "hover:border-primary/50 hover:shadow-md",
+            formData.intakeTrack === "improve_existing" 
+              ? "border-primary bg-primary/5" 
+              : "border-border bg-card"
+          )}
+        >
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 rounded-lg bg-secondary/50 flex items-center justify-center shrink-0">
+              <Sparkles className="w-6 h-6 text-muted-foreground" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-lg mb-1">Improve my existing website</h3>
+              <p className="text-sm text-muted-foreground">We'll work inside your current platform (Squarespace, Wix, WordPress, etc.)</p>
+            </div>
+          </div>
+        </button>
+      </div>
+    </div>
+  );
+
+  // =====================================================
+  // TRACK A: NEW SITE STEPS
+  // =====================================================
+
+  const renderContentStep = () => (
+    <div className="space-y-6">
+      <div>
+        <h2 className="font-serif text-2xl font-bold mb-2">Your content</h2>
+        <p className="text-muted-foreground">This is what visitors will see first. We'll refine it together.</p>
+      </div>
+      
+      <div className="space-y-5">
+        <div className="space-y-2">
+          <Label htmlFor="heroLine">In one sentence, what do you do? *</Label>
+          <Input
+            id="heroLine"
+            placeholder="e.g. We keep Portland homes safe with 24/7 plumbing service."
+            value={formData.heroLine}
+            onChange={(e) => updateField("heroLine", e.target.value)}
+            disabled={isLoading}
+          />
+          <p className="text-xs text-muted-foreground">This becomes your homepage headline.</p>
+        </div>
+
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <Label>Your services *</Label>
+            {formData.servicesDetailed.length < 6 && (
+              <Button type="button" variant="ghost" size="sm" onClick={addServiceItem}>
+                + Add service
+              </Button>
+            )}
+          </div>
+          
+          {formData.servicesDetailed.length === 0 && (
+            <Button type="button" variant="outline" onClick={addServiceItem} className="w-full">
+              + Add your first service
+            </Button>
+          )}
+          
+          {formData.servicesDetailed.map((service, index) => (
+            <div key={index} className="flex gap-2 items-start">
+              <div className="flex-1 space-y-2">
+                <Input
+                  placeholder="Service name"
+                  value={service.name}
+                  onChange={(e) => updateServiceItem(index, "name", e.target.value)}
+                  disabled={isLoading}
+                />
+                <Input
+                  placeholder="Brief description (optional)"
+                  value={service.description}
+                  onChange={(e) => updateServiceItem(index, "description", e.target.value)}
+                  disabled={isLoading}
+                />
+              </div>
+              <Button 
+                type="button" 
+                variant="ghost" 
+                size="icon"
+                onClick={() => removeServiceItem(index)}
+                className="text-muted-foreground hover:text-destructive shrink-0"
+              >
+                ×
+              </Button>
+            </div>
+          ))}
+          <p className="text-xs text-muted-foreground">Add at least 1 service. You can add up to 6.</p>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="aboutBlurb">About your business (optional)</Label>
+          <Textarea
+            id="aboutBlurb"
+            placeholder="2-5 sentences about who you are, what you do, and why customers choose you..."
+            value={formData.aboutBlurb}
+            onChange={(e) => updateField("aboutBlurb", e.target.value)}
+            disabled={isLoading}
+            rows={4}
+            className="resize-none"
+          />
+        </div>
+
+        <div className="space-y-3">
+          <Label>What's the main action you want visitors to take? *</Label>
+          <RadioGroup
+            value={formData.primaryCta}
+            onValueChange={(v) => updateField("primaryCta", v)}
+            className="grid grid-cols-2 gap-2"
+            disabled={isLoading}
+          >
+            {[
+              { value: "calls", label: "Call us" },
+              { value: "quotes", label: "Get a quote" },
+              { value: "bookings", label: "Book online" },
+              { value: "info", label: "Learn more" },
+            ].map((opt) => (
+              <div 
+                key={opt.value} 
+                onClick={() => !isLoading && updateField("primaryCta", opt.value)}
+                className="flex items-center space-x-3 p-3 rounded-lg border border-border hover:bg-secondary/50 transition-colors cursor-pointer"
+              >
+                <RadioGroupItem value={opt.value} id={`cta-${opt.value}`} className="pointer-events-none" />
+                <Label className="cursor-pointer font-normal flex-1 pointer-events-none">{opt.label}</Label>
+              </div>
+            ))}
+          </RadioGroup>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderLinksStep = () => (
+    <div className="space-y-6">
+      <div>
+        <h2 className="font-serif text-2xl font-bold mb-2">Your online presence</h2>
+        <p className="text-muted-foreground">Help us connect your site to your existing profiles. All optional.</p>
+      </div>
+      
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="gbpLink">Google Business Profile link</Label>
+          <Input
+            id="gbpLink"
+            type="url"
+            placeholder="https://g.page/your-business"
+            value={formData.gbpLink}
+            onChange={(e) => updateField("gbpLink", e.target.value)}
+            disabled={isLoading}
+          />
+          <p className="text-xs text-muted-foreground">We'll pull reviews and info from here.</p>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-2">
+            <Label htmlFor="facebookHandle">Facebook</Label>
+            <Input
+              id="facebookHandle"
+              placeholder="@yourbusiness"
+              value={formData.facebookHandle}
+              onChange={(e) => updateField("facebookHandle", e.target.value)}
+              disabled={isLoading}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="instagramHandle">Instagram</Label>
+            <Input
+              id="instagramHandle"
+              placeholder="@yourbusiness"
+              value={formData.instagramHandle}
+              onChange={(e) => updateField("instagramHandle", e.target.value)}
+              disabled={isLoading}
+            />
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="reviewsGoogleLink">Google Reviews link</Label>
+          <Input
+            id="reviewsGoogleLink"
+            type="url"
+            placeholder="https://g.page/your-business/review"
+            value={formData.reviewsGoogleLink}
+            onChange={(e) => updateField("reviewsGoogleLink", e.target.value)}
+            disabled={isLoading}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="reviewsYelpLink">Yelp link</Label>
+          <Input
+            id="reviewsYelpLink"
+            type="url"
+            placeholder="https://yelp.com/biz/your-business"
+            value={formData.reviewsYelpLink}
+            onChange={(e) => updateField("reviewsYelpLink", e.target.value)}
+            disabled={isLoading}
+          />
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderHoursStep = () => (
+    <div className="space-y-6">
+      <div>
+        <h2 className="font-serif text-2xl font-bold mb-2">Hours & location</h2>
+        <p className="text-muted-foreground">When can customers reach you?</p>
+      </div>
+      
+      <div className="space-y-5">
+        <div className="space-y-3">
+          <Label>Business hours *</Label>
+          <div className="space-y-2">
+            {DAYS_OF_WEEK.map((day) => (
+              <div key={day} className="flex items-center gap-3">
+                <span className="w-20 text-sm capitalize text-muted-foreground">{day}</span>
+                <Input
+                  placeholder="e.g. 8am-5pm or Closed"
+                  value={formData.businessHoursDetailed[day] || ""}
+                  onChange={(e) => updateBusinessHoursDetailed(day, e.target.value)}
+                  disabled={isLoading}
+                  className="flex-1"
+                />
+              </div>
+            ))}
+          </div>
+          <p className="text-xs text-muted-foreground">Enter hours or "Closed" for each day.</p>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="serviceAreaDetailed">Service area</Label>
+          <Input
+            id="serviceAreaDetailed"
+            placeholder="e.g. Greater Portland, within 30 miles of Brunswick"
+            value={formData.serviceAreaDetailed || formData.serviceArea}
+            onChange={(e) => updateField("serviceAreaDetailed", e.target.value)}
+            disabled={isLoading}
+          />
+        </div>
+
+        <div className="space-y-3">
+          <Label>Preferred contact method</Label>
+          <RadioGroup
+            value={formData.preferredContactMethod}
+            onValueChange={(v) => updateField("preferredContactMethod", v)}
+            className="grid grid-cols-3 gap-2"
+            disabled={isLoading}
+          >
+            {[
+              { value: "call", label: "Call" },
+              { value: "text", label: "Text" },
+              { value: "email", label: "Email" },
+            ].map((opt) => (
+              <div 
+                key={opt.value} 
+                onClick={() => !isLoading && updateField("preferredContactMethod", opt.value)}
+                className="flex items-center justify-center space-x-2 p-3 rounded-lg border border-border hover:bg-secondary/50 transition-colors cursor-pointer"
+              >
+                <RadioGroupItem value={opt.value} id={`contact-${opt.value}`} className="pointer-events-none" />
+                <Label className="cursor-pointer font-normal pointer-events-none">{opt.label}</Label>
+              </div>
+            ))}
+          </RadioGroup>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderDesignStep = () => (
+    <div className="space-y-6">
+      <div>
+        <h2 className="font-serif text-2xl font-bold mb-2">Design & brand</h2>
+        <p className="text-muted-foreground">Help us match your style. Don't stress — we'll refine it together.</p>
+      </div>
+      
+      <div className="space-y-5">
+        <div className="space-y-3">
+          <Label>What vibe fits your brand? *</Label>
+          <div className="grid grid-cols-2 gap-2">
+            {VIBE_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => updateField("vibe", opt.value as VibeOption)}
+                className={cn(
+                  "p-4 rounded-lg border-2 text-left transition-all duration-200",
+                  "hover:border-primary/50",
+                  formData.vibe === opt.value 
+                    ? "border-primary bg-primary/5" 
+                    : "border-border"
+                )}
+              >
+                <span className="font-medium text-sm">{opt.label}</span>
+                <p className="text-xs text-muted-foreground mt-1">{opt.desc}</p>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          <Label>Do you have a logo? *</Label>
+          <RadioGroup
+            value={formData.logoStatus}
+            onValueChange={(v: LogoStatus) => updateField("logoStatus", v)}
+            className="grid gap-2"
+            disabled={isLoading}
+          >
+            {[
+              { value: "yes", label: "Yes" },
+              { value: "no", label: "No" },
+              { value: "refresh", label: "Need a refresh" },
+            ].map((opt) => (
+              <div 
+                key={opt.value} 
+                onClick={() => !isLoading && updateField("logoStatus", opt.value as LogoStatus)}
+                className="flex items-center space-x-3 p-3 rounded-lg border border-border hover:bg-secondary/50 transition-colors cursor-pointer"
+              >
+                <RadioGroupItem value={opt.value} id={`logo-${opt.value}`} className="pointer-events-none" />
+                <Label className="cursor-pointer font-normal flex-1 pointer-events-none">{opt.label}</Label>
+              </div>
+            ))}
+          </RadioGroup>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="brandColors">Brand colors (if you have them)</Label>
+          <Input
+            id="brandColors"
+            placeholder="e.g. Navy blue and gold, or #1a365d"
+            value={formData.brandColors}
+            onChange={(e) => updateField("brandColors", e.target.value)}
+            disabled={isLoading}
+          />
+        </div>
+
+        <div className="space-y-3">
+          <Label>Photos / content readiness *</Label>
+          <RadioGroup
+            value={formData.photoReadiness}
+            onValueChange={(v: PhotoReadiness) => updateField("photoReadiness", v)}
+            className="grid gap-2"
+            disabled={isLoading}
+          >
+            {[
+              { value: "ready", label: "Ready — I have photos to upload" },
+              { value: "some", label: "Some — I have a few to share" },
+              { value: "none", label: "None yet — I'll need help" },
+            ].map((opt) => (
+              <div 
+                key={opt.value} 
+                onClick={() => !isLoading && updateField("photoReadiness", opt.value as PhotoReadiness)}
+                className="flex items-center space-x-3 p-3 rounded-lg border border-border hover:bg-secondary/50 transition-colors cursor-pointer"
+              >
+                <RadioGroupItem value={opt.value} id={`photo-${opt.value}`} className="pointer-events-none" />
+                <Label className="cursor-pointer font-normal flex-1 pointer-events-none">{opt.label}</Label>
+              </div>
+            ))}
+          </RadioGroup>
+        </div>
+
+        {(formData.photoReadiness === "ready" || formData.photoReadiness === "some") && (
+          <FileDropZone
+            label="Upload your photos"
+            hint="Photos of your work, team, storefront, etc. (Max 10 files)"
+            accept="image/*"
+            multiple={true}
+            maxFiles={10}
+            maxSizeMB={10}
+            files={formData.photoFiles}
+            onFilesChange={(files) => updateField("photoFiles", files)}
+            disabled={isLoading}
+          />
+        )}
+      </div>
+    </div>
+  );
+
+  const renderFeaturesStep = () => (
+    <div className="space-y-6">
+      <div>
+        <h2 className="font-serif text-2xl font-bold mb-2">Website features</h2>
+        <p className="text-muted-foreground">What functionality do you need? Select all that apply.</p>
+      </div>
+      
+      <div className="grid grid-cols-2 gap-2">
+        {FEATURE_OPTIONS.map((opt) => (
+          <button
+            key={opt.value}
+            type="button"
+            onClick={() => toggleFeaturesNeeded(opt.value)}
+            className={cn(
+              "flex items-center space-x-2 p-3 rounded-lg border text-left text-sm transition-colors",
+              formData.featuresNeeded.includes(opt.value)
+                ? "border-primary bg-primary/5"
+                : "border-border hover:bg-secondary/50"
+            )}
+          >
+            <Checkbox checked={formData.featuresNeeded.includes(opt.value)} className="pointer-events-none" />
+            <span>{opt.label}</span>
+          </button>
+        ))}
+      </div>
+      
+      <p className="text-xs text-muted-foreground">Don't worry — you can always add features later.</p>
+    </div>
+  );
+
+  // =====================================================
+  // TRACK B: EXISTING SITE STEPS
+  // =====================================================
+
+  const renderPlatformStep = () => (
+    <div className="space-y-6">
+      <div>
+        <h2 className="font-serif text-2xl font-bold mb-2">Your current site</h2>
+        <p className="text-muted-foreground">Tell us about your existing website so we can help.</p>
+      </div>
+      
+      <div className="space-y-5">
+        <div className="space-y-3">
+          <Label>What platform is your site on? *</Label>
+          <div className="grid grid-cols-2 gap-2">
+            {PLATFORM_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => updateField("existingPlatform", opt.value)}
+                className={cn(
+                  "p-3 rounded-lg border-2 text-left text-sm transition-all duration-200",
+                  "hover:border-primary/50",
+                  formData.existingPlatform === opt.value 
+                    ? "border-primary bg-primary/5" 
+                    : "border-border"
+                )}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {formData.existingPlatform === "other" && (
+          <div className="space-y-2">
+            <Label htmlFor="existingPlatformOther">What platform?</Label>
+            <Input
+              id="existingPlatformOther"
+              placeholder="e.g. Custom HTML, Webflow, Duda..."
+              value={formData.existingPlatformOther}
+              onChange={(e) => updateField("existingPlatformOther", e.target.value)}
+              disabled={isLoading}
+            />
+          </div>
+        )}
+
+        <div className="space-y-2">
+          <Label htmlFor="existingSiteUrl">Your website URL *</Label>
+          <Input
+            id="existingSiteUrl"
+            type="url"
+            placeholder="https://yourbusiness.com"
+            value={formData.existingSiteUrl}
+            onChange={(e) => updateField("existingSiteUrl", e.target.value)}
+            disabled={isLoading}
+          />
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderWorkNeededStep = () => (
+    <div className="space-y-6">
+      <div>
+        <h2 className="font-serif text-2xl font-bold mb-2">What do you need?</h2>
+        <p className="text-muted-foreground">Select all that apply.</p>
+      </div>
+      
+      <div className="space-y-2">
+        {WORK_REQUESTED_OPTIONS.map((opt) => (
+          <button
+            key={opt.value}
+            type="button"
+            onClick={() => toggleWorkRequested(opt.value)}
+            className={cn(
+              "flex items-start space-x-3 p-4 rounded-lg border w-full text-left transition-colors",
+              formData.workRequested.includes(opt.value)
+                ? "border-primary bg-primary/5"
+                : "border-border hover:bg-secondary/50"
+            )}
+          >
+            <Checkbox checked={formData.workRequested.includes(opt.value)} className="mt-0.5 pointer-events-none" />
+            <div>
+              <span className="font-medium">{opt.label}</span>
+              <p className="text-xs text-muted-foreground">{opt.desc}</p>
+            </div>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+
+  const renderAccessStep = () => (
+    <div className="space-y-6">
+      <div>
+        <h2 className="font-serif text-2xl font-bold mb-2">How will you give us access?</h2>
+        <p className="text-muted-foreground">Choose the method that works best for you.</p>
+      </div>
+      
+      <div className="space-y-3">
+        <button
+          type="button"
+          onClick={() => updateField("accessMethod", "collaborator")}
+          className={cn(
+            "w-full p-4 rounded-lg border-2 text-left transition-all duration-200",
+            formData.accessMethod === "collaborator" 
+              ? "border-primary bg-primary/5" 
+              : "border-border hover:border-primary/50"
+          )}
+        >
+          <div className="flex items-start gap-3">
+            <CheckCircle2 className="w-5 h-5 text-primary mt-0.5 shrink-0" />
+            <div>
+              <span className="font-medium">Invite as collaborator</span>
+              <span className="text-xs ml-2 px-2 py-0.5 rounded-full bg-primary/10 text-primary">Best option</span>
+              <p className="text-sm text-muted-foreground mt-1">No passwords needed. You keep full control.</p>
+              {formData.existingPlatform === "squarespace" && (
+                <p className="text-xs text-muted-foreground mt-2">Squarespace: Settings → Permissions → Add contributor</p>
+              )}
+              {formData.existingPlatform === "wix" && (
+                <p className="text-xs text-muted-foreground mt-2">Wix: Settings → Roles & Permissions → Add team member</p>
+              )}
+              {formData.existingPlatform === "wordpress" && (
+                <p className="text-xs text-muted-foreground mt-2">WordPress: Users → Add New → Editor role</p>
+              )}
+            </div>
+          </div>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => updateField("accessMethod", "dns_only")}
+          className={cn(
+            "w-full p-4 rounded-lg border-2 text-left transition-all duration-200",
+            formData.accessMethod === "dns_only" 
+              ? "border-primary bg-primary/5" 
+              : "border-border hover:border-primary/50"
+          )}
+        >
+          <div className="flex items-start gap-3">
+            <Globe className="w-5 h-5 text-muted-foreground mt-0.5 shrink-0" />
+            <div>
+              <span className="font-medium">DNS/domain access only</span>
+              <p className="text-sm text-muted-foreground mt-1">We can connect services but not edit your content directly.</p>
+            </div>
+          </div>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => updateField("accessMethod", "password")}
+          className={cn(
+            "w-full p-4 rounded-lg border-2 text-left transition-all duration-200",
+            formData.accessMethod === "password" 
+              ? "border-primary bg-primary/5" 
+              : "border-border hover:border-primary/50"
+          )}
+        >
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-yellow-500 mt-0.5 shrink-0" />
+            <div>
+              <span className="font-medium">Send login credentials</span>
+              <p className="text-sm text-muted-foreground mt-1">We recommend collaborator invite instead when possible.</p>
+            </div>
+          </div>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => updateField("accessMethod", "none")}
+          className={cn(
+            "w-full p-4 rounded-lg border-2 text-left transition-all duration-200",
+            formData.accessMethod === "none" 
+              ? "border-primary bg-primary/5" 
+              : "border-border hover:border-primary/50"
+          )}
+        >
+          <div className="flex items-start gap-3">
+            <MessageSquare className="w-5 h-5 text-muted-foreground mt-0.5 shrink-0" />
+            <div>
+              <span className="font-medium">I'm not sure / Need help</span>
+              <p className="text-sm text-muted-foreground mt-1">We'll help you figure out the best approach.</p>
+            </div>
+          </div>
+        </button>
+      </div>
+
+      {formData.accessMethod && formData.accessMethod !== "none" && (
+        <div className="space-y-2 pt-2">
+          <Label htmlFor="accessInstructions">Any notes about access?</Label>
+          <Textarea
+            id="accessInstructions"
+            placeholder="e.g. I'll send an invite to your email, or The site is managed by my nephew..."
+            value={formData.accessInstructions}
+            onChange={(e) => updateField("accessInstructions", e.target.value)}
+            disabled={isLoading}
+            rows={2}
+            className="resize-none"
+          />
+        </div>
+      )}
+    </div>
+  );
+
+  const renderAccessChecklistStep = () => (
+    <div className="space-y-6">
+      <div>
+        <h2 className="font-serif text-2xl font-bold mb-2">Access checklist</h2>
+        <p className="text-muted-foreground">Which of these can you provide? This helps us understand what's possible.</p>
+      </div>
+      
+      <div className="space-y-3">
+        {ACCESS_CHECKLIST_ITEMS.map((item) => (
+          <div key={item.key} className="p-4 rounded-lg border border-border">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <span className="font-medium">{item.label}</span>
+                <p className="text-xs text-muted-foreground">{item.desc}</p>
+              </div>
+              <div className="flex gap-1 shrink-0">
+                {["granted", "pending", "blocked"].map((status) => (
+                  <button
+                    key={status}
+                    type="button"
+                    onClick={() => updateAccessChecklist(item.key, status)}
+                    className={cn(
+                      "px-2 py-1 text-xs rounded transition-colors",
+                      formData.accessChecklist[item.key] === status
+                        ? status === "granted" ? "bg-green-500/20 text-green-700" :
+                          status === "pending" ? "bg-yellow-500/20 text-yellow-700" :
+                          "bg-red-500/20 text-red-700"
+                        : "bg-secondary/50 text-muted-foreground hover:bg-secondary"
+                    )}
+                  >
+                    {status === "granted" ? "✓ Yes" : status === "pending" ? "⏳ TBD" : "✗ No"}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+      
+      <p className="text-xs text-muted-foreground">Don't worry if you're unsure — we'll help you figure it out.</p>
     </div>
   );
 
@@ -1975,10 +2847,29 @@ const GetDemo = () => {
         return renderChooseStep();
       case "basics":
         return renderBasicsStep();
-      case "website":
-        return renderWebsiteStep();
-      case "brand":
-        return renderBrandStep();
+      // Track selection
+      case "track":
+        return renderTrackStep();
+      // Track A: New Site steps
+      case "content":
+        return renderContentStep();
+      case "links":
+        return renderLinksStep();
+      case "hours":
+        return renderHoursStep();
+      case "design":
+        return renderDesignStep();
+      case "features":
+        return renderFeaturesStep();
+      // Track B: Existing Site steps
+      case "platform":
+        return renderPlatformStep();
+      case "work-needed":
+        return renderWorkNeededStep();
+      case "access":
+        return renderAccessStep();
+      case "access-checklist":
+        return renderAccessChecklistStep();
       // AI steps - new order
       case "ai-framing":
         return renderAIFramingStep();
