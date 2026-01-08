@@ -216,7 +216,38 @@ export function ProjectDetailDrawer({ project, open, onClose, onStatusChange }: 
     }
   };
 
-  // Reset state when project changes
+  // Ensure Stripe customer exists for billing readiness
+  const ensureCustomerMutation = useMutation({
+    mutationFn: async ({ projectToken, email, name, phone }: { 
+      projectToken: string; 
+      email: string; 
+      name?: string; 
+      phone?: string; 
+    }) => {
+      const res = await adminFetch("/billing/ensure-customer", {
+        method: "POST",
+        body: JSON.stringify({ 
+          project_token: projectToken, 
+          email, 
+          name, 
+          phone 
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || "Failed to ensure customer");
+      }
+      return res.json();
+    },
+    onSuccess: (data) => {
+      console.log("[Billing] Customer ready:", data);
+    },
+    onError: (error: Error) => {
+      console.warn("[Billing] ensure-customer failed:", error.message);
+    },
+  });
+
+  // Reset state when project changes + ensure billing customer
   useEffect(() => {
     if (project) {
       setReplyContent("");
@@ -224,6 +255,16 @@ export function ProjectDetailDrawer({ project, open, onClose, onStatusChange }: 
       setNewChecklistItem("");
       setActiveTab(project.intake ? "intake" : "messages");
       setClientTyping(false);
+      
+      // Ensure Stripe customer is ready for billing (only if we have an email)
+      if (project.contact_email && !ensureCustomerMutation.isPending) {
+        ensureCustomerMutation.mutate({
+          projectToken: project.project_token,
+          email: project.contact_email,
+          name: project.contact_name || undefined,
+          phone: project.contact_phone || undefined,
+        });
+      }
     }
   }, [project?.id]);
 
