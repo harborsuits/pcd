@@ -83,6 +83,12 @@ Deno.serve(async (req) => {
     return handleClaimLead(req, corsHeaders);
   }
 
+  // POST /portal/claim-projects - Auto-claim orphaned projects by email
+  const claimProjectsIdx = pathParts.indexOf("claim-projects");
+  if (claimProjectsIdx > portalIdx && req.method === "POST") {
+    return handleClaimProjects(req, corsHeaders);
+  }
+
   // GET /portal/:token/whoami - Check if user is operator (server-verified)
   if (whoamiIdx > portalIdx && req.method === "GET") {
     const token = pathParts[portalIdx + 1];
@@ -3805,6 +3811,146 @@ async function handleClaimLead(
     );
   } catch (error) {
     console.error("Claim lead error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+}
+
+// POST /portal/claim-projects - Auto-claim orphaned projects by matching email
+// Called after login/signup to ensure user gets their projects
+async function handleClaimProjects(
+  req: Request,
+  corsHeaders: Record<string, string>
+): Promise<Response> {
+  try {
+    // Validate JWT
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Validate user
+    const jwt = authHeader.replace("Bearer ", "");
+    if (jwt === supabaseAnonKey) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser(jwt);
+    if (authError || !user) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const userEmail = user.email?.toLowerCase().trim();
+    if (!userEmail) {
+      return new Response(
+        JSON.stringify({ ok: true, claimed: 0, message: "No email on account" }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log(`Claiming orphaned projects for user ${user.id} (${userEmail})`);
+
+    // Find projects where:
+    // - contact_email matches user email
+    // - owner_user_id is NULL (unclaimed)
+    // - not deleted
+    const { data: orphanedProjects, error: findError } = await supabase
+      .from("projects")
+      .select("id, project_token, business_name")
+      .is("owner_user_id", null)
+      .is("deleted_at", null)
+      .ilike("contact_email", userEmail);
+
+    if (findError) {
+      console.error("Error finding orphaned projects:", findError);
+      return new Response(
+        JSON.stringify({ error: "Database error" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (!orphanedProjects || orphanedProjects.length === 0) {
+      console.log("No orphaned projects found for this email");
+      return new Response(
+        JSON.stringify({ ok: true, claimed: 0, projects: [] }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log(`Found ${orphanedProjects.length} orphaned projects to claim`);
+
+    // Claim all orphaned projects
+    const projectIds = orphanedProjects.map(p => p.id);
+    const { error: claimError } = await supabase
+      .from("projects")
+      .update({ 
+        owner_user_id: user.id,
+        email_verified: true,
+      })
+      .in("id", projectIds);
+
+    if (claimError) {
+      console.error("Error claiming projects:", claimError);
+      return new Response(
+        JSON.stringify({ error: "Failed to claim projects" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Also update any project_clients records
+    for (const project of orphanedProjects) {
+      await supabase
+        .from("project_clients")
+        .update({ invite_status: "accepted" })
+        .eq("project_token", project.project_token)
+        .eq("email", userEmail);
+    }
+
+    // Log the event
+    for (const project of orphanedProjects) {
+      await supabase.from("project_events").insert({
+        project_token: project.project_token,
+        event_name: "project_auto_claimed",
+        metadata: { 
+          user_id: user.id,
+          email: userEmail,
+          business_name: project.business_name,
+        }
+      });
+    }
+
+    console.log(`Successfully claimed ${orphanedProjects.length} projects for user ${user.id}`);
+
+    return new Response(
+      JSON.stringify({
+        ok: true,
+        claimed: orphanedProjects.length,
+        projects: orphanedProjects.map(p => ({
+          project_token: p.project_token,
+          business_name: p.business_name,
+        })),
+      }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+
+  } catch (error) {
+    console.error("Claim projects error:", error);
     return new Response(
       JSON.stringify({ error: "Internal server error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
