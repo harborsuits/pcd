@@ -19,6 +19,7 @@ interface FeedbackComment {
   resolved_at: string | null;
   created_at: string;
   screenshot_path?: string | null;
+  screenshot_signed_url?: string | null;
   crop_x?: number | null;
   crop_y?: number | null;
   crop_w?: number | null;
@@ -368,10 +369,10 @@ export function WebsiteTab({
                       key={comment.id}
                       className="rounded-md border border-border bg-background overflow-hidden hover:border-muted-foreground/30 transition-colors cursor-pointer"
                     >
-                      {comment.screenshot_path ? (
+                      {comment.screenshot_signed_url ? (
                         <div className="relative aspect-video bg-muted">
                           <img
-                            src={`${SUPABASE_URL}/storage/v1/object/public/project-media/${comment.screenshot_path}`}
+                            src={comment.screenshot_signed_url}
                             alt="Feedback"
                             className="w-full h-full object-cover"
                             onError={(e) => {
