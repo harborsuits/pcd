@@ -280,7 +280,22 @@ export default function PricingSection() {
                 <Card key={plan.id} className="hover:shadow-md transition-shadow">
                   <CardContent className="p-6">
                     <h4 className="font-semibold text-foreground mb-1">{plan.label}</h4>
-                    <p className="text-2xl text-accent font-bold mb-2">{plan.price}</p>
+                    <div className="flex items-baseline gap-1 mb-2">
+                      <span className="text-2xl font-bold text-accent">$</span>
+                      <NumberFlow
+                        value={period === "yearly" ? plan.yearlyPrice : plan.monthlyPrice}
+                        className="text-2xl font-bold text-accent"
+                        transformTiming={{ duration: 400, easing: "ease-out" }}
+                      />
+                      <span className="text-muted-foreground text-sm">
+                        /{period === "yearly" ? "year" : "month"}
+                      </span>
+                    </div>
+                    {period === "yearly" && (
+                      <p className="text-xs text-accent/70 mb-2">
+                        Save ${(plan.monthlyPrice * 12) - plan.yearlyPrice}/year
+                      </p>
+                    )}
                     <p className="text-sm text-muted-foreground mb-4">{plan.description}</p>
                     <ul className="space-y-2">
                       {plan.features.map((feature, i) => (
