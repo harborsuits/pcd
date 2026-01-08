@@ -49,8 +49,16 @@ export default function PortalHub() {
 
   // Track if user was redirected from create-password (existing account)
   const [showExistingAccountMessage, setShowExistingAccountMessage] = useState(false);
+  const [businessNameFromRedirect, setBusinessNameFromRedirect] = useState("");
   const emailInputRef = useRef<HTMLInputElement>(null);
   const passwordInputRef = useRef<HTMLInputElement>(null);
+  
+  // Password recovery (reset) flow state
+  const [isRecovery, setIsRecovery] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [newPassword2, setNewPassword2] = useState("");
+  const [recoveryError, setRecoveryError] = useState<string | null>(null);
+  const [recoveryLoading, setRecoveryLoading] = useState(false);
 
   // Handle prefilled params from /start page or /create-password redirect
   useEffect(() => {
@@ -58,10 +66,12 @@ export default function PortalHub() {
     const prefillName = searchParams.get("name");
     const tab = searchParams.get("tab");
     const fromCreatePassword = searchParams.get("existing") === "true";
+    const businessParam = searchParams.get("business");
     
     if (prefillEmail) setEmail(prefillEmail);
     if (prefillName) setFullName(prefillName);
     if (tab === "signup") setMode("signup");
+    if (businessParam) setBusinessNameFromRedirect(decodeURIComponent(businessParam));
     
     // If redirected from create-password because account exists, show message and auto-focus password
     if (fromCreatePassword && prefillEmail) {
@@ -89,15 +99,21 @@ export default function PortalHub() {
     fullName: string;
   } | null>(null);
 
-  // Check auth state on mount
+  // Check auth state on mount + handle PASSWORD_RECOVERY event
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
       setAuthChecking(false);
       
+      // Handle password recovery event
+      if (event === "PASSWORD_RECOVERY") {
+        setIsRecovery(true);
+        setMode("login");
+      }
+      
       // On successful sign in, check if we need to redirect back to a stored path
-      if (event === "SIGNED_IN" && session) {
+      if (event === "SIGNED_IN" && session && !isRecovery) {
         const returnPath = getAuthReturnPath();
         if (returnPath && returnPath !== "/portal") {
           navigate(returnPath, { replace: true });
@@ -112,7 +128,40 @@ export default function PortalHub() {
     });
 
     return () => subscription.unsubscribe();
-  }, [navigate]);
+  }, [navigate, isRecovery]);
+  
+  // Handle setting new password after recovery
+  const handleSetNewPassword = async () => {
+    setRecoveryError(null);
+
+    if (newPassword.length < 8) {
+      setRecoveryError("Password must be at least 8 characters.");
+      return;
+    }
+    if (newPassword !== newPassword2) {
+      setRecoveryError("Passwords do not match.");
+      return;
+    }
+
+    setRecoveryLoading(true);
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) throw error;
+
+      setIsRecovery(false);
+      setNewPassword("");
+      setNewPassword2("");
+      toast({
+        title: "Password updated!",
+        description: "You're now logged in.",
+      });
+      // User is now authenticated, portal list will load
+    } catch (e: any) {
+      setRecoveryError(e?.message ?? "Could not update password.");
+    } finally {
+      setRecoveryLoading(false);
+    }
+  };
 
   // Claim orphaned projects and fetch user's portals when logged in
   useEffect(() => {
@@ -651,6 +700,75 @@ export default function PortalHub() {
     );
   }
 
+  // Password recovery - set new password UI
+  if (isRecovery) {
+    return (
+      <>
+        <SEOHead
+          title="Reset Password | Client Portal"
+          description="Set a new password for your client portal account."
+          path="/portal"
+        />
+        <ClientLayout
+          title="Set New Password"
+          subtitle="Enter your new password below"
+          maxWidth="md"
+          centered
+        >
+          <BrandCard className="w-full max-w-md mx-auto">
+            <form onSubmit={(e) => { e.preventDefault(); handleSetNewPassword(); }} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="new-password">New Password</Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="new-password"
+                    type="password"
+                    placeholder="At least 8 characters"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    className="pl-10"
+                    autoFocus
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="confirm-new-password">Confirm New Password</Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="confirm-new-password"
+                    type="password"
+                    placeholder="Re-enter your password"
+                    value={newPassword2}
+                    onChange={(e) => setNewPassword2(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+              </div>
+
+              {recoveryError && (
+                <p className="text-sm text-destructive">{recoveryError}</p>
+              )}
+
+              <Button type="submit" className="w-full" disabled={recoveryLoading}>
+                {recoveryLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  "Update Password"
+                )}
+              </Button>
+            </form>
+          </BrandCard>
+        </ClientLayout>
+      </>
+    );
+  }
+
 
   // Logged in - show portals
   if (user) {
@@ -898,8 +1016,12 @@ export default function PortalHub() {
                 {/* Message when redirected from create-password */}
                 {showExistingAccountMessage && (
                   <div className="p-3 rounded-lg bg-accent/10 border border-accent/20 text-sm text-accent-foreground mb-4">
-                    <p className="font-medium">You already have an account!</p>
-                    <p className="text-muted-foreground mt-1">Please log in with your existing password.</p>
+                    <p className="font-medium">
+                      Welcome back{businessNameFromRedirect ? ` — ${businessNameFromRedirect}` : ""}!
+                    </p>
+                    <p className="text-muted-foreground mt-1">
+                      Your email is pre-filled. Enter your password to continue.
+                    </p>
                   </div>
                 )}
                 
