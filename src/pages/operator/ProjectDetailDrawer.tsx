@@ -22,10 +22,11 @@ import {
   Palette, Settings, CheckCircle, StickyNote, ListTodo, Trash2,
   Link, Plus, Eye, MessageCirclePlus, X, MessageSquareDot,
   ChevronRight, ChevronLeft, Hammer, Bot, Power, AlertTriangle,
-  Image as ImageIcon, Download, File
+  Image as ImageIcon, Download, File, DollarSign
 } from "lucide-react";
 import { ServiceTypeBadge } from "@/components/operator/StageBadge";
 import { IntakeSummary } from "@/components/intake/IntakeSummary";
+import { BillingTab } from "@/components/operator/billing/BillingTab";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
@@ -62,6 +63,11 @@ interface Project {
   created_at: string;
   updated_at: string;
   intake: ProjectIntake | null;
+  client_account_id?: string | null;
+  client_account?: {
+    id: string;
+    stripe_customer_id: string | null;
+  } | null;
 }
 
 const AI_STATUS_OPTIONS = [
@@ -152,7 +158,7 @@ export function ProjectDetailDrawer({ project, open, onClose, onStatusChange }: 
   const [replyContent, setReplyContent] = useState("");
   const [newNote, setNewNote] = useState("");
   const [newChecklistItem, setNewChecklistItem] = useState("");
-  const [activeTab, setActiveTab] = useState<"intake" | "messages" | "notes" | "checklist" | "prototype" | "ulio">("intake");
+  const [activeTab, setActiveTab] = useState<"intake" | "messages" | "notes" | "checklist" | "prototype" | "ulio" | "billing">("intake");
   const [ulioBusinessId, setUlioBusinessId] = useState("");
   const [ulioSetupUrl, setUlioSetupUrl] = useState("");
   const [clientTyping, setClientTyping] = useState(false);
@@ -865,7 +871,7 @@ export function ProjectDetailDrawer({ project, open, onClose, onStatusChange }: 
           onValueChange={(v) => setActiveTab(v as typeof activeTab)}
           className="flex-1 flex flex-col overflow-hidden"
         >
-          <TabsList className="flex-shrink-0 w-full grid grid-cols-6">
+          <TabsList className="flex-shrink-0 w-full grid grid-cols-7">
             <TabsTrigger value="intake" className="gap-1 text-xs px-1">
               <FileText className="h-3 w-3" />
               <span className="hidden sm:inline">Intake</span>
@@ -893,6 +899,10 @@ export function ProjectDetailDrawer({ project, open, onClose, onStatusChange }: 
               {prototypes.length > 0 && (
                 <Badge variant="secondary" className="text-[10px] px-1 py-0">{prototypes.length}</Badge>
               )}
+            </TabsTrigger>
+            <TabsTrigger value="billing" className="gap-1 text-xs px-1">
+              <DollarSign className="h-3 w-3" />
+              <span className="hidden sm:inline">Billing</span>
             </TabsTrigger>
             <TabsTrigger value="messages" className="gap-1 text-xs px-1">
               <MessageSquare className="h-3 w-3" />
@@ -1322,6 +1332,20 @@ export function ProjectDetailDrawer({ project, open, onClose, onStatusChange }: 
                 </Button>
               )}
             </div>
+          </TabsContent>
+
+          {/* Billing Tab */}
+          <TabsContent value="billing" className="flex-1 overflow-hidden mt-4">
+            <ScrollArea className="h-full pr-4">
+              <BillingTab
+                projectId={project.id}
+                projectToken={project.project_token}
+                clientAccountId={project.client_account_id || null}
+                stripeCustomerId={project.client_account?.stripe_customer_id || null}
+                contactEmail={project.contact_email}
+                contactName={project.contact_name}
+              />
+            </ScrollArea>
           </TabsContent>
 
           {/* Prototype Tab */}
