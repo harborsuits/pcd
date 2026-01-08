@@ -3908,15 +3908,16 @@ async function handleClaimProjects(
     console.log(`Claiming orphaned projects for user ${user.id} (${userEmail})`);
 
     // Find projects where:
-    // - contact_email matches user email
-    // - owner_user_id is NULL (unclaimed)
+    // - contact_email matches user email (case-insensitive)
+    // - owner_user_id is NULL OR belongs to a different user (mislinked)
     // - not deleted
+    // - NOT already owned by this user
     const { data: orphanedProjects, error: findError } = await supabase
       .from("projects")
-      .select("id, project_token, business_name")
-      .is("owner_user_id", null)
+      .select("id, project_token, business_name, owner_user_id")
       .is("deleted_at", null)
-      .ilike("contact_email", userEmail);
+      .ilike("contact_email", userEmail)
+      .neq("owner_user_id", user.id); // Exclude already-owned projects
 
     if (findError) {
       console.error("Error finding orphaned projects:", findError);
@@ -3926,7 +3927,28 @@ async function handleClaimProjects(
       );
     }
 
-    if (!orphanedProjects || orphanedProjects.length === 0) {
+    // Filter to only claim projects that are truly orphaned:
+    // - owner_user_id is NULL, OR
+    // - owner_user_id references a user that doesn't exist (stale link)
+    // For safety, we only auto-claim NULL owners or verify the other user doesn't exist
+    const projectsToClaim: typeof orphanedProjects = [];
+    
+    for (const project of orphanedProjects || []) {
+      if (!project.owner_user_id) {
+        // No owner - safe to claim
+        projectsToClaim.push(project);
+      } else {
+        // Check if the current owner exists in auth.users
+        // If they don't exist, it's a stale reference - claim it
+        const { data: ownerExists } = await supabase.auth.admin.getUserById(project.owner_user_id);
+        if (!ownerExists?.user) {
+          console.log(`Project ${project.project_token} has stale owner ${project.owner_user_id} - claiming`);
+          projectsToClaim.push(project);
+        }
+      }
+    }
+
+    if (projectsToClaim.length === 0) {
       console.log("No orphaned projects found for this email");
       return new Response(
         JSON.stringify({ ok: true, claimed: 0, projects: [] }),
@@ -3934,10 +3956,10 @@ async function handleClaimProjects(
       );
     }
 
-    console.log(`Found ${orphanedProjects.length} orphaned projects to claim`);
+    console.log(`Found ${projectsToClaim.length} orphaned projects to claim`);
 
     // Claim all orphaned projects
-    const projectIds = orphanedProjects.map(p => p.id);
+    const projectIds = projectsToClaim.map(p => p.id);
     const { error: claimError } = await supabase
       .from("projects")
       .update({ 
@@ -3955,7 +3977,7 @@ async function handleClaimProjects(
     }
 
     // Also update any project_clients records
-    for (const project of orphanedProjects) {
+    for (const project of projectsToClaim) {
       await supabase
         .from("project_clients")
         .update({ invite_status: "accepted" })
@@ -3964,7 +3986,7 @@ async function handleClaimProjects(
     }
 
     // Log the event
-    for (const project of orphanedProjects) {
+    for (const project of projectsToClaim) {
       await supabase.from("project_events").insert({
         project_token: project.project_token,
         event_name: "project_auto_claimed",
@@ -3972,17 +3994,18 @@ async function handleClaimProjects(
           user_id: user.id,
           email: userEmail,
           business_name: project.business_name,
+          previous_owner: project.owner_user_id || null,
         }
       });
     }
 
-    console.log(`Successfully claimed ${orphanedProjects.length} projects for user ${user.id}`);
+    console.log(`Successfully claimed ${projectsToClaim.length} projects for user ${user.id}`);
 
     return new Response(
       JSON.stringify({
         ok: true,
-        claimed: orphanedProjects.length,
-        projects: orphanedProjects.map(p => ({
+        claimed: projectsToClaim.length,
+        projects: projectsToClaim.map(p => ({
           project_token: p.project_token,
           business_name: p.business_name,
         })),
