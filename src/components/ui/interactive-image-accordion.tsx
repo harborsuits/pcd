@@ -5,6 +5,7 @@ import rooferImage from '@/assets/demos/roofer-hero.jpeg';
 import galleryCoverVideo from '@/assets/demos/gallery-cover.mp4';
 import salonCoverVideo from '@/assets/demos/salon-cover.mp4';
 import boutiqueCoverVideo from '@/assets/demos/boutique-cover.mp4';
+import restaurantCoverVideo from '@/assets/demos/restaurant-cover.mp4';
 
 interface AccordionItemData {
   id: number;
@@ -102,7 +103,7 @@ const defaultItems: AccordionItemData[] = [
     id: 2,
     category: 'Local Dining',
     title: 'Restaurant',
-    imageUrl: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800&auto=format&fit=crop',
+    videoUrl: restaurantCoverVideo,
     demoUrl: '/demos/restaurant',
   },
   {
