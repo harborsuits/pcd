@@ -105,17 +105,17 @@ const Index = () => {
       {/* Header */}
       <header className="border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-6 py-4 flex items-center justify-between">
-          <Link to="/" className="font-serif text-xl font-bold tracking-tight text-foreground">
+          <Link to="/" className="font-serif text-lg md:text-xl font-bold tracking-tight text-foreground whitespace-nowrap">
             Pleasant Cove Design
           </Link>
-          <nav className="flex items-center gap-4">
-            <Button asChild variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
+          <nav className="flex items-center gap-2 md:gap-4">
+            <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex text-muted-foreground hover:text-foreground">
               <Link to="/what-we-build">What We Build</Link>
             </Button>
-            <Button asChild variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
+            <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex text-muted-foreground hover:text-foreground">
               <Link to="/pricing">Pricing</Link>
             </Button>
-            <Button asChild variant="outline" size="sm">
+            <Button asChild variant="outline" size="sm" className="whitespace-nowrap">
               <Link to="/portal">Client Portal</Link>
             </Button>
           </nav>
