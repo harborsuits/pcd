@@ -191,9 +191,16 @@ export default function WorkspacePage() {
 
       const data = await res.json();
       
-      // Handle 401 with requires_auth - show re-login modal
+      // Handle 401 with requires_auth - redirect to login
       if (res.status === 401 && data.requires_auth) {
         storeAuthReturnPath(`/w/${token}`);
+        // If no session at all, redirect directly to portal login
+        const { data: { session: currentSession } } = await supabase.auth.getSession();
+        if (!currentSession) {
+          navigate("/portal", { replace: true });
+          return;
+        }
+        // If session exists but is invalid/expired, show modal
         setShowAuthModal(true);
         return;
       }
