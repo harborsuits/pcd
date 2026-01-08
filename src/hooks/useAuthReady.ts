@@ -1,45 +1,56 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
-export function useAuthReady() {
-  const [isReady, setIsReady] = useState(false);
+type AuthReadyState = {
+  hydrated: boolean;   // we finished checking (don't block forever)
+  hasToken: boolean;   // access_token exists right now
+};
+
+export function useAuthReady(): AuthReadyState {
+  const [state, setState] = useState({
+    hydrated: false,
+    hasToken: false,
+  });
 
   useEffect(() => {
     let mounted = true;
-    
-    const checkAuth = async () => {
-      // Try up to 3 times with small delays (same as adminFetch)
+
+    const checkWithRetry = async () => {
+      // Try up to ~300ms to allow Supabase to hydrate session after refresh
       for (let attempt = 0; attempt < 3; attempt++) {
         const { data: { session } } = await supabase.auth.getSession();
+        if (!mounted) return;
+
         if (session?.access_token) {
-          if (mounted) setIsReady(true);
+          setState({ hydrated: true, hasToken: true });
           return;
         }
-        // Wait 100ms before retry (except on last attempt)
+
         if (attempt < 2) {
-          await new Promise(r => setTimeout(r, 100));
+          await new Promise((r) => setTimeout(r, 100));
         }
       }
-      // No session after retries - still set ready so we don't block forever
-      if (mounted) setIsReady(true);
+
+      // Hydration attempt finished, but no token
+      if (mounted) setState({ hydrated: true, hasToken: false });
     };
-    
-    checkAuth();
-    
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
-      if (mounted) {
-        // On auth state change, re-check (but no need for retries here)
-        supabase.auth.getSession().then(({ data: { session } }) => {
-          if (mounted) setIsReady(!!session?.access_token || true);
-        });
-      }
+
+    checkWithRetry();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!mounted) return;
+      setState({
+        hydrated: true,
+        hasToken: !!session?.access_token,
+      });
     });
-    
+
     return () => {
       mounted = false;
       subscription.unsubscribe();
     };
   }, []);
 
-  return isReady;
+  return state;
 }

@@ -56,7 +56,7 @@ export default function OperatorLayout() {
   const [currentProjectName, setCurrentProjectName] = useState<string | null>(null);
   const closeProjectRef = useRef<() => void>(() => {});
   const queryClient = useQueryClient();
-  const isAuthReady = useAuthReady();
+  const { hydrated, hasToken } = useAuthReady();
 
   const registerCloseProject = useCallback((fn: () => void) => {
     closeProjectRef.current = fn;
@@ -195,11 +195,48 @@ export default function OperatorLayout() {
     toast.success("Logged out");
   };
 
-  // Show loading state - wait for both auth check AND token hydration
-  if (isLoading || (isAuthed && !isAuthReady)) {
+  // Show loading state while checking auth
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  // Wait briefly for token hydration after auth check
+  if (isAuthed && !hydrated) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  // Session expired - authed state but no token after hydration
+  if (isAuthed && hydrated && !hasToken) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col">
+        <header className="border-b border-border bg-card p-4">
+          <Button variant="ghost" size="sm" asChild>
+            <Link to="/"><Home className="h-4 w-4 mr-2" />Home</Link>
+          </Button>
+        </header>
+        <div className="flex-1 flex items-center justify-center p-4">
+          <Card className="w-full max-w-md">
+            <CardHeader>
+              <CardTitle>Session Expired</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-muted-foreground">
+                Please sign in again to access the operator console.
+              </p>
+              <Button onClick={() => setIsAuthed(false)} className="w-full">
+                Go to login
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     );
   }
