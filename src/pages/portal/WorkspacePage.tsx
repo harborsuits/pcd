@@ -12,6 +12,7 @@ import { useSessionExpiry, storeAuthReturnPath } from "@/hooks/useSessionExpiry"
 import { useToast } from "@/hooks/use-toast";
 import { UpdatesTab, MessagesTab, FilesTab, WebsiteTab, AIReceptionistTab } from "@/components/portal/workspace/tabs";
 import type { Version } from "@/components/portal/workspace/VersionsList";
+import { useAuthReady } from "@/hooks/useAuthReady";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -105,29 +106,31 @@ export default function WorkspacePage() {
   const [isOperator, setIsOperator] = useState(false);
   const [operatorCheckDone, setOperatorCheckDone] = useState(false);
   
+  // Get session from single source of truth
+  const { hydrated, session: authSession } = useAuthReady();
+  
   // Determine service type and what tabs to show
   const serviceType = projectInfo?.intakeData?.service_type || 'website';
   const includesWebsite = serviceType === 'website' || serviceType === 'both';
   const includesAI = serviceType === 'ai_receptionist' || serviceType === 'both';
   const hasVersions = versions.length > 0;
   
-  // Server-side operator verification
+  // Server-side operator verification - uses session from useAuthReady
   const verifyOperatorStatus = useCallback(async () => {
     if (!token) {
       setOperatorCheckDone(true);
       return;
     }
     
-    // Get session once - avoid multiple getSession calls that cause deadlocks
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session?.access_token || !session?.user?.id) {
+    // Use session from useAuthReady - NO getSession() call
+    if (!authSession?.access_token || !authSession?.user?.id) {
       setIsOperator(false);
       setOperatorCheckDone(true);
       return;
     }
     
-    // Check admin role - pass user ID directly to avoid getSession deadlock
-    const isAdmin = await checkAdminRole(session.user.id);
+    // Check admin role - pass user ID directly
+    const isAdmin = await checkAdminRole(authSession.user.id);
     if (!isAdmin) {
       setIsOperator(false);
       setOperatorCheckDone(true);
@@ -142,7 +145,7 @@ export default function WorkspacePage() {
           headers: {
             "Content-Type": "application/json",
             apikey: SUPABASE_ANON_KEY,
-            "Authorization": `Bearer ${session.access_token}`,
+            "Authorization": `Bearer ${authSession.access_token}`,
           },
         }
       );
@@ -159,7 +162,7 @@ export default function WorkspacePage() {
     } finally {
       setOperatorCheckDone(true);
     }
-  }, [token]);
+  }, [token, authSession]);
   
   // Handle ai_trial query param
   useEffect(() => {
@@ -313,8 +316,8 @@ export default function WorkspacePage() {
     }
   };
 
-  // Wait for both loading AND operator check to complete
-  if (loading || !operatorCheckDone) {
+  // Wait for auth hydration, loading AND operator check to complete
+  if (!hydrated || loading || !operatorCheckDone) {
     return (
       <div className="h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />

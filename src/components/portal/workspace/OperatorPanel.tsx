@@ -21,7 +21,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { adminFetch, isAuthenticatedAdmin } from "@/lib/adminFetch";
+import { adminFetch } from "@/lib/adminFetch";
 import { StageBadge, STAGE_CONFIG, PipelineStage, getNextStage } from "@/components/operator/StageBadge";
 
 interface IntakeData {
