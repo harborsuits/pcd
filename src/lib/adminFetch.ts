@@ -1,4 +1,4 @@
-import { supabase } from "@/integrations/supabase/client";
+import { operatorSupabase } from "@/integrations/supabase/operatorClient";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 
@@ -15,7 +15,7 @@ export class AdminAuthError extends Error {
  */
 export async function checkAdminRole(userId: string): Promise<boolean> {
   console.log("[adminFetch] checkAdminRole - uid:", userId);
-  const { data, error } = await supabase
+  const { data, error } = await operatorSupabase
     .from("user_roles")
     .select("role")
     .eq("user_id", userId)
@@ -29,9 +29,10 @@ export async function checkAdminRole(userId: string): Promise<boolean> {
 /**
  * Sign in with email/password and verify admin role.
  * Uses session from sign-in response directly.
+ * Uses isolated operator Supabase client.
  */
 export async function signInAdmin(email: string, password: string): Promise<{ success: boolean; error?: string }> {
-  const { data, error } = await supabase.auth.signInWithPassword({
+  const { data, error } = await operatorSupabase.auth.signInWithPassword({
     email,
     password,
   });
@@ -47,7 +48,7 @@ export async function signInAdmin(email: string, password: string): Promise<{ su
   // Verify admin role using user ID from response
   const isAdmin = await checkAdminRole(data.session.user.id);
   if (!isAdmin) {
-    await supabase.auth.signOut();
+    await operatorSupabase.auth.signOut();
     return { success: false, error: "Access denied. Admin privileges required." };
   }
   
@@ -56,13 +57,14 @@ export async function signInAdmin(email: string, password: string): Promise<{ su
 
 /**
  * Sign out and clear any cached admin state.
+ * Uses isolated operator Supabase client.
  */
 export async function signOutAdmin(): Promise<void> {
   console.log("[adminFetch] signOutAdmin called");
   sessionStorage.removeItem("admin_verified");
   
   try {
-    const { error } = await supabase.auth.signOut();
+    const { error } = await operatorSupabase.auth.signOut();
     if (error) {
       console.error("[adminFetch] signOut error:", error);
     } else {
@@ -76,9 +78,10 @@ export async function signOutAdmin(): Promise<void> {
 /**
  * Admin fetch with JWT authentication.
  * Gets token from session, retries on 401.
+ * Uses isolated operator Supabase client.
  */
 export async function adminFetch(path: string, init: RequestInit = {}): Promise<Response> {
-  const { data: { session } } = await supabase.auth.getSession();
+  const { data: { session } } = await operatorSupabase.auth.getSession();
   const token = session?.access_token;
   
   if (!token) {
@@ -103,7 +106,7 @@ export async function adminFetch(path: string, init: RequestInit = {}): Promise<
 
   if (res.status === 401) {
     // Try to refresh the session
-    const { data: { session: newSession }, error } = await supabase.auth.refreshSession();
+    const { data: { session: newSession }, error } = await operatorSupabase.auth.refreshSession();
     
     if (error || !newSession) {
       throw new AdminAuthError("Session expired. Please log in again.");

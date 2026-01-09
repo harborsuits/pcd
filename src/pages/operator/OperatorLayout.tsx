@@ -19,7 +19,7 @@ import {
   signOutAdmin,
   checkAdminRole,
 } from "@/lib/adminFetch";
-import { useAuthReady } from "@/hooks/useAuthReady";
+import { useOperatorAuthReady } from "@/hooks/useOperatorAuthReady";
 
 // Context to track currently open project for global shortcuts
 interface OperatorContextValue {
@@ -55,8 +55,8 @@ export default function OperatorLayout() {
   const closeProjectRef = useRef<() => void>(() => {});
   const queryClient = useQueryClient();
   
-  // Single source of truth for auth - session from useAuthReady
-  const { hydrated, session } = useAuthReady();
+  // Single source of truth for OPERATOR auth - uses isolated storage
+  const { hydrated, session } = useOperatorAuthReady();
 
   const registerCloseProject = useCallback((fn: () => void) => {
     closeProjectRef.current = fn;
@@ -178,10 +178,17 @@ export default function OperatorLayout() {
     setIsValidating(true);
     setLoginError(null);
     
-    const result = await signInAdmin(email, password);
+    // 10-second timeout failsafe to prevent indefinite hangs
+    const timeout = new Promise<{ success: boolean; error?: string }>((resolve) =>
+      setTimeout(() => resolve({ 
+        success: false, 
+        error: "Sign-in timed out. Please try again." 
+      }), 10000)
+    );
+    
+    const result = await Promise.race([signInAdmin(email, password), timeout]);
     
     if (result.success) {
-      // Set isLoading false so we don't stay on spinner
       setIsLoading(false);
       setIsAuthed(true);
       setUserEmail(email);
