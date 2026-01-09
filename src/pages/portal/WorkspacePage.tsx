@@ -172,13 +172,13 @@ export default function WorkspacePage() {
     }
   }, [searchParams, token, navigate]);
 
-  // Fetch project info
+  // Fetch project info - uses authSession from useAuthReady
   const fetchProjectInfo = useCallback(async () => {
     if (!token) return;
 
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const authToken = session?.access_token || SUPABASE_ANON_KEY;
+      // Use session from useAuthReady - NO getSession() call
+      const authToken = authSession?.access_token || SUPABASE_ANON_KEY;
       
       const res = await fetch(
         `${SUPABASE_URL}/functions/v1/portal/${token}`,
@@ -197,9 +197,8 @@ export default function WorkspacePage() {
       // Handle 401 with requires_auth - redirect to login
       if (res.status === 401 && data.requires_auth) {
         storeAuthReturnPath(`/w/${token}`);
-        // If no session at all, redirect directly to portal login
-        const { data: { session: currentSession } } = await supabase.auth.getSession();
-        if (!currentSession) {
+        // If no session, redirect directly to portal login
+        if (!authSession) {
           navigate("/portal", { replace: true });
           return;
         }
@@ -227,15 +226,15 @@ export default function WorkspacePage() {
     } catch (err) {
       console.error("Fetch project info error:", err);
     }
-  }, [token, setShowAuthModal]);
+  }, [token, authSession, setShowAuthModal, navigate]);
 
-  // Fetch prototypes (versions)
+  // Fetch prototypes (versions) - uses authSession from useAuthReady
   const fetchVersions = useCallback(async () => {
     if (!token) return;
     
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const authToken = session?.access_token || SUPABASE_ANON_KEY;
+      // Use session from useAuthReady - NO getSession() call
+      const authToken = authSession?.access_token || SUPABASE_ANON_KEY;
       
       const res = await fetch(
         `${SUPABASE_URL}/functions/v1/portal/${token}/prototypes`,
@@ -259,7 +258,7 @@ export default function WorkspacePage() {
       console.error("Fetch versions error:", err);
       setError("Failed to load workspace");
     }
-  }, [token]);
+  }, [token, authSession]);
 
   // Initial load
   useEffect(() => {
@@ -275,11 +274,11 @@ export default function WorkspacePage() {
     load();
   }, [fetchProjectInfo, fetchVersions, verifyOperatorStatus]);
 
-  // Request change handler
+  // Request change handler - uses authSession from useAuthReady
   const handleRequestChange = async () => {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const authToken = session?.access_token || SUPABASE_ANON_KEY;
+      // Use session from useAuthReady - NO getSession() call
+      const authToken = authSession?.access_token || SUPABASE_ANON_KEY;
       
       const res = await fetch(
         `${SUPABASE_URL}/functions/v1/portal/${token}/help-request`,
