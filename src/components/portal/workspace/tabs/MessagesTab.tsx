@@ -58,9 +58,33 @@ export function MessagesTab({ token, businessName }: MessagesTabProps) {
 
   useEffect(() => {
     fetchMessages();
-    // Poll for new messages every 30 seconds
-    const interval = setInterval(fetchMessages, 30000);
-    return () => clearInterval(interval);
+    
+    // Subscribe to realtime message updates
+    const channel = supabase
+      .channel(`messages-${token}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages',
+          filter: `project_token=eq.${token}`,
+        },
+        (payload) => {
+          console.log('New message received via realtime:', payload);
+          const newMsg = payload.new as Message;
+          setMessages((prev) => {
+            // Avoid duplicates
+            if (prev.some((m) => m.id === newMsg.id)) return prev;
+            return [...prev, newMsg];
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [token]);
 
   // Scroll to bottom when messages change
