@@ -138,58 +138,74 @@ export async function signOutAdmin(): Promise<void> {
 
 // Check if currently authenticated as admin (with caching for faster loads)
 export async function isAuthenticatedAdmin(): Promise<boolean> {
-  try {
-    const { data: { session }, error } = await supabase.auth.getSession();
-    
-    // Handle session errors or missing session
-    if (error || !session) {
-      console.log("[adminFetch] No valid session found:", error?.message);
-      sessionStorage.removeItem("admin_verified");
-      return false;
-    }
-    
-    // CRITICAL: Validate that access_token actually exists (handles hydration race)
-    if (!session.access_token) {
-      console.log("[adminFetch] Session exists but no access_token yet (hydration pending)");
-      sessionStorage.removeItem("admin_verified");
-      return false;
-    }
-    
-    // Check if session is expired
-    const expiresAt = session.expires_at;
-    if (expiresAt && expiresAt * 1000 < Date.now()) {
-      console.log("[adminFetch] Session expired, attempting refresh...");
-      const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
-      if (refreshError || !refreshData.session) {
-        console.log("[adminFetch] Session refresh failed:", refreshError?.message);
+  const AUTH_TIMEOUT = 5000; // 5 second timeout
+
+  const timeout = new Promise<boolean>((resolve) => {
+    setTimeout(() => {
+      console.log("[adminFetch] isAuthenticatedAdmin timed out after 5s");
+      resolve(false);
+    }, AUTH_TIMEOUT);
+  });
+
+  const check = async (): Promise<boolean> => {
+    try {
+      console.log("[adminFetch] isAuthenticatedAdmin starting...");
+      const { data: { session }, error } = await supabase.auth.getSession();
+      
+      // Handle session errors or missing session
+      if (error || !session) {
+        console.log("[adminFetch] No valid session found:", error?.message);
         sessionStorage.removeItem("admin_verified");
         return false;
       }
-    }
-    
-    // Check if we've already verified admin status for this session
-    const cachedUserId = sessionStorage.getItem("admin_verified");
-    if (cachedUserId === session.user.id) {
-      // Double-check token still exists before trusting cache
-      if (session.access_token) {
-        console.log("[adminFetch] Using cached admin verification");
-        return true;
+      
+      // CRITICAL: Validate that access_token actually exists (handles hydration race)
+      if (!session.access_token) {
+        console.log("[adminFetch] Session exists but no access_token yet (hydration pending)");
+        sessionStorage.removeItem("admin_verified");
+        return false;
       }
-      // Cache invalid - token missing
+      
+      // Check if session is expired
+      const expiresAt = session.expires_at;
+      if (expiresAt && expiresAt * 1000 < Date.now()) {
+        console.log("[adminFetch] Session expired, attempting refresh...");
+        const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+        if (refreshError || !refreshData.session) {
+          console.log("[adminFetch] Session refresh failed:", refreshError?.message);
+          sessionStorage.removeItem("admin_verified");
+          return false;
+        }
+      }
+      
+      // Check if we've already verified admin status for this session
+      const cachedUserId = sessionStorage.getItem("admin_verified");
+      if (cachedUserId === session.user.id) {
+        // Double-check token still exists before trusting cache
+        if (session.access_token) {
+          console.log("[adminFetch] Using cached admin verification");
+          return true;
+        }
+        // Cache invalid - token missing
+        sessionStorage.removeItem("admin_verified");
+      }
+      
+      // Verify admin role and cache result
+      console.log("[adminFetch] Checking admin role for user:", session.user.id);
+      const isAdmin = await checkAdminRole();
+      console.log("[adminFetch] Admin role check result:", isAdmin);
+      if (isAdmin) {
+        sessionStorage.setItem("admin_verified", session.user.id);
+      } else {
+        sessionStorage.removeItem("admin_verified");
+      }
+      return isAdmin;
+    } catch (err) {
+      console.error("[adminFetch] isAuthenticatedAdmin error:", err);
       sessionStorage.removeItem("admin_verified");
+      return false;
     }
-    
-    // Verify admin role and cache result
-    const isAdmin = await checkAdminRole();
-    if (isAdmin) {
-      sessionStorage.setItem("admin_verified", session.user.id);
-    } else {
-      sessionStorage.removeItem("admin_verified");
-    }
-    return isAdmin;
-  } catch (err) {
-    console.error("[adminFetch] isAuthenticatedAdmin error:", err);
-    sessionStorage.removeItem("admin_verified");
-    return false;
-  }
+  };
+
+  return Promise.race([check(), timeout]);
 }
