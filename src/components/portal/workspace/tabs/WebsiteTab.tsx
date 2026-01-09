@@ -236,7 +236,36 @@ export function WebsiteTab({
       const fullBlob = await fullResponse.blob();
       const fullUpload = await uploadScreenshot(fullBlob, selectedVersion.id);
 
-      // Create comment with cropped screenshot + crop coordinates
+      // Upload attachment files and collect media IDs
+      const attachmentMediaIds: string[] = [];
+      if (attachments.length > 0) {
+        for (const attachFile of attachments) {
+          const formData = new FormData();
+          formData.append("file", attachFile, attachFile.name);
+          formData.append("prototype_id", selectedVersion.id);
+          
+          const attachRes = await fetch(
+            `${SUPABASE_URL}/functions/v1/portal/${token}/screenshot`,
+            {
+              method: "POST",
+              headers: {
+                apikey: SUPABASE_ANON_KEY,
+                Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+              },
+              body: formData,
+            }
+          );
+          
+          if (attachRes.ok) {
+            const attachData = await attachRes.json();
+            if (attachData.media_id) {
+              attachmentMediaIds.push(attachData.media_id);
+            }
+          }
+        }
+      }
+
+      // Create comment with cropped screenshot + crop coordinates + attachments
       const res = await fetch(
         `${SUPABASE_URL}/functions/v1/portal/${token}/comments`,
         {
@@ -262,6 +291,8 @@ export function WebsiteTab({
             crop_y: mode.crop.y,
             crop_w: mode.crop.w,
             crop_h: mode.crop.h,
+            // Attachments
+            attachment_media_ids: attachmentMediaIds.length > 0 ? attachmentMediaIds : undefined,
           }),
         }
       );
