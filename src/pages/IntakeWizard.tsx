@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowLeft, ArrowRight, Loader2, Sparkles, Check, Bot, Globe, Package, Palette, Image, Search, Phone, Clock, AlertTriangle, Users, MessageSquare, FileText, CheckCircle2, Upload } from "lucide-react";
+import { categoryServicesMap, generateTagline, getServicesForTemplate } from "@/lib/categoryServices";
 import { FileDropZone, UploadedFile, uploadIntakeFiles } from "@/components/intake/FileDropZone";
 import pcdLogo from "@/assets/pcd-logo.jpeg";
 import { Button } from "@/components/ui/button";
@@ -1478,11 +1479,57 @@ const GetDemo = () => {
   // TRACK A: NEW SITE STEPS
   // =====================================================
 
+  // Helper to prefill content with trade-specific examples
+  const prefillTradeExample = (trade: string) => {
+    const services = getServicesForTemplate(trade);
+    const city = formData.serviceArea || "your area";
+    const tagline = generateTagline(trade, city);
+    
+    updateField("heroLine", tagline);
+    
+    // Prefill 3-4 services
+    const exampleServices: ServiceItem[] = services.slice(0, 4).map(s => ({
+      name: s,
+      description: "",
+    }));
+    updateField("servicesDetailed", exampleServices);
+  };
+
+  const TRADE_CHIPS = [
+    { key: "plumber", label: "Plumber" },
+    { key: "roofer", label: "Roofer" },
+    { key: "electrician", label: "Electrician" },
+    { key: "contractor", label: "Contractor" },
+    { key: "restaurant", label: "Restaurant" },
+    { key: "cleaner", label: "Cleaner" },
+  ];
+
   const renderContentStep = () => (
     <div className="space-y-6">
       <div>
         <h2 className="font-serif text-2xl font-bold mb-2">Your content</h2>
         <p className="text-muted-foreground">This is what visitors will see first. We'll refine it together.</p>
+      </div>
+      
+      {/* Reassurance banner */}
+      <div className="bg-secondary/50 rounded-lg p-3 text-sm text-muted-foreground">
+        💡 Rough ideas are perfect — bullet points, fragments, whatever you have. We'll polish everything together.
+      </div>
+
+      {/* Quick-fill trade chips */}
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-sm text-muted-foreground">Quick-fill example:</span>
+        {TRADE_CHIPS.map((trade) => (
+          <button
+            key={trade.key}
+            type="button"
+            onClick={() => prefillTradeExample(trade.key)}
+            className="px-3 py-1 text-sm rounded-full border border-border hover:bg-secondary/70 transition-colors"
+            disabled={isLoading}
+          >
+            {trade.label}
+          </button>
+        ))}
       </div>
       
       <div className="space-y-5">
@@ -1495,7 +1542,9 @@ const GetDemo = () => {
             onChange={(e) => updateField("heroLine", e.target.value)}
             disabled={isLoading}
           />
-          <p className="text-xs text-muted-foreground">This becomes your homepage headline.</p>
+          <p className="text-xs text-muted-foreground">
+            This becomes your homepage headline. Examples: "24/7 emergency plumbing for Seattle homes" • "Family-owned Italian restaurant since 1985" • "Expert roof repairs you can count on"
+          </p>
         </div>
 
         <div className="space-y-3">
@@ -1506,6 +1555,11 @@ const GetDemo = () => {
                 + Add service
               </Button>
             )}
+          </div>
+          
+          {/* Helper text for services */}
+          <div className="text-xs text-muted-foreground bg-muted/50 rounded p-2">
+            <strong>Examples:</strong> "Leak Detection" with "Fast, non-invasive detection" — or just "Kitchen Remodeling" (descriptions are optional)
           </div>
           
           {formData.servicesDetailed.length === 0 && (
@@ -1545,10 +1599,13 @@ const GetDemo = () => {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="aboutBlurb">About your business (optional)</Label>
+          <Label htmlFor="aboutBlurb">Tell us a bit about your business (optional)</Label>
+          <p className="text-xs text-muted-foreground mb-1">
+            A few sentences or bullet points — we'll handle the polish.
+          </p>
           <Textarea
             id="aboutBlurb"
-            placeholder="2-5 sentences about who you are, what you do, and why customers choose you..."
+            placeholder="e.g. Family-owned since 2005. Serving the greater Portland area. Known for fast, honest service..."
             value={formData.aboutBlurb}
             onChange={(e) => updateField("aboutBlurb", e.target.value)}
             disabled={isLoading}
