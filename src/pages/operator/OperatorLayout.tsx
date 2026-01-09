@@ -66,8 +66,10 @@ export default function OperatorLayout() {
     closeProjectRef.current?.();
   }, []);
 
-  // Check auth status on mount
+  // Check auth status after hydration completes
   useEffect(() => {
+    if (!hydrated) return; // Wait for auth hydration
+    
     const checkAuth = async () => {
       const isAdmin = await isAuthenticatedAdmin();
       setIsAuthed(isAdmin);
@@ -95,7 +97,7 @@ export default function OperatorLayout() {
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [hydrated]);
 
   // Listen for AdminAuthError events globally
   useEffect(() => {
@@ -195,17 +197,8 @@ export default function OperatorLayout() {
     toast.success("Logged out");
   };
 
-  // Show loading state while checking auth
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
-
-  // Wait briefly for token hydration after auth check
-  if (isAuthed && !hydrated) {
+  // Show loading state while hydrating or checking auth
+  if (!hydrated || isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
