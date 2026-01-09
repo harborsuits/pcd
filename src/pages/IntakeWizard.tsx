@@ -848,14 +848,14 @@ const GetDemo = () => {
         <ServiceCard
           value="website"
           icon={Globe}
-          title="Website"
-          description="A fast, modern site that converts visitors into customers."
+          title="Website Demo"
+          description="See an instant preview of your site in 3 styles. Takes 30 seconds."
         />
         <ServiceCard
           value="ai"
           icon={Bot}
           title="AI Receptionist"
-          description="Answer calls, texts & forms 24/7. Start capturing leads instantly."
+          description="Set up your AI to answer calls 24/7. We'll guide you through the setup."
         />
       </div>
     </div>

@@ -755,7 +755,7 @@ const WhatWeBuild = () => {
             Ready to see yours?
           </h2>
           <Button asChild size="lg" className="group">
-            <Link to="/get-demo">
+            <Link to="/get-demo?service=demo">
               Get Your Demo
               <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
             </Link>
