@@ -19,6 +19,7 @@ import {
   signOutAdmin,
   isAuthenticatedAdmin,
   getAdminEmail,
+  checkAdminRole,
 } from "@/lib/adminFetch";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuthReady } from "@/hooks/useAuthReady";
@@ -66,20 +67,37 @@ export default function OperatorLayout() {
     closeProjectRef.current?.();
   }, []);
 
+  // Clear stale admin cache on mount
+  useEffect(() => {
+    sessionStorage.removeItem("admin_verified");
+  }, []);
+
   // Check auth status after hydration completes
   useEffect(() => {
     if (!hydrated) return; // Wait for auth hydration
     
     const checkAuth = async () => {
-      console.log("[OperatorLayout] Checking admin auth...");
-      const isAdmin = await isAuthenticatedAdmin();
+      console.log("[OperatorLayout] Checking admin auth, hasToken:", hasToken);
+      
+      if (!hasToken) {
+        // No session - definitely not an admin
+        console.log("[OperatorLayout] No token, not admin");
+        setIsAuthed(false);
+        setUserEmail(null);
+        setIsLoading(false);
+        return;
+      }
+      
+      // Session exists, just check admin role (avoids double getSession call)
+      console.log("[OperatorLayout] Token exists, checking admin role...");
+      const isAdmin = await checkAdminRole();
       console.log("[OperatorLayout] isAdmin result:", isAdmin);
       setIsAuthed(isAdmin);
+      
       if (isAdmin) {
         const email = await getAdminEmail();
         setUserEmail(email);
       } else {
-        // Clear any stale state if not admin
         setUserEmail(null);
       }
       setIsLoading(false);
@@ -98,7 +116,7 @@ export default function OperatorLayout() {
       } else if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
         // Defer the async admin check to avoid Supabase deadlock
         setTimeout(async () => {
-          const isAdmin = await isAuthenticatedAdmin();
+          const isAdmin = await checkAdminRole();
           console.log("[OperatorLayout] Post-signin admin check:", isAdmin);
           setIsAuthed(isAdmin);
           if (isAdmin) {
@@ -112,7 +130,7 @@ export default function OperatorLayout() {
     });
 
     return () => subscription.unsubscribe();
-  }, [hydrated]);
+  }, [hydrated, hasToken]);
 
   // Listen for AdminAuthError events globally
   useEffect(() => {
