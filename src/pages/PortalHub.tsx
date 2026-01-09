@@ -591,8 +591,16 @@ export default function PortalHub() {
   };
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    setPortals([]);
+    try {
+      await supabase.auth.signOut();
+      // Clear all client state
+      setUser(null);
+      setSession(null);
+      setPortals([]);
+      setArchivedPortals([]);
+    } catch (err) {
+      console.error("[PortalHub] Logout error:", err);
+    }
   };
 
 
