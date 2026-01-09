@@ -423,6 +423,11 @@ Deno.serve(async (req) => {
     return handleBootstrap(req);
   }
 
+  // Route: GET /admin/signed-url - Get signed URL for private bucket files
+  if (subPath === "signed-url" && req.method === "GET") {
+    return handleSignedUrl(req, url);
+  }
+
   return new Response(
     JSON.stringify({ error: "Not found" }),
     { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -5304,6 +5309,49 @@ async function handleBootstrap(req: Request): Promise<Response> {
 
   } catch (error) {
     console.error("Bootstrap error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+}
+
+// GET /admin/signed-url - Get signed URL for private bucket files
+async function handleSignedUrl(req: Request, url: URL): Promise<Response> {
+  const { error: authError, context } = await validateAdminAuth(req);
+  if (authError) return authError;
+
+  const bucket = url.searchParams.get("bucket");
+  const path = url.searchParams.get("path");
+
+  if (!bucket || !path) {
+    return new Response(
+      JSON.stringify({ error: "Missing bucket or path parameter" }),
+      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  try {
+    const supabase = getSupabaseClient();
+    
+    const { data, error } = await supabase.storage
+      .from(bucket)
+      .createSignedUrl(path, 60 * 60); // 1 hour expiry
+
+    if (error) {
+      console.error("Error creating signed URL:", error);
+      return new Response(
+        JSON.stringify({ error: "Failed to create signed URL" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    return new Response(
+      JSON.stringify({ signedUrl: data.signedUrl }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  } catch (error) {
+    console.error("Signed URL error:", error);
     return new Response(
       JSON.stringify({ error: "Internal server error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
