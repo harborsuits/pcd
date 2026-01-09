@@ -19,7 +19,6 @@ import {
   signOutAdmin,
   checkAdminRole,
 } from "@/lib/adminFetch";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuthReady } from "@/hooks/useAuthReady";
 
 // Context to track currently open project for global shortcuts
@@ -55,7 +54,9 @@ export default function OperatorLayout() {
   const [currentProjectName, setCurrentProjectName] = useState<string | null>(null);
   const closeProjectRef = useRef<() => void>(() => {});
   const queryClient = useQueryClient();
-  const { hydrated, hasToken } = useAuthReady();
+  
+  // Single source of truth for auth - session from useAuthReady
+  const { hydrated, session } = useAuthReady();
 
   const registerCloseProject = useCallback((fn: () => void) => {
     closeProjectRef.current = fn;
@@ -70,68 +71,36 @@ export default function OperatorLayout() {
     sessionStorage.removeItem("admin_verified");
   }, []);
 
-  // Check auth status ONLY on initial mount after hydration - NOT when hasToken changes
+  // React to session changes from useAuthReady - NO duplicate onAuthStateChange listener
   useEffect(() => {
-    if (!hydrated) return; // Wait for auth hydration
+    if (!hydrated) return;
     
     let cancelled = false;
     
-    const checkInitialAuth = async () => {
-      console.log("[OperatorLayout] Initial auth check...");
-      
-      // Get session once - safe on mount, not during auth state changes
-      const { data: { session } } = await supabase.auth.getSession();
-      if (cancelled) return;
+    const checkAdmin = async () => {
+      console.log("[OperatorLayout] Session changed, checking admin...", !!session);
       
       if (!session?.user?.id) {
-        console.log("[OperatorLayout] No initial session");
         setIsAuthed(false);
         setUserEmail(null);
         setIsLoading(false);
         return;
       }
       
-      // Check admin role - pass user ID directly
+      // Check admin role using user ID from session
       const isAdmin = await checkAdminRole(session.user.id);
       if (cancelled) return;
       
-      console.log("[OperatorLayout] Initial isAdmin:", isAdmin);
+      console.log("[OperatorLayout] isAdmin:", isAdmin);
       setIsAuthed(isAdmin);
       setUserEmail(isAdmin ? session.user.email || null : null);
       setIsLoading(false);
     };
     
-    checkInitialAuth();
-
-    // Listen for auth state changes - handle ALL changes here exclusively
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (cancelled) return;
-      console.log("[OperatorLayout] Auth state changed:", event);
-      
-      if (event === "SIGNED_OUT") {
-        setIsAuthed(false);
-        setUserEmail(null);
-        setIsLoading(false);
-      } else if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
-        if (session?.user?.id) {
-          // Defer to avoid Supabase internal mutex lock
-          setTimeout(async () => {
-            if (cancelled) return;
-            const isAdmin = await checkAdminRole(session.user.id);
-            console.log("[OperatorLayout] Post-event admin check:", isAdmin);
-            setIsAuthed(isAdmin);
-            setUserEmail(isAdmin ? session.user.email || null : null);
-            setIsLoading(false);
-          }, 0);
-        }
-      }
-    });
-
-    return () => {
-      cancelled = true;
-      subscription.unsubscribe();
-    };
-  }, [hydrated]); // ONLY depend on hydrated - NOT hasToken
+    checkAdmin();
+    
+    return () => { cancelled = true; };
+  }, [hydrated, session]); // React to session changes from useAuthReady
 
   // Listen for AdminAuthError events globally
   useEffect(() => {
@@ -252,8 +221,8 @@ export default function OperatorLayout() {
     );
   }
 
-  // Session expired - authed state but no token after hydration
-  if (isAuthed && hydrated && !hasToken) {
+  // Session expired - authed state but no session after hydration
+  if (isAuthed && hydrated && !session) {
     return (
       <div className="min-h-screen bg-background flex flex-col">
         <header className="border-b border-border bg-card p-4">

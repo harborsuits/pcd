@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { captureTab, isTabCaptureSupported, type CaptureError } from "@/lib/tabCapture";
@@ -14,7 +14,8 @@ import { FeedbackDetailModal } from "./FeedbackDetailModal";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { MessageCircle, Settings2, Home } from "lucide-react";
-import { isAuthenticatedAdmin } from "@/lib/adminFetch";
+import { checkAdminRole } from "@/lib/adminFetch";
+import { useAuthReady } from "@/hooks/useAuthReady";
 import type { CommentData } from "./FeedbackCard";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
@@ -124,19 +125,30 @@ export function ProjectWorkspace({
   
   const previewContainerRef = useRef<HTMLDivElement>(null);
   
-  // Check if user has operator access asynchronously
-  // forceClientMode overrides operator check - used for /c/:token client-only route
-  useState(() => {
+  // Get session from single source of truth
+  const { hydrated, session } = useAuthReady();
+  
+  // Check if user has operator access using session from useAuthReady
+  useEffect(() => {
     if (forceClientMode) {
       setIsOperator(false);
       setIsOperatorChecked(true);
-    } else {
-      isAuthenticatedAdmin().then(result => {
-        setIsOperator(result);
-        setIsOperatorChecked(true);
-      });
+      return;
     }
-  });
+    
+    if (!hydrated) return;
+    
+    if (!session?.user?.id) {
+      setIsOperator(false);
+      setIsOperatorChecked(true);
+      return;
+    }
+    
+    checkAdminRole(session.user.id).then(result => {
+      setIsOperator(result);
+      setIsOperatorChecked(true);
+    });
+  }, [hydrated, session, forceClientMode]);
 
   const selectedVersion = versions.find(v => v.id === selectedVersionId) ?? versions[0];
   const versionComments = comments.filter(c => c.prototype_id === selectedVersion?.id);

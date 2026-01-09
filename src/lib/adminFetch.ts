@@ -9,56 +9,77 @@ export class AdminAuthError extends Error {
   }
 }
 
-// Get current session token for admin requests with retry for hydration
-async function getAuthToken(): Promise<string | null> {
-  // Try up to 3 times with small delays to handle session hydration
-  for (let attempt = 0; attempt < 3; attempt++) {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session?.access_token) {
-      return session.access_token;
-    }
-    // Wait 100ms before retry (except on last attempt)
-    if (attempt < 2) {
-      await new Promise(r => setTimeout(r, 100));
-    }
-  }
-  return null;
-}
-
-// Check if user has admin role - accepts optional userId to avoid getSession deadlocks
-export async function checkAdminRole(userId?: string): Promise<boolean> {
-  let uid = userId;
-  
-  // Only call getSession if userId wasn't provided
-  if (!uid) {
-    const { data: { session } } = await supabase.auth.getSession();
-    console.log("[adminFetch] checkAdminRole - session:", session?.user?.id);
-    if (!session?.user?.id) return false;
-    uid = session.user.id;
-  }
-  
-  console.log("[adminFetch] checkAdminRole - checking uid:", uid);
+/**
+ * Check if user has admin role.
+ * REQUIRES userId - no fallback getSession() to avoid deadlocks.
+ */
+export async function checkAdminRole(userId: string): Promise<boolean> {
+  console.log("[adminFetch] checkAdminRole - uid:", userId);
   const { data, error } = await supabase
     .from("user_roles")
     .select("role")
-    .eq("user_id", uid)
+    .eq("user_id", userId)
     .eq("role", "admin")
     .maybeSingle();
   
-  console.log("[adminFetch] checkAdminRole - data:", data, "error:", error);
   if (error || !data) return false;
   return true;
 }
 
-// Get current user email
-export async function getAdminEmail(): Promise<string | null> {
-  const { data: { session } } = await supabase.auth.getSession();
-  return session?.user?.email || null;
+/**
+ * Sign in with email/password and verify admin role.
+ * Uses session from sign-in response directly.
+ */
+export async function signInAdmin(email: string, password: string): Promise<{ success: boolean; error?: string }> {
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  });
+  
+  if (error) {
+    return { success: false, error: error.message };
+  }
+  
+  if (!data.session?.user?.id) {
+    return { success: false, error: "Sign-in failed" };
+  }
+  
+  // Verify admin role using user ID from response
+  const isAdmin = await checkAdminRole(data.session.user.id);
+  if (!isAdmin) {
+    await supabase.auth.signOut();
+    return { success: false, error: "Access denied. Admin privileges required." };
+  }
+  
+  return { success: true };
 }
 
-// Admin fetch with JWT authentication
+/**
+ * Sign out and clear any cached admin state.
+ */
+export async function signOutAdmin(): Promise<void> {
+  console.log("[adminFetch] signOutAdmin called");
+  sessionStorage.removeItem("admin_verified");
+  
+  try {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      console.error("[adminFetch] signOut error:", error);
+    } else {
+      console.log("[adminFetch] signOut successful");
+    }
+  } catch (err) {
+    console.error("[adminFetch] signOut exception:", err);
+  }
+}
+
+/**
+ * Admin fetch with JWT authentication.
+ * Gets token from session, retries on 401.
+ */
 export async function adminFetch(path: string, init: RequestInit = {}): Promise<Response> {
-  const token = await getAuthToken();
+  const { data: { session } } = await supabase.auth.getSession();
+  const token = session?.access_token;
   
   if (!token) {
     throw new AdminAuthError("Not logged in. Please sign in to continue.");
@@ -101,118 +122,4 @@ export async function adminFetch(path: string, init: RequestInit = {}): Promise<
   }
 
   return res;
-}
-
-// Sign in with email/password
-export async function signInAdmin(email: string, password: string): Promise<{ success: boolean; error?: string }> {
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  });
-  
-  if (error) {
-    return { success: false, error: error.message };
-  }
-  
-  // Verify admin role - pass user ID directly to avoid getSession deadlock
-  const isAdmin = await checkAdminRole(data.session?.user?.id);
-  if (!isAdmin) {
-    await supabase.auth.signOut();
-    return { success: false, error: "Access denied. Admin privileges required." };
-  }
-  
-  return { success: true };
-}
-
-// Sign out
-export async function signOutAdmin(): Promise<void> {
-  console.log("[adminFetch] signOutAdmin called");
-  // Clear cache first
-  sessionStorage.removeItem("admin_verified");
-  
-  try {
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      console.error("[adminFetch] signOut error:", error);
-    } else {
-      console.log("[adminFetch] signOut successful");
-    }
-  } catch (err) {
-    console.error("[adminFetch] signOut exception:", err);
-    // Don't throw - we've already cleared the cache
-  }
-}
-
-// Check if currently authenticated as admin (with caching for faster loads)
-export async function isAuthenticatedAdmin(): Promise<boolean> {
-  const AUTH_TIMEOUT = 5000; // 5 second timeout
-
-  const timeout = new Promise<boolean>((resolve) => {
-    setTimeout(() => {
-      console.log("[adminFetch] isAuthenticatedAdmin timed out after 5s");
-      resolve(false);
-    }, AUTH_TIMEOUT);
-  });
-
-  const check = async (): Promise<boolean> => {
-    try {
-      console.log("[adminFetch] isAuthenticatedAdmin starting...");
-      const { data: { session }, error } = await supabase.auth.getSession();
-      
-      // Handle session errors or missing session
-      if (error || !session) {
-        console.log("[adminFetch] No valid session found:", error?.message);
-        sessionStorage.removeItem("admin_verified");
-        return false;
-      }
-      
-      // CRITICAL: Validate that access_token actually exists (handles hydration race)
-      if (!session.access_token) {
-        console.log("[adminFetch] Session exists but no access_token yet (hydration pending)");
-        sessionStorage.removeItem("admin_verified");
-        return false;
-      }
-      
-      // Check if session is expired
-      const expiresAt = session.expires_at;
-      if (expiresAt && expiresAt * 1000 < Date.now()) {
-        console.log("[adminFetch] Session expired, attempting refresh...");
-        const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
-        if (refreshError || !refreshData.session) {
-          console.log("[adminFetch] Session refresh failed:", refreshError?.message);
-          sessionStorage.removeItem("admin_verified");
-          return false;
-        }
-      }
-      
-      // Check if we've already verified admin status for this session
-      const cachedUserId = sessionStorage.getItem("admin_verified");
-      if (cachedUserId === session.user.id) {
-        // Double-check token still exists before trusting cache
-        if (session.access_token) {
-          console.log("[adminFetch] Using cached admin verification");
-          return true;
-        }
-        // Cache invalid - token missing
-        sessionStorage.removeItem("admin_verified");
-      }
-      
-      // Verify admin role and cache result - pass user ID to avoid getSession deadlock
-      console.log("[adminFetch] Checking admin role for user:", session.user.id);
-      const isAdmin = await checkAdminRole(session.user.id);
-      console.log("[adminFetch] Admin role check result:", isAdmin);
-      if (isAdmin) {
-        sessionStorage.setItem("admin_verified", session.user.id);
-      } else {
-        sessionStorage.removeItem("admin_verified");
-      }
-      return isAdmin;
-    } catch (err) {
-      console.error("[adminFetch] isAuthenticatedAdmin error:", err);
-      sessionStorage.removeItem("admin_verified");
-      return false;
-    }
-  };
-
-  return Promise.race([check(), timeout]);
 }
