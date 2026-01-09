@@ -3294,12 +3294,19 @@ async function handleGetCommentAttachments(req: Request, token: string, commentI
     }
 
     // Fetch attachments from prototype_comment_media
-    const { data: attachments, error } = await supabase
+    // EXCLUDE the screenshot_media_id since that's shown separately as the main screenshot
+    let query = supabase
       .from("prototype_comment_media")
       .select("id, filename, mime_type, size_bytes, uploader_type, created_at, storage_path")
       .eq("comment_id", commentId)
-      .eq("project_token", token)
-      .order("created_at", { ascending: true });
+      .eq("project_token", token);
+    
+    // Filter out the screenshot media if it exists
+    if (comment.screenshot_media_id) {
+      query = query.neq("id", comment.screenshot_media_id);
+    }
+    
+    const { data: attachments, error } = await query.order("created_at", { ascending: true });
 
     if (error) {
       console.error("Get attachments error:", error);
