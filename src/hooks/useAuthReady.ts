@@ -13,6 +13,25 @@ type AuthReadyState = {
 };
 
 /**
+ * Check if a session belongs to the operator (not client portal).
+ * Compares user ID from session with user ID stored in operator storage.
+ */
+const isOperatorSession = (session: Session | null): boolean => {
+  if (!session) return false;
+  
+  const operatorData = localStorage.getItem(OPERATOR_STORAGE_KEY);
+  if (!operatorData) return false;
+  
+  try {
+    const parsed = JSON.parse(operatorData);
+    // If session user ID matches operator storage user ID, it's an operator session
+    return parsed?.user?.id === session.user.id;
+  } catch {
+    return false;
+  }
+};
+
+/**
  * Client portal auth hook.
  * Ignores sessions from operator storage to prevent cross-contamination.
  */
@@ -32,18 +51,6 @@ export function useAuthReady(): AuthReadyState {
       return;
     }
 
-    // Check if the session came from operator storage (cross-contamination)
-    const isOperatorSession = (): boolean => {
-      const operatorData = localStorage.getItem(OPERATOR_STORAGE_KEY);
-      if (!operatorData) return false;
-      
-      // Default Supabase storage key for this project
-      const clientData = localStorage.getItem("sb-ararrbvhzaudfaxjwdrc-auth-token");
-      // If there's an operator session but no client session, 
-      // any auth event is likely from operator login bleeding through
-      return !clientData && !!operatorData;
-    };
-
     // Set up auth listener FIRST (Supabase best practice)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
@@ -51,7 +58,7 @@ export function useAuthReady(): AuthReadyState {
         console.log("[useAuthReady] onAuthStateChange:", event);
         
         // Ignore if this is an operator session bleeding through
-        if (session && isOperatorSession()) {
+        if (isOperatorSession(session)) {
           console.log("[useAuthReady] Ignoring operator session bleed");
           setState({ hydrated: true, session: null });
           return;
@@ -67,7 +74,7 @@ export function useAuthReady(): AuthReadyState {
       console.log("[useAuthReady] Initial getSession:", !!session);
       
       // Ignore if this is an operator session
-      if (session && isOperatorSession()) {
+      if (isOperatorSession(session)) {
         console.log("[useAuthReady] Ignoring operator session on init");
         setState({ hydrated: true, session: null });
         return;
