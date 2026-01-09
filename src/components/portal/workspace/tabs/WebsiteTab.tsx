@@ -8,6 +8,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import { VersionsList, type Version } from "../VersionsList";
 import { CropSelector } from "../CropSelector";
+import { FeedbackDetailModal } from "../FeedbackDetailModal";
 import { captureTabCropped, isTabCaptureSupported, type CaptureError } from "@/lib/tabCapture";
 
 interface FeedbackComment {
@@ -24,6 +25,9 @@ interface FeedbackComment {
   crop_y?: number | null;
   crop_w?: number | null;
   crop_h?: number | null;
+  edited_at?: string | null;
+  is_relevant?: boolean;
+  version_count?: number;
 }
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -70,6 +74,10 @@ export function WebsiteTab({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [comments, setComments] = useState<FeedbackComment[]>([]);
   const [isLoadingComments, setIsLoadingComments] = useState(false);
+  
+  // Detail modal state
+  const [selectedComment, setSelectedComment] = useState<FeedbackComment | null>(null);
+  const [showDetailModal, setShowDetailModal] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const attachInputRef = useRef<HTMLInputElement>(null);
@@ -395,9 +403,13 @@ export function WebsiteTab({
                     ? <Clock className="h-2.5 w-2.5 text-blue-500" />
                     : <CircleDot className="h-2.5 w-2.5 text-orange-500" />;
                   
-                  return (
+                    return (
                     <div
                       key={comment.id}
+                      onClick={() => {
+                        setSelectedComment(comment);
+                        setShowDetailModal(true);
+                      }}
                       className="rounded-md border border-border bg-background overflow-hidden hover:border-muted-foreground/30 transition-colors cursor-pointer"
                     >
                       {comment.screenshot_signed_url ? (
@@ -716,6 +728,18 @@ export function WebsiteTab({
           </div>
         </div>
       )}
+
+      {/* Feedback detail modal */}
+      <FeedbackDetailModal
+        comment={selectedComment as any}
+        open={showDetailModal}
+        onClose={() => {
+          setShowDetailModal(false);
+          setSelectedComment(null);
+        }}
+        token={token}
+        onCommentUpdated={fetchComments}
+      />
     </div>
   );
 }
