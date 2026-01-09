@@ -71,28 +71,43 @@ export default function OperatorLayout() {
     if (!hydrated) return; // Wait for auth hydration
     
     const checkAuth = async () => {
+      console.log("[OperatorLayout] Checking admin auth...");
       const isAdmin = await isAuthenticatedAdmin();
+      console.log("[OperatorLayout] isAdmin result:", isAdmin);
       setIsAuthed(isAdmin);
       if (isAdmin) {
         const email = await getAdminEmail();
         setUserEmail(email);
+      } else {
+        // Clear any stale state if not admin
+        setUserEmail(null);
       }
       setIsLoading(false);
     };
     checkAuth();
 
-    // Listen for auth state changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event) => {
+    // Listen for auth state changes - use sync callback to avoid deadlocks
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log("[OperatorLayout] Auth state changed:", event);
+      
       if (event === "SIGNED_OUT") {
+        // Immediate sync update for logout
         setIsAuthed(false);
         setUserEmail(null);
-      } else if (event === "SIGNED_IN") {
-        const isAdmin = await isAuthenticatedAdmin();
-        setIsAuthed(isAdmin);
-        if (isAdmin) {
-          const email = await getAdminEmail();
-          setUserEmail(email);
-        }
+        setIsLoading(false);
+      } else if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
+        // Defer the async admin check to avoid Supabase deadlock
+        setTimeout(async () => {
+          const isAdmin = await isAuthenticatedAdmin();
+          console.log("[OperatorLayout] Post-signin admin check:", isAdmin);
+          setIsAuthed(isAdmin);
+          if (isAdmin) {
+            const email = await getAdminEmail();
+            setUserEmail(email);
+          } else {
+            setUserEmail(null);
+          }
+        }, 0);
       }
     });
 
@@ -189,12 +204,22 @@ export default function OperatorLayout() {
   };
 
   const handleLogout = async () => {
-    await signOutAdmin();
+    console.log("[OperatorLayout] Logout clicked");
+    // Clear state immediately before async operation
     setIsAuthed(false);
     setUserEmail(null);
     setEmail("");
     setPassword("");
-    toast.success("Logged out");
+    
+    try {
+      await signOutAdmin();
+      console.log("[OperatorLayout] signOutAdmin completed");
+      toast.success("Logged out");
+    } catch (err) {
+      console.error("[OperatorLayout] Logout error:", err);
+      // State already cleared, show message anyway
+      toast.success("Logged out");
+    }
   };
 
   // Show loading state while hydrating or checking auth
