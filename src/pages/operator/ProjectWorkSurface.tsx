@@ -111,6 +111,8 @@ interface PrototypeComment {
   resolved_at: string | null;
   created_at: string;
   author_type: string;
+  parent_comment_id?: string | null;
+  is_internal?: boolean;
   // Anchor fields
   page_url?: string | null;
   page_path?: string | null;
@@ -123,6 +125,8 @@ interface PrototypeComment {
   x_pct?: number | null;
   y_pct?: number | null;
   text_hint?: string | null;
+  // Threading - replies populated by grouping
+  replies?: PrototypeComment[];
 }
 
 interface MediaItem {
@@ -457,15 +461,42 @@ export function ProjectWorkSurface({ project, onBack, onStatusChange }: ProjectW
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
-  // Filter comments
+  // Filter and group comments into threads
   const filteredComments = useMemo(() => {
-    if (commentFilter === "all") return comments;
-    if (commentFilter === "open") return comments.filter(c => !c.resolved_at);
-    return comments.filter(c => c.resolved_at);
+    // First separate top-level from replies
+    const topLevel = comments.filter(c => !c.parent_comment_id);
+    const replies = comments.filter(c => c.parent_comment_id);
+    
+    // Build a map of parent_id -> replies[]
+    const replyMap = new Map<string, PrototypeComment[]>();
+    replies.forEach(reply => {
+      const parentId = reply.parent_comment_id!;
+      const list = replyMap.get(parentId) || [];
+      list.push(reply);
+      replyMap.set(parentId, list);
+    });
+    
+    // Sort replies by created_at
+    replyMap.forEach(list => list.sort((a, b) => 
+      new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+    ));
+    
+    // Attach replies to top-level comments
+    const threaded = topLevel.map(c => ({
+      ...c,
+      replies: replyMap.get(c.id) || [],
+    }));
+    
+    // Now apply filter
+    if (commentFilter === "all") return threaded;
+    if (commentFilter === "open") return threaded.filter(c => !c.resolved_at);
+    return threaded.filter(c => c.resolved_at);
   }, [comments, commentFilter]);
 
-  const openCount = comments.filter(c => !c.resolved_at).length;
-  const resolvedCount = comments.filter(c => c.resolved_at).length;
+  // Count only top-level comments for badges
+  const topLevelComments = comments.filter(c => !c.parent_comment_id);
+  const openCount = topLevelComments.filter(c => !c.resolved_at).length;
+  const resolvedCount = topLevelComments.filter(c => c.resolved_at).length;
 
   // Set of message IDs that have been linked to comments
   const linkedMessageIds = useMemo(() => {

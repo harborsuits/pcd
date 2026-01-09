@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/select";
 import { 
   CheckCircle, Circle, Loader2, FileIcon, 
-  ExternalLink, Paperclip, X, Upload, Reply, RotateCcw, Send, Lock, Clock, CircleDot, XCircle, ChevronDown
+  ExternalLink, Paperclip, X, Upload, Reply, RotateCcw, Send, Lock, Clock, CircleDot, XCircle, ChevronDown, MessageSquare, CornerDownRight
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -22,7 +22,7 @@ import { adminFetch } from "@/lib/adminFetch";
 
 type CommentStatus = "open" | "in_progress" | "resolved" | "wont_do";
 
-interface PrototypeComment {
+export interface PrototypeComment {
   id: string;
   source_message_id: string | null;
   body: string;
@@ -45,6 +45,8 @@ interface PrototypeComment {
   crop_y?: number | null;
   crop_w?: number | null;
   crop_h?: number | null;
+  // Nested replies (populated by parent component)
+  replies?: PrototypeComment[];
 }
 
 
@@ -68,6 +70,7 @@ interface CommentCardProps {
   onStatusChange?: (commentId: string, status: CommentStatus, resolutionNote?: string) => void;
   isResolving: boolean;
   onReplyAdded?: () => void;
+  isReply?: boolean;
 }
 
 export function CommentCard({
@@ -79,14 +82,17 @@ export function CommentCard({
   onResolveToggle,
   isResolving,
   onReplyAdded,
+  isReply = false,
 }: CommentCardProps) {
   const [showAttachments, setShowAttachments] = useState(false);
   const [showReply, setShowReply] = useState(false);
   const [replyText, setReplyText] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
+  
+  const hasReplies = (comment.replies?.length ?? 0) > 0;
 
-  // Fetch attachments for this comment
+  // Fetch attachments count eagerly to show badge (always query, not just when expanded)
   const { data: attachmentsData, isLoading: attachmentsLoading } = useQuery({
     queryKey: ["comment-attachments", projectToken, comment.id],
     queryFn: async () => {
@@ -94,7 +100,6 @@ export function CommentCard({
       if (!res.ok) throw new Error("Failed to fetch attachments");
       return res.json() as Promise<{ attachments: Attachment[] }>;
     },
-    enabled: showAttachments,
   });
 
   // Fetch signed URL for screenshot (bucket is private)
@@ -191,80 +196,112 @@ export function CommentCard({
   };
 
   return (
-    <div
-      className={`p-3 rounded-lg border transition-colors ${
-        isHighlighted ? "border-primary bg-primary/5" : "border-border hover:bg-muted/50"
-      } ${isResolved ? "opacity-70" : ""} ${isInternal ? "border-dashed border-yellow-500/50 bg-yellow-50/30 dark:bg-yellow-900/10" : ""}`}
-    >
-      {/* Internal badge */}
-      {isInternal && (
-        <div className="mb-2 flex items-center gap-1">
-          <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-400">
-            Internal Note
-          </span>
-        </div>
-      )}
-      {/* Header row */}
-      <div 
-        className="flex items-start justify-between gap-2 cursor-pointer"
-        onClick={() => onJumpToPin(comment)}
+    <div className={isReply ? "ml-4 pl-3 border-l-2 border-border/50" : ""}>
+      <div
+        className={`p-3 rounded-lg border transition-colors ${
+          isHighlighted ? "border-primary bg-primary/5" : "border-border hover:bg-muted/50"
+        } ${isResolved ? "opacity-70" : ""} ${isInternal ? "border-dashed border-yellow-500/50 bg-yellow-50/30 dark:bg-yellow-900/10" : ""}`}
       >
-        <div className="flex items-start gap-2 min-w-0">
-          <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0 ${
-            isResolved ? "bg-muted text-muted-foreground" : "bg-primary text-primary-foreground"
-          }`}>
-            {index + 1}
+        {/* Reply indicator */}
+        {isReply && (
+          <div className="flex items-center gap-1 text-[10px] text-muted-foreground mb-1.5">
+            <CornerDownRight className="h-2.5 w-2.5" />
+            Reply
           </div>
-          <div className="min-w-0">
-            <p className={`text-sm line-clamp-2 ${isResolved ? "line-through text-muted-foreground" : ""}`}>
-              {comment.body}
-            </p>
-            <p className="text-[10px] text-muted-foreground mt-1">
-              {comment.author_type === "client" ? "Client" : "Admin"} • {format(new Date(comment.created_at), "MMM d, h:mm a")}
-            </p>
+        )}
+        
+        {/* Internal badge */}
+        {isInternal && (
+          <div className="mb-2 flex items-center gap-1">
+            <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-400">
+              Internal Note
+            </span>
+          </div>
+        )}
+        {/* Header row */}
+        <div 
+          className="flex items-start justify-between gap-2 cursor-pointer"
+          onClick={() => onJumpToPin(comment)}
+        >
+          <div className="flex items-start gap-2 min-w-0">
+            {!isReply && (
+              <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0 ${
+                isResolved ? "bg-muted text-muted-foreground" : "bg-primary text-primary-foreground"
+              }`}>
+                {index + 1}
+              </div>
+            )}
+            <div className="min-w-0">
+              <p className={`text-sm line-clamp-2 ${isResolved ? "line-through text-muted-foreground" : ""}`}>
+                {comment.body}
+              </p>
+              <div className="flex items-center gap-2 mt-1 flex-wrap">
+                <p className="text-[10px] text-muted-foreground">
+                  {comment.author_type === "client" ? "Client" : "Admin"} • {format(new Date(comment.created_at), "MMM d, h:mm a")}
+                </p>
+                {/* Inline attachment count badge */}
+                {attachments.length > 0 && (
+                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-700">
+                    <Paperclip className="h-2 w-2 mr-0.5" />
+                    {attachments.length} file{attachments.length !== 1 ? 's' : ''}
+                  </Badge>
+                )}
+                {/* Reply count badge */}
+                {hasReplies && (
+                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-300 dark:border-indigo-700">
+                    <MessageSquare className="h-2 w-2 mr-0.5" />
+                    {comment.replies!.length} repl{comment.replies!.length !== 1 ? 'ies' : 'y'}
+                  </Badge>
+                )}
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center gap-1 flex-shrink-0">
+            {/* Reply button */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowReply(!showReply);
+              }}
+              title="Reply"
+            >
+              <Reply className="h-3 w-3" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowAttachments(!showAttachments);
+              }}
+              title="Attachments"
+            >
+              <Paperclip className="h-3 w-3" />
+              {attachments.length > 0 && !showAttachments && (
+                <span className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-purple-500 text-white text-[8px] rounded-full flex items-center justify-center">
+                  {attachments.length}
+                </span>
+              )}
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6"
+              onClick={(e) => {
+                e.stopPropagation();
+                onResolveToggle(comment.id, !isResolved);
+              }}
+              disabled={isResolving}
+              title={isResolved ? "Reopen" : "Resolve"}
+            >
+              {isResolved ? <RotateCcw className="h-3 w-3" /> : <CheckCircle className="h-3 w-3" />}
+            </Button>
           </div>
         </div>
-        <div className="flex items-center gap-1 flex-shrink-0">
-          {/* Reply button */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6"
-            onClick={(e) => {
-              e.stopPropagation();
-              setShowReply(!showReply);
-            }}
-            title="Reply"
-          >
-            <Reply className="h-3 w-3" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6"
-            onClick={(e) => {
-              e.stopPropagation();
-              setShowAttachments(!showAttachments);
-            }}
-            title="Attachments"
-          >
-            <Paperclip className="h-3 w-3" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6"
-            onClick={(e) => {
-              e.stopPropagation();
-              onResolveToggle(comment.id, !isResolved);
-            }}
-            disabled={isResolving}
-            title={isResolved ? "Reopen" : "Resolve"}
-          >
-            {isResolved ? <RotateCcw className="h-3 w-3" /> : <CheckCircle className="h-3 w-3" />}
-          </Button>
-        </div>
-      </div>
 
       {/* Screenshot preview */}
       {comment.screenshot_path && screenshotUrl && (
@@ -431,5 +468,26 @@ export function CommentCard({
         </div>
       )}
     </div>
+    
+    {/* Render nested replies */}
+    {hasReplies && (
+      <div className="mt-2 space-y-2">
+        {comment.replies!.map((reply, replyIdx) => (
+          <CommentCard
+            key={reply.id}
+            comment={reply}
+            index={replyIdx}
+            projectToken={projectToken}
+            isHighlighted={false}
+            onJumpToPin={onJumpToPin}
+            onResolveToggle={onResolveToggle}
+            isResolving={isResolving}
+            onReplyAdded={onReplyAdded}
+            isReply
+          />
+        ))}
+      </div>
+    )}
+  </div>
   );
 }

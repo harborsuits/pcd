@@ -30,7 +30,7 @@ export function FeedbackPanel({
 }: FeedbackPanelProps) {
   const [activeTab, setActiveTab] = useState<string>("open");
 
-  // Group comments by status (exclude is_relevant === false from default view)
+  // Group comments by status and thread replies under parents
   const grouped = useMemo(() => {
     const result = {
       open: [] as CommentData[],
@@ -39,20 +39,42 @@ export function FeedbackPanel({
       not_relevant: [] as CommentData[],
     };
 
-    comments
-      .filter(c => !c.archived_at)
-      .forEach(c => {
-        // Handle "not relevant" as a separate category
-        if (c.is_relevant === false) {
-          result.not_relevant.push(c);
-          return;
-        }
-        
-        const status = getEffectiveStatus(c);
-        if (status === "open") result.open.push(c);
-        else if (status === "in_progress") result.in_progress.push(c);
-        else result.resolved.push(c);
-      });
+    // First, separate top-level comments from replies
+    const topLevel = comments.filter(c => !c.archived_at && !c.parent_comment_id);
+    const replies = comments.filter(c => !c.archived_at && c.parent_comment_id);
+    
+    // Build a map of parent_id -> replies[]
+    const replyMap = new Map<string, CommentData[]>();
+    replies.forEach(reply => {
+      const parentId = reply.parent_comment_id!;
+      const list = replyMap.get(parentId) || [];
+      list.push(reply);
+      replyMap.set(parentId, list);
+    });
+    
+    // Sort replies by created_at
+    replyMap.forEach(list => list.sort((a, b) => 
+      new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+    ));
+
+    // Group top-level comments with their replies attached
+    topLevel.forEach(c => {
+      const commentWithReplies: CommentData = {
+        ...c,
+        replies: replyMap.get(c.id) || [],
+      };
+      
+      // Handle "not relevant" as a separate category
+      if (c.is_relevant === false) {
+        result.not_relevant.push(commentWithReplies);
+        return;
+      }
+      
+      const status = getEffectiveStatus(c);
+      if (status === "open") result.open.push(commentWithReplies);
+      else if (status === "in_progress") result.in_progress.push(commentWithReplies);
+      else result.resolved.push(commentWithReplies);
+    });
 
     return result;
   }, [comments]);

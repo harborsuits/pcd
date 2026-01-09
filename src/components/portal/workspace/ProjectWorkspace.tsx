@@ -154,12 +154,16 @@ export function ProjectWorkspace({
   const versionComments = comments.filter(c => c.prototype_id === selectedVersion?.id);
 
   // Upload screenshot to storage and get media_id
-  const uploadScreenshot = useCallback(async (file: File | Blob): Promise<{ mediaId: string; path: string }> => {
+  const uploadScreenshot = useCallback(async (file: File | Blob, prototypeId?: string): Promise<{ mediaId: string; path: string }> => {
     const formData = new FormData();
     formData.append("file", file);
+    if (prototypeId) {
+      formData.append("prototype_id", prototypeId);
+    }
 
+    // Use /screenshot endpoint for POST uploads (not /media which is GET only)
     const res = await fetch(
-      `${SUPABASE_URL}/functions/v1/portal/${token}/media`,
+      `${SUPABASE_URL}/functions/v1/portal/${token}/screenshot`,
       {
         method: "POST",
         headers: {
@@ -255,7 +259,7 @@ export function ProjectWorkspace({
       const blob = await response.blob();
       const file = new File([blob], `screenshot-${Date.now()}.png`, { type: "image/png" });
       
-      const { mediaId, path } = await uploadScreenshot(file);
+      const { mediaId, path } = await uploadScreenshot(file, selectedVersion?.id);
 
       // Upload attachment files and collect media IDs
       const attachmentMediaIds: string[] = [];
