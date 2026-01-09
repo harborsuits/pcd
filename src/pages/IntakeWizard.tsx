@@ -43,6 +43,7 @@ type TierType =
   | "website_essential" | "website_growth" | "website_premium"  // Website-only tiers
   | "ai_front_door" | "ai_booking" | "ai_full"  // AI-only tiers
   | "care_starter" | "care_growth"  // Care plan tiers
+  | "custom"  // "Not sure" option
   | "";
 
 const TIER_PARAM_MAP: Record<string, TierType> = {
@@ -498,7 +499,7 @@ const GetDemo = () => {
         return needsServiceArea ? basicsValid && formData.serviceArea.trim() : basicsValid;
       // Tier selection step (for "both" without pre-selected tier)
       case "tier":
-        return !!formData.tier;
+        return !!formData.tier || formData.tier === "custom";
       // Track selection step
       case "track":
         return !!formData.intakeTrack;
@@ -944,84 +945,75 @@ const GetDemo = () => {
   const WEBSITE_TIER_OPTIONS = [
     { 
       value: "website_essential", 
-      label: "Essential Website", 
-      price: "$750",
+      label: "Essential", 
+      price: "Starting at $750",
       priceType: "one-time" as const,
-      description: "Fast, mobile-optimized site with core pages (1–5 pages).",
-      features: ["Click-to-call + contact forms", "Google Maps embed", "Basic SEO setup"],
+      description: "Get online professionally with a clean, fast site.",
     },
     { 
       value: "website_growth", 
-      label: "Growth Website", 
-      price: "$1,500",
+      label: "Growth", 
+      price: "Starting at $1,500",
       priceType: "one-time" as const,
-      description: "Extended pages with conversion focus and booking integration (5–8 pages).",
-      features: ["Booking or intake integration", "Lead capture flows", "Light animations"],
+      description: "Turn visitors into leads with booking + forms.",
       popular: true,
     },
     { 
       value: "website_premium", 
-      label: "Premium Website", 
-      price: "$2,500+",
+      label: "Premium", 
+      price: "Starting at $2,500",
       priceType: "one-time" as const,
-      description: "Custom features, animations, and third-party integrations.",
-      features: ["Advanced interactions", "Custom user flows", "CRM connections"],
+      description: "Custom design with advanced features + integrations.",
     },
   ];
 
   const AI_TIER_OPTIONS = [
     { 
       value: "ai_front_door", 
-      label: "AI Front Door", 
-      price: "$450/mo",
+      label: "Front Door", 
+      price: "Starting at $450/mo",
       priceType: "monthly" as const,
-      description: "24/7 call answering, routing, and follow-ups.",
-      features: ["Answers calls + captures info", "After-hours handling", "Call summaries"],
+      description: "Never miss a call — AI answers 24/7.",
     },
     { 
       value: "ai_booking", 
-      label: "AI Front Door + Booking", 
-      price: "$700/mo",
+      label: "Front Door + Booking", 
+      price: "Starting at $700/mo",
       priceType: "monthly" as const,
-      description: "Includes scheduling integration for appointments.",
-      features: ["Everything in Front Door", "Single or multi-staff scheduling", "Confirmation texts/emails"],
+      description: "Fill your calendar automatically.",
       popular: true,
     },
     { 
       value: "ai_full", 
-      label: "AI + Booking + CRM", 
-      price: "$950/mo",
+      label: "Full AI Suite", 
+      price: "Starting at $950/mo",
       priceType: "monthly" as const,
-      description: "Full automation with lead management and CRM context.",
-      features: ["Everything in Booking", "CRM logging + tagging", "Priority routing"],
+      description: "AI + booking + CRM — the complete system.",
     },
   ];
 
   const BUNDLE_TIER_OPTIONS = [
     { 
       value: "starter", 
-      label: "Starter System", 
-      price: "$575/mo",
+      label: "Starter", 
+      price: "Starting at $575/mo",
       priceType: "monthly" as const,
-      buildRange: "$750–$1,250",
-      description: "Essential website + AI Front Door. Clean baseline for owner-operators.",
+      description: "Get online professionally with AI handling your calls.",
     },
     { 
       value: "growth", 
-      label: "Growth System", 
-      price: "$875/mo",
+      label: "Growth", 
+      price: "Starting at $875/mo",
       priceType: "monthly" as const,
-      buildRange: "$1,500–$2,500",
-      description: "Booking + stronger lead capture + CRM basics. For businesses that live on appointments.",
+      description: "Turn visitors into booked appointments automatically.",
       popular: true,
     },
     { 
       value: "full_ops", 
       label: "Full Operations", 
-      price: "$1,100/mo",
+      price: "Starting at $1,100/mo",
       priceType: "monthly" as const,
-      buildRange: "$2,500–$4,000+",
-      description: "Premium site + AI + booking + CRM context + managed updates. The full system.",
+      description: "We run your digital front desk end-to-end.",
     },
   ];
 
@@ -1029,12 +1021,24 @@ const GetDemo = () => {
   const getTierOptionsForService = () => {
     switch (formData.serviceType) {
       case "website":
-        return { options: WEBSITE_TIER_OPTIONS, title: "Which website tier fits your needs?", subtitle: "Choose a package to get started." };
+        return { 
+          options: WEBSITE_TIER_OPTIONS, 
+          title: "Pick a starting point", 
+          subtitle: "These are ballpark ranges — we'll fine-tune together." 
+        };
       case "ai":
-        return { options: AI_TIER_OPTIONS, title: "Which AI receptionist tier fits your needs?", subtitle: "Choose a package to get started." };
+        return { 
+          options: AI_TIER_OPTIONS, 
+          title: "Pick a starting point", 
+          subtitle: "These are ballpark ranges — we'll fine-tune together." 
+        };
       case "both":
       default:
-        return { options: BUNDLE_TIER_OPTIONS, title: "Which system fits your needs?", subtitle: "All tiers include website + AI receptionist." };
+        return { 
+          options: BUNDLE_TIER_OPTIONS, 
+          title: "Pick a starting point", 
+          subtitle: "Website + AI included in all tiers. We'll fine-tune together." 
+        };
     }
   };
 
@@ -1043,19 +1047,26 @@ const GetDemo = () => {
     
     return (
       <div className="space-y-6">
-        <div className="text-center mb-8">
+        <div className="text-center mb-6">
           <h2 className="font-serif text-2xl font-bold mb-2">{title}</h2>
           <p className="text-muted-foreground">{subtitle}</p>
         </div>
         
-        <div className="grid gap-4">
+        {/* Reassurance banner */}
+        <div className="rounded-lg border border-border/50 bg-secondary/30 p-3 text-center">
+          <p className="text-sm text-muted-foreground">
+            💡 These are starting points, not final quotes. We'll work with you to find the right fit.
+          </p>
+        </div>
+        
+        <div className="grid gap-3">
           {options.map((tier) => (
             <button
               key={tier.value}
               type="button"
               onClick={() => updateField("tier", tier.value as TierType)}
               className={cn(
-                "relative p-5 rounded-xl border-2 text-left transition-all duration-200",
+                "relative p-4 rounded-xl border-2 text-left transition-all duration-200",
                 "hover:border-primary/50 hover:shadow-md",
                 formData.tier === tier.value 
                   ? "border-primary bg-primary/5" 
@@ -1067,43 +1078,49 @@ const GetDemo = () => {
                   Recommended
                 </span>
               )}
-              <div className="flex items-start justify-between gap-4">
+              <div className="flex items-center justify-between gap-4">
                 <div className="flex-1">
-                  <h3 className="font-semibold text-lg">{tier.label}</h3>
-                  <p className="text-sm text-muted-foreground mt-1">{tier.description}</p>
-                  {'buildRange' in tier && (
-                    <p className="text-xs text-muted-foreground/70 mt-2">One-time build: {tier.buildRange}</p>
-                  )}
-                  {'features' in tier && tier.features && (
-                    <ul className="text-xs text-muted-foreground/70 mt-2 space-y-0.5">
-                      {tier.features.map((f, i) => (
-                        <li key={i} className="flex items-center gap-1.5">
-                          <Check className="w-3 h-3 text-primary" />
-                          {f}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
+                  <h3 className="font-semibold">{tier.label}</h3>
+                  <p className="text-sm text-muted-foreground mt-0.5">{tier.description}</p>
                 </div>
                 <div className="text-right shrink-0">
-                  <p className="text-xl font-bold text-primary">{tier.price}</p>
-                  {tier.priceType === "monthly" && (
-                    <p className="text-xs text-muted-foreground">monthly</p>
-                  )}
+                  <p className="text-base font-medium text-muted-foreground">{tier.price}</p>
                 </div>
               </div>
               {formData.tier === tier.value && (
-                <div className="absolute top-4 right-4">
+                <div className="absolute top-3 right-3">
                   <Check className="w-5 h-5 text-primary" />
                 </div>
               )}
             </button>
           ))}
+          
+          {/* "Not sure" escape hatch option */}
+          <button
+            type="button"
+            onClick={() => updateField("tier", "custom" as TierType)}
+            className={cn(
+              "relative p-4 rounded-xl border-2 text-left transition-all duration-200",
+              "hover:border-primary/50 hover:shadow-md",
+              formData.tier === "custom" 
+                ? "border-primary bg-primary/5" 
+                : "border-dashed border-muted-foreground/30 bg-muted/20"
+            )}
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-secondary/50 flex items-center justify-center shrink-0">
+                <MessageSquare className="w-5 h-5 text-muted-foreground" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold">Not sure yet</h3>
+                <p className="text-sm text-muted-foreground">We'll figure it out together on a quick call.</p>
+              </div>
+              {formData.tier === "custom" && (
+                <Check className="w-5 h-5 text-primary shrink-0" />
+              )}
+            </div>
+          </button>
         </div>
-        
-        <p className="text-xs text-muted-foreground text-center">
-          Choose a tier to get started — you can adjust later.
-        </p>
       </div>
     );
   };
