@@ -197,9 +197,9 @@ export async function isAuthenticatedAdmin(): Promise<boolean> {
         sessionStorage.removeItem("admin_verified");
       }
       
-      // Verify admin role and cache result
+      // Verify admin role and cache result - pass user ID to avoid getSession deadlock
       console.log("[adminFetch] Checking admin role for user:", session.user.id);
-      const isAdmin = await checkAdminRole();
+      const isAdmin = await checkAdminRole(session.user.id);
       console.log("[adminFetch] Admin role check result:", isAdmin);
       if (isAdmin) {
         sessionStorage.setItem("admin_verified", session.user.id);
