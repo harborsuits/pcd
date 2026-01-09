@@ -846,7 +846,7 @@ const GetDemo = () => {
       
       <div className="grid gap-4 md:grid-cols-2">
         <ServiceCard
-          value="website"
+          value="demo"
           icon={Globe}
           title="Website Demo"
           description="See an instant preview of your site in 3 styles. Takes 30 seconds."
