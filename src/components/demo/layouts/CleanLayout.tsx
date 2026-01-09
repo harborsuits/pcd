@@ -1,8 +1,18 @@
-import { MapPin, Star, Phone, Quote, Camera } from "lucide-react";
+import { MapPin, Star, Phone, Quote, Award, Users, Calendar, CheckCircle, Wrench, Shield, Clock, ThumbsUp } from "lucide-react";
+import { motion } from "framer-motion";
 import { getHeroImage, getGalleryImagesForBusiness, getInitials } from "../themes";
 import { getTradeDisplayName, getTradeCTAText, isKnownTrade } from "@/lib/categoryServices";
 import { getTradeIcon } from "@/lib/tradeIcons";
 import { getStableTestimonials } from "@/lib/testimonials";
+import { LampContainer } from "@/components/ui/lamp";
+import { 
+  HoverSlider, 
+  TextStaggerHover, 
+  HoverSliderImageWrap, 
+  HoverSliderImage 
+} from "@/components/ui/animated-slideshow";
+import { AboutSection } from "@/components/ui/about-section";
+import { DemoFooter } from "@/components/ui/demo-footer";
 
 interface LayoutProps {
   templateType: string;
@@ -20,19 +30,19 @@ export function CleanLayout({ templateType, content, businessName, onQuoteClick 
   const reviewCount = (content.reviewCount as number) || null;
   const tagline = (content.tagline as string) || "";
   const photoReferences = (content.photoReferences as string[]) || [];
+  const address = content.address as string;
+  
   const heroResult = getHeroImage({ templateType, businessName });
   const heroImage = heroResult.heroImage;
   const galleryResult = getGalleryImagesForBusiness({
     templateType,
     businessName,
     city,
-    count: 3,
+    count: 6,
     excludeHero: heroImage,
-    photoReferences, // Use real Google photos when available
+    photoReferences,
   });
   const galleryImages = galleryResult.images;
-  const gallerySource = galleryResult.source;
-  const initials = getInitials(businessName);
   const locationString = state ? `${city}, ${state}` : city;
   const nearbyTowns = (content.nearbyTowns as string[]) || [];
 
@@ -43,134 +53,169 @@ export function CleanLayout({ templateType, content, businessName, onQuoteClick 
   const heroSubheadline = knownTrade 
     ? `Professional ${tradeName} Services in ${locationString}`
     : `Professional Services in ${locationString}`;
-  const servicesTitle = knownTrade ? `Our ${tradeName} Services` : "Our Services";
   const testimonials = getStableTestimonials({ businessName, city, templateType, count: 1 });
   const TradeIcon = getTradeIcon(templateType);
 
-  return (
-    <div className="pb-32">
-      {/* Clean Hero - White/light background, centered, minimal */}
-      <section className="bg-gradient-to-b from-background via-muted/20 to-background py-16 md:py-24">
-        <div className="container mx-auto px-4">
-          <div className="max-w-3xl mx-auto text-center">
-            {/* Small subtle logo with trade icon */}
-            <div className="flex justify-center mb-6">
-              <div className="w-14 h-14 bg-primary/10 text-primary rounded-full flex items-center justify-center">
-                <TradeIcon className="w-7 h-7" />
-              </div>
-            </div>
-            
-            <h1 className="text-3xl md:text-4xl lg:text-5xl font-medium text-foreground mb-3 tracking-tight">
-              {businessName}
-            </h1>
-            
-            {/* Trade-aware subheadline */}
-            <p className="text-lg text-primary font-medium mb-4">
-              {heroSubheadline}
-            </p>
-            
-            {tagline && (
-              <p className="text-muted-foreground mb-6 max-w-xl mx-auto">
-                {tagline}
-              </p>
-            )}
-            
-            {/* Minimal info row */}
-            <div className="flex flex-wrap items-center justify-center gap-4 mb-8 text-sm text-muted-foreground">
-              <span className="flex items-center gap-1.5">
-                <MapPin className="w-4 h-4" />
-                {locationString}
-              </span>
-              {rating && (
-                <span className="flex items-center gap-1.5">
-                  <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                  {rating.toFixed(1)} {reviewCount && `(${reviewCount})`}
-                </span>
-              )}
-              {phone && (
-                <a href={`tel:${phone}`} className="flex items-center gap-1.5 hover:text-foreground">
-                  <Phone className="w-4 h-4" />
-                  {phone}
-                </a>
-              )}
-            </div>
-            
-            <button 
-              onClick={onQuoteClick}
-              className="px-6 py-3 bg-primary text-primary-foreground rounded-md font-medium hover:bg-primary/90 transition-colors"
-            >
-              {ctaText.button}
-            </button>
-          </div>
-        </div>
-      </section>
+  // Prepare services for HoverSlider (max 5 items with images)
+  const slideshowServices = services.slice(0, Math.min(5, galleryImages.length)).map((service, index) => ({
+    id: `service-${index}`,
+    title: service,
+    imageUrl: galleryImages[index] || heroImage,
+  }));
 
-      {/* Simple Services - horizontal scroll on mobile, clean grid on desktop */}
-      {services.length > 0 && (
-        <section className="py-12 border-t border-border/50">
-          <div className="container mx-auto px-4">
-            <h2 className="text-xl font-medium text-foreground text-center mb-8">{servicesTitle}</h2>
-            <div className="flex flex-wrap justify-center gap-3 max-w-3xl mx-auto">
-              {services.slice(0, 6).map((service, index) => (
-                <span 
-                  key={index}
-                  className="px-4 py-2 bg-muted/50 text-foreground rounded-full text-sm border border-border/50"
-                >
-                  {service}
-                </span>
-              ))}
+  // Prepare services for AboutSection
+  const aboutServices = services.slice(0, 6).map((service, index) => ({
+    icon: index % 4 === 0 ? <Wrench className="h-5 w-5" /> : 
+          index % 4 === 1 ? <Shield className="h-5 w-5" /> :
+          index % 4 === 2 ? <Clock className="h-5 w-5" /> :
+          <ThumbsUp className="h-5 w-5" />,
+    title: service,
+    description: `Professional ${service.toLowerCase()} services delivered with expertise and attention to detail. We ensure quality results every time.`,
+  }));
+
+  // Stats for AboutSection
+  const stats = [
+    { icon: <Star className="h-5 w-5" />, value: rating ? Math.round(rating * 10) / 10 * 20 : 98, label: "Satisfaction Rate", suffix: "%" },
+    { icon: <Users className="h-5 w-5" />, value: reviewCount || 150, label: "Happy Clients", suffix: "+" },
+    { icon: <Calendar className="h-5 w-5" />, value: 10, label: "Years Experience", suffix: "+" },
+    { icon: <Award className="h-5 w-5" />, value: services.length || 8, label: "Services Offered", suffix: "" },
+  ];
+
+  return (
+    <div className="bg-slate-950">
+      {/* Hero Section with Lamp Effect */}
+      <LampContainer className="min-h-[80vh] bg-slate-950">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5, duration: 0.8 }}
+          className="text-center"
+        >
+          {/* Trade icon badge */}
+          <div className="flex justify-center mb-6">
+            <div className="w-16 h-16 bg-blue-600/20 text-blue-400 rounded-full flex items-center justify-center border border-blue-500/30">
+              <TradeIcon className="w-8 h-8" />
             </div>
           </div>
+
+          <h1 className="bg-gradient-to-b from-white to-slate-400 bg-clip-text text-center text-4xl font-bold tracking-tight text-transparent md:text-6xl lg:text-7xl">
+            {businessName}
+          </h1>
+          
+          <p className="mt-4 text-lg text-blue-400 font-medium md:text-xl">
+            {heroSubheadline}
+          </p>
+          
+          {tagline && (
+            <p className="mt-3 text-slate-400 max-w-xl mx-auto">
+              {tagline}
+            </p>
+          )}
+
+          {/* Info badges */}
+          <div className="flex flex-wrap items-center justify-center gap-4 mt-8 text-sm">
+            <span className="flex items-center gap-2 px-4 py-2 rounded-full bg-slate-800/50 text-slate-300 border border-slate-700">
+              <MapPin className="w-4 h-4 text-blue-400" />
+              {locationString}
+            </span>
+            {rating && (
+              <span className="flex items-center gap-2 px-4 py-2 rounded-full bg-slate-800/50 text-slate-300 border border-slate-700">
+                <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                {rating.toFixed(1)} {reviewCount && `(${reviewCount} reviews)`}
+              </span>
+            )}
+            {phone && (
+              <a 
+                href={`tel:${phone}`} 
+                className="flex items-center gap-2 px-4 py-2 rounded-full bg-blue-600/20 text-blue-300 border border-blue-500/30 hover:bg-blue-600/30 transition-colors"
+              >
+                <Phone className="w-4 h-4" />
+                {phone}
+              </a>
+            )}
+          </div>
+
+          {/* CTA Button */}
+          <button 
+            onClick={onQuoteClick}
+            className="mt-8 px-8 py-4 bg-blue-600 text-white rounded-full font-semibold hover:bg-blue-500 transition-colors shadow-lg shadow-blue-600/25"
+          >
+            {ctaText.button}
+          </button>
+        </motion.div>
+      </LampContainer>
+
+      {/* Services Slideshow Section */}
+      {slideshowServices.length > 0 && (
+        <section className="bg-white py-20 md:py-28">
+          <HoverSlider className="container mx-auto px-4">
+            <div className="mb-8">
+              <span className="text-sm font-medium text-blue-600 uppercase tracking-wider">
+                / our services
+              </span>
+            </div>
+
+            <div className="flex flex-col gap-10 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex flex-col gap-4 lg:w-1/2">
+                {slideshowServices.map((slide, index) => (
+                  <TextStaggerHover
+                    key={slide.id}
+                    text={slide.title}
+                    index={index}
+                  />
+                ))}
+              </div>
+              
+              <HoverSliderImageWrap className="lg:w-2/5">
+                {slideshowServices.map((slide, index) => (
+                  <div key={slide.id} className="relative">
+                    <HoverSliderImage
+                      index={index}
+                      imageUrl={slide.imageUrl}
+                    />
+                  </div>
+                ))}
+              </HoverSliderImageWrap>
+            </div>
+          </HoverSlider>
         </section>
       )}
 
-      {/* Gallery / Recent Work - Trade-specific */}
-      <section className="py-12 bg-muted/20">
-        <div className="container mx-auto px-4">
-          <div className="max-w-3xl mx-auto">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-2">
-                <Camera className="w-5 h-5 text-primary" />
-                <h2 className="text-xl font-medium text-foreground">
-                  {knownTrade ? `Recent ${tradeName} Work` : "Recent Work"}
-                </h2>
-              </div>
-              <p className="text-sm text-muted-foreground hidden md:block">
-                {knownTrade ? "Photos representative of typical projects" : "Sample project photos"}
-              </p>
-            </div>
+      {/* About Section with Stats */}
+      <AboutSection
+        businessName={businessName}
+        tagline={tagline || `We are dedicated to providing the highest quality ${tradeName.toLowerCase()} services in ${locationString}. Our team brings years of experience and a commitment to excellence to every project.`}
+        services={aboutServices}
+        stats={stats}
+        centerImageUrl={galleryImages[0] || heroImage}
+        onCtaClick={onQuoteClick}
+        ctaText={ctaText.button}
+      />
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {galleryImages.map((src, i) => (
-                <div key={i} className="overflow-hidden rounded-lg border border-border/50 bg-muted/30">
-                  <img
-                    src={src}
-                    alt={knownTrade ? `${tradeName} project photo ${i + 1}` : `Project photo ${i + 1}`}
-                    className="h-44 w-full object-cover hover:scale-105 transition-transform duration-300"
-                    loading="lazy"
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Testimonial - Social Proof */}
-      <section className="py-12">
+      {/* Testimonial Section */}
+      <section className="bg-slate-900 py-20">
         <div className="container mx-auto px-4">
-          <div className="max-w-2xl mx-auto text-center">
-            <h2 className="text-sm uppercase tracking-widest text-muted-foreground mb-6">
-              Trusted by Local Customers
-            </h2>
+          <div className="max-w-3xl mx-auto text-center">
+            <span className="text-sm font-medium text-blue-400 uppercase tracking-wider mb-4 block">
+              What Our Clients Say
+            </span>
+            
             {testimonials.map((t, i) => (
-              <div key={i} className="relative">
-                <Quote className="w-8 h-8 text-primary/20 mx-auto mb-4" />
-                <blockquote className="text-lg text-foreground italic mb-4">
-                  {t.quote}
+              <div key={i} className="relative mt-8">
+                <Quote className="w-12 h-12 text-blue-500/20 mx-auto mb-6" />
+                
+                {/* Star rating */}
+                <div className="flex justify-center gap-1 mb-6">
+                  {[...Array(5)].map((_, starIndex) => (
+                    <Star key={starIndex} className="w-5 h-5 fill-yellow-400 text-yellow-400" />
+                  ))}
+                </div>
+                
+                <blockquote className="text-xl md:text-2xl text-white font-medium leading-relaxed mb-6">
+                  "{t.quote}"
                 </blockquote>
-                <cite className="text-sm text-muted-foreground not-italic">
-                  {t.author}
+                <cite className="text-slate-400 not-italic">
+                  — {t.author}
                 </cite>
               </div>
             ))}
@@ -178,47 +223,90 @@ export function CleanLayout({ templateType, content, businessName, onQuoteClick 
         </div>
       </section>
 
-      {/* Location info - simple text block */}
-      <section className="py-12 border-t border-border/50">
-        <div className="container mx-auto px-4 text-center max-w-2xl">
-          <h2 className="text-xl font-medium text-foreground mb-3">
-            Serving {city}
-          </h2>
-          {nearbyTowns.length > 0 && (
-            <p className="text-muted-foreground">
-              Also available in {nearbyTowns.slice(0, 4).join(", ")}
-            </p>
-          )}
+      {/* Service Area Section */}
+      <section className="bg-slate-50 py-16">
+        <div className="container mx-auto px-4 text-center">
+          <div className="max-w-2xl mx-auto">
+            <div className="flex justify-center mb-6">
+              <div className="flex -space-x-2">
+                {[...Array(3)].map((_, i) => (
+                  <div 
+                    key={i} 
+                    className="w-10 h-10 rounded-full bg-blue-100 border-2 border-white flex items-center justify-center"
+                  >
+                    <MapPin className="w-4 h-4 text-blue-600" />
+                  </div>
+                ))}
+              </div>
+            </div>
+            
+            <h2 className="text-2xl md:text-3xl font-bold text-slate-900 mb-3">
+              Proudly Serving {city}
+            </h2>
+            
+            {nearbyTowns.length > 0 && (
+              <div className="flex flex-wrap justify-center gap-2 mt-6">
+                {nearbyTowns.slice(0, 6).map((town, index) => (
+                  <span 
+                    key={index}
+                    className="px-4 py-2 bg-white rounded-full text-sm text-slate-600 border border-slate-200"
+                  >
+                    {town}
+                  </span>
+                ))}
+              </div>
+            )}
+            
+            {phone && (
+              <a 
+                href={`tel:${phone}`}
+                className="inline-flex items-center gap-2 mt-8 px-6 py-3 bg-slate-900 text-white rounded-full font-medium hover:bg-slate-800 transition-colors"
+              >
+                <Phone className="w-4 h-4" />
+                Call Now: {phone}
+              </a>
+            )}
+          </div>
         </div>
       </section>
 
-      {/* Simple CTA */}
-      <section className="py-16 bg-primary/5">
+      {/* Final CTA Section */}
+      <section className="bg-gradient-to-r from-blue-600 to-blue-700 py-20">
         <div className="container mx-auto px-4 text-center">
-          <h2 className="text-2xl font-medium text-foreground mb-4">
+          <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
             {ctaText.heading}
           </h2>
-          <p className="text-muted-foreground mb-6">
-            Fast response • Local service • No obligation
+          <p className="text-blue-100 mb-8 max-w-xl mx-auto">
+            Fast response • Licensed & Insured • Satisfaction Guaranteed
           </p>
-          <button 
-            onClick={onQuoteClick}
-            className="px-8 py-3 bg-primary text-primary-foreground rounded-md font-medium hover:bg-primary/90 transition-colors"
-          >
-            {ctaText.button}
-          </button>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <button 
+              onClick={onQuoteClick}
+              className="px-8 py-4 bg-white text-blue-600 rounded-full font-semibold hover:bg-blue-50 transition-colors shadow-lg"
+            >
+              {ctaText.button}
+            </button>
+            {phone && (
+              <a 
+                href={`tel:${phone}`}
+                className="px-8 py-4 bg-blue-800/50 text-white rounded-full font-semibold hover:bg-blue-800 transition-colors border border-blue-400/30"
+              >
+                <Phone className="w-4 h-4 inline mr-2" />
+                Call {phone}
+              </a>
+            )}
+          </div>
         </div>
       </section>
 
-      {/* Footer - Business name + location */}
-      <footer className="text-center py-8 border-t border-border/50">
-        <p className="text-sm text-foreground font-medium mb-1">
-          © {businessName} — {locationString}
-        </p>
-        <p className="text-xs text-muted-foreground/60">
-          This is a preview website generated for demonstration purposes.
-        </p>
-      </footer>
+      {/* Footer */}
+      <DemoFooter
+        businessName={businessName}
+        phone={phone}
+        city={city}
+        state={state}
+        address={address}
+      />
     </div>
   );
 }
