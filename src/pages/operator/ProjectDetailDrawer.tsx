@@ -301,8 +301,43 @@ export function ProjectDetailDrawer({ project, open, onClose, onStatusChange }: 
       return res.json() as Promise<{ messages: Message[] }>;
     },
     enabled: !!project && open,
-    refetchInterval: 10000,
   });
+
+  // Realtime subscription for instant message updates
+  useEffect(() => {
+    if (!project?.project_token || !open) return;
+
+    const channel = supabase
+      .channel(`op-messages-${project.project_token}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages',
+          filter: `project_token=eq.${project.project_token}`,
+        },
+        (payload) => {
+          console.log('[Operator] New message via realtime:', payload);
+          queryClient.setQueryData(
+            ["project-messages", project.project_token],
+            (old: { messages: Message[] } | undefined) => {
+              if (!old) return { messages: [payload.new as Message] };
+              const exists = old.messages.some((m) => m.id === (payload.new as Message).id);
+              if (exists) return old;
+              return { messages: [...old.messages, payload.new as Message] };
+            }
+          );
+          // Also refresh inbox count
+          queryClient.invalidateQueries({ queryKey: ["admin-inbox"] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [project?.project_token, open, queryClient]);
 
   // Mark messages as read when messages tab is viewed (only if there are unread messages)
   useEffect(() => {
