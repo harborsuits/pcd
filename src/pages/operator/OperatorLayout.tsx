@@ -211,6 +211,8 @@ export default function OperatorLayout() {
     const result = await signInAdmin(email, password);
     
     if (result.success) {
+      // Set isLoading false so we don't stay on spinner
+      setIsLoading(false);
       setIsAuthed(true);
       setUserEmail(email);
       toast.success("Authenticated successfully");
