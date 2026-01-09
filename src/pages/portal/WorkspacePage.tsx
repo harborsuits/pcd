@@ -260,8 +260,10 @@ export default function WorkspacePage() {
     }
   }, [token, authSession]);
 
-  // Initial load
+  // Initial load - wait for auth to hydrate before fetching
   useEffect(() => {
+    if (!hydrated) return;
+    
     const load = async () => {
       setLoading(true);
       await Promise.all([
@@ -272,7 +274,7 @@ export default function WorkspacePage() {
       setLoading(false);
     };
     load();
-  }, [fetchProjectInfo, fetchVersions, verifyOperatorStatus]);
+  }, [hydrated, fetchProjectInfo, fetchVersions, verifyOperatorStatus]);
 
   // Request change handler - uses authSession from useAuthReady
   const handleRequestChange = async () => {
