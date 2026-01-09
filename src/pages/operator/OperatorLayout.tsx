@@ -70,76 +70,68 @@ export default function OperatorLayout() {
     sessionStorage.removeItem("admin_verified");
   }, []);
 
-  // Check auth status after hydration completes
+  // Check auth status ONLY on initial mount after hydration - NOT when hasToken changes
   useEffect(() => {
     if (!hydrated) return; // Wait for auth hydration
     
-    const checkAuth = async () => {
-      console.log("[OperatorLayout] Checking admin auth, hasToken:", hasToken);
+    let cancelled = false;
+    
+    const checkInitialAuth = async () => {
+      console.log("[OperatorLayout] Initial auth check...");
       
-      if (!hasToken) {
-        // No session - definitely not an admin
-        console.log("[OperatorLayout] No token, not admin");
-        setIsAuthed(false);
-        setUserEmail(null);
-        setIsLoading(false);
-        return;
-      }
-      
-      // Get session once and pass user ID to avoid deadlocks
-      console.log("[OperatorLayout] Token exists, getting session for admin check...");
+      // Get session once - safe on mount, not during auth state changes
       const { data: { session } } = await supabase.auth.getSession();
+      if (cancelled) return;
+      
       if (!session?.user?.id) {
-        console.log("[OperatorLayout] No session user, not admin");
+        console.log("[OperatorLayout] No initial session");
         setIsAuthed(false);
         setUserEmail(null);
         setIsLoading(false);
         return;
       }
       
-      // Pass user ID directly to avoid getSession deadlock
+      // Check admin role - pass user ID directly
       const isAdmin = await checkAdminRole(session.user.id);
-      console.log("[OperatorLayout] isAdmin result:", isAdmin);
-      setIsAuthed(isAdmin);
+      if (cancelled) return;
       
-      if (isAdmin) {
-        setUserEmail(session.user.email || null);
-      } else {
-        setUserEmail(null);
-      }
+      console.log("[OperatorLayout] Initial isAdmin:", isAdmin);
+      setIsAuthed(isAdmin);
+      setUserEmail(isAdmin ? session.user.email || null : null);
       setIsLoading(false);
     };
-    checkAuth();
+    
+    checkInitialAuth();
 
-    // Listen for auth state changes - use sync callback to avoid deadlocks
+    // Listen for auth state changes - handle ALL changes here exclusively
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (cancelled) return;
       console.log("[OperatorLayout] Auth state changed:", event);
       
       if (event === "SIGNED_OUT") {
-        // Immediate sync update for logout
         setIsAuthed(false);
         setUserEmail(null);
         setIsLoading(false);
       } else if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
-        // Use session from callback directly - pass user ID to avoid getSession deadlock
         if (session?.user?.id) {
+          // Defer to avoid Supabase internal mutex lock
           setTimeout(async () => {
+            if (cancelled) return;
             const isAdmin = await checkAdminRole(session.user.id);
-            console.log("[OperatorLayout] Post-signin admin check:", isAdmin);
+            console.log("[OperatorLayout] Post-event admin check:", isAdmin);
             setIsAuthed(isAdmin);
-            if (isAdmin) {
-              setUserEmail(session.user.email || null);
-            } else {
-              setUserEmail(null);
-            }
+            setUserEmail(isAdmin ? session.user.email || null : null);
             setIsLoading(false);
           }, 0);
         }
       }
     });
 
-    return () => subscription.unsubscribe();
-  }, [hydrated, hasToken]);
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
+    };
+  }, [hydrated]); // ONLY depend on hydrated - NOT hasToken
 
   // Listen for AdminAuthError events globally
   useEffect(() => {
