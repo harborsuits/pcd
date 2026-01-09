@@ -119,8 +119,21 @@ export async function signInAdmin(email: string, password: string): Promise<{ su
 
 // Sign out
 export async function signOutAdmin(): Promise<void> {
+  console.log("[adminFetch] signOutAdmin called");
+  // Clear cache first
   sessionStorage.removeItem("admin_verified");
-  await supabase.auth.signOut();
+  
+  try {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      console.error("[adminFetch] signOut error:", error);
+    } else {
+      console.log("[adminFetch] signOut successful");
+    }
+  } catch (err) {
+    console.error("[adminFetch] signOut exception:", err);
+    // Don't throw - we've already cleared the cache
+  }
 }
 
 // Check if currently authenticated as admin (with caching for faster loads)
