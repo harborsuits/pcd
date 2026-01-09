@@ -1706,15 +1706,13 @@ async function handleScreenshotUpload(
     }
 
     // Create prototype_comment_media record
-    // Note: comment_id can be a placeholder UUID for pre-upload (will be updated after comment creation)
-    const placeholderCommentId = commentId || "00000000-0000-0000-0000-000000000000";
-    
+    // comment_id is null for pre-upload (will be updated after comment creation)
     const { data: mediaRecord, error: mediaError } = await supabase
       .from("prototype_comment_media")
       .insert({
-        prototype_id: prototypeId || "00000000-0000-0000-0000-000000000000", // placeholder if not provided
+        prototype_id: prototypeId || null,
         project_token: token,
-        comment_id: placeholderCommentId,
+        comment_id: commentId || null, // null until linked to a comment
         storage_path: storagePath,
         filename: file.name,
         mime_type: file.type,
