@@ -157,29 +157,75 @@ async function validateAdminKey(req: Request): Promise<boolean> {
   return true;
 }
 
-// GET /messages/:token - Fetch messages for operator (admin key required)
+// Validate that user is either an admin OR the project owner
+async function validateProjectAccess(
+  req: Request,
+  projectOwnerId: string | null
+): Promise<{ isValid: boolean; userId?: string; isAdmin?: boolean }> {
+  const authHeader = req.headers.get("Authorization");
+  
+  if (!authHeader?.startsWith("Bearer ")) {
+    console.log("Missing or invalid Authorization header for project access");
+    return { isValid: false };
+  }
+
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+  
+  const supabaseWithAuth = createClient(supabaseUrl, supabaseAnonKey, {
+    global: { headers: { Authorization: authHeader } }
+  });
+
+  const token = authHeader.replace("Bearer ", "");
+  const { data: claimsData, error: claimsError } = await supabaseWithAuth.auth.getClaims(token);
+
+  if (claimsError || !claimsData?.claims) {
+    console.log("Invalid JWT for project access:", claimsError?.message);
+    return { isValid: false };
+  }
+
+  const userId = claimsData.claims.sub as string;
+  const email = claimsData.claims.email as string || "unknown";
+
+  // Check 1: Is user the project owner?
+  if (projectOwnerId && userId === projectOwnerId) {
+    console.log(`Project owner ${email} (${userId}) accessing messages`);
+    return { isValid: true, userId, isAdmin: false };
+  }
+
+  // Check 2: Is user an admin?
+  const supabase = getSupabaseClient();
+  const { data: roleData } = await supabase
+    .from("user_roles")
+    .select("role")
+    .eq("user_id", userId)
+    .eq("role", "admin")
+    .maybeSingle();
+
+  if (roleData) {
+    console.log(`Admin ${email} (${userId}) accessing messages`);
+    return { isValid: true, userId, isAdmin: true };
+  }
+
+  console.log(`User ${email} (${userId}) denied access - not owner or admin`);
+  return { isValid: false };
+}
+
+// GET /messages/:token - Fetch messages for operator or project owner
 async function handleGetMessages(
   req: Request,
   token: string,
   corsHeaders: Record<string, string>
 ): Promise<Response> {
   try {
-    // Require admin auth for reading messages
-    if (!await validateAdminKey(req)) {
-      return new Response(
-        JSON.stringify({ error: "Unauthorized" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
     console.log(`Fetching messages for token: ${token.slice(0, 8)}...`);
 
     const supabase = getSupabaseClient();
 
-    // Resolve project by token
+    // First resolve project to get owner_user_id
     const { data: project, error: projectError } = await supabase
       .from("projects")
-      .select("id")
+      .select("id, owner_user_id")
       .eq("project_token", token)
       .is("deleted_at", null)
       .maybeSingle();
@@ -196,6 +242,15 @@ async function handleGetMessages(
       return new Response(
         JSON.stringify({ error: "Project not found" }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Validate that user is admin OR project owner
+    const accessCheck = await validateProjectAccess(req, project.owner_user_id);
+    if (!accessCheck.isValid) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
