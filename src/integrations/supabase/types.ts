@@ -1359,39 +1359,39 @@ export type Database = {
       }
       prototype_comment_media: {
         Row: {
-          comment_id: string
+          comment_id: string | null
           created_at: string
           filename: string
           id: string
           mime_type: string
           project_token: string
-          prototype_id: string
+          prototype_id: string | null
           size_bytes: number
           storage_path: string
           uploader_type: string
           uploader_user_id: string | null
         }
         Insert: {
-          comment_id: string
+          comment_id?: string | null
           created_at?: string
           filename: string
           id?: string
           mime_type: string
           project_token: string
-          prototype_id: string
+          prototype_id?: string | null
           size_bytes: number
           storage_path: string
           uploader_type: string
           uploader_user_id?: string | null
         }
         Update: {
-          comment_id?: string
+          comment_id?: string | null
           created_at?: string
           filename?: string
           id?: string
           mime_type?: string
           project_token?: string
-          prototype_id?: string
+          prototype_id?: string | null
           size_bytes?: number
           storage_path?: string
           uploader_type?: string
