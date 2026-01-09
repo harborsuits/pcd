@@ -47,7 +47,6 @@ interface PrototypeComment {
   crop_h?: number | null;
 }
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 
 interface Attachment {
   id: string;
@@ -96,6 +95,19 @@ export function CommentCard({
       return res.json() as Promise<{ attachments: Attachment[] }>;
     },
     enabled: showAttachments,
+  });
+
+  // Fetch signed URL for screenshot (bucket is private)
+  const { data: screenshotUrl } = useQuery({
+    queryKey: ["comment-screenshot", comment.screenshot_path],
+    queryFn: async () => {
+      const res = await adminFetch(`/admin/signed-url?bucket=project-media&path=${encodeURIComponent(comment.screenshot_path!)}`);
+      if (!res.ok) return null;
+      const data = await res.json();
+      return data.signedUrl as string;
+    },
+    enabled: !!comment.screenshot_path,
+    staleTime: 50 * 60 * 1000, // 50 min (signed URLs expire in 60 min)
   });
 
   // Upload attachment mutation
@@ -255,17 +267,17 @@ export function CommentCard({
       </div>
 
       {/* Screenshot preview */}
-      {comment.screenshot_path && (
+      {comment.screenshot_path && screenshotUrl && (
         <div className="mt-2 rounded-md overflow-hidden border border-border bg-muted/30">
           <a 
-            href={`${SUPABASE_URL}/storage/v1/object/public/project-media/${comment.screenshot_path}`}
+            href={screenshotUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="block"
             onClick={(e) => e.stopPropagation()}
           >
             <img
-              src={`${SUPABASE_URL}/storage/v1/object/public/project-media/${comment.screenshot_path}`}
+              src={screenshotUrl}
               alt="Screenshot"
               className="w-full max-h-40 object-contain bg-background"
               onError={(e) => {
