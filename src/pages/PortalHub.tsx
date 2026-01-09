@@ -8,13 +8,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2, Lock, Mail, ArrowRight, Sparkles, User as UserIcon, RefreshCw, Plus, Archive, Trash2, ChevronDown, ChevronUp } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/hooks/use-toast";
-import type { User, Session } from "@supabase/supabase-js";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { ClientLayout } from "@/components/portal/ClientLayout";
 import { BrandCard } from "@/components/portal/BrandCard";
 import { FcGoogle } from "react-icons/fc";
 import { SEOHead } from "@/components/SEOHead";
 import { getAuthReturnPath } from "@/hooks/useSessionExpiry";
+import { useAuthReady } from "@/hooks/useAuthReady";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -29,6 +29,11 @@ interface Portal {
 export default function PortalHub() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  
+  // Use shared auth hook for consistent session handling
+  const { hydrated, session } = useAuthReady();
+  const user = session?.user ?? null;
+  
   const [mode, setMode] = useState<"login" | "signup">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -37,10 +42,6 @@ export default function PortalHub() {
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
-  
-  const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
-  const [authChecking, setAuthChecking] = useState(true);
   
   const [portals, setPortals] = useState<Portal[]>([]);
   const [archivedPortals, setArchivedPortals] = useState<Portal[]>([]);
@@ -99,13 +100,9 @@ export default function PortalHub() {
     fullName: string;
   } | null>(null);
 
-  // Check auth state on mount + handle PASSWORD_RECOVERY event
+  // Handle PASSWORD_RECOVERY event + redirect logic
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setAuthChecking(false);
-      
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, currentSession) => {
       // Handle password recovery event
       if (event === "PASSWORD_RECOVERY") {
         setIsRecovery(true);
@@ -113,18 +110,12 @@ export default function PortalHub() {
       }
       
       // On successful sign in, check if we need to redirect back to a stored path
-      if (event === "SIGNED_IN" && session && !isRecovery) {
+      if (event === "SIGNED_IN" && currentSession && !isRecovery) {
         const returnPath = getAuthReturnPath();
         if (returnPath && returnPath !== "/portal") {
           navigate(returnPath, { replace: true });
         }
       }
-    });
-
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setAuthChecking(false);
     });
 
     return () => subscription.unsubscribe();
@@ -593,9 +584,7 @@ export default function PortalHub() {
   const handleLogout = async () => {
     try {
       await supabase.auth.signOut();
-      // Clear all client state
-      setUser(null);
-      setSession(null);
+      // Clear local state (session will be cleared by useAuthReady)
       setPortals([]);
       setArchivedPortals([]);
     } catch (err) {
@@ -605,7 +594,7 @@ export default function PortalHub() {
 
 
   // Show loading while checking auth state - prevents flash of login form
-  if (authChecking) {
+  if (!hydrated) {
     return (
       <div className="h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
