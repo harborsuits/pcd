@@ -17,8 +17,6 @@ import {
   AdminAuthError, 
   signInAdmin,
   signOutAdmin,
-  isAuthenticatedAdmin,
-  getAdminEmail,
   checkAdminRole,
 } from "@/lib/adminFetch";
 import { supabase } from "@/integrations/supabase/client";
@@ -88,15 +86,24 @@ export default function OperatorLayout() {
         return;
       }
       
-      // Session exists, just check admin role (avoids double getSession call)
-      console.log("[OperatorLayout] Token exists, checking admin role...");
-      const isAdmin = await checkAdminRole();
+      // Get session once and pass user ID to avoid deadlocks
+      console.log("[OperatorLayout] Token exists, getting session for admin check...");
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user?.id) {
+        console.log("[OperatorLayout] No session user, not admin");
+        setIsAuthed(false);
+        setUserEmail(null);
+        setIsLoading(false);
+        return;
+      }
+      
+      // Pass user ID directly to avoid getSession deadlock
+      const isAdmin = await checkAdminRole(session.user.id);
       console.log("[OperatorLayout] isAdmin result:", isAdmin);
       setIsAuthed(isAdmin);
       
       if (isAdmin) {
-        const email = await getAdminEmail();
-        setUserEmail(email);
+        setUserEmail(session.user.email || null);
       } else {
         setUserEmail(null);
       }
@@ -114,18 +121,20 @@ export default function OperatorLayout() {
         setUserEmail(null);
         setIsLoading(false);
       } else if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
-        // Defer the async admin check to avoid Supabase deadlock
-        setTimeout(async () => {
-          const isAdmin = await checkAdminRole();
-          console.log("[OperatorLayout] Post-signin admin check:", isAdmin);
-          setIsAuthed(isAdmin);
-          if (isAdmin) {
-            const email = await getAdminEmail();
-            setUserEmail(email);
-          } else {
-            setUserEmail(null);
-          }
-        }, 0);
+        // Use session from callback directly - pass user ID to avoid getSession deadlock
+        if (session?.user?.id) {
+          setTimeout(async () => {
+            const isAdmin = await checkAdminRole(session.user.id);
+            console.log("[OperatorLayout] Post-signin admin check:", isAdmin);
+            setIsAuthed(isAdmin);
+            if (isAdmin) {
+              setUserEmail(session.user.email || null);
+            } else {
+              setUserEmail(null);
+            }
+            setIsLoading(false);
+          }, 0);
+        }
       }
     });
 

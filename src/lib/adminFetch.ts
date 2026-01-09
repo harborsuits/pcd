@@ -25,16 +25,23 @@ async function getAuthToken(): Promise<string | null> {
   return null;
 }
 
-// Check if user has admin role
-export async function checkAdminRole(): Promise<boolean> {
-  const { data: { session } } = await supabase.auth.getSession();
-  console.log("[adminFetch] checkAdminRole - session:", session?.user?.id);
-  if (!session?.user?.id) return false;
+// Check if user has admin role - accepts optional userId to avoid getSession deadlocks
+export async function checkAdminRole(userId?: string): Promise<boolean> {
+  let uid = userId;
   
+  // Only call getSession if userId wasn't provided
+  if (!uid) {
+    const { data: { session } } = await supabase.auth.getSession();
+    console.log("[adminFetch] checkAdminRole - session:", session?.user?.id);
+    if (!session?.user?.id) return false;
+    uid = session.user.id;
+  }
+  
+  console.log("[adminFetch] checkAdminRole - checking uid:", uid);
   const { data, error } = await supabase
     .from("user_roles")
     .select("role")
-    .eq("user_id", session.user.id)
+    .eq("user_id", uid)
     .eq("role", "admin")
     .maybeSingle();
   
@@ -107,8 +114,8 @@ export async function signInAdmin(email: string, password: string): Promise<{ su
     return { success: false, error: error.message };
   }
   
-  // Verify admin role
-  const isAdmin = await checkAdminRole();
+  // Verify admin role - pass user ID directly to avoid getSession deadlock
+  const isAdmin = await checkAdminRole(data.session?.user?.id);
   if (!isAdmin) {
     await supabase.auth.signOut();
     return { success: false, error: "Access denied. Admin privileges required." };
