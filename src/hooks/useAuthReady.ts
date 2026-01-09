@@ -37,9 +37,10 @@ export function useAuthReady(): AuthReadyState {
 
     checkWithRetry();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+    // Use sync callback to avoid Supabase deadlock, defer async work
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (!mounted) return;
+      // Immediate sync update based on session from callback
       setState({
         hydrated: true,
         hasToken: !!session?.access_token,
