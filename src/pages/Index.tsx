@@ -437,7 +437,7 @@ const Index = () => {
           <p className="text-muted-foreground max-w-md mx-auto mb-8">
             Get a personalized website demo — no pressure, no commitment.
           </p>
-          <Link to="/get-demo?service=demo">
+          <Link to="/get-demo">
             <LiquidButton size="lg">
               See a Demo
             </LiquidButton>
