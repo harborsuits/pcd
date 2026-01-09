@@ -257,7 +257,38 @@ export function ProjectWorkspace({
       
       const { mediaId, path } = await uploadScreenshot(file);
 
-      // Create comment with screenshot
+      // Upload attachment files and collect media IDs
+      const attachmentMediaIds: string[] = [];
+      if (data.attachments && data.attachments.length > 0) {
+        for (const attachFile of data.attachments) {
+          const formData = new FormData();
+          formData.append("file", attachFile, attachFile.name);
+          if (selectedVersion?.id) {
+            formData.append("prototype_id", selectedVersion.id);
+          }
+          
+          const attachRes = await fetch(
+            `${SUPABASE_URL}/functions/v1/portal/${token}/screenshot`,
+            {
+              method: "POST",
+              headers: {
+                apikey: SUPABASE_ANON_KEY,
+                Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+              },
+              body: formData,
+            }
+          );
+          
+          if (attachRes.ok) {
+            const attachData = await attachRes.json();
+            if (attachData.media_id) {
+              attachmentMediaIds.push(attachData.media_id);
+            }
+          }
+        }
+      }
+
+      // Create comment with screenshot and attachments
       const res = await fetch(
         `${SUPABASE_URL}/functions/v1/portal/${token}/comments`,
         {
@@ -278,6 +309,7 @@ export function ProjectWorkspace({
             screenshot_path: path,
             screenshot_w: data.screenshotW,
             screenshot_h: data.screenshotH,
+            attachment_media_ids: attachmentMediaIds.length > 0 ? attachmentMediaIds : undefined,
           }),
         }
       );
