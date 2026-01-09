@@ -4,7 +4,7 @@ import { Loader2, AlertCircle, Home, Settings2, ExternalLink, Activity, MessageC
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { isAuthenticatedAdmin } from "@/lib/adminFetch";
+import { checkAdminRole } from "@/lib/adminFetch";
 import { supabase } from "@/integrations/supabase/client";
 import { AIReceptionistSetup } from "@/components/portal/AIReceptionistSetup";
 import { SessionExpiredModal } from "@/components/portal/SessionExpiredModal";
@@ -118,17 +118,17 @@ export default function WorkspacePage() {
       return;
     }
     
-    // Check if user is authenticated as admin
-    const isAdmin = await isAuthenticatedAdmin();
-    if (!isAdmin) {
+    // Get session once - avoid multiple getSession calls that cause deadlocks
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token || !session?.user?.id) {
       setIsOperator(false);
       setOperatorCheckDone(true);
       return;
     }
     
-    // Get the session token for the API call
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session?.access_token) {
+    // Check admin role - pass user ID directly to avoid getSession deadlock
+    const isAdmin = await checkAdminRole(session.user.id);
+    if (!isAdmin) {
       setIsOperator(false);
       setOperatorCheckDone(true);
       return;
