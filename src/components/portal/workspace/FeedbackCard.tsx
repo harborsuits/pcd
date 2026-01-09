@@ -1,7 +1,19 @@
 import { Badge } from "@/components/ui/badge";
-import { Check, Clock, CircleDot, XCircle, Image as ImageIcon, Pencil, MinusCircle, MessageSquare, Paperclip, CornerDownRight } from "lucide-react";
+import { Check, Clock, CircleDot, XCircle, Image as ImageIcon, Pencil, MinusCircle, MessageSquare, Paperclip, CornerDownRight, Loader2 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
 export type CommentStatus = "open" | "in_progress" | "resolved" | "wont_do";
+
+interface Attachment {
+  id: string;
+  filename: string;
+  mime_type: string;
+  size_bytes: number;
+  signed_url: string | null;
+}
 
 export interface CommentData {
   id: string;
@@ -36,7 +48,7 @@ export interface CommentData {
   parent_comment_id?: string | null;
   // Nested replies (populated by parent component)
   replies?: CommentData[];
-  // Attachment count (populated by parent component)
+  // Attachment count (populated by parent component - deprecated, now fetched)
   attachment_count?: number;
 }
 
@@ -77,7 +89,28 @@ export function FeedbackCard({
   const isEdited = !!comment.edited_at;
   const isNotRelevant = comment.is_relevant === false;
   const hasReplies = (comment.replies?.length ?? 0) > 0;
-  const hasAttachments = (comment.attachment_count ?? 0) > 0;
+  
+  // Fetch attachments for this comment
+  const { data: attachmentsData, isLoading: loadingAttachments } = useQuery({
+    queryKey: ["portal-comment-attachments", token, comment.id],
+    queryFn: async () => {
+      const res = await fetch(
+        `${SUPABASE_URL}/functions/v1/portal/${token}/comments/${comment.id}/attachments`,
+        {
+          headers: {
+            apikey: SUPABASE_ANON_KEY,
+            Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+          },
+        }
+      );
+      if (!res.ok) return { attachments: [] };
+      return res.json() as Promise<{ attachments: Attachment[] }>;
+    },
+    staleTime: 30000, // Cache for 30 seconds
+  });
+  
+  const attachments = attachmentsData?.attachments || [];
+  const hasAttachments = attachments.length > 0;
 
   const getStatusBadge = () => {
     switch (status) {
@@ -192,10 +225,15 @@ export function FeedbackCard({
           {getStatusBadge()}
           
           {/* Attachment badge */}
-          {hasAttachments && (
+          {loadingAttachments ? (
+            <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-700">
+              <Loader2 className="h-2 w-2 mr-0.5 animate-spin" />
+              Loading...
+            </Badge>
+          ) : hasAttachments && (
             <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-700">
               <Paperclip className="h-2 w-2 mr-0.5" />
-              {comment.attachment_count} file{comment.attachment_count !== 1 ? 's' : ''}
+              {attachments.length} file{attachments.length !== 1 ? 's' : ''}
             </Badge>
           )}
           
@@ -237,6 +275,36 @@ export function FeedbackCard({
               alt="Screenshot"
               className="w-full h-auto object-cover max-h-20"
             />
+          </div>
+        )}
+
+        {/* Attachments - show inline thumbnails */}
+        {hasAttachments && (
+          <div className="mb-2">
+            <div className="text-[10px] text-muted-foreground mb-1 flex items-center gap-1">
+              <Paperclip className="h-2.5 w-2.5" />
+              Attached files:
+            </div>
+            <div className="flex flex-wrap gap-1">
+              {attachments.map((att) => (
+                <div
+                  key={att.id}
+                  className="relative w-12 h-12 rounded border border-border overflow-hidden bg-muted/50"
+                >
+                  {att.mime_type.startsWith("image/") && att.signed_url ? (
+                    <img 
+                      src={att.signed_url} 
+                      alt={att.filename} 
+                      className="w-full h-full object-cover" 
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-[8px] text-muted-foreground text-center p-1">
+                      {att.filename.split('.').pop()?.toUpperCase() || 'FILE'}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
