@@ -113,6 +113,35 @@ async function verifyOperatorAuth(req: Request, supabase: any): Promise<{ valid:
   return { valid: !!hasPermission, userId: data.user.id };
 }
 
+// Verify client owns the project via projects.owner_user_id
+// deno-lint-ignore no-explicit-any
+async function verifyClientOwnership(
+  req: Request,
+  supabase: any,
+  projectId: string
+): Promise<{ valid: boolean; userId?: string }> {
+  const authHeader = req.headers.get("Authorization");
+  if (!authHeader?.startsWith("Bearer ")) return { valid: false };
+
+  const jwt = authHeader.slice("Bearer ".length).trim();
+  const { data, error } = await supabase.auth.getUser(jwt);
+  if (error || !data?.user) return { valid: false };
+
+  const { data: project, error: projectErr } = await supabase
+    .from("projects")
+    .select("owner_user_id")
+    .eq("id", projectId)
+    .maybeSingle();
+
+  if (projectErr || !project) return { valid: false };
+
+  if (project.owner_user_id === data.user.id) {
+    return { valid: true, userId: data.user.id };
+  }
+
+  return { valid: false };
+}
+
 // Handle unified file listing (merges files + prototype_comment_media)
 // deno-lint-ignore no-explicit-any
 async function handleList(
@@ -379,18 +408,37 @@ Deno.serve(async (req) => {
     if (!fileId) {
       return json(400, { error: "Missing file ID" }, corsHeaders);
     }
+    
+    // Verify either operator OR client ownership
+    const operatorAuth = await verifyOperatorAuth(req, supabase);
+    const clientAuth = await verifyClientOwnership(req, supabase, project.id);
+
+    if (!operatorAuth.valid && !clientAuth.valid) {
+      console.log("[Files] Unauthorized download request");
+      return json(401, { error: "Unauthorized" }, corsHeaders);
+    }
+
     return await handleDownload(supabase, project, token, fileId, corsHeaders);
   }
 
   // Handle LIST action (GET) - returns unified files with signed URLs
   const action = third;
   if (action === "list" && req.method === "GET") {
-    // Verify operator/admin auth for listing files
-    const auth = await verifyOperatorAuth(req, supabase);
-    if (!auth.valid) {
+    // Allow either:
+    // 1) operator/admin via roles
+    // 2) client who owns the project via projects.owner_user_id
+    const operatorAuth = await verifyOperatorAuth(req, supabase);
+    const clientAuth = await verifyClientOwnership(req, supabase, project.id);
+
+    if (!operatorAuth.valid && !clientAuth.valid) {
       console.log("[Files] Unauthorized list request");
       return json(401, { error: "Unauthorized" }, corsHeaders);
     }
+
+    const userId = operatorAuth.userId || clientAuth.userId;
+    console.log(
+      `[Files] Auth verified: ${operatorAuth.valid ? "operator" : "client"} ${userId}`
+    );
 
     return await handleList(supabase, project, token, corsHeaders);
   }
