@@ -1,5 +1,5 @@
-import { useState, useRef, useCallback, useEffect } from "react";
-import { Clock, ExternalLink, RefreshCw, Camera, Upload, Loader2, X, Send, Paperclip, Check, CircleDot, MessageCircle } from "lucide-react";
+import { useState, useRef, useCallback, useEffect, useMemo } from "react";
+import { Clock, ExternalLink, RefreshCw, Camera, Upload, Loader2, X, Send, Paperclip, Check, CircleDot, MessageCircle, CornerDownRight, MessageSquare } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -29,6 +29,12 @@ interface FeedbackComment {
   edited_at?: string | null;
   is_relevant?: boolean;
   version_count?: number;
+  // Threading fields
+  parent_comment_id?: string | null;
+  thread_root_id?: string | null;
+  last_activity_at?: string | null;
+  // Computed by UI
+  replies?: FeedbackComment[];
 }
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -89,6 +95,45 @@ export function WebsiteTab({
   
   const selectedVersion = versions.find(v => v.id === selectedId);
   const canTabCapture = isTabCaptureSupported();
+
+  // Group comments into threads by thread_root_id
+  const threadedComments = useMemo(() => {
+    // Find root comments (where there's no parent_comment_id)
+    const rootComments = comments.filter(c => !c.parent_comment_id);
+    
+    // Build map: thread_root_id -> [replies]
+    const replyMap = new Map<string, FeedbackComment[]>();
+    comments.forEach(c => {
+      if (c.parent_comment_id) {
+        const threadId = c.thread_root_id ?? c.parent_comment_id;
+        const list = replyMap.get(threadId) || [];
+        list.push(c);
+        replyMap.set(threadId, list);
+      }
+    });
+    
+    // Sort replies chronologically (oldest first)
+    replyMap.forEach(list => list.sort((a, b) => 
+      new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+    ));
+    
+    // Attach replies to root comments
+    return rootComments.map(root => ({
+      ...root,
+      replies: replyMap.get(root.thread_root_id ?? root.id) || [],
+    })).sort((a, b) => {
+      // Sort by last_activity_at or created_at descending (most recent first)
+      const aTime = new Date(a.last_activity_at || a.created_at).getTime();
+      const bTime = new Date(b.last_activity_at || b.created_at).getTime();
+      return bTime - aTime;
+    });
+  }, [comments]);
+
+  // Helper to get the latest reply preview
+  const getLatestReply = (thread: FeedbackComment) => {
+    if (!thread.replies?.length) return null;
+    return thread.replies[thread.replies.length - 1];
+  };
 
   // Fetch comments for the selected prototype
   const fetchComments = useCallback(async () => {
@@ -425,38 +470,51 @@ export function WebsiteTab({
                   </div>
                 )}
 
-                {/* Live comments */}
-                {comments.filter(c => !c.resolved_at).map((comment) => {
-                  const statusIcon = comment.status === "in_progress" 
+                {/* Thread cards - open threads */}
+                {threadedComments.filter(thread => !thread.resolved_at).map((thread) => {
+                  const latestReply = getLatestReply(thread);
+                  const replyCount = thread.replies?.length ?? 0;
+                  const statusIcon = thread.status === "in_progress" 
                     ? <Clock className="h-2.5 w-2.5 text-blue-500" />
+                    : thread.status === "resolved" 
+                    ? <Check className="h-2.5 w-2.5 text-green-500" />
                     : <CircleDot className="h-2.5 w-2.5 text-orange-500" />;
                   
-                    return (
+                  return (
                     <div
-                      key={comment.id}
+                      key={thread.id}
                       onClick={() => {
-                        setSelectedComment(comment);
+                        setSelectedComment(thread);
                         setShowDetailModal(true);
                       }}
-                      className="rounded-md border border-border bg-background overflow-hidden hover:border-muted-foreground/30 transition-colors cursor-pointer"
+                      className="rounded-md border border-border bg-background overflow-hidden hover:border-primary/40 transition-colors cursor-pointer group"
                     >
-                      {comment.screenshot_signed_url ? (
+                      {/* Screenshot thumbnail */}
+                      {thread.screenshot_signed_url ? (
                         <div className="relative aspect-video bg-muted">
                           <img
-                            src={comment.screenshot_signed_url}
+                            src={thread.screenshot_signed_url}
                             alt="Feedback"
                             className="w-full h-full object-cover"
                             onError={(e) => {
                               e.currentTarget.style.display = 'none';
                             }}
                           />
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                          {/* Status + reply count badges */}
                           <div className="absolute top-1 right-1 flex items-center gap-1">
                             {statusIcon}
+                            {replyCount > 0 && (
+                              <Badge className="text-[8px] h-4 px-1 bg-indigo-600/90 border-0">
+                                <MessageSquare className="h-2 w-2 mr-0.5" />
+                                {replyCount}
+                              </Badge>
+                            )}
                           </div>
+                          {/* Original feedback preview */}
                           <div className="absolute bottom-1 left-1 right-1">
-                            <span className="text-[9px] text-white/90 font-medium truncate block">
-                              {comment.body.slice(0, 30)}{comment.body.length > 30 ? '...' : ''}
+                            <span className="text-[9px] text-white/95 font-medium truncate block">
+                              {thread.body.slice(0, 35)}{thread.body.length > 35 ? '...' : ''}
                             </span>
                           </div>
                         </div>
@@ -464,45 +522,69 @@ export function WebsiteTab({
                         <div className="p-2">
                           <div className="flex items-start gap-1.5">
                             {statusIcon}
-                            <p className="text-[10px] text-foreground leading-tight line-clamp-2">
-                              {comment.body}
+                            <p className="text-[10px] text-foreground leading-tight line-clamp-2 flex-1">
+                              {thread.body}
                             </p>
+                            {replyCount > 0 && (
+                              <Badge variant="outline" className="text-[8px] h-4 px-1 bg-indigo-50 text-indigo-600 border-indigo-200 flex-shrink-0">
+                                <MessageSquare className="h-2 w-2 mr-0.5" />
+                                {replyCount}
+                              </Badge>
+                            )}
                           </div>
                         </div>
                       )}
+                      
+                      {/* Footer with author + status */}
                       <div className="px-2 py-1 border-t border-border bg-muted/30 flex items-center justify-between">
                         <span className="text-[9px] text-muted-foreground">
-                          {comment.author_type === "client" ? "You" : "Operator"}
+                          {thread.author_type === "client" ? "You" : "Operator"}
                         </span>
                         <Badge 
                           variant="outline" 
                           className={`text-[8px] h-4 px-1 ${
-                            comment.status === "in_progress" 
+                            thread.status === "in_progress" 
                               ? "bg-blue-50 text-blue-700 border-blue-200" 
                               : "bg-orange-50 text-orange-700 border-orange-200"
                           }`}
                         >
-                          {comment.status === "in_progress" ? "In Progress" : "Open"}
+                          {thread.status === "in_progress" ? "Working" : "Open"}
                         </Badge>
                       </div>
+                      
+                      {/* Latest reply preview (if has replies) */}
+                      {latestReply && (
+                        <div className="px-2 py-1.5 border-t border-dashed border-border/60 bg-muted/20">
+                          <div className="flex items-center gap-1 text-[9px] text-muted-foreground mb-0.5">
+                            <CornerDownRight className="h-2 w-2" />
+                            <span className="font-medium">
+                              {latestReply.author_type === "client" ? "You" : "Operator"}
+                            </span>
+                            <span>replied</span>
+                          </div>
+                          <p className="text-[9px] text-foreground/80 line-clamp-1">
+                            {latestReply.body}
+                          </p>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
 
-                {/* Resolved comments (collapsed) */}
-                {comments.filter(c => c.resolved_at).length > 0 && (
+                {/* Resolved threads (collapsed) */}
+                {threadedComments.filter(thread => thread.resolved_at).length > 0 && (
                   <div className="pt-2 border-t border-border">
                     <div className="flex items-center gap-1.5 mb-2">
                       <Check className="h-3 w-3 text-green-500" />
                       <span className="text-[10px] text-muted-foreground">
-                        {comments.filter(c => c.resolved_at).length} resolved
+                        {threadedComments.filter(thread => thread.resolved_at).length} resolved
                       </span>
                     </div>
                   </div>
                 )}
 
                 {/* Empty state */}
-                {comments.length === 0 && mode.type !== "compose" && !isLoadingComments && (
+                {threadedComments.length === 0 && mode.type !== "compose" && !isLoadingComments && (
                   <div className="py-6 text-center">
                     <MessageCircle className="h-6 w-6 text-muted-foreground/40 mx-auto mb-2" />
                     <p className="text-[10px] text-muted-foreground">No feedback yet</p>
@@ -757,9 +839,10 @@ export function WebsiteTab({
         </div>
       )}
 
-      {/* Feedback detail modal */}
+      {/* Feedback thread modal */}
       <FeedbackDetailModal
         comment={selectedComment as any}
+        threadReplies={(selectedComment?.replies ?? []) as any}
         open={showDetailModal}
         onClose={() => {
           setShowDetailModal(false);
