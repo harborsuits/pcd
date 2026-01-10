@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   Dialog,
   DialogContent,
@@ -26,9 +27,19 @@ import {
   Send,
   X,
   Loader2,
+  Paperclip,
+  ExternalLink,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { CommentData } from "./FeedbackCard";
+
+interface Attachment {
+  id: string;
+  filename: string;
+  mime_type: string;
+  size_bytes: number;
+  signed_url: string | null;
+}
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -109,6 +120,30 @@ export function FeedbackDetailModal({
   const [versions, setVersions] = useState<CommentVersion[]>([]);
   const [loadingVersions, setLoadingVersions] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
+
+  // Fetch attachments for this comment
+  const { data: attachmentsData, isLoading: loadingAttachments } = useQuery({
+    queryKey: ["feedback-detail-attachments", token, comment?.id],
+    queryFn: async () => {
+      if (!comment?.id) return { attachments: [] };
+      const res = await fetch(
+        `${SUPABASE_URL}/functions/v1/portal/${token}/comments/${comment.id}/attachments`,
+        {
+          headers: {
+            apikey: SUPABASE_ANON_KEY,
+            Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+          },
+        }
+      );
+      if (!res.ok) return { attachments: [] };
+      return res.json() as Promise<{ attachments: Attachment[] }>;
+    },
+    enabled: open && !!comment?.id,
+    staleTime: 30000,
+  });
+
+  const attachments = attachmentsData?.attachments || [];
+  const hasAttachments = attachments.length > 0;
 
   // Reset state when modal opens with new comment
   useEffect(() => {
@@ -361,6 +396,55 @@ export function FeedbackDetailModal({
                   alt="Screenshot"
                   className="w-full h-auto max-h-[50vh] object-contain"
                 />
+              </div>
+            )}
+
+            {/* Attachments */}
+            {(hasAttachments || loadingAttachments) && (
+              <div className="space-y-2">
+                <div className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                  <Paperclip className="h-3 w-3" />
+                  Attached Files ({loadingAttachments ? "..." : attachments.length})
+                </div>
+                {loadingAttachments ? (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Loading attachments...
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-3 gap-2">
+                    {attachments.map((att) => (
+                      <a
+                        key={att.id}
+                        href={att.signed_url || "#"}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="group relative aspect-square rounded-lg border border-border overflow-hidden bg-muted/50 hover:border-primary/50 transition-colors"
+                      >
+                        {att.mime_type.startsWith("image/") && att.signed_url ? (
+                          <img
+                            src={att.signed_url}
+                            alt={att.filename}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex flex-col items-center justify-center p-2">
+                            <span className="text-2xl mb-1">
+                              {att.mime_type.includes("pdf") ? "📄" :
+                               att.mime_type.includes("video") ? "🎬" : "📎"}
+                            </span>
+                            <span className="text-[10px] text-muted-foreground text-center truncate w-full">
+                              {att.filename}
+                            </span>
+                          </div>
+                        )}
+                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                          <ExternalLink className="h-5 w-5 text-white" />
+                        </div>
+                      </a>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 
