@@ -9,7 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { ScrollArea } from "@/components/ui/scroll-area";
+
 import {
   Collapsible,
   CollapsibleContent,
@@ -386,7 +386,7 @@ export function FeedbackDetailModal({
           </DialogTitle>
         </DialogHeader>
 
-        <ScrollArea className="flex-1 min-h-0 max-h-[calc(90vh-6rem)] pr-4">
+        <div className="flex-1 min-h-0 max-h-[calc(90vh-6rem)] overflow-y-auto pr-4">
           <div className="space-y-4">
             {/* Screenshot */}
             {screenshotUrl && (
@@ -412,14 +412,15 @@ export function FeedbackDetailModal({
                     Loading attachments...
                   </div>
                 ) : (
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="flex flex-wrap gap-2">
                     {attachments.map((att) => (
                       <a
                         key={att.id}
                         href={att.signed_url || "#"}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="group relative aspect-square rounded-lg border border-border overflow-hidden bg-muted/50 hover:border-primary/50 transition-colors"
+                        className="group relative w-12 h-12 rounded-md border border-border overflow-hidden bg-muted/50 hover:border-primary/50 transition-colors"
+                        title={att.filename}
                       >
                         {att.mime_type.startsWith("image/") && att.signed_url ? (
                           <img
@@ -428,18 +429,13 @@ export function FeedbackDetailModal({
                             className="w-full h-full object-cover"
                           />
                         ) : (
-                          <div className="w-full h-full flex flex-col items-center justify-center p-2">
-                            <span className="text-2xl mb-1">
-                              {att.mime_type.includes("pdf") ? "📄" :
-                               att.mime_type.includes("video") ? "🎬" : "📎"}
-                            </span>
-                            <span className="text-[10px] text-muted-foreground text-center truncate w-full">
-                              {att.filename}
-                            </span>
+                          <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">
+                            📎
                           </div>
                         )}
-                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                          <ExternalLink className="h-5 w-5 text-white" />
+
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                          <span className="text-white text-[10px]">Open</span>
                         </div>
                       </a>
                     ))}
@@ -686,7 +682,7 @@ export function FeedbackDetailModal({
               </Collapsible>
             )}
           </div>
-        </ScrollArea>
+        </div>
       </DialogContent>
     </Dialog>
   );
