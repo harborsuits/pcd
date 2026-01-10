@@ -1528,7 +1528,8 @@ async function handleGetComments(
         screenshot_path, screenshot_w, screenshot_h, screenshot_media_id,
         edited_at, version_count, is_relevant,
         thread_root_id, last_activity_at,
-        crop_x, crop_y, crop_w, crop_h
+        crop_x, crop_y, crop_w, crop_h,
+        client_confirmed_at, client_confirmed_by
       `)
       .eq("project_token", token)
       .eq("is_internal", false) // Filter out internal operator notes for clients
@@ -1897,6 +1898,42 @@ async function handleCommentAction(
         );
       }
 
+      // AUTO-REOPEN: If this is a reply to a resolved thread, reopen it
+      if (comment && body.parent_comment_id) {
+        // Get the thread root to check if it's resolved
+        const { data: threadRoot } = await supabase
+          .from("prototype_comments")
+          .select("id, thread_root_id, resolved_at")
+          .eq("id", body.parent_comment_id)
+          .eq("project_token", token)
+          .maybeSingle();
+        
+        // Find the actual root comment (could be the parent itself or its thread_root_id)
+        const rootId = threadRoot?.thread_root_id || body.parent_comment_id;
+        
+        const { data: actualRoot } = await supabase
+          .from("prototype_comments")
+          .select("id, resolved_at")
+          .eq("id", rootId)
+          .eq("project_token", token)
+          .maybeSingle();
+        
+        if (actualRoot?.resolved_at) {
+          // Reopen the thread
+          await supabase
+            .from("prototype_comments")
+            .update({ 
+              resolved_at: null, 
+              status: "open",
+              last_activity_at: new Date().toISOString()
+            })
+            .eq("id", actualRoot.id)
+            .eq("project_token", token);
+          
+          console.log(`Thread ${actualRoot.id} auto-reopened by client reply`);
+        }
+      }
+
       // Update attachment media records to point to this comment
       if (comment && Array.isArray(attachment_media_ids) && attachment_media_ids.length > 0) {
         const { error: linkError } = await supabase
@@ -1985,6 +2022,61 @@ if (action === "resolve" || action === "unresolve") {
 
       return new Response(
         JSON.stringify({ ok: true, resolved: action === "resolve" }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Client confirms work "Looks Good" - sets client_confirmed_at without resolving
+    if (action === "confirm") {
+      if (!comment_id) {
+        return new Response(
+          JSON.stringify({ error: "comment_id is required" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const { error: updateError } = await supabase
+        .from("prototype_comments")
+        .update({ 
+          client_confirmed_at: new Date().toISOString(),
+          client_confirmed_by: "client"
+        })
+        .eq("id", comment_id)
+        .eq("project_token", token);
+
+      if (updateError) {
+        console.error("Confirm comment error:", updateError);
+        return new Response(
+          JSON.stringify({ error: "Failed to confirm comment" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Send notification to operator
+      const telegramBotToken = Deno.env.get("TELEGRAM_BOT_TOKEN");
+      const telegramChatId = Deno.env.get("TELEGRAM_CHAT_ID");
+      if (telegramBotToken && telegramChatId) {
+        const msg = `✅ <b>Client Confirmed Feedback</b>\n` +
+          `• <b>Status:</b> Looks Good\n` +
+          `• <b>Token:</b> <code>${token.slice(0, 12)}...</code>`;
+
+        try {
+          await fetch(`https://api.telegram.org/bot${telegramBotToken}/sendMessage`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              chat_id: telegramChatId,
+              text: msg,
+              parse_mode: "HTML",
+            }),
+          });
+        } catch (e) {
+          console.error("Telegram notification failed:", e);
+        }
+      }
+
+      return new Response(
+        JSON.stringify({ ok: true, confirmed: true }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }

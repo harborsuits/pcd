@@ -46,6 +46,11 @@ export interface CommentData {
   screenshot_signed_url?: string | null;
   // Threading
   parent_comment_id?: string | null;
+  thread_root_id?: string | null;
+  last_activity_at?: string | null;
+  // Client confirmation fields
+  client_confirmed_at?: string | null;
+  client_confirmed_by?: string | null;
   // Nested replies (populated by parent component)
   replies?: CommentData[];
   // Attachment count (populated by parent component - deprecated, now fetched)

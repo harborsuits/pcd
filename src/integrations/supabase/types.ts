@@ -1422,6 +1422,8 @@ export type Database = {
           author_type: string
           body: string
           breakpoint: string | null
+          client_confirmed_at: string | null
+          client_confirmed_by: string | null
           created_at: string
           crop_h: number | null
           crop_w: number | null
@@ -1468,6 +1470,8 @@ export type Database = {
           author_type: string
           body: string
           breakpoint?: string | null
+          client_confirmed_at?: string | null
+          client_confirmed_by?: string | null
           created_at?: string
           crop_h?: number | null
           crop_w?: number | null
@@ -1514,6 +1518,8 @@ export type Database = {
           author_type?: string
           body?: string
           breakpoint?: string | null
+          client_confirmed_at?: string | null
+          client_confirmed_by?: string | null
           created_at?: string
           crop_h?: number | null
           crop_w?: number | null

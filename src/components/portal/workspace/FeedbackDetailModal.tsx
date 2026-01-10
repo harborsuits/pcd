@@ -299,6 +299,39 @@ export function FeedbackDetailModal({
     }
   };
 
+  // Client "Looks Good" confirmation (not resolution - just signals completion)
+  const handleConfirmLooksGood = async () => {
+    if (!comment) return;
+
+    setIsSaving(true);
+    try {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/portal/${token}/comments`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({
+          action: "confirm",
+          comment_id: comment.id,
+        }),
+      });
+
+      if (res.ok) {
+        toast.success("Thanks! We've noted your confirmation.");
+        onCommentUpdated();
+      } else {
+        const data = await res.json();
+        toast.error(data.error || "Failed to confirm");
+      }
+    } catch (err) {
+      toast.error("Failed to confirm");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const handleMarkNotRelevant = async () => {
     if (!comment) return;
 
@@ -360,11 +393,14 @@ export function FeedbackDetailModal({
 
   if (!comment) return null;
 
+  // Determine if viewing as a client (all portal users are clients for now)
+  const isViewingAsClient = true; // Portal users are clients - operators have separate dashboard
   const isClient = comment.author_type === "client";
   const canEdit = isClient;
   const isResolved = comment.status === "resolved" || !!comment.resolved_at;
   const isInProgress = comment.status === "in_progress";
   const isNotRelevant = comment.is_relevant === false;
+  const isClientConfirmed = !!comment.client_confirmed_at;
   const hasVersions = (comment.version_count ?? 1) > 1;
   const hasReplies = threadReplies.length > 0;
   const screenshotUrl = comment.screenshot_signed_url ||
@@ -629,70 +665,128 @@ export function FeedbackDetailModal({
               </div>
             )}
 
-            {/* Status actions */}
-            <div className="flex items-center gap-2 pt-2 border-t border-border">
-              {isNotRelevant ? (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="text-xs"
-                  onClick={handleRestoreRelevant}
-                  disabled={isSaving}
-                >
-                  Restore
-                </Button>
-              ) : (
-                <>
-                  {!isInProgress && !isResolved && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="text-xs text-blue-600 hover:bg-blue-50"
-                      onClick={() => handleStatusChange("in_progress")}
-                      disabled={isSaving}
-                    >
-                      <Clock className="h-3 w-3 mr-1" />
-                      Working
-                    </Button>
+            {/* Status actions - Different for clients vs operators */}
+            <div className="flex flex-col gap-3 pt-3 border-t border-border">
+              {/* Resolved status helper text */}
+              {isResolved && (
+                <div className="flex items-center gap-2 text-sm text-green-700 bg-green-50 rounded-md px-3 py-2">
+                  <Check className="h-4 w-4" />
+                  <span>This feedback has been completed.</span>
+                  {!isViewingAsClient && (
+                    <span className="text-xs text-green-600/80 ml-auto">
+                      You can still reply below if needed.
+                    </span>
                   )}
-                  {!isResolved && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="text-xs text-green-600 hover:bg-green-50"
-                      onClick={() => handleStatusChange("resolved")}
-                      disabled={isSaving}
-                    >
-                      <Check className="h-3 w-3 mr-1" />
-                      Resolve
-                    </Button>
-                  )}
-                  {isResolved && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="text-xs text-orange-600 hover:bg-orange-50"
-                      onClick={() => handleStatusChange("open")}
-                      disabled={isSaving}
-                    >
-                      <CircleDot className="h-3 w-3 mr-1" />
-                      Reopen
-                    </Button>
-                  )}
-                  {canEdit && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-xs text-gray-500 hover:text-gray-700 ml-auto"
-                      onClick={handleMarkNotRelevant}
-                      disabled={isSaving}
-                    >
-                      <MinusCircle className="h-3 w-3 mr-1" />
-                      No Longer Relevant
-                    </Button>
-                  )}
-                </>
+                </div>
               )}
+
+              {/* Client confirmation status */}
+              {isClientConfirmed && !isResolved && (
+                <div className="flex items-center gap-2 text-sm text-blue-700 bg-blue-50 rounded-md px-3 py-2">
+                  <Check className="h-4 w-4" />
+                  <span>You confirmed this looks good. Waiting for operator to resolve.</span>
+                </div>
+              )}
+
+              <div className="flex items-center gap-2">
+                {isNotRelevant ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-xs"
+                    onClick={handleRestoreRelevant}
+                    disabled={isSaving}
+                  >
+                    Restore
+                  </Button>
+                ) : isViewingAsClient ? (
+                  /* ═══════════════ CLIENT ACTIONS ═══════════════ */
+                  <>
+                    {/* "Looks Good" button - client confirms without resolving */}
+                    {!isResolved && !isClientConfirmed && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-xs text-green-600 hover:bg-green-50 border-green-200"
+                        onClick={handleConfirmLooksGood}
+                        disabled={isSaving}
+                      >
+                        {isSaving ? (
+                          <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                        ) : (
+                          <Check className="h-3 w-3 mr-1" />
+                        )}
+                        Looks Good
+                      </Button>
+                    )}
+                    {/* "No Longer Relevant" - client can mark their own feedback as not relevant */}
+                    {canEdit && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-xs text-gray-500 hover:text-gray-700 ml-auto"
+                        onClick={handleMarkNotRelevant}
+                        disabled={isSaving}
+                      >
+                        <MinusCircle className="h-3 w-3 mr-1" />
+                        No Longer Relevant
+                      </Button>
+                    )}
+                  </>
+                ) : (
+                  /* ═══════════════ OPERATOR ACTIONS (kept for reference, not used in portal) ═══════════════ */
+                  <>
+                    {!isInProgress && !isResolved && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-xs text-blue-600 hover:bg-blue-50"
+                        onClick={() => handleStatusChange("in_progress")}
+                        disabled={isSaving}
+                      >
+                        <Clock className="h-3 w-3 mr-1" />
+                        Working
+                      </Button>
+                    )}
+                    {!isResolved && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-xs text-green-600 hover:bg-green-50"
+                        onClick={() => handleStatusChange("resolved")}
+                        disabled={isSaving}
+                      >
+                        <Check className="h-3 w-3 mr-1" />
+                        Resolve
+                      </Button>
+                    )}
+                    {isResolved && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-xs text-orange-600 hover:bg-orange-50"
+                        onClick={() => handleStatusChange("open")}
+                        disabled={isSaving}
+                      >
+                        <CircleDot className="h-3 w-3 mr-1" />
+                        Reopen
+                      </Button>
+                    )}
+                    {canEdit && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-xs text-gray-500 hover:text-gray-700 ml-auto"
+                        onClick={handleMarkNotRelevant}
+                        disabled={isSaving}
+                      >
+                        <MinusCircle className="h-3 w-3 mr-1" />
+                        No Longer Relevant
+                      </Button>
+                    )}
+                  </>
+                )}
+              </div>
             </div>
 
             {/* Version history */}

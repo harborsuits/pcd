@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
-import { Clock, ExternalLink, RefreshCw, Camera, Upload, Loader2, X, Send, Paperclip, Check, CircleDot, MessageCircle, CornerDownRight, MessageSquare } from "lucide-react";
+import { Clock, ExternalLink, RefreshCw, Camera, Upload, Loader2, X, Send, Paperclip, Check, CircleDot, MessageCircle, CornerDownRight, MessageSquare, ChevronDown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -33,6 +33,9 @@ interface FeedbackComment {
   parent_comment_id?: string | null;
   thread_root_id?: string | null;
   last_activity_at?: string | null;
+  // Client confirmation fields
+  client_confirmed_at?: string | null;
+  client_confirmed_by?: string | null;
   // Computed by UI
   replies?: FeedbackComment[];
 }
@@ -571,16 +574,74 @@ export function WebsiteTab({
                   );
                 })}
 
-                {/* Resolved threads (collapsed) */}
+                {/* Resolved threads (collapsible with muted cards) */}
                 {threadedComments.filter(thread => thread.resolved_at).length > 0 && (
-                  <div className="pt-2 border-t border-border">
-                    <div className="flex items-center gap-1.5 mb-2">
+                  <details className="pt-2 border-t border-border group">
+                    <summary className="flex items-center gap-1.5 cursor-pointer list-none select-none hover:text-foreground text-muted-foreground transition-colors">
+                      <ChevronDown className="h-3 w-3 transition-transform group-open:rotate-180" />
                       <Check className="h-3 w-3 text-green-500" />
-                      <span className="text-[10px] text-muted-foreground">
-                        {threadedComments.filter(thread => thread.resolved_at).length} resolved
+                      <span className="text-[10px]">
+                        Resolved ({threadedComments.filter(thread => thread.resolved_at).length})
                       </span>
+                    </summary>
+                    <div className="mt-2 space-y-2">
+                      {threadedComments.filter(thread => thread.resolved_at).map((thread) => {
+                        const replyCount = thread.replies?.length ?? 0;
+                        return (
+                          <div
+                            key={thread.id}
+                            onClick={() => {
+                              setSelectedComment(thread);
+                              setShowDetailModal(true);
+                            }}
+                            className="rounded-md border border-border/50 bg-muted/30 overflow-hidden hover:border-border transition-colors cursor-pointer opacity-70 hover:opacity-100"
+                          >
+                            {/* Screenshot thumbnail (muted) */}
+                            {thread.screenshot_signed_url ? (
+                              <div className="relative aspect-video bg-muted grayscale-[30%]">
+                                <img
+                                  src={thread.screenshot_signed_url}
+                                  alt="Resolved feedback"
+                                  className="w-full h-full object-cover"
+                                />
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
+                                <div className="absolute top-1 right-1">
+                                  <Check className="h-3 w-3 text-green-400" />
+                                </div>
+                                <div className="absolute bottom-1 left-1 right-1">
+                                  <span className="text-[9px] text-white/80 truncate block line-through">
+                                    {thread.body.slice(0, 35)}{thread.body.length > 35 ? '...' : ''}
+                                  </span>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="p-2">
+                                <div className="flex items-start gap-1.5">
+                                  <Check className="h-2.5 w-2.5 text-green-500 flex-shrink-0" />
+                                  <p className="text-[10px] text-muted-foreground leading-tight line-clamp-2 flex-1 line-through">
+                                    {thread.body}
+                                  </p>
+                                  {replyCount > 0 && (
+                                    <Badge variant="outline" className="text-[8px] h-4 px-1 bg-gray-50 text-gray-500 border-gray-200 flex-shrink-0">
+                                      {replyCount}
+                                    </Badge>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+                            <div className="px-2 py-1 border-t border-border/50 bg-muted/20 flex items-center justify-between">
+                              <span className="text-[9px] text-muted-foreground/70">
+                                {thread.author_type === "client" ? "You" : "Operator"}
+                              </span>
+                              <Badge variant="outline" className="text-[8px] h-4 px-1 bg-green-50/50 text-green-600 border-green-200/50">
+                                Resolved
+                              </Badge>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
-                  </div>
+                  </details>
                 )}
 
                 {/* Empty state */}
