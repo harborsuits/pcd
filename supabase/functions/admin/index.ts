@@ -3333,29 +3333,6 @@ async function handleGetCommentAttachments(req: Request, token: string, commentI
       };
     }));
 
-    // Also include the legacy screenshot_path as an attachment if it exists
-    // and there's no screenshot_media_id (meaning it's not already in prototype_comment_media)
-    if (comment.screenshot_path && !comment.screenshot_media_id) {
-      const { data: screenshotSignedData } = await supabase.storage
-        .from("project-media")
-        .createSignedUrl(comment.screenshot_path, 3600);
-      
-      // Extract filename from path
-      const pathParts = comment.screenshot_path.split("/");
-      const filename = pathParts[pathParts.length - 1] || "screenshot.png";
-      
-      // Add screenshot as first attachment
-      attachmentsWithUrls.unshift({
-        id: `screenshot-${commentId}`,
-        filename: filename,
-        mime_type: "image/png",
-        size_bytes: 0, // Unknown for legacy screenshots
-        uploader_type: "client",
-        created_at: comment.created_at,
-        signed_url: screenshotSignedData?.signedUrl || null,
-      });
-    }
-
     return new Response(
       JSON.stringify({ attachments: attachmentsWithUrls }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
