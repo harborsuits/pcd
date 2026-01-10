@@ -409,42 +409,44 @@ export function CommentCard({
               <p className="text-xs">No attachments</p>
             </div>
           ) : (
-            <div className="flex flex-wrap gap-1 mb-2">
+            <div className="flex flex-wrap gap-2 mb-2">
               {attachments.map((att) => (
-                <div
-                  key={att.id}
-                  className="relative group w-12 h-12 rounded border border-border overflow-hidden bg-muted/50"
-                >
-                  {isImageMime(att.mime_type) && att.signed_url ? (
-                    <img src={att.signed_url} alt={att.filename} className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <FileIcon className="h-4 w-4 text-muted-foreground" />
-                    </div>
-                  )}
-                  {/* Hover actions */}
-                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-0.5">
-                    {att.signed_url && (
+                <div key={att.id} className="group w-20">
+                  <div className="relative w-20 h-20 rounded-lg border border-border overflow-hidden bg-muted/50">
+                    {isImageMime(att.mime_type) && att.signed_url ? (
+                      <img src={att.signed_url} alt={att.filename} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <FileIcon className="h-5 w-5 text-muted-foreground" />
+                      </div>
+                    )}
+                    {/* Hover actions - operator gets open + delete */}
+                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1">
+                      {att.signed_url && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 text-white hover:bg-white/20"
+                          onClick={() => window.open(att.signed_url!, "_blank")}
+                          title="Open"
+                        >
+                          <ExternalLink className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-5 w-5 text-white hover:bg-white/20"
-                        onClick={() => window.open(att.signed_url!, "_blank")}
-                        title="Open"
+                        className="h-6 w-6 text-white hover:bg-white/20"
+                        onClick={() => deleteMutation.mutate(att.id)}
+                        disabled={deleteMutation.isPending}
+                        title="Delete"
                       >
-                        <ExternalLink className="h-3 w-3" />
+                        <X className="h-3.5 w-3.5" />
                       </Button>
-                    )}
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-5 w-5 text-white hover:bg-white/20"
-                      onClick={() => deleteMutation.mutate(att.id)}
-                      disabled={deleteMutation.isPending}
-                      title="Delete"
-                    >
-                      <X className="h-3 w-3" />
-                    </Button>
+                    </div>
+                  </div>
+                  <div className="mt-1 text-[11px] text-muted-foreground truncate" title={att.filename}>
+                    {att.filename}
                   </div>
                 </div>
               ))}
