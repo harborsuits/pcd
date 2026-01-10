@@ -351,7 +351,7 @@ export function FeedbackDetailModal({
           </DialogTitle>
         </DialogHeader>
 
-        <ScrollArea className="flex-1 min-h-0 pr-4">
+        <ScrollArea className="flex-1 min-h-0 max-h-[calc(90vh-6rem)] pr-4">
           <div className="space-y-4">
             {/* Screenshot */}
             {screenshotUrl && (
@@ -359,7 +359,7 @@ export function FeedbackDetailModal({
                 <img
                   src={screenshotUrl}
                   alt="Screenshot"
-                  className="w-full h-auto"
+                  className="w-full h-auto max-h-[50vh] object-contain"
                 />
               </div>
             )}
