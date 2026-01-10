@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { Upload, File, Image, FileText, Download, Loader2, FolderOpen, Trash2 } from "lucide-react";
+import { Upload, File, Image, FileText, Download, Loader2, FolderOpen, MessageSquare } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -12,9 +12,12 @@ interface FileItem {
   id: string;
   file_name: string;
   file_type: string;
-  storage_path: string;
   created_at: string;
-  description?: string;
+  description?: string | null;
+  signed_url?: string | null;
+  source?: "upload" | "feedback";
+  uploader_type?: string | null;
+  comment_id?: string | null;
 }
 
 interface FilesTabProps {
@@ -31,56 +34,9 @@ function isImageType(mimeType: string): boolean {
   return mimeType.startsWith('image/');
 }
 
-// Component for image thumbnail with lazy loading
-function FileThumbnail({ 
-  file, 
-  token 
-}: { 
-  file: FileItem; 
-  token: string;
-}) {
-  const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+// Component for image thumbnail - uses signed_url from list response
+function FileThumbnail({ file }: { file: FileItem }) {
   const [error, setError] = useState(false);
-
-  useEffect(() => {
-    if (!isImageType(file.file_type)) {
-      setLoading(false);
-      return;
-    }
-
-    const fetchThumbnail = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        const authToken = session?.access_token || SUPABASE_ANON_KEY;
-        
-        const res = await fetch(
-          `${SUPABASE_URL}/functions/v1/files/${token}/${file.id}/download`,
-          {
-            method: "GET",
-            headers: {
-              apikey: SUPABASE_ANON_KEY,
-              Authorization: `Bearer ${authToken}`,
-            },
-          }
-        );
-
-        if (res.ok) {
-          const data = await res.json();
-          if (data.url) {
-            setThumbnailUrl(data.url);
-          }
-        }
-      } catch (err) {
-        console.error("Thumbnail fetch error:", err);
-        setError(true);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchThumbnail();
-  }, [file.id, file.file_type, token]);
 
   // For non-images, show the icon
   if (!isImageType(file.file_type)) {
@@ -92,33 +48,24 @@ function FileThumbnail({
     );
   }
 
-  // Loading state for images
-  if (loading) {
+  // If signed_url provided and no error, show the thumbnail
+  if (file.signed_url && !error) {
     return (
-      <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
-        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+      <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-muted">
+        <img
+          src={file.signed_url}
+          alt={file.file_name}
+          className="w-full h-full object-cover"
+          onError={() => setError(true)}
+        />
       </div>
     );
   }
 
-  // Error state or no URL - fall back to icon
-  if (error || !thumbnailUrl) {
-    return (
-      <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
-        <Image className="h-5 w-5 text-muted-foreground" />
-      </div>
-    );
-  }
-
-  // Show the actual thumbnail
+  // Fallback to icon
   return (
-    <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-muted">
-      <img
-        src={thumbnailUrl}
-        alt={file.file_name}
-        className="w-full h-full object-cover"
-        onError={() => setError(true)}
-      />
+    <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
+      <Image className="h-5 w-5 text-muted-foreground" />
     </div>
   );
 }
@@ -205,6 +152,13 @@ export function FilesTab({ token }: FilesTabProps) {
   };
 
   const handleDownload = async (file: FileItem) => {
+    // If we have a signed_url from the list, use it directly
+    if (file.signed_url) {
+      window.open(file.signed_url, '_blank');
+      return;
+    }
+
+    // Fallback to download endpoint
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const authToken = session?.access_token || SUPABASE_ANON_KEY;
@@ -230,6 +184,12 @@ export function FilesTab({ token }: FilesTabProps) {
       console.error("Download error:", err);
       toast.error("Failed to download file");
     }
+  };
+
+  // Get provenance text for display
+  const getProvenanceText = (file: FileItem): string => {
+    if (file.source !== "feedback" || !file.uploader_type) return "";
+    return file.uploader_type === "client" ? "You" : "Operator";
   };
 
   if (loading) {
@@ -296,16 +256,27 @@ export function FilesTab({ token }: FilesTabProps) {
         ) : (
           <div className="space-y-2">
             {files.map((file) => {
+              const provenance = getProvenanceText(file);
+              
               return (
                 <div
                   key={file.id}
                   className="flex items-center gap-3 p-3 rounded-lg border border-border bg-card hover:bg-muted/50 transition-colors"
                 >
-                  <FileThumbnail file={file} token={token} />
+                  <FileThumbnail file={file} />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{file.file_name}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-medium truncate">{file.file_name}</p>
+                      {file.source === "feedback" && (
+                        <span className="inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 flex-shrink-0">
+                          <MessageSquare className="h-3 w-3" />
+                          From feedback
+                        </span>
+                      )}
+                    </div>
                     <p className="text-xs text-muted-foreground">
                       {format(new Date(file.created_at), 'MMM d, yyyy')}
+                      {provenance && ` • ${provenance}`}
                     </p>
                   </div>
                   <Button
