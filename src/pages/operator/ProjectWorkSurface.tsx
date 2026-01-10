@@ -241,8 +241,65 @@ export function ProjectWorkSurface({ project, onBack, onStatusChange }: ProjectW
       if (!res.ok) throw new Error("Failed to fetch messages");
       return res.json() as Promise<{ messages: Message[] }>;
     },
-    refetchInterval: 10000,
+    // No polling - using realtime below
   });
+
+  // Realtime subscription for messages (replaces polling)
+  useEffect(() => {
+    if (!project?.project_token) return;
+
+    const channel = supabase
+      .channel(`rt-messages-worksurface-${project.project_token}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'messages',
+          filter: `project_token=eq.${project.project_token}`,
+        },
+        (payload) => {
+          console.log('[Operator WorkSurface] Message realtime:', payload.eventType);
+          queryClient.invalidateQueries({ 
+            queryKey: ['project-messages', project.project_token] 
+          });
+          queryClient.invalidateQueries({ queryKey: ['admin-inbox'] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [project?.project_token, queryClient]);
+
+  // Realtime subscription for comments
+  useEffect(() => {
+    if (!project?.project_token) return;
+
+    const channel = supabase
+      .channel(`rt-comments-worksurface-${project.project_token}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'prototype_comments',
+          filter: `project_token=eq.${project.project_token}`,
+        },
+        (payload) => {
+          console.log('[Operator WorkSurface] Comment realtime:', payload.eventType);
+          queryClient.invalidateQueries({ 
+            queryKey: ['project-comments', project.project_token] 
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [project?.project_token, queryClient]);
 
   // Fetch media
   const { data: mediaData, isLoading: mediaLoading } = useQuery({

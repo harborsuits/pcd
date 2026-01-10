@@ -402,6 +402,34 @@ export function ProjectDetailDrawer({ project, open, onClose, onStatusChange }: 
     enabled: !!project && open,
   });
 
+  // Realtime subscription for comments (instant updates)
+  useEffect(() => {
+    if (!project?.project_token || !open) return;
+
+    const channel = supabase
+      .channel(`rt-comments-drawer-${project.project_token}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'prototype_comments',
+          filter: `project_token=eq.${project.project_token}`,
+        },
+        (payload) => {
+          console.log('[Operator Drawer] Comment realtime:', payload.eventType);
+          queryClient.invalidateQueries({ 
+            queryKey: ['project-comments', project.project_token] 
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [project?.project_token, open, queryClient]);
+
   // Fetch project files with signed URLs via edge function
   const { data: filesData, isLoading: filesLoading } = useQuery({
     queryKey: ["project-files", project?.project_token],

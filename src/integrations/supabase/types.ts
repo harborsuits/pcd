@@ -1430,7 +1430,9 @@ export type Database = {
           edited_at: string | null
           id: string
           is_internal: boolean
+          is_locked: boolean
           is_relevant: boolean | null
+          last_activity_at: string | null
           page_path: string | null
           page_url: string | null
           parent_comment_id: string | null
@@ -1452,6 +1454,7 @@ export type Database = {
           text_context: string | null
           text_hint: string | null
           text_offset: number | null
+          thread_root_id: string | null
           version_count: number | null
           viewport_h: number | null
           viewport_w: number | null
@@ -1473,7 +1476,9 @@ export type Database = {
           edited_at?: string | null
           id?: string
           is_internal?: boolean
+          is_locked?: boolean
           is_relevant?: boolean | null
+          last_activity_at?: string | null
           page_path?: string | null
           page_url?: string | null
           parent_comment_id?: string | null
@@ -1495,6 +1500,7 @@ export type Database = {
           text_context?: string | null
           text_hint?: string | null
           text_offset?: number | null
+          thread_root_id?: string | null
           version_count?: number | null
           viewport_h?: number | null
           viewport_w?: number | null
@@ -1516,7 +1522,9 @@ export type Database = {
           edited_at?: string | null
           id?: string
           is_internal?: boolean
+          is_locked?: boolean
           is_relevant?: boolean | null
+          last_activity_at?: string | null
           page_path?: string | null
           page_url?: string | null
           parent_comment_id?: string | null
@@ -1538,6 +1546,7 @@ export type Database = {
           text_context?: string | null
           text_hint?: string | null
           text_offset?: number | null
+          thread_root_id?: string | null
           version_count?: number | null
           viewport_h?: number | null
           viewport_w?: number | null
@@ -1698,6 +1707,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      thread_reads: {
+        Row: {
+          created_at: string
+          id: string
+          last_read_at: string
+          project_token: string | null
+          thread_root_id: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          last_read_at?: string
+          project_token?: string | null
+          thread_root_id: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_read_at?: string
+          project_token?: string | null
+          thread_root_id?: string
+          user_id?: string | null
+        }
+        Relationships: []
       }
       user_roles: {
         Row: {

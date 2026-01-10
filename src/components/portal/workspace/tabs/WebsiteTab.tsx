@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { Clock, ExternalLink, RefreshCw, Camera, Upload, Loader2, X, Send, Paperclip, Check, CircleDot, MessageCircle } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
@@ -118,6 +119,33 @@ export function WebsiteTab({
   useEffect(() => {
     fetchComments();
   }, [fetchComments]);
+
+  // Realtime subscription for comments (instant updates from operator)
+  useEffect(() => {
+    if (!selectedId) return;
+
+    const channel = supabase
+      .channel(`rt-comments-client-${selectedId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'prototype_comments',
+          filter: `prototype_id=eq.${selectedId}`,
+        },
+        (payload) => {
+          console.log('[Client WebsiteTab] Comment realtime:', payload.eventType);
+          fetchComments();
+          onRefreshComments?.();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [selectedId, fetchComments, onRefreshComments]);
 
   // Capture screenshot using browser tab capture (auto-crops to preview area)
   const handleCaptureScreenshot = useCallback(async () => {
