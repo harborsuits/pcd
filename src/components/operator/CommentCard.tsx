@@ -84,7 +84,7 @@ export function CommentCard({
   onReplyAdded,
   isReply = false,
 }: CommentCardProps) {
-  const [showAttachments, setShowAttachments] = useState(false);
+  // Attachments always visible - no toggle needed
   const [showReply, setShowReply] = useState(false);
   const [replyText, setReplyText] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -270,21 +270,22 @@ export function CommentCard({
             >
               <Reply className="h-3 w-3" />
             </Button>
+            {/* Add files button in header for quick access */}
             <Button
               variant="ghost"
               size="icon"
               className="h-6 w-6"
               onClick={(e) => {
                 e.stopPropagation();
-                setShowAttachments(!showAttachments);
+                fileInputRef.current?.click();
               }}
-              title="Attachments"
+              title="Add files"
+              disabled={uploadMutation.isPending}
             >
-              <Paperclip className="h-3 w-3" />
-              {attachments.length > 0 && !showAttachments && (
-                <span className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-purple-500 text-white text-[8px] rounded-full flex items-center justify-center">
-                  {attachments.length}
-                </span>
+              {uploadMutation.isPending ? (
+                <Loader2 className="h-3 w-3 animate-spin" />
+              ) : (
+                <Upload className="h-3 w-3" />
               )}
             </Button>
             <Button
@@ -389,27 +390,26 @@ export function CommentCard({
         </div>
       )}
 
-      {/* Attachments panel */}
-      {showAttachments && (
-        <div className="mt-2 pt-2 border-t border-border" onClick={(e) => e.stopPropagation()}>
-          <input
-            ref={fileInputRef}
-            type="file"
-            multiple
-            className="hidden"
-            onChange={(e) => handleFileSelect(e.target.files)}
-          />
-          
+      {/* Hidden file input */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        multiple
+        className="hidden"
+        onChange={(e) => handleFileSelect(e.target.files)}
+        onClick={(e) => e.stopPropagation()}
+      />
+
+      {/* Attachments - always visible inline */}
+      {(attachments.length > 0 || attachmentsLoading) && (
+        <div className="mt-2" onClick={(e) => e.stopPropagation()}>
           {attachmentsLoading ? (
-            <div className="flex items-center justify-center py-2">
-              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-            </div>
-          ) : attachments.length === 0 ? (
-            <div className="text-center py-2 text-muted-foreground">
-              <p className="text-xs">No attachments</p>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Loader2 className="h-3 w-3 animate-spin" />
+              Loading attachments...
             </div>
           ) : (
-            <div className="flex flex-wrap gap-2 mb-2">
+            <div className="flex flex-wrap gap-2">
               {attachments.map((att) => (
                 <div key={att.id} className="group w-20">
                   <div className="relative w-20 h-20 rounded-lg border border-border overflow-hidden bg-muted/50">
@@ -452,21 +452,6 @@ export function CommentCard({
               ))}
             </div>
           )}
-          
-          <Button
-            variant="outline"
-            size="sm"
-            className="w-full h-7 text-xs"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={uploadMutation.isPending}
-          >
-            {uploadMutation.isPending ? (
-              <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-            ) : (
-              <Upload className="h-3 w-3 mr-1" />
-            )}
-            Add files
-          </Button>
         </div>
       )}
     </div>
