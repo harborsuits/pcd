@@ -1526,7 +1526,9 @@ async function handleGetComments(
         page_url, page_path, scroll_y, viewport_w, viewport_h, breakpoint,
         anchor_id, anchor_selector, x_pct, y_pct, text_hint, text_offset, text_context,
         screenshot_path, screenshot_w, screenshot_h, screenshot_media_id,
-        edited_at, version_count, is_relevant
+        edited_at, version_count, is_relevant,
+        thread_root_id, last_activity_at,
+        crop_x, crop_y, crop_w, crop_h
       `)
       .eq("project_token", token)
       .eq("is_internal", false) // Filter out internal operator notes for clients
