@@ -278,18 +278,15 @@ export function FeedbackCard({
           </div>
         )}
 
-        {/* Attachments - show inline thumbnails */}
+        {/* Attachments - compact preview with +N badge */}
         {hasAttachments && (
           <div className="mb-2">
-            <div className="text-[10px] text-muted-foreground mb-1 flex items-center gap-1">
-              <Paperclip className="h-2.5 w-2.5" />
-              Attached files:
-            </div>
-            <div className="flex flex-wrap gap-1">
-              {attachments.map((att) => (
+            <div className="flex items-center gap-1.5">
+              {attachments.slice(0, 3).map((att) => (
                 <div
                   key={att.id}
-                  className="relative w-12 h-12 rounded border border-border overflow-hidden bg-muted/50"
+                  className="relative w-10 h-10 rounded-md border border-border overflow-hidden bg-muted/50"
+                  title={att.filename}
                 >
                   {att.mime_type.startsWith("image/") && att.signed_url ? (
                     <img 
@@ -298,12 +295,18 @@ export function FeedbackCard({
                       className="w-full h-full object-cover" 
                     />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center text-[8px] text-muted-foreground text-center p-1">
-                      {att.filename.split('.').pop()?.toUpperCase() || 'FILE'}
+                    <div className="w-full h-full flex items-center justify-center text-[8px] text-muted-foreground">
+                      📎
                     </div>
                   )}
                 </div>
               ))}
+
+              {attachments.length > 3 && (
+                <div className="w-10 h-10 rounded-md border border-border bg-muted/40 flex items-center justify-center text-xs text-muted-foreground font-medium">
+                  +{attachments.length - 3}
+                </div>
+              )}
             </div>
           </div>
         )}

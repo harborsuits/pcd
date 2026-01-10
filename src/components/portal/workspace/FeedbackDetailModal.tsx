@@ -402,40 +402,43 @@ export function FeedbackDetailModal({
             {/* Attachments */}
             {(hasAttachments || loadingAttachments) && (
               <div className="space-y-2">
-                <div className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-                  <Paperclip className="h-3 w-3" />
-                  Attached Files ({loadingAttachments ? "..." : attachments.length})
+                <div className="text-xs font-medium text-muted-foreground">
+                  Attached files {loadingAttachments ? "" : `(${attachments.length})`}
                 </div>
+
                 {loadingAttachments ? (
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Loading attachments...
-                  </div>
+                  <div className="text-sm text-muted-foreground">Loading...</div>
                 ) : (
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap gap-3">
                     {attachments.map((att) => (
                       <a
                         key={att.id}
                         href={att.signed_url || "#"}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="group relative w-12 h-12 rounded-md border border-border overflow-hidden bg-muted/50 hover:border-primary/50 transition-colors"
+                        className="group w-20"
                         title={att.filename}
                       >
-                        {att.mime_type.startsWith("image/") && att.signed_url ? (
-                          <img
-                            src={att.signed_url}
-                            alt={att.filename}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">
-                            📎
-                          </div>
-                        )}
+                        <div className="relative w-20 h-20 rounded-lg border border-border overflow-hidden bg-muted/50 hover:border-primary/50 transition-colors">
+                          {att.mime_type?.startsWith("image/") && att.signed_url ? (
+                            <img
+                              src={att.signed_url}
+                              alt={att.filename}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">
+                              📎
+                            </div>
+                          )}
 
-                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                          <span className="text-white text-[10px]">Open</span>
+                          <div className="absolute inset-0 bg-black/35 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                            <span className="text-white text-[11px] font-medium">Open</span>
+                          </div>
+                        </div>
+
+                        <div className="mt-1 text-[11px] text-muted-foreground truncate">
+                          {att.filename}
                         </div>
                       </a>
                     ))}
