@@ -1607,6 +1607,7 @@ async function handleGetComments(
 
 // POST /portal/:token/screenshot - Upload a screenshot for feedback
 // Now creates a prototype_comment_media record and returns media_id
+// SECURITY: Validates JWT and derives uploader identity from authenticated user
 async function handleScreenshotUpload(
   req: Request,
   token: string,
@@ -1622,12 +1623,51 @@ async function handleScreenshotUpload(
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") || "";
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Verify project exists
+    // SECURITY: Validate JWT and derive uploader identity
+    const authHeader = req.headers.get("Authorization");
+    let uploaderType = "client";
+    let uploaderUserId: string | null = null;
+
+    if (authHeader?.startsWith("Bearer ")) {
+      const jwt = authHeader.replace("Bearer ", "");
+      
+      // Skip validation for anon key (backwards compatibility for public uploads)
+      if (jwt !== supabaseAnonKey) {
+        const { data: { user }, error: authError } = await supabase.auth.getUser(jwt);
+
+        if (authError || !user) {
+          console.log("Screenshot upload: invalid JWT");
+          return new Response(
+            JSON.stringify({ error: "Authentication required", requires_auth: true }),
+            { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        uploaderUserId = user.id;
+
+        // Check if user is operator/admin
+        const { data: roleData } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", user.id)
+          .in("role", ["operator", "admin"])
+          .maybeSingle();
+
+        if (roleData) {
+          uploaderType = roleData.role;
+        }
+
+        console.log(`Screenshot upload: authenticated as ${uploaderType} (${user.id.slice(0, 8)}...)`);
+      }
+    }
+
+    // Verify project exists and user has access
     const { data: project, error: projectError } = await supabase
       .from("projects")
-      .select("id")
+      .select("id, owner_user_id")
       .eq("project_token", token)
       .is("deleted_at", null)
       .maybeSingle();
@@ -1637,6 +1677,17 @@ async function handleScreenshotUpload(
         JSON.stringify({ error: "Project not found" }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
+    }
+
+    // SECURITY: If authenticated and not operator, verify ownership
+    if (uploaderUserId && uploaderType === "client") {
+      if (project.owner_user_id && project.owner_user_id !== uploaderUserId) {
+        console.log(`Screenshot upload: access denied - user ${uploaderUserId} not owner of project`);
+        return new Response(
+          JSON.stringify({ error: "You don't have access to this project" }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
     }
 
     // Parse multipart form data
@@ -1708,19 +1759,19 @@ async function handleScreenshotUpload(
       );
     }
 
-    // Create prototype_comment_media record
-    // comment_id is null for pre-upload (will be updated after comment creation)
+    // Create prototype_comment_media record with derived uploader_type
     const { data: mediaRecord, error: mediaError } = await supabase
       .from("prototype_comment_media")
       .insert({
         prototype_id: prototypeId || null,
         project_token: token,
-        comment_id: commentId || null, // null until linked to a comment
+        comment_id: commentId || null,
         storage_path: storagePath,
         filename: file.name,
         mime_type: file.type,
         size_bytes: file.size,
-        uploader_type: "client",
+        uploader_type: uploaderType, // Derived from JWT, not payload
+        uploader_user_id: uploaderUserId,
       })
       .select("id, storage_path, filename, mime_type, size_bytes")
       .single();
@@ -1734,7 +1785,7 @@ async function handleScreenshotUpload(
       );
     }
 
-    console.log(`Media uploaded: ${storagePath}, media_id: ${mediaRecord.id}`);
+    console.log(`Media uploaded: ${storagePath}, media_id: ${mediaRecord.id}, uploader: ${uploaderType}`);
 
     return new Response(
       JSON.stringify({ 
@@ -2902,6 +2953,7 @@ async function handleGetCommentAttachments(
 }
 
 // POST /portal/:token/comments/:commentId/attachments - Upload attachment for a comment
+// SECURITY: Validates JWT and derives uploader identity from authenticated user
 async function handleUploadCommentAttachment(
   req: Request,
   token: string,
@@ -2918,7 +2970,46 @@ async function handleUploadCommentAttachment(
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") || "";
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // SECURITY: Validate JWT and derive uploader identity
+    const authHeader = req.headers.get("Authorization");
+    let uploaderType = "client";
+    let uploaderUserId: string | null = null;
+
+    if (authHeader?.startsWith("Bearer ")) {
+      const jwt = authHeader.replace("Bearer ", "");
+      
+      // Skip validation for anon key (backwards compatibility)
+      if (jwt !== supabaseAnonKey) {
+        const { data: { user }, error: authError } = await supabase.auth.getUser(jwt);
+
+        if (authError || !user) {
+          console.log("Attachment upload: invalid JWT");
+          return new Response(
+            JSON.stringify({ error: "Authentication required", requires_auth: true }),
+            { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        uploaderUserId = user.id;
+
+        // Check if user is operator/admin
+        const { data: roleData } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", user.id)
+          .in("role", ["operator", "admin"])
+          .maybeSingle();
+
+        if (roleData) {
+          uploaderType = roleData.role;
+        }
+
+        console.log(`Attachment upload: authenticated as ${uploaderType} (${user.id.slice(0, 8)}...)`);
+      }
+    }
 
     // Verify comment belongs to project and get prototype_id
     const { data: comment, error: commentError } = await supabase
@@ -2933,6 +3024,23 @@ async function handleUploadCommentAttachment(
         JSON.stringify({ error: "Comment not found" }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
+    }
+
+    // SECURITY: If client, verify project ownership
+    if (uploaderUserId && uploaderType === "client") {
+      const { data: project } = await supabase
+        .from("projects")
+        .select("owner_user_id")
+        .eq("project_token", token)
+        .maybeSingle();
+
+      if (project?.owner_user_id && project.owner_user_id !== uploaderUserId) {
+        console.log(`Attachment upload: access denied - user ${uploaderUserId} not owner`);
+        return new Response(
+          JSON.stringify({ error: "You don't have access to this project" }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
     }
 
     // Parse multipart form data
@@ -2966,14 +3074,15 @@ async function handleUploadCommentAttachment(
       );
     }
 
-    // Create media record
+    // Create media record with derived uploader_type
     const { data: mediaRecord, error: insertError } = await supabase
       .from("prototype_comment_media")
       .insert({
         project_token: token,
         prototype_id: comment.prototype_id,
         comment_id: commentId,
-        uploader_type: "client",
+        uploader_type: uploaderType, // Derived from JWT
+        uploader_user_id: uploaderUserId,
         storage_path: storagePath,
         filename,
         mime_type: mimeType,
@@ -2997,7 +3106,7 @@ async function handleUploadCommentAttachment(
       .from("project-media")
       .createSignedUrl(storagePath, 3600);
 
-    console.log(`Attachment uploaded for comment ${commentId}`);
+    console.log(`Attachment uploaded for comment ${commentId}, uploader: ${uploaderType}`);
 
     return new Response(
       JSON.stringify({

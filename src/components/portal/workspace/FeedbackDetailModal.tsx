@@ -32,9 +32,12 @@ import {
   ExternalLink,
   CornerDownRight,
   MessageSquare,
+  RotateCcw,
+  AlertCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { CommentData } from "./FeedbackCard";
+import { reportError } from "@/lib/errorReporting";
 
 interface Attachment {
   id: string;
@@ -130,6 +133,7 @@ export function FeedbackDetailModal({
   const [replyText, setReplyText] = useState("");
   const [showReplyInput, setShowReplyInput] = useState(false);
   const [isReplying, setIsReplying] = useState(false);
+  const [replyError, setReplyError] = useState<string | null>(null);
 
   // Fetch attachments for this comment
   const { data: attachmentsData, isLoading: loadingAttachments } = useQuery({
@@ -167,6 +171,7 @@ export function FeedbackDetailModal({
       // Reset reply state
       setReplyText("");
       setShowReplyInput(false);
+      setReplyError(null);
     }
   }, [comment?.id]);
 
@@ -405,12 +410,18 @@ export function FeedbackDetailModal({
     if (!comment || !replyText.trim()) return;
 
     setIsReplying(true);
+    setReplyError(null);
+    
+    // Store reply text for retry
+    const replyContent = replyText.trim();
+    
     try {
       const { data, error } = await supabase.auth.getSession();
       const accessToken = data?.session?.access_token;
 
       if (error || !accessToken) {
-        toast.error("Please sign in again.");
+        setReplyError("Please sign in again to reply.");
+        reportError("No access token for reply", { action: 'handleAddReply', token, commentId: comment.id });
         return;
       }
 
@@ -427,26 +438,37 @@ export function FeedbackDetailModal({
         body: JSON.stringify({
           action: "create",
           prototype_id: comment.prototype_id,
-          body: replyText.trim(),
+          body: replyContent,
           parent_comment_id: parentId,
         }),
       });
 
       if (!res.ok) {
         const payload = await res.json().catch(() => null);
-        throw new Error(payload?.error || "Failed to create reply");
+        const errorMsg = payload?.error || "Failed to create reply";
+        setReplyError(errorMsg);
+        reportError(`Reply failed: ${res.status} - ${errorMsg}`, { action: 'handleAddReply', token, commentId: comment.id });
+        return;
       }
 
       toast.success("Reply added");
       setReplyText("");
       setShowReplyInput(false);
+      setReplyError(null);
       onCommentUpdated?.();
     } catch (e: unknown) {
       const errorMessage = e instanceof Error ? e.message : "Failed to add reply";
-      toast.error(errorMessage);
+      setReplyError(errorMessage);
+      reportError(e instanceof Error ? e : String(e), { action: 'handleAddReply', token, commentId: comment.id });
     } finally {
       setIsReplying(false);
     }
+  };
+  
+  // Retry handler for failed replies
+  const handleRetryReply = () => {
+    setReplyError(null);
+    handleAddReply();
   };
 
   if (!comment) return null;
@@ -672,6 +694,26 @@ export function FeedbackDetailModal({
                 <div className="space-y-2 pt-2">
                   {showReplyInput ? (
                     <div className="space-y-2 p-3 rounded-lg border border-border bg-muted/30">
+                      {/* Error state with retry */}
+                      {replyError && (
+                        <div className="flex items-center justify-between gap-2 p-2 rounded-md bg-destructive/10 border border-destructive/20">
+                          <div className="flex items-center gap-1.5 text-xs text-destructive">
+                            <AlertCircle className="h-3 w-3" />
+                            {replyError}
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={handleRetryReply}
+                            disabled={isReplying}
+                            className="h-6 text-xs px-2"
+                          >
+                            <RotateCcw className="h-3 w-3 mr-1" />
+                            Retry
+                          </Button>
+                        </div>
+                      )}
+                      
                       <Textarea
                         value={replyText}
                         onChange={(e) => setReplyText(e.target.value)}
@@ -691,7 +733,7 @@ export function FeedbackDetailModal({
                           ) : (
                             <Send className="h-3 w-3 mr-1" />
                           )}
-                          Reply
+                          {isReplying ? 'Sending...' : 'Reply'}
                         </Button>
 
                         <Button
@@ -700,6 +742,7 @@ export function FeedbackDetailModal({
                           onClick={() => {
                             setShowReplyInput(false);
                             setReplyText("");
+                            setReplyError(null);
                           }}
                           disabled={isReplying}
                         >
