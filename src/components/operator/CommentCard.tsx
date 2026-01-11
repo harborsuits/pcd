@@ -237,7 +237,7 @@ export function CommentCard({
               </p>
               <div className="flex items-center gap-2 mt-1 flex-wrap">
                 <p className="text-[10px] text-muted-foreground">
-                  {comment.author_type === "client" ? "Client" : "Admin"} • {format(new Date(comment.created_at), "MMM d, h:mm a")}
+                  {comment.author_type === "client" ? "Client" : "Operator"} • {format(new Date(comment.created_at), "MMM d, h:mm a")}
                 </p>
                 {/* Inline attachment count badge */}
                 {attachments.length > 0 && (

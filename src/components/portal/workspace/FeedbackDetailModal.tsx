@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import {
   Dialog,
@@ -125,6 +126,11 @@ export function FeedbackDetailModal({
   const [loadingVersions, setLoadingVersions] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
 
+  // Reply to thread state
+  const [replyText, setReplyText] = useState("");
+  const [showReplyInput, setShowReplyInput] = useState(false);
+  const [isReplying, setIsReplying] = useState(false);
+
   // Fetch attachments for this comment
   const { data: attachmentsData, isLoading: loadingAttachments } = useQuery({
     queryKey: ["feedback-detail-attachments", token, comment?.id],
@@ -158,6 +164,9 @@ export function FeedbackDetailModal({
       setShowClarification(false);
       setVersions([]);
       setHistoryOpen(false);
+      // Reset reply state
+      setReplyText("");
+      setShowReplyInput(false);
     }
   }, [comment?.id]);
 
@@ -391,6 +400,55 @@ export function FeedbackDetailModal({
     }
   };
 
+  // Reply to thread handler - always replies to thread root
+  const handleAddReply = async () => {
+    if (!comment || !replyText.trim()) return;
+
+    setIsReplying(true);
+    try {
+      const { data, error } = await supabase.auth.getSession();
+      const accessToken = data?.session?.access_token;
+
+      if (error || !accessToken) {
+        toast.error("Please sign in again.");
+        return;
+      }
+
+      // Always reply to the thread root to prevent nesting issues
+      const parentId = comment.thread_root_id ?? comment.id;
+
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/portal/${token}/comments`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          action: "create",
+          prototype_id: comment.prototype_id,
+          body: replyText.trim(),
+          parent_comment_id: parentId,
+        }),
+      });
+
+      if (!res.ok) {
+        const payload = await res.json().catch(() => null);
+        throw new Error(payload?.error || "Failed to create reply");
+      }
+
+      toast.success("Reply added");
+      setReplyText("");
+      setShowReplyInput(false);
+      onCommentUpdated?.();
+    } catch (e: unknown) {
+      const errorMessage = e instanceof Error ? e.message : "Failed to add reply";
+      toast.error(errorMessage);
+    } finally {
+      setIsReplying(false);
+    }
+  };
+
   if (!comment) return null;
 
   // Determine if viewing as a client (all portal users are clients for now)
@@ -608,6 +666,58 @@ export function FeedbackDetailModal({
                       </div>
                     );
                   })}
+                </div>
+
+                {/* Reply to Thread */}
+                <div className="space-y-2 pt-2">
+                  {showReplyInput ? (
+                    <div className="space-y-2 p-3 rounded-lg border border-border bg-muted/30">
+                      <Textarea
+                        value={replyText}
+                        onChange={(e) => setReplyText(e.target.value)}
+                        placeholder="Reply to this thread..."
+                        className="min-h-[80px]"
+                        autoFocus
+                      />
+
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="sm"
+                          onClick={handleAddReply}
+                          disabled={isReplying || !replyText.trim()}
+                        >
+                          {isReplying ? (
+                            <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                          ) : (
+                            <Send className="h-3 w-3 mr-1" />
+                          )}
+                          Reply
+                        </Button>
+
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setShowReplyInput(false);
+                            setReplyText("");
+                          }}
+                          disabled={isReplying}
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-xs"
+                      onClick={() => setShowReplyInput(true)}
+                    >
+                      <MessageSquare className="h-3 w-3 mr-1" />
+                      Reply to Thread
+                    </Button>
+                  )}
                 </div>
               </div>
             )}

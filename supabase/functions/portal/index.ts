@@ -1817,7 +1817,7 @@ async function handleCommentAction(
     // Verify project exists
     const { data: project, error: projectError } = await supabase
       .from("projects")
-      .select("id")
+      .select("id, owner_user_id")
       .eq("project_token", token)
       .is("deleted_at", null)
       .maybeSingle();
@@ -1845,19 +1845,92 @@ async function handleCommentAction(
         );
       }
 
+      // ═══════════════ SERVER-SIDE AUTHOR DERIVATION ═══════════════
+      // NEVER trust client-provided author_type - derive from JWT
+      let derivedAuthorType: "client" | "admin" = "client";
+
+      const authHeader = req.headers.get("Authorization") || "";
+      const jwt = authHeader.startsWith("Bearer ") ? authHeader.slice(7).trim() : null;
+
+      if (!jwt) {
+        return new Response(
+          JSON.stringify({ error: "Unauthorized" }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const { data: userData, error: userErr } = await supabase.auth.getUser(jwt);
+      const authedUserId = userData?.user?.id ?? null;
+
+      if (userErr || !authedUserId) {
+        return new Response(
+          JSON.stringify({ error: "Unauthorized" }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Check if user is operator/admin
+      const { data: roleRow } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", authedUserId)
+        .in("role", ["admin", "operator"])
+        .maybeSingle();
+
+      if (roleRow?.role) {
+        derivedAuthorType = "admin";
+      } else if (project.owner_user_id === authedUserId) {
+        derivedAuthorType = "client";
+      } else {
+        return new Response(
+          JSON.stringify({ error: "Forbidden" }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // ═══════════════ THREAD ROOT ENFORCEMENT ═══════════════
+      // Force correct thread_root_id for replies + validate prototype_id match
+      let threadRootId: string | null = null;
+
+      if (body.parent_comment_id) {
+        const { data: parent } = await supabase
+          .from("prototype_comments")
+          .select("id, thread_root_id, project_token, prototype_id")
+          .eq("id", body.parent_comment_id)
+          .maybeSingle();
+
+        if (!parent || parent.project_token !== token) {
+          return new Response(
+            JSON.stringify({ error: "Invalid parent comment" }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        // Extra safety: prevent cross-prototype reply injection
+        if (parent.prototype_id !== prototype_id) {
+          return new Response(
+            JSON.stringify({ error: "Parent comment belongs to different prototype" }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        threadRootId = parent.thread_root_id ?? parent.id;
+      }
+
       // Client comments are never internal
       const { data: comment, error: insertError } = await supabase
         .from("prototype_comments")
         .insert({
           prototype_id,
           project_token: token,
-          author_type: author_type || "client",
+          author_type: derivedAuthorType,
           body: commentBody,
           pin_x: pin_x ?? null,
           pin_y: pin_y ?? null,
           source_message_id: source_message_id || null,
           is_internal: false, // Client comments are always visible
           parent_comment_id: body.parent_comment_id ?? null,
+          thread_root_id: threadRootId,
           // Anchor fields
           page_url: page_url ?? null,
           page_path: page_path ?? null,
