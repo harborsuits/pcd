@@ -43,13 +43,15 @@ export function FeedbackPanel({
     const topLevel = comments.filter(c => !c.archived_at && !c.parent_comment_id);
     const replies = comments.filter(c => !c.archived_at && c.parent_comment_id);
     
-    // Build a map of parent_id -> replies[]
+    // Build a map of thread_root_id -> replies[]
     const replyMap = new Map<string, CommentData[]>();
-    replies.forEach(reply => {
-      const parentId = reply.parent_comment_id!;
-      const list = replyMap.get(parentId) || [];
+
+    replies.forEach((reply) => {
+      const rootId = reply.thread_root_id ?? reply.parent_comment_id;
+      if (!rootId) return;
+      const list = replyMap.get(rootId) ?? [];
       list.push(reply);
-      replyMap.set(parentId, list);
+      replyMap.set(rootId, list);
     });
     
     // Sort replies by created_at
