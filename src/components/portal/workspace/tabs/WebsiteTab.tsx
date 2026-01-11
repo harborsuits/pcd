@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
-import { Clock, ExternalLink, RefreshCw, Camera, Upload, Loader2, X, Send, Paperclip, Check, CircleDot, MessageCircle, CornerDownRight, MessageSquare, ChevronDown } from "lucide-react";
+import { Clock, ExternalLink, RefreshCw, Camera, Upload, Loader2, X, Send, Paperclip, Check, CircleDot, MessageCircle, CornerDownRight, MessageSquare, ChevronDown, WifiOff } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -11,6 +11,7 @@ import { VersionsList, type Version } from "../VersionsList";
 import { CropSelector } from "../CropSelector";
 import { FeedbackDetailModal } from "../FeedbackDetailModal";
 import { captureTabCropped, isTabCaptureSupported, type CaptureError } from "@/lib/tabCapture";
+import { reportError } from "@/lib/errorReporting";
 
 interface FeedbackComment {
   id: string;
@@ -64,6 +65,9 @@ type FeedbackMode =
   | { type: "cropping"; fullImage: string; fullImageW: number; fullImageH: number }
   | { type: "compose"; fullImage: string; fullImageW: number; fullImageH: number; crop: CropSelection; croppedImage: string };
 
+// Fallback polling interval when realtime is disconnected
+const POLLING_INTERVAL_MS = 10000;
+
 export function WebsiteTab({
   versions,
   intakeStatus,
@@ -84,6 +88,10 @@ export function WebsiteTab({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [comments, setComments] = useState<FeedbackComment[]>([]);
   const [isLoadingComments, setIsLoadingComments] = useState(false);
+  
+  // Realtime connection status tracking
+  const [isRealtimeConnected, setIsRealtimeConnected] = useState(true);
+  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   
   // Detail modal state
   const [selectedComment, setSelectedComment] = useState<FeedbackComment | null>(null);
@@ -143,21 +151,28 @@ export function WebsiteTab({
     if (!selectedId) return;
     setIsLoadingComments(true);
     try {
+      // Get auth token for authenticated requests
+      const { data: { session } } = await supabase.auth.getSession();
+      const authToken = session?.access_token || SUPABASE_ANON_KEY;
+      
       const res = await fetch(
         `${SUPABASE_URL}/functions/v1/portal/${token}/comments?prototype_id=${selectedId}`,
         {
           headers: {
             apikey: SUPABASE_ANON_KEY,
-            Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+            Authorization: `Bearer ${authToken}`,
           },
         }
       );
       if (res.ok) {
         const data = await res.json();
         setComments(data.comments || []);
+      } else {
+        reportError(`Failed to fetch comments: ${res.status}`, { action: 'fetchComments', token, prototypeId: selectedId });
       }
     } catch (err) {
       console.error("Failed to fetch comments:", err);
+      reportError(err instanceof Error ? err : String(err), { action: 'fetchComments', token, prototypeId: selectedId });
     } finally {
       setIsLoadingComments(false);
     }
@@ -168,32 +183,77 @@ export function WebsiteTab({
     fetchComments();
   }, [fetchComments]);
 
-  // Realtime subscription for comments (instant updates from operator)
+  // Start/stop fallback polling based on realtime connection status
   useEffect(() => {
-    if (!selectedId) return;
+    if (!isRealtimeConnected && selectedId) {
+      console.log('[WebsiteTab] Realtime disconnected, starting fallback polling');
+      pollingIntervalRef.current = setInterval(() => {
+        fetchComments();
+      }, POLLING_INTERVAL_MS);
+    } else if (pollingIntervalRef.current) {
+      console.log('[WebsiteTab] Realtime connected, stopping polling');
+      clearInterval(pollingIntervalRef.current);
+      pollingIntervalRef.current = null;
+    }
+
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+      }
+    };
+  }, [isRealtimeConnected, selectedId, fetchComments]);
+
+  // Refetch on tab focus (catches missed updates during background)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && selectedId) {
+        console.log('[WebsiteTab] Tab focused, refetching comments');
+        fetchComments();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [selectedId, fetchComments]);
+
+  // Realtime subscription for comments (token-scoped for security)
+  useEffect(() => {
+    if (!token) return;
 
     const channel = supabase
-      .channel(`rt-comments-client-${selectedId}`)
+      .channel(`rt-comments-client-${token}`)
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
           table: 'prototype_comments',
-          filter: `prototype_id=eq.${selectedId}`,
+          filter: `project_token=eq.${token}`, // Token-scoped for security
         },
         (payload) => {
           console.log('[Client WebsiteTab] Comment realtime:', payload.eventType);
-          fetchComments();
-          onRefreshComments?.();
+          // Only process if it matches the selected prototype
+          const newComment = payload.new as FeedbackComment | undefined;
+          if (newComment && selectedId && newComment.prototype_id === selectedId) {
+            fetchComments();
+            onRefreshComments?.();
+          }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('[WebsiteTab] Realtime subscription status:', status);
+        if (status === 'SUBSCRIBED') {
+          setIsRealtimeConnected(true);
+        } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
+          setIsRealtimeConnected(false);
+        }
+      });
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [selectedId, fetchComments, onRefreshComments]);
+  }, [token, selectedId, fetchComments, onRefreshComments]);
 
   // Capture screenshot using browser tab capture (auto-crops to preview area)
   const handleCaptureScreenshot = useCallback(async () => {

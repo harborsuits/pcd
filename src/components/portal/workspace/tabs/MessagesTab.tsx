@@ -1,12 +1,16 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Send, Loader2, MessageCircle } from "lucide-react";
+import { Send, Loader2, MessageCircle, WifiOff, RotateCcw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
+import { reportError } from "@/lib/errorReporting";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
+// Fallback polling interval
+const POLLING_INTERVAL_MS = 10000;
 
 interface Message {
   id: string;
@@ -24,11 +28,14 @@ export function MessagesTab({ token, businessName }: MessagesTabProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
   const [newMessage, setNewMessage] = useState("");
+  const [isRealtimeConnected, setIsRealtimeConnected] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Fetch messages
-  const fetchMessages = async () => {
+  const fetchMessages = useCallback(async () => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const authToken = session?.access_token || SUPABASE_ANON_KEY;
@@ -48,18 +55,55 @@ export function MessagesTab({ token, businessName }: MessagesTabProps) {
       const data = await res.json();
       if (res.ok && data.messages) {
         setMessages(data.messages);
+      } else {
+        reportError(`Failed to fetch messages: ${res.status}`, { action: 'fetchMessages', token });
       }
     } catch (err) {
       console.error("Fetch messages error:", err);
+      reportError(err instanceof Error ? err : String(err), { action: 'fetchMessages', token });
     } finally {
       setLoading(false);
     }
-  };
+  }, [token]);
+
+  // Start/stop fallback polling based on realtime connection status
+  useEffect(() => {
+    if (!isRealtimeConnected) {
+      console.log('[MessagesTab] Realtime disconnected, starting fallback polling');
+      pollingIntervalRef.current = setInterval(() => {
+        fetchMessages();
+      }, POLLING_INTERVAL_MS);
+    } else if (pollingIntervalRef.current) {
+      console.log('[MessagesTab] Realtime connected, stopping polling');
+      clearInterval(pollingIntervalRef.current);
+      pollingIntervalRef.current = null;
+    }
+
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+      }
+    };
+  }, [isRealtimeConnected, fetchMessages]);
+
+  // Refetch on tab focus
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        console.log('[MessagesTab] Tab focused, refetching messages');
+        fetchMessages();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [fetchMessages]);
 
   useEffect(() => {
     fetchMessages();
     
-    // Subscribe to realtime message updates
+    // Subscribe to realtime message updates (token-scoped)
     const channel = supabase
       .channel(`messages-${token}`)
       .on(
@@ -80,12 +124,19 @@ export function MessagesTab({ token, businessName }: MessagesTabProps) {
           });
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('[MessagesTab] Realtime subscription status:', status);
+        if (status === 'SUBSCRIBED') {
+          setIsRealtimeConnected(true);
+        } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
+          setIsRealtimeConnected(false);
+        }
+      });
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [token]);
+  }, [token, fetchMessages]);
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -98,6 +149,11 @@ export function MessagesTab({ token, businessName }: MessagesTabProps) {
     if (!newMessage.trim() || sending) return;
     
     setSending(true);
+    setSendError(null);
+    
+    // Store message content for retry
+    const messageContent = newMessage.trim();
+    
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const authToken = session?.access_token || SUPABASE_ANON_KEY;
@@ -112,7 +168,7 @@ export function MessagesTab({ token, businessName }: MessagesTabProps) {
             Authorization: `Bearer ${authToken}`,
           },
           body: JSON.stringify({
-            content: newMessage.trim(),
+            content: messageContent,
             sender_type: "client",
           }),
         }
@@ -121,12 +177,23 @@ export function MessagesTab({ token, businessName }: MessagesTabProps) {
       if (res.ok) {
         setNewMessage("");
         await fetchMessages();
+      } else {
+        const errorData = await res.json().catch(() => ({ error: 'Failed to send' }));
+        setSendError(errorData.error || 'Failed to send message');
+        reportError(`Send message failed: ${res.status}`, { action: 'sendMessage', token });
       }
     } catch (err) {
       console.error("Send message error:", err);
+      setSendError('Network error. Please try again.');
+      reportError(err instanceof Error ? err : String(err), { action: 'sendMessage', token });
     } finally {
       setSending(false);
     }
+  };
+
+  const handleRetry = () => {
+    setSendError(null);
+    sendMessage();
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -146,6 +213,14 @@ export function MessagesTab({ token, businessName }: MessagesTabProps) {
 
   return (
     <div className="h-full flex flex-col">
+      {/* Connection status banner */}
+      {!isRealtimeConnected && (
+        <div className="flex items-center gap-2 px-4 py-2 bg-amber-50 dark:bg-amber-900/20 border-b border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300 text-xs">
+          <WifiOff className="h-3 w-3" />
+          <span>Live updates unavailable. Messages will refresh automatically.</span>
+        </div>
+      )}
+      
       {/* Messages list */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.length === 0 ? (
@@ -185,6 +260,23 @@ export function MessagesTab({ token, businessName }: MessagesTabProps) {
 
       {/* Message input */}
       <div className="border-t border-border p-4 bg-card">
+        {/* Error state with retry */}
+        {sendError && (
+          <div className="flex items-center justify-between gap-2 mb-3 p-2 rounded-md bg-destructive/10 border border-destructive/20">
+            <span className="text-xs text-destructive">{sendError}</span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleRetry}
+              disabled={sending}
+              className="h-6 text-xs px-2"
+            >
+              <RotateCcw className="h-3 w-3 mr-1" />
+              Retry
+            </Button>
+          </div>
+        )}
+        
         <div className="flex gap-2">
           <Textarea
             value={newMessage}
