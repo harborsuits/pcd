@@ -112,15 +112,17 @@ export function WebsiteTab({
     // Find root comments (where there's no parent_comment_id)
     const rootComments = comments.filter(c => !c.parent_comment_id);
     
-    // Build map: thread_root_id -> [replies]
+    // Build map: thread_root_id -> [replies] with proper typing
     const replyMap = new Map<string, FeedbackComment[]>();
     comments.forEach(c => {
-      if (c.parent_comment_id) {
-        const threadId = c.thread_root_id ?? c.parent_comment_id;
-        const list = replyMap.get(threadId) || [];
-        list.push(c);
-        replyMap.set(threadId, list);
-      }
+      if (!c.parent_comment_id) return;
+      
+      const threadId = c.thread_root_id ?? c.parent_comment_id;
+      if (!threadId) return;
+      
+      const list = replyMap.get(threadId) ?? [];
+      list.push(c);
+      replyMap.set(threadId, list);
     });
     
     // Sort replies chronologically (oldest first)
@@ -129,15 +131,17 @@ export function WebsiteTab({
     ));
     
     // Attach replies to root comments
-    return rootComments.map(root => ({
-      ...root,
-      replies: replyMap.get(root.thread_root_id ?? root.id) || [],
-    })).sort((a, b) => {
-      // Sort by last_activity_at or created_at descending (most recent first)
-      const aTime = new Date(a.last_activity_at || a.created_at).getTime();
-      const bTime = new Date(b.last_activity_at || b.created_at).getTime();
-      return bTime - aTime;
-    });
+    return rootComments
+      .map(root => ({
+        ...root,
+        replies: replyMap.get(root.thread_root_id ?? root.id) ?? [],
+      }))
+      .sort((a, b) => {
+        // Sort by last_activity_at or created_at descending (most recent first)
+        const aTime = new Date(a.last_activity_at ?? a.created_at).getTime();
+        const bTime = new Date(b.last_activity_at ?? b.created_at).getTime();
+        return bTime - aTime;
+      });
   }, [comments]);
 
   // Helper to get the latest reply preview
