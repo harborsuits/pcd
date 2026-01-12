@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Run unit tests
+        run: npm run test:unit
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps
+
+      - name: Run E2E tests
+        run: npm run test:e2e
+
+  security-upload-auth:
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run security tests
+        if: ${{ secrets.SUPABASE_URL != '' }}
+        run: bash scripts/test-upload-auth.sh
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          PROJECT_TOKEN: ${{ secrets.PROJECT_TOKEN }}
+          OWNER_JWT: ${{ secrets.OWNER_JWT }}
+          WRONG_JWT: ${{ secrets.WRONG_JWT }}
+          OPERATOR_JWT: ${{ secrets.OPERATOR_JWT }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
