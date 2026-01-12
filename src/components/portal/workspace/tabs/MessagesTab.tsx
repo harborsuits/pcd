@@ -308,6 +308,7 @@ export function MessagesTab({ token, businessName }: MessagesTabProps) {
             disabled={!newMessage.trim() || sending}
             size="icon"
             className="flex-shrink-0"
+            aria-label="Send"
           >
             {sending ? (
               <Loader2 className="h-4 w-4 animate-spin" />
