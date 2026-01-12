@@ -15,7 +15,7 @@ const POLLING_INTERVAL_MS = 10000;
 interface Message {
   id: string;
   content: string;
-  sender_type: 'client' | 'operator';
+  sender_type: 'client' | 'operator' | 'admin';
   created_at: string;
 }
 
@@ -103,10 +103,10 @@ export function MessagesTab({ token, businessName }: MessagesTabProps) {
     // Skip if still loading or no messages
     if (loading || messages.length === 0) return;
     
-    // Check if there are any operator messages (these are "admin" messages from client perspective)
-    const hasOperatorMessages = messages.some(m => m.sender_type === 'operator');
+    // Check if there are any admin messages (operator messages stored as sender_type='admin')
+    const hasAdminMessages = messages.some(m => m.sender_type === 'admin');
     
-    if (!hasOperatorMessages) return;
+    if (!hasAdminMessages) return;
     
     // Call mark-read endpoint - fire and forget
     const markRead = async () => {
