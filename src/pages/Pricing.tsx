@@ -41,7 +41,7 @@ const Pricing = () => {
             Straightforward pricing for real businesses.
           </p>
           <p className="text-base text-muted-foreground/80 max-w-2xl mx-auto mb-3">
-            Digital infrastructure, websites, and AI reception services designed for local businesses.
+            Websites, AI receptionists that book appointments for you, and digital infrastructure for local businesses.
             Choose a bundle that matches your call volume, booking needs, and how much you want automated.
           </p>
           <p className="text-sm text-muted-foreground/70">

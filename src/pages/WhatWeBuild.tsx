@@ -52,9 +52,9 @@ const FEATURES: FeatureItem[] = [
     bullets: [
       "Answers common questions instantly (services, hours, pricing ranges, next steps)",
       "Responds to calls, texts, and messages when you're unavailable",
-      "Collects structured lead information before handing off or booking",
-      "Routes high-intent requests appropriately",
-      "CRM integrations on the roadmap — designed to reduce manual data entry",
+      "Books appointments directly into your calendar (Calendly, Acuity, Google Calendar)",
+      "Qualifies leads and routes high-intent requests appropriately",
+      "CRM integrations available — designed to reduce manual data entry",
     ],
     url: aiFrontDoorVideo,
     span: "md:col-span-2 md:row-span-1 col-span-1 row-span-1",
