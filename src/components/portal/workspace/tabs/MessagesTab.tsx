@@ -89,7 +89,7 @@ export function MessagesTab({ token, businessName }: MessagesTabProps) {
     return -1;
   }, [messages, lastReadTime]);
 
-  // Mark messages as read when viewed
+  // Mark messages as read when viewed (local storage for UI)
   useEffect(() => {
     if (messages.length > 0) {
       const now = new Date().toISOString();
@@ -97,6 +97,41 @@ export function MessagesTab({ token, businessName }: MessagesTabProps) {
       setLastReadTime(now);
     }
   }, [token, messages.length]);
+
+  // Mark admin/operator messages as read on the backend when client views them
+  useEffect(() => {
+    // Skip if still loading or no messages
+    if (loading || messages.length === 0) return;
+    
+    // Check if there are any operator messages (these are "admin" messages from client perspective)
+    const hasOperatorMessages = messages.some(m => m.sender_type === 'operator');
+    
+    if (!hasOperatorMessages) return;
+    
+    // Call mark-read endpoint - fire and forget
+    const markRead = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.access_token) return;
+        
+        await fetch(
+          `${SUPABASE_URL}/functions/v1/messages/${token}/mark-read`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              apikey: SUPABASE_ANON_KEY,
+              Authorization: `Bearer ${session.access_token}`,
+            },
+          }
+        );
+      } catch (err) {
+        console.warn('[MessagesTab] Failed to mark messages read:', err);
+      }
+    };
+    
+    markRead();
+  }, [loading, messages, token]);
 
   // Fetch messages
   const fetchMessages = useCallback(async () => {
