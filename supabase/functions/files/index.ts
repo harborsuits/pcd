@@ -445,6 +445,18 @@ Deno.serve(async (req) => {
 
   // Handle UPLOAD action (POST)
   if (action === "upload" && req.method === "POST") {
+    // AUTH CHECK - require operator OR client ownership
+    const operatorAuth = await verifyOperatorAuth(req, supabase);
+    const clientAuth = await verifyClientOwnership(req, supabase, project.id);
+
+    if (!operatorAuth.valid && !clientAuth.valid) {
+      console.log("[Files] Unauthorized upload request");
+      return json(401, { error: "Unauthorized" }, corsHeaders);
+    }
+
+    const uploadUserId = operatorAuth.userId || clientAuth.userId;
+    console.log(`[Files] Upload auth verified: ${operatorAuth.valid ? "operator" : "client"} ${uploadUserId}`);
+
     const contentType = req.headers.get("content-type") || "";
     if (!contentType.toLowerCase().includes("multipart/form-data")) {
       return json(400, { error: "Expected multipart/form-data" }, corsHeaders);

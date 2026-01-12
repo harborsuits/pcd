@@ -614,7 +614,7 @@ async function handleInbox(req: Request): Promise<Response> {
 
 // POST /admin/messages/reply
 async function handleMessagesReply(req: Request): Promise<Response> {
-  const authError = await validateAdminKey(req);
+  const { error: authError, context } = await validateAdminAuth(req);
   if (authError) return authError;
 
   try {
@@ -701,8 +701,15 @@ async function handleMessagesReply(req: Request): Promise<Response> {
       );
     }
 
-    console.log("Admin message sent successfully");
+    // Log audit event
+    if (context) {
+      await logAdminAction(context, "message_sent", "message", message.id, {
+        project_token,
+        content_length: trimmedContent.length
+      });
+    }
 
+    console.log("Admin message sent successfully");
     return new Response(
       JSON.stringify({
         ok: true,
@@ -1654,7 +1661,7 @@ async function handleProjects(req: Request): Promise<Response> {
 
 // PATCH /admin/projects/:token/status - Update project status
 async function handleUpdateProjectStatus(req: Request, token: string): Promise<Response> {
-  const authError = await validateAdminKey(req);
+  const { error: authError, context } = await validateAdminAuth(req);
   if (authError) return authError;
 
   if (!isValidToken(token)) {
@@ -1680,6 +1687,16 @@ async function handleUpdateProjectStatus(req: Request, token: string): Promise<R
 
     const supabase = getSupabaseClient();
 
+    // Get current status for audit log
+    const { data: currentProject } = await supabase
+      .from("projects")
+      .select("id, status")
+      .eq("project_token", token)
+      .is("deleted_at", null)
+      .maybeSingle();
+
+    const oldStatus = currentProject?.status;
+
     const { data, error } = await supabase
       .from("projects")
       .update({ status, updated_at: new Date().toISOString() })
@@ -1701,6 +1718,15 @@ async function handleUpdateProjectStatus(req: Request, token: string): Promise<R
         JSON.stringify({ error: "Project not found" }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
+    }
+
+    // Log audit event
+    if (context) {
+      await logAdminAction(context, "project_status_update", "project", data.id, {
+        token,
+        old_status: oldStatus,
+        new_status: status
+      });
     }
 
     console.log(`Project ${token} status updated to ${status}`);
@@ -4865,7 +4891,7 @@ async function handleAddMilestoneNote(req: Request, token: string, milestoneId: 
 
 // POST /admin/projects/:token/archive - Archive a project (soft delete)
 async function handleArchiveProject(req: Request, token: string): Promise<Response> {
-  const authError = await validateAdminKey(req);
+  const { error: authError, context } = await validateAdminAuth(req);
   if (authError) return authError;
 
   if (!isValidToken(token)) {
@@ -4902,6 +4928,14 @@ async function handleArchiveProject(req: Request, token: string): Promise<Respon
       event_name: "archived",
       metadata: { business_name: project.business_name }
     });
+
+    // Log audit event
+    if (context) {
+      await logAdminAction(context, "project_archived", "project", project.id, {
+        token,
+        business_name: project.business_name
+      });
+    }
 
     console.log(`Project archived: ${project.business_name}`);
 
