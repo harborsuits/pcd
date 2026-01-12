@@ -1820,6 +1820,7 @@ async function handleScreenshotUpload(
 }
 
 // POST /portal/:token/comments - Create, resolve, or unresolve comment
+// SECURITY: All actions require JWT authentication for owned projects
 async function handleCommentAction(
   req: Request,
   token: string,
@@ -1875,6 +1876,7 @@ async function handleCommentAction(
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") || "";
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Verify project exists
@@ -1891,6 +1893,67 @@ async function handleCommentAction(
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    // ═══════════════ COMMON AUTH CHECK FOR ALL ACTIONS ═══════════════
+    // SECURITY: If project has an owner, require valid JWT for ALL actions
+    // Read-only actions (get_versions) still require auth for owned projects
+    const authHeader = req.headers.get("Authorization") || "";
+    const jwt = authHeader.startsWith("Bearer ") ? authHeader.slice(7).trim() : null;
+    let authedUserId: string | null = null;
+    let isOperatorOrAdmin = false;
+    
+    if (project.owner_user_id) {
+      // Project is claimed - require authentication
+      if (!jwt) {
+        console.log(`Comment action "${action}": no JWT for owned project`);
+        return new Response(
+          JSON.stringify({ error: "Authentication required", requires_auth: true }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Reject anon key - require real user JWT for owned projects
+      if (jwt === supabaseAnonKey) {
+        console.log(`Comment action "${action}": anon key rejected for owned project`);
+        return new Response(
+          JSON.stringify({ error: "Authentication required", requires_auth: true }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const { data: userData, error: userErr } = await supabase.auth.getUser(jwt);
+      authedUserId = userData?.user?.id ?? null;
+
+      if (userErr || !authedUserId) {
+        console.log(`Comment action "${action}": invalid JWT`);
+        return new Response(
+          JSON.stringify({ error: "Authentication required", requires_auth: true }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Check if user is operator/admin
+      const { data: roleRow } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", authedUserId)
+        .in("role", ["admin", "operator"])
+        .maybeSingle();
+
+      isOperatorOrAdmin = !!roleRow?.role;
+
+      // Verify user has access to this project (owner or operator/admin)
+      if (!isOperatorOrAdmin && project.owner_user_id !== authedUserId) {
+        console.log(`Comment action "${action}": user ${authedUserId.slice(0, 8)}... not authorized`);
+        return new Response(
+          JSON.stringify({ error: "You don't have access to this project" }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      console.log(`Comment action "${action}": authenticated as ${isOperatorOrAdmin ? "operator/admin" : "client"} (${authedUserId.slice(0, 8)}...)`);
+    }
+    // For unclaimed projects (no owner_user_id), allow token-based access for backwards compatibility
 
     if (action === "create") {
       if (!prototype_id || !commentBody) {
@@ -1909,47 +1972,9 @@ async function handleCommentAction(
       }
 
       // ═══════════════ SERVER-SIDE AUTHOR DERIVATION ═══════════════
-      // NEVER trust client-provided author_type - derive from JWT
-      let derivedAuthorType: "client" | "admin" = "client";
-
-      const authHeader = req.headers.get("Authorization") || "";
-      const jwt = authHeader.startsWith("Bearer ") ? authHeader.slice(7).trim() : null;
-
-      if (!jwt) {
-        return new Response(
-          JSON.stringify({ error: "Unauthorized" }),
-          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-
-      const { data: userData, error: userErr } = await supabase.auth.getUser(jwt);
-      const authedUserId = userData?.user?.id ?? null;
-
-      if (userErr || !authedUserId) {
-        return new Response(
-          JSON.stringify({ error: "Unauthorized" }),
-          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-
-      // Check if user is operator/admin
-      const { data: roleRow } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", authedUserId)
-        .in("role", ["admin", "operator"])
-        .maybeSingle();
-
-      if (roleRow?.role) {
-        derivedAuthorType = "admin";
-      } else if (project.owner_user_id === authedUserId) {
-        derivedAuthorType = "client";
-      } else {
-        return new Response(
-          JSON.stringify({ error: "Forbidden" }),
-          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
+      // Auth already validated in common section above - derive author_type from role
+      // For unclaimed projects, default to "client" author_type
+      const derivedAuthorType: "client" | "admin" = isOperatorOrAdmin ? "admin" : "client";
 
       // ═══════════════ THREAD ROOT ENFORCEMENT ═══════════════
       // Force correct thread_root_id for replies + validate prototype_id match
