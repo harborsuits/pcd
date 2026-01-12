@@ -731,7 +731,7 @@ export default function OnboardingWizard() {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="bookingLink">Booking link (optional)</Label>
+          <Label htmlFor="bookingLink">Calendar integration (optional)</Label>
           <Input
             id="bookingLink"
             type="url"

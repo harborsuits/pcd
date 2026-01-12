@@ -109,7 +109,7 @@ export function IntakeSummary({ serviceType, intake, basics }: IntakeSummaryProp
           <Row label="Escalation #" value={getString("escalationNumber")} />
           <Row label="Emergency Rules" value={getString("emergencyRules")} />
           <Row label="Tone" value={getString("preferredTone")} />
-          <Row label="Booking Link" value={getString("bookingLink")} />
+          <Row label="Calendar Integration" value={getString("bookingLink")} />
           <Row label="FAQs" value={getString("faqs")} />
         </Section>
       )}

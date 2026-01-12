@@ -147,6 +147,106 @@ const STATUS_OPTIONS = [
   { value: "archived", label: "Archived" },
 ];
 
+// Webhook Status Section Component
+function WebhookStatusSection({ projectToken }: { projectToken: string }) {
+  const { data, isLoading } = useQuery({
+    queryKey: ["webhook-status", projectToken],
+    queryFn: async () => {
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      
+      const { data: events, error } = await supabase
+        .from("project_events")
+        .select("id, event_name, metadata, created_at")
+        .eq("project_token", projectToken)
+        .like("event_name", "ai_%")
+        .gte("created_at", sevenDaysAgo.toISOString())
+        .order("created_at", { ascending: false })
+        .limit(10);
+      
+      if (error) throw error;
+      return events || [];
+    },
+    staleTime: 30000, // 30 seconds
+  });
+
+  const lastEvent = data?.[0];
+  const eventCount = data?.length || 0;
+  
+  // Status indicator logic
+  let statusColor = "bg-muted-foreground";
+  let statusText = "No events";
+  
+  if (lastEvent) {
+    const lastEventTime = new Date(lastEvent.created_at);
+    const hoursSince = (Date.now() - lastEventTime.getTime()) / (1000 * 60 * 60);
+    
+    if (hoursSince < 24) {
+      statusColor = "bg-green-500";
+      statusText = "Active";
+    } else if (hoursSince < 168) { // 7 days
+      statusColor = "bg-amber-500";
+      statusText = "Idle";
+    } else {
+      statusColor = "bg-destructive";
+      statusText = "Stale";
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="p-4 bg-muted/50 rounded-lg animate-pulse">
+        <div className="h-4 w-24 bg-muted rounded" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Status Summary */}
+      <div className="p-4 bg-muted/50 rounded-lg">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2 text-sm font-medium">
+            <div className={`w-2 h-2 rounded-full ${statusColor}`} />
+            Webhook Status: {statusText}
+          </div>
+          <Badge variant="outline" className="text-xs">
+            {eventCount} events (7d)
+          </Badge>
+        </div>
+        {lastEvent && (
+          <div className="text-xs text-muted-foreground">
+            Last event: {format(new Date(lastEvent.created_at), "MMM d, h:mm a")} — {lastEvent.event_name}
+          </div>
+        )}
+      </div>
+
+      {/* Recent Events Debug View */}
+      {data && data.length > 0 && (
+        <details className="group">
+          <summary className="text-xs font-medium text-muted-foreground cursor-pointer hover:text-foreground flex items-center gap-1">
+            <ChevronRight className="h-3 w-3 transition-transform group-open:rotate-90" />
+            Recent AI Events (Debug)
+          </summary>
+          <div className="mt-2 border rounded-lg divide-y text-xs max-h-64 overflow-y-auto">
+            {data.map((evt) => (
+              <div key={evt.id} className="p-2 space-y-1">
+                <div className="flex items-center justify-between">
+                  <Badge variant="secondary" className="text-[10px]">{evt.event_name}</Badge>
+                  <span className="text-muted-foreground">{format(new Date(evt.created_at), "MMM d, h:mm:ss a")}</span>
+                </div>
+                <pre className="text-[10px] text-muted-foreground bg-muted/50 p-1 rounded overflow-x-auto">
+                  {JSON.stringify(evt.metadata, null, 2).slice(0, 200)}
+                </pre>
+              </div>
+            ))}
+          </div>
+        </details>
+      )}
+    </div>
+  );
+}
+
 interface ProjectDetailDrawerProps {
   project: Project | null;
   open: boolean;
@@ -1720,6 +1820,34 @@ export function ProjectDetailDrawer({ project, open, onClose, onStatusChange }: 
                       </Button>
                     )}
 
+                    {/* Webhook Configuration */}
+                    <div className="p-4 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg space-y-3">
+                      <div className="flex items-center gap-2 text-sm font-medium text-blue-700 dark:text-blue-400">
+                        <Link className="h-4 w-4" />
+                        Webhook Integration
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Paste this URL into Ulio's webhook settings. Events will be routed using the shop_id.
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          readOnly
+                          value="https://ararrbvhzaudfaxjwdrc.supabase.co/functions/v1/ulio-webhook"
+                          className="text-xs font-mono bg-background"
+                        />
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            navigator.clipboard.writeText("https://ararrbvhzaudfaxjwdrc.supabase.co/functions/v1/ulio-webhook");
+                            toast.success("Webhook URL copied!");
+                          }}
+                        >
+                          Copy
+                        </Button>
+                      </div>
+                    </div>
+
                     {/* Ulio Setup URL */}
                     <div className="space-y-2">
                       <label className="text-sm font-medium">Ulio Setup URL</label>
@@ -1751,7 +1879,7 @@ export function ProjectDetailDrawer({ project, open, onClose, onStatusChange }: 
 
                     {/* Ulio Business ID */}
                     <div className="space-y-2">
-                      <label className="text-sm font-medium text-muted-foreground">Ulio Business ID</label>
+                      <label className="text-sm font-medium text-muted-foreground">Ulio Business ID (shop_id)</label>
                       <Input
                         placeholder="UUID from Ulio"
                         defaultValue={project.ulio_business_id || ""}
@@ -1764,7 +1892,15 @@ export function ProjectDetailDrawer({ project, open, onClose, onStatusChange }: 
                           }
                         }}
                       />
+                      <p className="text-xs text-muted-foreground">
+                        This links Ulio webhook events to this project.
+                      </p>
                     </div>
+
+                    {/* Webhook Status - show if business ID is set */}
+                    {project.ulio_business_id && (
+                      <WebhookStatusSection projectToken={project.project_token} />
+                    )}
                   </>
                 ) : (
                   <div className="text-center py-8 text-muted-foreground">

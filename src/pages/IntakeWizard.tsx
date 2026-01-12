@@ -2280,7 +2280,7 @@ const GetDemo = () => {
             {[
               { value: "answer_faqs", label: "Answer FAQs" },
               { value: "collect_lead", label: "Collect lead info" },
-              { value: "send_booking", label: "Send booking links" },
+              { value: "send_booking", label: "Book appointments directly" },
               { value: "follow_up", label: "Follow up missed calls" },
             ].map((opt) => (
               <button
@@ -2776,7 +2776,7 @@ const GetDemo = () => {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="bookingLink">Booking link (optional)</Label>
+          <Label htmlFor="bookingLink">Calendar integration (optional)</Label>
           <Input
             id="bookingLink"
             type="url"
@@ -2833,7 +2833,7 @@ const GetDemo = () => {
     const textHandlingLabels: Record<string, string> = {
       answer_faqs: "Answer FAQs",
       collect_lead: "Collect lead info",
-      send_booking: "Send booking link",
+      send_booking: "Book appointments",
       follow_up_missed: "Follow up missed calls",
     };
 
@@ -3028,7 +3028,7 @@ const GetDemo = () => {
                   </div>
                 )}
                 {formData.bookingLink && (
-                  <ReviewRow label="Booking link:" value={formData.bookingLink} />
+                  <ReviewRow label="Calendar integration:" value={formData.bookingLink} />
                 )}
                 {formData.faqs && (
                   <div>

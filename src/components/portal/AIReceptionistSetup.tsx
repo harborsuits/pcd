@@ -271,7 +271,7 @@ Emergency leak repair"
             </p>
             
             <div className="space-y-2">
-              <Label htmlFor="booking">Booking link (optional)</Label>
+              <Label htmlFor="booking">Calendar integration (optional)</Label>
               <Input
                 id="booking"
                 type="url"
@@ -279,7 +279,7 @@ Emergency leak repair"
                 onChange={(e) => setBookingLink(e.target.value)}
                 placeholder="https://calendly.com/yourbusiness"
               />
-              <p className="text-xs text-muted-foreground">Calendly, Acuity, etc.</p>
+              <p className="text-xs text-muted-foreground">Connect Calendly, Acuity, or Google Calendar. The AI books directly.</p>
             </div>
             
             <div className="space-y-2">
