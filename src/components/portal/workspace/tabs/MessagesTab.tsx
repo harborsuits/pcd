@@ -37,8 +37,16 @@ export function MessagesTab({ token, businessName }: MessagesTabProps) {
   // Fetch messages
   const fetchMessages = useCallback(async () => {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const authToken = session?.access_token || SUPABASE_ANON_KEY;
+      const { data: { session }, error: sessErr } = await supabase.auth.getSession();
+      
+      // Hard fail if no session - don't fallback to anon
+      if (sessErr || !session?.access_token) {
+        console.warn('[MessagesTab] No session for fetchMessages, skipping');
+        setLoading(false);
+        return;
+      }
+      
+      const accessToken = session.access_token;
       
       const res = await fetch(
         `${SUPABASE_URL}/functions/v1/messages/${token}`,
@@ -47,7 +55,7 @@ export function MessagesTab({ token, businessName }: MessagesTabProps) {
           headers: {
             "Content-Type": "application/json",
             apikey: SUPABASE_ANON_KEY,
-            Authorization: `Bearer ${authToken}`,
+            Authorization: `Bearer ${accessToken}`,
           },
         }
       );
@@ -155,8 +163,17 @@ export function MessagesTab({ token, businessName }: MessagesTabProps) {
     const messageContent = newMessage.trim();
     
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const authToken = session?.access_token || SUPABASE_ANON_KEY;
+      const { data: { session }, error: sessErr } = await supabase.auth.getSession();
+      
+      // Hard fail if no session - require auth
+      if (sessErr || !session?.access_token) {
+        setSendError("Please sign in again to send messages.");
+        reportError("No session for sendMessage", { action: 'sendMessage', token });
+        setSending(false);
+        return;
+      }
+      
+      const accessToken = session.access_token;
       
       const res = await fetch(
         `${SUPABASE_URL}/functions/v1/messages/${token}`,
@@ -165,7 +182,7 @@ export function MessagesTab({ token, businessName }: MessagesTabProps) {
           headers: {
             "Content-Type": "application/json",
             apikey: SUPABASE_ANON_KEY,
-            Authorization: `Bearer ${authToken}`,
+            Authorization: `Bearer ${accessToken}`,
           },
           body: JSON.stringify({
             content: messageContent,
