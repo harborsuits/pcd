@@ -1,7 +1,25 @@
 import { useState, useCallback } from "react";
 import { Badge } from "@/components/ui/badge";
-import { Check, Clock, CircleDot, XCircle, Image as ImageIcon, Pencil, MinusCircle, MessageSquare, Paperclip, CornerDownRight, Loader2, RefreshCw } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Check,
+  Clock,
+  CircleDot,
+  XCircle,
+  Image as ImageIcon,
+  Pencil,
+  MinusCircle,
+  MessageSquare,
+  Paperclip,
+  CornerDownRight,
+  Loader2,
+  RefreshCw,
+  Reply,
+  Eye,
+} from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { isReplyComment } from "@/lib/threading";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -33,28 +51,21 @@ export interface CommentData {
   screenshot_media_id?: string | null;
   screenshot_w?: number | null;
   screenshot_h?: number | null;
-  // Snip-first crop fields
   screenshot_full_path?: string | null;
   crop_x?: number | null;
   crop_y?: number | null;
   crop_w?: number | null;
   crop_h?: number | null;
-  // Versioning fields
   edited_at?: string | null;
   version_count?: number;
   is_relevant?: boolean;
-  // Signed URL from backend
   screenshot_signed_url?: string | null;
-  // Threading
   parent_comment_id?: string | null;
   thread_root_id?: string | null;
   last_activity_at?: string | null;
-  // Client confirmation fields
   client_confirmed_at?: string | null;
   client_confirmed_by?: string | null;
-  // Nested replies (populated by parent component)
   replies?: CommentData[];
-  // Attachment count (populated by parent component - deprecated, now fetched)
   attachment_count?: number;
 }
 
@@ -76,10 +87,16 @@ function getEffectiveStatus(c: CommentData): CommentStatus {
 function formatTime(dateStr: string) {
   const d = new Date(dateStr);
   const now = new Date();
-  const isToday = d.toDateString() === now.toDateString();
-  const time = d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
-  if (isToday) return `Today at ${time}`;
-  return `${d.toLocaleDateString(undefined, { month: "short", day: "numeric" })} at ${time}`;
+  const diffMs = now.getTime() - d.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffMins < 1) return "Just now";
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays < 7) return `${diffDays}d ago`;
+  return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
 export function FeedbackCard({
@@ -87,26 +104,38 @@ export function FeedbackCard({
   index,
   token,
   onClick,
-  isReply = false,
+  isReply: isReplyProp,
 }: FeedbackCardProps) {
+  const isMobile = useIsMobile();
+
+  // Derive isReply from comment data, fallback to prop for backward compat
+  const derivedIsReply = isReplyComment(comment);
+  const isReplyFinal = isReplyProp ?? derivedIsReply;
+
   const status = getEffectiveStatus(comment);
   const isResolved = status === "resolved" || status === "wont_do";
-  const hasScreenshot = !!comment.screenshot_path || !!comment.screenshot_signed_url;
+  const hasScreenshot =
+    !!comment.screenshot_path || !!comment.screenshot_signed_url;
   const isEdited = !!comment.edited_at;
   const isNotRelevant = comment.is_relevant === false;
   const hasReplies = (comment.replies?.length ?? 0) > 0;
-  
-  // State for signed URL refresh on image error
+
   const [screenshotError, setScreenshotError] = useState(false);
   const [refreshedUrl, setRefreshedUrl] = useState<string | null>(null);
   const [refreshAttempted, setRefreshAttempted] = useState(false);
-  
-  // State for attachment image errors (keyed by attachment id)
-  const [attachmentErrors, setAttachmentErrors] = useState<Record<string, boolean>>({});
-  const [refreshedAttachmentUrls, setRefreshedAttachmentUrls] = useState<Record<string, string>>({});
-  
-  // Fetch attachments for this comment
-  const { data: attachmentsData, isLoading: loadingAttachments, refetch: refetchAttachments } = useQuery({
+  const [attachmentErrors, setAttachmentErrors] = useState<
+    Record<string, boolean>
+  >({});
+  const [refreshedAttachmentUrls, setRefreshedAttachmentUrls] = useState<
+    Record<string, string>
+  >({});
+  const [showAllAttachments, setShowAllAttachments] = useState(false);
+
+  const {
+    data: attachmentsData,
+    isLoading: loadingAttachments,
+    refetch: refetchAttachments,
+  } = useQuery({
     queryKey: ["portal-comment-attachments", token, comment.id],
     queryFn: async () => {
       const res = await fetch(
@@ -121,23 +150,22 @@ export function FeedbackCard({
       if (!res.ok) return { attachments: [] };
       return res.json() as Promise<{ attachments: Attachment[] }>;
     },
-    staleTime: 30000, // Cache for 30 seconds
+    staleTime: 30000,
   });
-  
+
   const attachments = attachmentsData?.attachments || [];
   const hasAttachments = attachments.length > 0;
+  const displayedAttachments = showAllAttachments
+    ? attachments
+    : attachments.slice(0, 3);
+  const hiddenCount = attachments.length - 3;
 
-  // Handle screenshot image error - refresh signed URL
   const handleScreenshotError = useCallback(async () => {
-    // Prevent infinite loop - only attempt once
     if (refreshAttempted) return;
     setRefreshAttempted(true);
     setScreenshotError(true);
-    
-    console.log(`[FeedbackCard] Screenshot failed to load for comment ${comment.id}, refreshing signed URL...`);
-    
+
     try {
-      // Re-fetch comments to get fresh signed URL
       const res = await fetch(
         `${SUPABASE_URL}/functions/v1/portal/${token}/comments?prototype_id=${comment.prototype_id}`,
         {
@@ -147,75 +175,87 @@ export function FeedbackCard({
           },
         }
       );
-      
+
       if (res.ok) {
         const data = await res.json();
-        const refreshedComment = data.comments?.find((c: CommentData) => c.id === comment.id);
+        const refreshedComment = data.comments?.find(
+          (c: CommentData) => c.id === comment.id
+        );
         if (refreshedComment?.screenshot_signed_url) {
-          console.log(`[FeedbackCard] Got fresh signed URL for comment ${comment.id}`);
           setRefreshedUrl(refreshedComment.screenshot_signed_url);
           setScreenshotError(false);
-        } else {
-          console.warn(`[FeedbackCard] No signed URL in refreshed comment ${comment.id}`);
         }
-      } else {
-        console.error(`[FeedbackCard] Failed to refresh signed URL: ${res.status}`);
       }
     } catch (err) {
-      console.error('[FeedbackCard] Failed to refresh signed URL:', err);
+      console.error("[FeedbackCard] Failed to refresh signed URL:", err);
     }
   }, [token, comment.prototype_id, comment.id, refreshAttempted]);
 
-  // Handle attachment image error - refresh attachments
-  const handleAttachmentError = useCallback(async (attachmentId: string) => {
-    // Prevent multiple refresh attempts for same attachment
-    if (attachmentErrors[attachmentId]) return;
-    
-    setAttachmentErrors(prev => ({ ...prev, [attachmentId]: true }));
-    console.log(`[FeedbackCard] Attachment ${attachmentId} failed to load, refreshing...`);
-    
-    try {
-      // Refetch attachments to get fresh signed URLs
-      const result = await refetchAttachments();
-      if (result.data?.attachments) {
-        const refreshedAtt = result.data.attachments.find(a => a.id === attachmentId);
-        if (refreshedAtt?.signed_url) {
-          console.log(`[FeedbackCard] Got fresh signed URL for attachment ${attachmentId}`);
-          setRefreshedAttachmentUrls(prev => ({ ...prev, [attachmentId]: refreshedAtt.signed_url! }));
-          setAttachmentErrors(prev => ({ ...prev, [attachmentId]: false }));
+  const handleAttachmentError = useCallback(
+    async (attachmentId: string) => {
+      if (attachmentErrors[attachmentId]) return;
+
+      setAttachmentErrors((prev) => ({ ...prev, [attachmentId]: true }));
+
+      try {
+        const result = await refetchAttachments();
+        if (result.data?.attachments) {
+          const refreshedAtt = result.data.attachments.find(
+            (a) => a.id === attachmentId
+          );
+          if (refreshedAtt?.signed_url) {
+            setRefreshedAttachmentUrls((prev) => ({
+              ...prev,
+              [attachmentId]: refreshedAtt.signed_url!,
+            }));
+            setAttachmentErrors((prev) => ({ ...prev, [attachmentId]: false }));
+          }
         }
+      } catch (err) {
+        console.error("[FeedbackCard] Failed to refresh attachment URL:", err);
       }
-    } catch (err) {
-      console.error('[FeedbackCard] Failed to refresh attachment URL:', err);
-    }
-  }, [attachmentErrors, refetchAttachments]);
+    },
+    [attachmentErrors, refetchAttachments]
+  );
 
   const getStatusBadge = () => {
     switch (status) {
       case "in_progress":
         return (
-          <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700">
+          <Badge
+            variant="outline"
+            className="text-[10px] px-1.5 py-0 bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700"
+          >
             <Clock className="h-2.5 w-2.5 mr-0.5" />
             In Progress
           </Badge>
         );
       case "resolved":
         return (
-          <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-green-50 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-700">
+          <Badge
+            variant="outline"
+            className="text-[10px] px-1.5 py-0 bg-green-50 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-700"
+          >
             <Check className="h-2.5 w-2.5 mr-0.5" />
             Resolved
           </Badge>
         );
       case "wont_do":
         return (
-          <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-gray-50 text-gray-600 border-gray-200 dark:bg-gray-800/30 dark:text-gray-400 dark:border-gray-700">
+          <Badge
+            variant="outline"
+            className="text-[10px] px-1.5 py-0 bg-gray-50 text-gray-600 border-gray-200 dark:bg-gray-800/30 dark:text-gray-400 dark:border-gray-700"
+          >
             <XCircle className="h-2.5 w-2.5 mr-0.5" />
             Won't Do
           </Badge>
         );
       default:
         return (
-          <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-900/30 dark:text-orange-300 dark:border-orange-700">
+          <Badge
+            variant="outline"
+            className="text-[10px] px-1.5 py-0 bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-900/30 dark:text-orange-300 dark:border-orange-700"
+          >
             <CircleDot className="h-2.5 w-2.5 mr-0.5" />
             Open
           </Badge>
@@ -224,73 +264,153 @@ export function FeedbackCard({
   };
 
   const getRoleBadge = () => {
-    if (comment.author_type === "operator" || comment.author_type === "admin") {
+    if (
+      comment.author_type === "operator" ||
+      comment.author_type === "admin"
+    ) {
       return (
-        <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-violet-50 text-violet-700 border-violet-200 dark:bg-violet-900/30 dark:text-violet-300 dark:border-violet-700">
+        <Badge
+          variant="outline"
+          className="text-[10px] px-1.5 py-0 bg-violet-50 text-violet-700 border-violet-200 dark:bg-violet-900/30 dark:text-violet-300 dark:border-violet-700"
+        >
           Operator
         </Badge>
       );
     }
     return (
-      <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-900/30 dark:text-sky-300 dark:border-sky-700">
+      <Badge
+        variant="outline"
+        className="text-[10px] px-1.5 py-0 bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-900/30 dark:text-sky-300 dark:border-sky-700"
+      >
         Client
       </Badge>
     );
   };
 
-  // Get screenshot URL - prefer refreshed URL, then signed URL, fallback to public URL
-  const screenshotUrl = refreshedUrl || comment.screenshot_signed_url || 
-    (comment.screenshot_path ? `${SUPABASE_URL}/storage/v1/object/public/project-media/${comment.screenshot_path}` : null);
+  const screenshotUrl =
+    refreshedUrl ||
+    comment.screenshot_signed_url ||
+    (comment.screenshot_path
+      ? `${SUPABASE_URL}/storage/v1/object/public/project-media/${comment.screenshot_path}`
+      : null);
 
+  // Root comment styling: stronger visual weight
+  // Reply styling: lighter, timeline-style
+  if (isReplyFinal) {
+    // ========== REPLY CARD (Lighter Style) ==========
+    return (
+      <div className="ml-4 pl-3 border-l-2 border-muted py-2 group">
+        <div
+          onClick={() => onClick?.(comment)}
+          className={`cursor-pointer rounded-md px-2 py-1.5 transition-colors hover:bg-muted/50 ${
+            isNotRelevant ? "opacity-60" : ""
+          }`}
+        >
+          {/* Compact header: author + time inline */}
+          <div className="flex items-center gap-2 mb-1">
+            <CornerDownRight className="h-2.5 w-2.5 text-muted-foreground" />
+            <span className="text-[10px] text-muted-foreground">
+              {comment.author_type === "client" ? "Client" : "Operator"} •{" "}
+              {formatTime(comment.created_at)}
+            </span>
+            {isEdited && (
+              <span title="Edited">
+                <Pencil className="h-2 w-2 text-amber-500" />
+              </span>
+            )}
+          </div>
+
+          {/* Body - compact */}
+          <p
+            className={`text-sm line-clamp-2 ${
+              isResolved || isNotRelevant
+                ? "text-muted-foreground line-through"
+                : ""
+            }`}
+          >
+            {comment.body}
+          </p>
+
+          {/* Minimal attachment indicator */}
+          {hasAttachments && (
+            <div className="flex items-center gap-1 mt-1 text-[10px] text-muted-foreground">
+              <Paperclip className="h-2.5 w-2.5" />
+              {attachments.length} file{attachments.length !== 1 ? "s" : ""}
+            </div>
+          )}
+
+          {/* Hover-only action (Reply) - hidden on mobile, always visible there */}
+          <div
+            className={`mt-1.5 ${
+              isMobile
+                ? "flex items-center gap-1"
+                : "opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1"
+            }`}
+          >
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-5 w-5"
+              onClick={(e) => {
+                e.stopPropagation();
+                onClick?.(comment);
+              }}
+              aria-label="Reply to this comment"
+            >
+              <Reply className="h-2.5 w-2.5" />
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ========== ROOT CARD (Heavier Style) ==========
   return (
-    <div className={isReply ? "ml-4 pl-3 border-l-2 border-border/50" : ""}>
+    <div className="mb-4">
       <div
         onClick={() => onClick?.(comment)}
-        className={`p-3 rounded-lg border transition-colors cursor-pointer ${
+        className={`p-3 rounded-lg border-l-4 border transition-colors cursor-pointer ${
           isNotRelevant
-            ? "bg-muted/30 border-border/30 opacity-60"
+            ? "bg-muted/30 border-l-muted border-border/30 opacity-60"
             : isResolved
-            ? "bg-muted/50 border-border/50"
-            : "bg-card border-border hover:border-primary/50 hover:bg-accent/50"
+            ? "bg-muted/50 border-l-muted border-border/50"
+            : "bg-card border-l-primary border-border hover:border-primary/50 hover:bg-accent/30"
         }`}
       >
-        {/* Reply indicator */}
-        {isReply && (
-          <div className="flex items-center gap-1 text-[10px] text-muted-foreground mb-1.5">
-            <CornerDownRight className="h-2.5 w-2.5" />
-            Reply
-          </div>
-        )}
-        
         {/* Header */}
         <div className="flex items-center justify-between gap-2 mb-2">
           <div className="flex items-center gap-2">
-            {/* Index badge - hide for replies */}
-            {!isReply && (
-              <div
-                className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold ${
-                  isResolved || isNotRelevant
-                    ? "bg-muted text-muted-foreground"
-                    : "bg-primary text-primary-foreground"
-                }`}
-              >
-                {isResolved ? <Check className="h-3 w-3" /> : index + 1}
-              </div>
-            )}
-            
+            {/* Larger index badge for root */}
+            <div
+              className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                isResolved || isNotRelevant
+                  ? "bg-muted text-muted-foreground"
+                  : "bg-primary text-primary-foreground"
+              }`}
+            >
+              {isResolved ? <Check className="h-3.5 w-3.5" /> : index + 1}
+            </div>
+
             {/* Type indicator */}
             {hasScreenshot ? (
-              <Badge variant="outline" className="text-[10px] px-1.5 py-0 gap-0.5">
+              <Badge
+                variant="outline"
+                className="text-[10px] px-1.5 py-0 gap-0.5"
+              >
                 <ImageIcon className="h-2.5 w-2.5" />
                 {comment.crop_w ? "Snip" : "Screenshot"}
               </Badge>
-            ) : (comment.pin_x !== null && comment.pin_y !== null) ? (
-              <Badge variant="outline" className="text-[10px] px-1.5 py-0 gap-0.5 text-muted-foreground">
+            ) : comment.pin_x !== null && comment.pin_y !== null ? (
+              <Badge
+                variant="outline"
+                className="text-[10px] px-1.5 py-0 gap-0.5 text-muted-foreground"
+              >
                 📍 Pinned
               </Badge>
             ) : null}
           </div>
-          
+
           <span className="text-[10px] text-muted-foreground">
             {formatTime(comment.created_at)}
           </span>
@@ -300,55 +420,72 @@ export function FeedbackCard({
         <div className="flex items-center gap-1.5 mb-2 flex-wrap">
           {getRoleBadge()}
           {getStatusBadge()}
-          
-          {/* Attachment badge */}
+
           {loadingAttachments ? (
-            <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-700">
+            <Badge
+              variant="outline"
+              className="text-[10px] px-1.5 py-0 bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-700"
+            >
               <Loader2 className="h-2 w-2 mr-0.5 animate-spin" />
               Loading...
             </Badge>
-          ) : hasAttachments && (
-            <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-700">
-              <Paperclip className="h-2 w-2 mr-0.5" />
-              {attachments.length} file{attachments.length !== 1 ? 's' : ''}
-            </Badge>
+          ) : (
+            hasAttachments && (
+              <Badge
+                variant="outline"
+                className="text-[10px] px-1.5 py-0 bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-700"
+              >
+                <Paperclip className="h-2 w-2 mr-0.5" />
+                {attachments.length} file{attachments.length !== 1 ? "s" : ""}
+              </Badge>
+            )
           )}
-          
-          {/* Reply count badge */}
+
           {hasReplies && (
-            <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-300 dark:border-indigo-700">
+            <Badge
+              variant="outline"
+              className="text-[10px] px-1.5 py-0 bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-300 dark:border-indigo-700"
+            >
               <MessageSquare className="h-2 w-2 mr-0.5" />
-              {comment.replies!.length} repl{comment.replies!.length !== 1 ? 'ies' : 'y'}
+              {comment.replies!.length}{" "}
+              {comment.replies!.length !== 1 ? "replies" : "reply"}
             </Badge>
           )}
-          
-          {/* Edited badge */}
+
           {isEdited && (
-            <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-700">
+            <Badge
+              variant="outline"
+              className="text-[10px] px-1.5 py-0 bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-700"
+            >
               <Pencil className="h-2 w-2 mr-0.5" />
               Edited
             </Badge>
           )}
-          
-          {/* Not relevant badge */}
+
           {isNotRelevant && (
-            <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-gray-100 text-gray-500 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700">
+            <Badge
+              variant="outline"
+              className="text-[10px] px-1.5 py-0 bg-gray-100 text-gray-500 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700"
+            >
               <MinusCircle className="h-2 w-2 mr-0.5" />
               Not Relevant
             </Badge>
           )}
         </div>
 
-        {/* Body - truncated preview */}
-        <p className={`text-sm mb-2 line-clamp-2 ${isResolved || isNotRelevant ? "text-muted-foreground" : ""}`}>
+        {/* Body */}
+        <p
+          className={`text-sm mb-2 line-clamp-2 ${
+            isResolved || isNotRelevant ? "text-muted-foreground" : ""
+          }`}
+        >
           {comment.body}
         </p>
 
-        {/* Screenshot thumbnail - compact preview with error handling */}
+        {/* Screenshot - 1 large preview */}
         {screenshotUrl && (
           <div className="relative w-full rounded-md overflow-hidden border border-border mb-2">
             {screenshotError && refreshAttempted && !refreshedUrl ? (
-              // Show error state if refresh failed
               <div className="w-full h-20 flex items-center justify-center bg-muted/50 text-muted-foreground text-xs gap-1">
                 <RefreshCw className="h-3 w-3" />
                 Image unavailable
@@ -364,24 +501,28 @@ export function FeedbackCard({
           </div>
         )}
 
-        {/* Attachments - compact preview with +N badge and error handling */}
+        {/* Attachments - collapsed by default with "View all" */}
         {hasAttachments && (
           <div className="mb-2">
-            <div className="flex items-center gap-1.5">
-              {attachments.slice(0, 3).map((att) => {
-                const attUrl = refreshedAttachmentUrls[att.id] || att.signed_url;
-                const hasError = attachmentErrors[att.id] && !refreshedAttachmentUrls[att.id];
-                
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {displayedAttachments.map((att) => {
+                const attUrl =
+                  refreshedAttachmentUrls[att.id] || att.signed_url;
+                const hasError =
+                  attachmentErrors[att.id] && !refreshedAttachmentUrls[att.id];
+
                 return (
                   <div
                     key={att.id}
                     className="relative w-10 h-10 rounded-md border border-border overflow-hidden bg-muted/50"
                     title={att.filename}
                   >
-                    {att.mime_type.startsWith("image/") && attUrl && !hasError ? (
-                      <img 
-                        src={attUrl} 
-                        alt={att.filename} 
+                    {att.mime_type.startsWith("image/") &&
+                    attUrl &&
+                    !hasError ? (
+                      <img
+                        src={attUrl}
+                        alt={att.filename}
                         className="w-full h-full object-cover"
                         onError={() => handleAttachmentError(att.id)}
                       />
@@ -398,10 +539,19 @@ export function FeedbackCard({
                 );
               })}
 
-              {attachments.length > 3 && (
-                <div className="w-10 h-10 rounded-md border border-border bg-muted/40 flex items-center justify-center text-xs text-muted-foreground font-medium">
-                  +{attachments.length - 3}
-                </div>
+              {!showAllAttachments && hiddenCount > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-10 px-2 text-xs"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowAllAttachments(true);
+                  }}
+                  aria-label={`View all ${attachments.length} attachments`}
+                >
+                  <Eye className="h-3 w-3 mr-1" />+{hiddenCount} more
+                </Button>
               )}
             </div>
           </div>
@@ -412,10 +562,10 @@ export function FeedbackCard({
           Click to view details
         </div>
       </div>
-      
-      {/* Render nested replies */}
+
+      {/* Render nested replies with lighter styling */}
       {hasReplies && (
-        <div className="mt-2 space-y-2">
+        <div className="mt-1">
           {comment.replies!.map((reply, replyIdx) => (
             <FeedbackCard
               key={reply.id}
@@ -423,7 +573,6 @@ export function FeedbackCard({
               index={replyIdx}
               token={token}
               onClick={onClick}
-              isReply
             />
           ))}
         </div>
