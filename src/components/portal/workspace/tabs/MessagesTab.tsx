@@ -1,9 +1,9 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Send, Loader2, MessageCircle, WifiOff, RotateCcw } from "lucide-react";
+import { Send, Loader2, MessageCircle, WifiOff, RotateCcw, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { format } from "date-fns";
+import { format, isToday, isYesterday, isSameDay } from "date-fns";
 import { reportError } from "@/lib/errorReporting";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
@@ -24,6 +24,20 @@ interface MessagesTabProps {
   businessName: string;
 }
 
+// Helper to format date headers
+function formatDateHeader(date: Date): string {
+  if (isToday(date)) return 'Today';
+  if (isYesterday(date)) return 'Yesterday';
+  return format(date, 'EEEE, MMMM d');
+}
+
+// Suggested message starters
+const MESSAGE_STARTERS = [
+  "Hi, I have a question about my project...",
+  "I'd like to request a change to...",
+  "Can you help me with..."
+];
+
 export function MessagesTab({ token, businessName }: MessagesTabProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
@@ -31,8 +45,58 @@ export function MessagesTab({ token, businessName }: MessagesTabProps) {
   const [sendError, setSendError] = useState<string | null>(null);
   const [newMessage, setNewMessage] = useState("");
   const [isRealtimeConnected, setIsRealtimeConnected] = useState(true);
+  const [lastReadTime, setLastReadTime] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Load last read time from localStorage
+  useEffect(() => {
+    const stored = localStorage.getItem(`pcd_messages_read_${token}`);
+    setLastReadTime(stored);
+  }, [token]);
+
+  // Group messages by date
+  const groupedMessages = useMemo(() => {
+    const groups: { date: Date; messages: Message[] }[] = [];
+    
+    messages.forEach((msg) => {
+      const msgDate = new Date(msg.created_at);
+      const lastGroup = groups[groups.length - 1];
+      
+      if (lastGroup && isSameDay(lastGroup.date, msgDate)) {
+        lastGroup.messages.push(msg);
+      } else {
+        groups.push({ date: msgDate, messages: [msg] });
+      }
+    });
+    
+    return groups;
+  }, [messages]);
+
+  // Find the first unread message index
+  const firstUnreadIndex = useMemo(() => {
+    if (!lastReadTime) return -1;
+    const lastReadDate = new Date(lastReadTime);
+    
+    for (let i = 0; i < messages.length; i++) {
+      if (
+        messages[i].sender_type === 'operator' &&
+        new Date(messages[i].created_at) > lastReadDate
+      ) {
+        return i;
+      }
+    }
+    return -1;
+  }, [messages, lastReadTime]);
+
+  // Mark messages as read when viewed
+  useEffect(() => {
+    if (messages.length > 0) {
+      const now = new Date().toISOString();
+      localStorage.setItem(`pcd_messages_read_${token}`, now);
+      setLastReadTime(now);
+    }
+  }, [token, messages.length]);
 
   // Fetch messages
   const fetchMessages = useCallback(async () => {
@@ -220,6 +284,10 @@ export function MessagesTab({ token, businessName }: MessagesTabProps) {
     }
   };
 
+  const handleStarterClick = (starter: string) => {
+    setNewMessage(starter);
+  };
+
   if (loading) {
     return (
       <div className="h-full flex items-center justify-center">
@@ -242,36 +310,86 @@ export function MessagesTab({ token, businessName }: MessagesTabProps) {
       <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-center px-4">
-            <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
-              <MessageCircle className="h-6 w-6 text-muted-foreground" />
+            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center mb-4">
+              <MessageCircle className="h-8 w-8 text-primary" />
             </div>
-            <h3 className="font-medium mb-1">No messages yet</h3>
-            <p className="text-sm text-muted-foreground max-w-sm">
+            <h3 className="font-semibold text-lg mb-2">Start a conversation</h3>
+            <p className="text-sm text-muted-foreground max-w-sm mb-6">
               Send us a message if you have questions, want to share additional details, or need to make changes.
             </p>
+            
+            {/* Suggested starters */}
+            <div className="space-y-2 w-full max-w-xs">
+              <p className="text-xs text-muted-foreground flex items-center gap-1.5 justify-center">
+                <Sparkles className="h-3 w-3" />
+                Quick starters
+              </p>
+              {MESSAGE_STARTERS.map((starter, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => handleStarterClick(starter)}
+                  className="w-full text-left text-sm px-3 py-2 rounded-lg border border-border hover:bg-muted/50 transition-colors truncate"
+                >
+                  {starter}
+                </button>
+              ))}
+            </div>
           </div>
         ) : (
-          messages.map((msg) => (
-            <div
-              key={msg.id}
-              className={`flex ${msg.sender_type === 'client' ? 'justify-end' : 'justify-start'}`}
-            >
-              <div
-                className={`max-w-[80%] rounded-2xl px-4 py-2.5 ${
-                  msg.sender_type === 'client'
-                    ? 'bg-primary text-primary-foreground rounded-br-md'
-                    : 'bg-muted rounded-bl-md'
-                }`}
-              >
-                <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
-                <p className={`text-xs mt-1 ${
-                  msg.sender_type === 'client' ? 'text-primary-foreground/70' : 'text-muted-foreground'
-                }`}>
-                  {format(new Date(msg.created_at), 'MMM d, h:mm a')}
-                </p>
+          <>
+            {groupedMessages.map((group, groupIdx) => (
+              <div key={groupIdx} className="space-y-3">
+                {/* Date header */}
+                <div className="flex items-center gap-3">
+                  <div className="flex-1 h-px bg-border" />
+                  <span className="text-xs text-muted-foreground font-medium">
+                    {formatDateHeader(group.date)}
+                  </span>
+                  <div className="flex-1 h-px bg-border" />
+                </div>
+                
+                {/* Messages in this group */}
+                {group.messages.map((msg, msgIdx) => {
+                  const globalIndex = messages.indexOf(msg);
+                  const showNewBadge = globalIndex === firstUnreadIndex;
+                  
+                  return (
+                    <div key={msg.id}>
+                      {/* New messages divider */}
+                      {showNewBadge && (
+                        <div className="flex items-center gap-3 my-3">
+                          <div className="flex-1 h-px bg-primary/50" />
+                          <span className="text-xs font-medium text-primary px-2 py-0.5 bg-primary/10 rounded-full">
+                            New messages
+                          </span>
+                          <div className="flex-1 h-px bg-primary/50" />
+                        </div>
+                      )}
+                      
+                      <div
+                        className={`flex ${msg.sender_type === 'client' ? 'justify-end' : 'justify-start'}`}
+                      >
+                        <div
+                          className={`max-w-[80%] rounded-2xl px-4 py-2.5 ${
+                            msg.sender_type === 'client'
+                              ? 'bg-primary text-primary-foreground rounded-br-md'
+                              : 'bg-muted rounded-bl-md'
+                          }`}
+                        >
+                          <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                          <p className={`text-xs mt-1 ${
+                            msg.sender_type === 'client' ? 'text-primary-foreground/70' : 'text-muted-foreground'
+                          }`}>
+                            {format(new Date(msg.created_at), 'h:mm a')}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-            </div>
-          ))
+            ))}
+          </>
         )}
       </div>
 

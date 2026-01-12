@@ -1,6 +1,6 @@
 import { useParams, Link, useSearchParams, useNavigate } from "react-router-dom";
 import React, { useState, useEffect, useCallback } from "react";
-import { Loader2, AlertCircle, Home, Settings2, ExternalLink, Activity, MessageCircle, FolderOpen, Globe, Phone, ArrowLeft } from "lucide-react";
+import { Loader2, AlertCircle, Home, Settings2, ExternalLink, Activity, MessageCircle, FolderOpen, Globe, Phone, ArrowLeft, HelpCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -13,6 +13,8 @@ import { useToast } from "@/hooks/use-toast";
 import { UpdatesTab, MessagesTab, FilesTab, WebsiteTab, AIReceptionistTab } from "@/components/portal/workspace/tabs";
 import type { Version } from "@/components/portal/workspace/VersionsList";
 import { useAuthReady } from "@/hooks/useAuthReady";
+import { NotificationBell } from "@/components/portal/NotificationBell";
+import { useUnreadCounts } from "@/hooks/useUnreadCounts";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -114,6 +116,9 @@ export default function WorkspacePage() {
   const includesWebsite = serviceType === 'website' || serviceType === 'both';
   const includesAI = serviceType === 'ai_receptionist' || serviceType === 'both';
   const hasVersions = versions.length > 0;
+  
+  // Unread counts for tab badges
+  const { counts: unreadCounts, markAsRead } = useUnreadCounts(token || '');
   
   // Server-side operator verification - uses session from useAuthReady
   const verifyOperatorStatus = useCallback(async () => {
@@ -356,6 +361,9 @@ export default function WorkspacePage() {
             <span className="text-sm font-semibold">{projectInfo?.businessName}</span>
           </div>
           <div className="flex items-center gap-3">
+            {/* Notification bell */}
+            <NotificationBell token={token!} onNavigate={setActiveTab} />
+            
             <Badge variant="outline" className="text-xs">
               {serviceType === 'both' ? 'Website + AI' : 
                serviceType === 'ai_receptionist' ? 'AI Receptionist' : 'Website'}
@@ -392,17 +400,29 @@ export default function WorkspacePage() {
             </TabsTrigger>
             <TabsTrigger 
               value="messages" 
-              className="data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-b-none border-b-2 border-transparent data-[state=active]:border-primary gap-2"
+              className="data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-b-none border-b-2 border-transparent data-[state=active]:border-primary gap-2 relative"
+              onClick={() => markAsRead('messages')}
             >
               <MessageCircle className="h-4 w-4" />
               <span className="hidden sm:inline">Messages</span>
+              {unreadCounts.messages > 0 && (
+                <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-destructive text-[10px] font-medium text-destructive-foreground flex items-center justify-center">
+                  {unreadCounts.messages > 9 ? '9+' : unreadCounts.messages}
+                </span>
+              )}
             </TabsTrigger>
             <TabsTrigger 
               value="files" 
-              className="data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-b-none border-b-2 border-transparent data-[state=active]:border-primary gap-2"
+              className="data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-b-none border-b-2 border-transparent data-[state=active]:border-primary gap-2 relative"
+              onClick={() => markAsRead('files')}
             >
               <FolderOpen className="h-4 w-4" />
               <span className="hidden sm:inline">Files</span>
+              {unreadCounts.files > 0 && (
+                <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-destructive text-[10px] font-medium text-destructive-foreground flex items-center justify-center">
+                  {unreadCounts.files > 9 ? '9+' : unreadCounts.files}
+                </span>
+              )}
             </TabsTrigger>
             {includesWebsite && (
               <TabsTrigger 
