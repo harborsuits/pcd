@@ -78,7 +78,7 @@ const capabilities = [
   {
     icon: Bot,
     title: "AI Receptionist",
-    description: "Smart lead handling and follow-ups.",
+    description: "Answers calls and books appointments 24/7.",
   },
 ];
 
@@ -185,7 +185,7 @@ const Index = () => {
             </h2>
             
             <p className="text-lg md:text-xl text-muted-foreground leading-relaxed max-w-2xl mx-auto">
-              We design custom websites for service businesses and power them with an AI receptionist that answers calls, texts, and forms automatically.
+              We design custom websites for service businesses and power them with an AI receptionist that answers calls, books appointments, and follows up automatically.
             </p>
           </div>
         </div>
@@ -214,7 +214,7 @@ const Index = () => {
                   <Bot className="h-8 w-8 text-accent" />
                 </div>
                 <h3 className="font-semibold text-lg text-foreground mb-2">AI Receptionist</h3>
-                <p className="text-sm text-muted-foreground">Answer calls, texts & forms 24/7. Start capturing leads instantly.</p>
+                <p className="text-sm text-muted-foreground">Answers calls, books appointments, and follows up — 24/7.</p>
               </GlowCard>
             </Link>
             
@@ -280,7 +280,7 @@ const Index = () => {
               Your AI Front Desk
             </h2>
             <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto">
-              Answers calls, texts, and forms instantly. Qualifies leads. Handles next steps automatically — 24/7.
+              Answers calls, texts, and forms instantly. Qualifies leads. Books appointments directly into your calendar — 24/7.
             </p>
           </div>
 
@@ -334,18 +334,14 @@ const Index = () => {
                 </div>
               </GlowCard>
               
-              {/* Roadmap teaser */}
-              <GlowCard customSize glowColor="teal" className="p-5 bg-card/40 border-dashed">
+              <GlowCard customSize glowColor="teal" className="p-5 bg-card/60">
                 <div className="flex items-center gap-4">
-                  <div className="p-2 rounded-lg bg-muted/50">
-                    <Calendar className="h-5 w-5 text-muted-foreground" />
+                  <div className="p-2 rounded-lg bg-accent/10">
+                    <Calendar className="h-5 w-5 text-accent" />
                   </div>
                   <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <h4 className="font-semibold text-muted-foreground">Appointment Booking</h4>
-                      <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded-full">Coming Soon</span>
-                    </div>
-                    <p className="text-sm text-muted-foreground/80">Book directly into your existing CRM — or one we build for you.</p>
+                    <h4 className="font-semibold text-foreground mb-1">Direct Booking</h4>
+                    <p className="text-sm text-muted-foreground">Books appointments into Calendly, Acuity, or Google Calendar automatically.</p>
                   </div>
                 </div>
               </GlowCard>
