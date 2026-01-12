@@ -1,5 +1,6 @@
+import { useState, useCallback } from "react";
 import { Badge } from "@/components/ui/badge";
-import { Check, Clock, CircleDot, XCircle, Image as ImageIcon, Pencil, MinusCircle, MessageSquare, Paperclip, CornerDownRight, Loader2 } from "lucide-react";
+import { Check, Clock, CircleDot, XCircle, Image as ImageIcon, Pencil, MinusCircle, MessageSquare, Paperclip, CornerDownRight, Loader2, RefreshCw } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
@@ -95,8 +96,17 @@ export function FeedbackCard({
   const isNotRelevant = comment.is_relevant === false;
   const hasReplies = (comment.replies?.length ?? 0) > 0;
   
+  // State for signed URL refresh on image error
+  const [screenshotError, setScreenshotError] = useState(false);
+  const [refreshedUrl, setRefreshedUrl] = useState<string | null>(null);
+  const [refreshAttempted, setRefreshAttempted] = useState(false);
+  
+  // State for attachment image errors (keyed by attachment id)
+  const [attachmentErrors, setAttachmentErrors] = useState<Record<string, boolean>>({});
+  const [refreshedAttachmentUrls, setRefreshedAttachmentUrls] = useState<Record<string, string>>({});
+  
   // Fetch attachments for this comment
-  const { data: attachmentsData, isLoading: loadingAttachments } = useQuery({
+  const { data: attachmentsData, isLoading: loadingAttachments, refetch: refetchAttachments } = useQuery({
     queryKey: ["portal-comment-attachments", token, comment.id],
     queryFn: async () => {
       const res = await fetch(
@@ -116,6 +126,69 @@ export function FeedbackCard({
   
   const attachments = attachmentsData?.attachments || [];
   const hasAttachments = attachments.length > 0;
+
+  // Handle screenshot image error - refresh signed URL
+  const handleScreenshotError = useCallback(async () => {
+    // Prevent infinite loop - only attempt once
+    if (refreshAttempted) return;
+    setRefreshAttempted(true);
+    setScreenshotError(true);
+    
+    console.log(`[FeedbackCard] Screenshot failed to load for comment ${comment.id}, refreshing signed URL...`);
+    
+    try {
+      // Re-fetch comments to get fresh signed URL
+      const res = await fetch(
+        `${SUPABASE_URL}/functions/v1/portal/${token}/comments?prototype_id=${comment.prototype_id}`,
+        {
+          headers: {
+            apikey: SUPABASE_ANON_KEY,
+            Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+          },
+        }
+      );
+      
+      if (res.ok) {
+        const data = await res.json();
+        const refreshedComment = data.comments?.find((c: CommentData) => c.id === comment.id);
+        if (refreshedComment?.screenshot_signed_url) {
+          console.log(`[FeedbackCard] Got fresh signed URL for comment ${comment.id}`);
+          setRefreshedUrl(refreshedComment.screenshot_signed_url);
+          setScreenshotError(false);
+        } else {
+          console.warn(`[FeedbackCard] No signed URL in refreshed comment ${comment.id}`);
+        }
+      } else {
+        console.error(`[FeedbackCard] Failed to refresh signed URL: ${res.status}`);
+      }
+    } catch (err) {
+      console.error('[FeedbackCard] Failed to refresh signed URL:', err);
+    }
+  }, [token, comment.prototype_id, comment.id, refreshAttempted]);
+
+  // Handle attachment image error - refresh attachments
+  const handleAttachmentError = useCallback(async (attachmentId: string) => {
+    // Prevent multiple refresh attempts for same attachment
+    if (attachmentErrors[attachmentId]) return;
+    
+    setAttachmentErrors(prev => ({ ...prev, [attachmentId]: true }));
+    console.log(`[FeedbackCard] Attachment ${attachmentId} failed to load, refreshing...`);
+    
+    try {
+      // Refetch attachments to get fresh signed URLs
+      const result = await refetchAttachments();
+      if (result.data?.attachments) {
+        const refreshedAtt = result.data.attachments.find(a => a.id === attachmentId);
+        if (refreshedAtt?.signed_url) {
+          console.log(`[FeedbackCard] Got fresh signed URL for attachment ${attachmentId}`);
+          setRefreshedAttachmentUrls(prev => ({ ...prev, [attachmentId]: refreshedAtt.signed_url! }));
+          setAttachmentErrors(prev => ({ ...prev, [attachmentId]: false }));
+        }
+      }
+    } catch (err) {
+      console.error('[FeedbackCard] Failed to refresh attachment URL:', err);
+    }
+  }, [attachmentErrors, refetchAttachments]);
 
   const getStatusBadge = () => {
     switch (status) {
@@ -165,9 +238,8 @@ export function FeedbackCard({
     );
   };
 
-  // Get screenshot URL - prefer signed URL, fallback to public URL
-  const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-  const screenshotUrl = comment.screenshot_signed_url || 
+  // Get screenshot URL - prefer refreshed URL, then signed URL, fallback to public URL
+  const screenshotUrl = refreshedUrl || comment.screenshot_signed_url || 
     (comment.screenshot_path ? `${SUPABASE_URL}/storage/v1/object/public/project-media/${comment.screenshot_path}` : null);
 
   return (
@@ -272,40 +344,59 @@ export function FeedbackCard({
           {comment.body}
         </p>
 
-        {/* Screenshot thumbnail - compact preview */}
+        {/* Screenshot thumbnail - compact preview with error handling */}
         {screenshotUrl && (
           <div className="relative w-full rounded-md overflow-hidden border border-border mb-2">
-            <img
-              src={screenshotUrl}
-              alt="Screenshot"
-              className="w-full h-auto object-cover max-h-20"
-            />
+            {screenshotError && refreshAttempted && !refreshedUrl ? (
+              // Show error state if refresh failed
+              <div className="w-full h-20 flex items-center justify-center bg-muted/50 text-muted-foreground text-xs gap-1">
+                <RefreshCw className="h-3 w-3" />
+                Image unavailable
+              </div>
+            ) : (
+              <img
+                src={screenshotUrl}
+                alt="Screenshot"
+                className="w-full h-auto object-cover max-h-20"
+                onError={handleScreenshotError}
+              />
+            )}
           </div>
         )}
 
-        {/* Attachments - compact preview with +N badge */}
+        {/* Attachments - compact preview with +N badge and error handling */}
         {hasAttachments && (
           <div className="mb-2">
             <div className="flex items-center gap-1.5">
-              {attachments.slice(0, 3).map((att) => (
-                <div
-                  key={att.id}
-                  className="relative w-10 h-10 rounded-md border border-border overflow-hidden bg-muted/50"
-                  title={att.filename}
-                >
-                  {att.mime_type.startsWith("image/") && att.signed_url ? (
-                    <img 
-                      src={att.signed_url} 
-                      alt={att.filename} 
-                      className="w-full h-full object-cover" 
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-[8px] text-muted-foreground">
-                      📎
-                    </div>
-                  )}
-                </div>
-              ))}
+              {attachments.slice(0, 3).map((att) => {
+                const attUrl = refreshedAttachmentUrls[att.id] || att.signed_url;
+                const hasError = attachmentErrors[att.id] && !refreshedAttachmentUrls[att.id];
+                
+                return (
+                  <div
+                    key={att.id}
+                    className="relative w-10 h-10 rounded-md border border-border overflow-hidden bg-muted/50"
+                    title={att.filename}
+                  >
+                    {att.mime_type.startsWith("image/") && attUrl && !hasError ? (
+                      <img 
+                        src={attUrl} 
+                        alt={att.filename} 
+                        className="w-full h-full object-cover"
+                        onError={() => handleAttachmentError(att.id)}
+                      />
+                    ) : hasError ? (
+                      <div className="w-full h-full flex items-center justify-center text-[8px] text-muted-foreground">
+                        <RefreshCw className="h-2.5 w-2.5" />
+                      </div>
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-[8px] text-muted-foreground">
+                        📎
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
 
               {attachments.length > 3 && (
                 <div className="w-10 h-10 rounded-md border border-border bg-muted/40 flex items-center justify-center text-xs text-muted-foreground font-medium">
