@@ -408,7 +408,7 @@ export default function OnboardingWizard() {
         <ServiceCard
           value="both"
           icon={Package}
-          title="Full Package"
+          title="Complete Growth System"
           description="Website + AI Receptionist — the complete lead-capture system."
           badge="Most Popular"
         />
@@ -850,7 +850,7 @@ export default function OnboardingWizard() {
       ? "AI Receptionist" 
       : formData.serviceType === "website" 
         ? "Website" 
-        : "Full Package";
+        : "Complete Growth System";
 
     return (
       <div className="space-y-6">
