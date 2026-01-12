@@ -1,10 +1,35 @@
 export type Threadable = {
   id: string;
   created_at: string;
-  parent_comment_id: string | null;
-  thread_root_id: string | null;
+  parent_comment_id?: string | null;
+  thread_root_id?: string | null;
   last_activity_at?: string | null;
 };
+
+/**
+ * Returns true if the comment is a root (top-level) comment.
+ * A root comment has no parent_comment_id.
+ */
+export function isRootComment(comment: Threadable): boolean {
+  return !comment.parent_comment_id;
+}
+
+/**
+ * Returns true if the comment is a reply.
+ * A reply has a parent_comment_id.
+ */
+export function isReplyComment(comment: Threadable): boolean {
+  return !!comment.parent_comment_id;
+}
+
+/**
+ * Returns the thread ID for a comment.
+ * For root comments, returns their own ID.
+ * For replies, returns thread_root_id or parent_comment_id.
+ */
+export function getThreadId(comment: Threadable): string {
+  return comment.thread_root_id ?? comment.parent_comment_id ?? comment.id;
+}
 
 /**
  * Groups replies under their thread root.

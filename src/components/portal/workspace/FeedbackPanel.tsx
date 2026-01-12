@@ -5,6 +5,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, MessageCircle, Check, Clock, CircleDot, MinusCircle } from "lucide-react";
 import { FeedbackCard, type CommentData } from "./FeedbackCard";
+import { ThreadFooter } from "@/components/shared/ThreadFooter";
+import { buildReplyMap } from "@/lib/threading";
 
 export type CommentStatus = "open" | "in_progress" | "resolved" | "wont_do";
 
@@ -39,25 +41,12 @@ export function FeedbackPanel({
       not_relevant: [] as CommentData[],
     };
 
-    // First, separate top-level comments from replies
+    // Separate top-level comments from replies
     const topLevel = comments.filter(c => !c.archived_at && !c.parent_comment_id);
     const replies = comments.filter(c => !c.archived_at && c.parent_comment_id);
     
-    // Build a map of thread_root_id -> replies[]
-    const replyMap = new Map<string, CommentData[]>();
-
-    replies.forEach((reply) => {
-      const rootId = reply.thread_root_id ?? reply.parent_comment_id;
-      if (!rootId) return;
-      const list = replyMap.get(rootId) ?? [];
-      list.push(reply);
-      replyMap.set(rootId, list);
-    });
-    
-    // Sort replies by created_at
-    replyMap.forEach(list => list.sort((a, b) => 
-      new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-    ));
+    // Use centralized threading utility
+    const replyMap = buildReplyMap(replies);
 
     // Group top-level comments with their replies attached
     topLevel.forEach(c => {
@@ -98,16 +87,31 @@ export function FeedbackPanel({
     }
 
     return (
-      <div className="space-y-2 p-2">
-        {list.map((comment, index) => (
-          <FeedbackCard
-            key={comment.id}
-            comment={comment}
-            index={index}
-            token={token}
-            onClick={onCommentClick}
-          />
-        ))}
+      <div className="space-y-0 p-2">
+        {list.map((comment, index) => {
+          const status = getEffectiveStatus(comment);
+          const replyCount = comment.replies?.length ?? 0;
+          const lastActivity = comment.last_activity_at || comment.created_at;
+          const isLast = index === list.length - 1;
+
+          return (
+            <div key={comment.id}>
+              <FeedbackCard
+                comment={comment}
+                index={index}
+                token={token}
+                onClick={onCommentClick}
+              />
+              {/* Thread footer with status line and divider */}
+              <ThreadFooter
+                replyCount={replyCount}
+                lastActivityAt={lastActivity}
+                status={status}
+                showDivider={!isLast}
+              />
+            </div>
+          );
+        })}
       </div>
     );
   };
