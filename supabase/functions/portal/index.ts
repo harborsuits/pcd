@@ -1631,40 +1631,7 @@ async function handleScreenshotUpload(
     let uploaderType = "client";
     let uploaderUserId: string | null = null;
 
-    if (authHeader?.startsWith("Bearer ")) {
-      const jwt = authHeader.replace("Bearer ", "");
-      
-      // Skip validation for anon key (backwards compatibility for public uploads)
-      if (jwt !== supabaseAnonKey) {
-        const { data: { user }, error: authError } = await supabase.auth.getUser(jwt);
-
-        if (authError || !user) {
-          console.log("Screenshot upload: invalid JWT");
-          return new Response(
-            JSON.stringify({ error: "Authentication required", requires_auth: true }),
-            { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
-        }
-
-        uploaderUserId = user.id;
-
-        // Check if user is operator/admin
-        const { data: roleData } = await supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", user.id)
-          .in("role", ["operator", "admin"])
-          .maybeSingle();
-
-        if (roleData) {
-          uploaderType = roleData.role;
-        }
-
-        console.log(`Screenshot upload: authenticated as ${uploaderType} (${user.id.slice(0, 8)}...)`);
-      }
-    }
-
-    // Verify project exists and user has access
+    // First, check if project exists and has an owner
     const { data: project, error: projectError } = await supabase
       .from("projects")
       .select("id, owner_user_id")
@@ -1679,16 +1646,61 @@ async function handleScreenshotUpload(
       );
     }
 
-    // SECURITY: If authenticated and not operator, verify ownership
-    if (uploaderUserId && uploaderType === "client") {
-      if (project.owner_user_id && project.owner_user_id !== uploaderUserId) {
-        console.log(`Screenshot upload: access denied - user ${uploaderUserId} not owner of project`);
+    // SECURITY: If project has an owner, require valid JWT (no anon key fallback)
+    if (project.owner_user_id) {
+      if (!authHeader?.startsWith("Bearer ")) {
+        console.log("Screenshot upload: no auth header for owned project");
+        return new Response(
+          JSON.stringify({ error: "Authentication required", requires_auth: true }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const jwt = authHeader.replace("Bearer ", "");
+      
+      // Reject anon key - require real user JWT for owned projects
+      if (jwt === supabaseAnonKey) {
+        console.log("Screenshot upload: anon key rejected for owned project");
+        return new Response(
+          JSON.stringify({ error: "Authentication required", requires_auth: true }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const { data: { user }, error: authError } = await supabase.auth.getUser(jwt);
+
+      if (authError || !user) {
+        console.log("Screenshot upload: invalid JWT for owned project");
+        return new Response(
+          JSON.stringify({ error: "Authentication required", requires_auth: true }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      uploaderUserId = user.id;
+
+      // Check if user is operator/admin
+      const { data: roleData } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id)
+        .in("role", ["operator", "admin"])
+        .maybeSingle();
+
+      if (roleData) {
+        uploaderType = roleData.role;
+      } else if (project.owner_user_id !== user.id) {
+        // Not owner, not operator - reject
+        console.log(`Screenshot upload: access denied - user ${user.id.slice(0, 8)}... not owner`);
         return new Response(
           JSON.stringify({ error: "You don't have access to this project" }),
           { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
+
+      console.log(`Screenshot upload: authenticated as ${uploaderType} (${user.id.slice(0, 8)}...)`);
     }
+    // If no owner_user_id, allow anonymous uploads (legacy/public projects)
 
     // Parse multipart form data
     const formData = await req.formData();
@@ -2978,39 +2990,6 @@ async function handleUploadCommentAttachment(
     let uploaderType = "client";
     let uploaderUserId: string | null = null;
 
-    if (authHeader?.startsWith("Bearer ")) {
-      const jwt = authHeader.replace("Bearer ", "");
-      
-      // Skip validation for anon key (backwards compatibility)
-      if (jwt !== supabaseAnonKey) {
-        const { data: { user }, error: authError } = await supabase.auth.getUser(jwt);
-
-        if (authError || !user) {
-          console.log("Attachment upload: invalid JWT");
-          return new Response(
-            JSON.stringify({ error: "Authentication required", requires_auth: true }),
-            { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
-        }
-
-        uploaderUserId = user.id;
-
-        // Check if user is operator/admin
-        const { data: roleData } = await supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", user.id)
-          .in("role", ["operator", "admin"])
-          .maybeSingle();
-
-        if (roleData) {
-          uploaderType = roleData.role;
-        }
-
-        console.log(`Attachment upload: authenticated as ${uploaderType} (${user.id.slice(0, 8)}...)`);
-      }
-    }
-
     // Verify comment belongs to project and get prototype_id
     const { data: comment, error: commentError } = await supabase
       .from("prototype_comments")
@@ -3026,22 +3005,68 @@ async function handleUploadCommentAttachment(
       );
     }
 
-    // SECURITY: If client, verify project ownership
-    if (uploaderUserId && uploaderType === "client") {
-      const { data: project } = await supabase
-        .from("projects")
-        .select("owner_user_id")
-        .eq("project_token", token)
+    // Get project to check ownership
+    const { data: project } = await supabase
+      .from("projects")
+      .select("owner_user_id")
+      .eq("project_token", token)
+      .maybeSingle();
+
+    // SECURITY: If project has an owner, require valid JWT (no anon key fallback)
+    if (project?.owner_user_id) {
+      if (!authHeader?.startsWith("Bearer ")) {
+        console.log("Attachment upload: no auth header for owned project");
+        return new Response(
+          JSON.stringify({ error: "Authentication required", requires_auth: true }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const jwt = authHeader.replace("Bearer ", "");
+      
+      // Reject anon key - require real user JWT for owned projects
+      if (jwt === supabaseAnonKey) {
+        console.log("Attachment upload: anon key rejected for owned project");
+        return new Response(
+          JSON.stringify({ error: "Authentication required", requires_auth: true }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const { data: { user }, error: authError } = await supabase.auth.getUser(jwt);
+
+      if (authError || !user) {
+        console.log("Attachment upload: invalid JWT for owned project");
+        return new Response(
+          JSON.stringify({ error: "Authentication required", requires_auth: true }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      uploaderUserId = user.id;
+
+      // Check if user is operator/admin
+      const { data: roleData } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id)
+        .in("role", ["operator", "admin"])
         .maybeSingle();
 
-      if (project?.owner_user_id && project.owner_user_id !== uploaderUserId) {
-        console.log(`Attachment upload: access denied - user ${uploaderUserId} not owner`);
+      if (roleData) {
+        uploaderType = roleData.role;
+      } else if (project.owner_user_id !== user.id) {
+        // Not owner, not operator - reject
+        console.log(`Attachment upload: access denied - user ${user.id.slice(0, 8)}... not owner`);
         return new Response(
           JSON.stringify({ error: "You don't have access to this project" }),
           { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
+
+      console.log(`Attachment upload: authenticated as ${uploaderType} (${user.id.slice(0, 8)}...)`);
     }
+    // If no owner_user_id, allow anonymous uploads (legacy/public projects)
 
     // Parse multipart form data
     const formData = await req.formData();
