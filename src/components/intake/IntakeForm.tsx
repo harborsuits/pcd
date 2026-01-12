@@ -145,7 +145,7 @@ const SERVICE_OPTIONS = [
   },
   {
     value: "both" as const,
-    label: "Full Package",
+    label: "Complete Growth System",
     description: "Website + AI Receptionist working together.",
     icon: Package,
   },
@@ -773,7 +773,7 @@ export function IntakeForm({
       ? "AI Receptionist" 
       : formData.serviceType === "website" 
         ? "Website" 
-        : "Full Package";
+        : "Complete Growth System";
 
     return (
       <div className="space-y-6">

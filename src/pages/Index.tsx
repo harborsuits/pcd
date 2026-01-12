@@ -241,7 +241,7 @@ const Index = () => {
                 <div className="p-3 rounded-xl bg-accent/10 w-fit mx-auto mb-4">
                   <Sparkles className="h-8 w-8 text-accent" />
                 </div>
-                <h3 className="font-semibold text-lg text-foreground mb-2">Full Package</h3>
+                <h3 className="font-semibold text-lg text-foreground mb-2">Complete Growth System</h3>
                 <p className="text-sm text-muted-foreground">Website + AI Receptionist — the complete lead-capture system.</p>
                 <span className="inline-block mt-3 text-xs bg-accent/20 text-accent px-2 py-1 rounded-full">Most Popular</span>
               </GlowCard>
