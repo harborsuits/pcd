@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef, useCallback, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -149,9 +150,18 @@ interface ProjectWorkSurfaceProps {
   onStatusChange: () => void;
 }
 
+const VALID_PANELS = ["overview", "milestones", "comments", "chat", "media", "launch"] as const;
+type PanelType = typeof VALID_PANELS[number];
+
 export function ProjectWorkSurface({ project, onBack, onStatusChange }: ProjectWorkSurfaceProps) {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const panelFromUrl = searchParams.get("panel");
+  const initialPanel: PanelType = VALID_PANELS.includes(panelFromUrl as PanelType)
+    ? (panelFromUrl as PanelType)
+    : "overview";
+  
   const [replyContent, setReplyContent] = useState("");
-  const [activePanel, setActivePanel] = useState<"overview" | "milestones" | "comments" | "chat" | "media" | "launch">("overview");
+  const [activePanel, setActivePanel] = useState<PanelType>(initialPanel);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [commentFilter, setCommentFilter] = useState<"open" | "resolved" | "all">("open");
@@ -166,6 +176,28 @@ export function ProjectWorkSurface({ project, onBack, onStatusChange }: ProjectW
   const queryClient = useQueryClient();
   const clientTypingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  
+  // Sync URL → state when URL changes (browser back/forward)
+  useEffect(() => {
+    const urlPanel = searchParams.get("panel");
+    if (urlPanel && VALID_PANELS.includes(urlPanel as PanelType) && urlPanel !== activePanel) {
+      setActivePanel(urlPanel as PanelType);
+    }
+  }, [searchParams]);
+  
+  // Sync state → URL when panel changes
+  useEffect(() => {
+    const currentPanel = searchParams.get("panel");
+    if (currentPanel !== activePanel) {
+      const newParams = new URLSearchParams(searchParams);
+      if (activePanel === "overview") {
+        newParams.delete("panel");
+      } else {
+        newParams.set("panel", activePanel);
+      }
+      setSearchParams(newParams, { replace: true });
+    }
+  }, [activePanel]);
 
   // Typing channel for real-time typing indicators
   const typingChannel = useMemo(() => {

@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -415,14 +416,43 @@ function PhaseBModal({
 }
 
 export function ProjectsTab() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
-  
   const [deleteConfirmProject, setDeleteConfirmProject] = useState<Project | null>(null);
-  const [pipelineFilter, setPipelineFilter] = useState<PipelineFilter>("all");
+  
+  // Read pipeline filter from URL
+  const pipelineFromUrl = searchParams.get("pipeline");
+  const initialPipeline: PipelineFilter = PIPELINE_FILTERS.some(f => f.value === pipelineFromUrl)
+    ? (pipelineFromUrl as PipelineFilter)
+    : "all";
+  const [pipelineFilter, setPipelineFilter] = useState<PipelineFilter>(initialPipeline);
+  
   const [serviceTypeFilter, setServiceTypeFilter] = useState<ServiceTypeFilter>("all");
   const [viewMode, setViewMode] = useState<ViewMode>("list");
   const { setCurrentProjectToken, setCurrentProjectName, registerCloseProject } = useOperatorContext();
   const queryClient = useQueryClient();
+  
+  // Sync URL → state when URL changes (browser back/forward)
+  useEffect(() => {
+    const urlPipeline = searchParams.get("pipeline");
+    if (urlPipeline && PIPELINE_FILTERS.some(f => f.value === urlPipeline) && urlPipeline !== pipelineFilter) {
+      setPipelineFilter(urlPipeline as PipelineFilter);
+    }
+  }, [searchParams]);
+  
+  // Sync state → URL when pipeline changes
+  useEffect(() => {
+    const currentPipeline = searchParams.get("pipeline");
+    if (currentPipeline !== pipelineFilter) {
+      const newParams = new URLSearchParams(searchParams);
+      if (pipelineFilter === "all") {
+        newParams.delete("pipeline");
+      } else {
+        newParams.set("pipeline", pipelineFilter);
+      }
+      setSearchParams(newParams, { replace: true });
+    }
+  }, [pipelineFilter]);
 
   // Sync selected project to context for global shortcuts
   useEffect(() => {
