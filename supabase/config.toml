@@ -56,3 +56,6 @@ verify_jwt = false
 
 [functions.stripe-webhook]
 verify_jwt = false
+
+[functions.ulio-webhook]
+verify_jwt = false

@@ -1,6 +1,9 @@
-import { CheckCircle2, Clock, Settings2, Phone, AlertCircle, FileText } from "lucide-react";
+import { useState, useEffect } from "react";
+import { CheckCircle2, Clock, Settings2, Phone, AlertCircle, FileText, Calendar, TrendingUp, PhoneForwarded, Moon, Timer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { supabase } from "@/integrations/supabase/client";
+import { formatDistanceToNow, format, isToday, isYesterday } from "date-fns";
 
 interface AIReceptionistTabProps {
   aiStatus: 'intake_received' | 'review' | 'setup' | 'testing' | 'live' | 'paused' | null;
@@ -13,9 +16,25 @@ interface AIReceptionistTabProps {
     escalation_number?: string;
   } | null;
   onRequestChange?: () => void;
+  projectToken?: string;
 }
 
 type AIStatusKey = 'intake_received' | 'review' | 'setup' | 'testing' | 'live' | 'paused';
+
+interface AIEvent {
+  id: string;
+  event_name: string;
+  metadata: Record<string, unknown>;
+  created_at: string;
+}
+
+interface AIStats {
+  callsAnswered: number;
+  appointmentsBooked: number;
+  escalations: number;
+  afterHours: number;
+  avgDuration: number;
+}
 
 const CALL_HANDLING_LABELS: Record<string, string> = {
   always: "Always answer",
@@ -28,6 +47,17 @@ const HANDOFF_LABELS: Record<string, string> = {
   message: "Take message",
   callback: "Schedule callback",
   text: "Text follow-up",
+};
+
+const EVENT_ICONS: Record<string, typeof Phone> = {
+  ai_call_completed: Phone,
+  ai_call_started: Phone,
+  ai_call_missed: Phone,
+  ai_appointment_booked: Calendar,
+  ai_booking_failed: AlertCircle,
+  ai_escalation_triggered: PhoneForwarded,
+  ai_message_taken: FileText,
+  ai_voicemail_received: FileText,
 };
 
 function getAIStatusConfig(status: string | null): { 
@@ -93,9 +123,157 @@ function getAIStatusConfig(status: string | null): {
   return configs[key] || configs.intake_received;
 }
 
-export function AIReceptionistTab({ aiStatus, intakeData, onRequestChange }: AIReceptionistTabProps) {
+function formatEventTime(dateString: string): string {
+  const date = new Date(dateString);
+  if (isToday(date)) {
+    return formatDistanceToNow(date, { addSuffix: true });
+  }
+  if (isYesterday(date)) {
+    return `Yesterday at ${format(date, 'h:mm a')}`;
+  }
+  return format(date, 'MMM d, h:mm a');
+}
+
+function formatEventDescription(event: AIEvent): string {
+  const meta = event.metadata || {};
+  const phone = (meta.caller_phone_masked as string) || "a caller";
+  
+  switch (event.event_name) {
+    case "ai_call_completed":
+      const duration = meta.duration_seconds as number;
+      const durationStr = duration ? ` (${Math.round(duration / 60)} min)` : "";
+      return `AI answered a call from ${phone}${durationStr}`;
+    case "ai_call_started":
+      return `AI started call with ${phone}`;
+    case "ai_call_missed":
+      return `Missed call from ${phone}`;
+    case "ai_appointment_booked":
+      const scheduledFor = meta.scheduled_for as string;
+      const service = meta.service as string;
+      const timeStr = scheduledFor ? ` for ${format(new Date(scheduledFor), 'EEE h:mm a')}` : "";
+      return `Booked appointment${service ? ` (${service})` : ""}${timeStr}`;
+    case "ai_booking_failed":
+      const errorMsg = meta.error_message as string;
+      return `Booking failed${errorMsg ? `: ${errorMsg}` : ""}`;
+    case "ai_escalation_triggered":
+      const reason = meta.reason as string;
+      return `Escalated call from ${phone}${reason ? ` — ${reason}` : ""}`;
+    case "ai_message_taken":
+      const preview = meta.message_preview as string;
+      return `Message from ${phone}${preview ? `: "${preview.slice(0, 50)}${preview.length > 50 ? "..." : ""}"` : ""}`;
+    case "ai_voicemail_received":
+      return `Voicemail from ${phone}`;
+    default:
+      return event.event_name.replace(/^ai_/, "").replace(/_/g, " ");
+  }
+}
+
+function StatCard({ label, value, icon: Icon, trend }: { 
+  label: string; 
+  value: string | number; 
+  icon: typeof Phone;
+  trend?: "up" | "down" | "neutral";
+}) {
+  return (
+    <div className="bg-card border border-border rounded-lg p-4 text-center">
+      <div className="flex items-center justify-center gap-2 mb-2">
+        <Icon className="h-4 w-4 text-muted-foreground" />
+      </div>
+      <div className="text-2xl font-bold">{value}</div>
+      <div className="text-xs text-muted-foreground">{label}</div>
+    </div>
+  );
+}
+
+export function AIReceptionistTab({ aiStatus, intakeData, onRequestChange, projectToken }: AIReceptionistTabProps) {
   const config = getAIStatusConfig(aiStatus);
   const StatusIcon = config.Icon;
+  
+  const [events, setEvents] = useState<AIEvent[]>([]);
+  const [stats, setStats] = useState<AIStats>({
+    callsAnswered: 0,
+    appointmentsBooked: 0,
+    escalations: 0,
+    afterHours: 0,
+    avgDuration: 0,
+  });
+  const [loading, setLoading] = useState(false);
+
+  // Fetch AI events and compute stats
+  useEffect(() => {
+    if (!projectToken || aiStatus !== 'live') return;
+    
+    const fetchEvents = async () => {
+      setLoading(true);
+      try {
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        
+        const { data, error } = await supabase
+          .from('project_events')
+          .select('id, event_name, metadata, created_at')
+          .eq('project_token', projectToken)
+          .like('event_name', 'ai_%')
+          .gte('created_at', sevenDaysAgo.toISOString())
+          .order('created_at', { ascending: false })
+          .limit(50);
+        
+        if (error) {
+          console.error('Error fetching AI events:', error);
+          return;
+        }
+        
+        const aiEvents = (data || []) as AIEvent[];
+        setEvents(aiEvents.slice(0, 20));
+        
+        // Compute stats
+        let totalDuration = 0;
+        let callCount = 0;
+        
+        const newStats: AIStats = {
+          callsAnswered: 0,
+          appointmentsBooked: 0,
+          escalations: 0,
+          afterHours: 0,
+          avgDuration: 0,
+        };
+        
+        for (const evt of aiEvents) {
+          switch (evt.event_name) {
+            case 'ai_call_completed':
+            case 'ai_call_started':
+              newStats.callsAnswered++;
+              const duration = (evt.metadata?.duration_seconds as number) || 0;
+              if (duration > 0) {
+                totalDuration += duration;
+                callCount++;
+              }
+              // Check if after hours (rough heuristic: before 8am or after 6pm)
+              const hour = new Date(evt.created_at).getHours();
+              if (hour < 8 || hour >= 18) {
+                newStats.afterHours++;
+              }
+              break;
+            case 'ai_appointment_booked':
+              newStats.appointmentsBooked++;
+              break;
+            case 'ai_escalation_triggered':
+              newStats.escalations++;
+              break;
+          }
+        }
+        
+        newStats.avgDuration = callCount > 0 ? Math.round(totalDuration / callCount) : 0;
+        setStats(newStats);
+      } catch (err) {
+        console.error('Error fetching AI events:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchEvents();
+  }, [projectToken, aiStatus]);
 
   return (
     <div className="h-full overflow-y-auto">
@@ -151,16 +329,95 @@ export function AIReceptionistTab({ aiStatus, intakeData, onRequestChange }: AIR
             </div>
           )}
 
-          {/* Live status - show dashboard preview */}
+          {/* Live status - show stats */}
           {aiStatus === 'live' && (
             <div className="bg-green-500/5 border border-green-200 dark:border-green-800 rounded-lg p-4 text-left text-sm">
               <p className="font-medium text-green-700 dark:text-green-400 mb-2">🎉 You're live!</p>
               <p className="text-muted-foreground">
-                Your AI receptionist is actively answering calls. Leads and call summaries will appear here soon.
+                Your AI receptionist is actively answering calls. See your stats and activity below.
               </p>
             </div>
           )}
         </div>
+
+        {/* Stats Cards - only show when live */}
+        {aiStatus === 'live' && projectToken && (
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+            <StatCard 
+              label="Calls Answered" 
+              value={stats.callsAnswered} 
+              icon={Phone}
+            />
+            <StatCard 
+              label="Appointments" 
+              value={stats.appointmentsBooked} 
+              icon={Calendar}
+            />
+            <StatCard 
+              label="Escalations" 
+              value={stats.escalations} 
+              icon={PhoneForwarded}
+            />
+            <StatCard 
+              label="After Hours" 
+              value={stats.afterHours} 
+              icon={Moon}
+            />
+            <StatCard 
+              label="Avg Duration" 
+              value={stats.avgDuration > 0 ? `${Math.round(stats.avgDuration / 60)}m` : "—"} 
+              icon={Timer}
+            />
+          </div>
+        )}
+
+        {/* Recent Activity - only show when live */}
+        {aiStatus === 'live' && projectToken && (
+          <div className="bg-card border border-border rounded-xl p-5 space-y-4">
+            <h3 className="font-medium flex items-center gap-2">
+              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              Recent Activity
+              <Badge variant="outline" className="text-xs ml-auto">Last 7 days</Badge>
+            </h3>
+            
+            {loading ? (
+              <div className="text-center text-muted-foreground text-sm py-8">
+                Loading activity...
+              </div>
+            ) : events.length === 0 ? (
+              <div className="text-center text-muted-foreground text-sm py-8">
+                <Phone className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                <p>No calls yet.</p>
+                <p className="text-xs mt-1">Your AI will start answering soon.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {events.map((event) => {
+                  const Icon = EVENT_ICONS[event.event_name] || Phone;
+                  return (
+                    <div key={event.id} className="flex items-start gap-3 text-sm">
+                      <div className={`mt-0.5 p-1.5 rounded-full ${
+                        event.event_name === 'ai_escalation_triggered' 
+                          ? 'bg-amber-500/10 text-amber-600'
+                          : event.event_name === 'ai_booking_failed'
+                            ? 'bg-destructive/10 text-destructive'
+                            : event.event_name === 'ai_appointment_booked'
+                              ? 'bg-green-500/10 text-green-600'
+                              : 'bg-muted text-muted-foreground'
+                      }`}>
+                        <Icon className="h-3.5 w-3.5" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-foreground">{formatEventDescription(event)}</p>
+                        <p className="text-xs text-muted-foreground">{formatEventTime(event.created_at)}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Configuration Summary */}
         {intakeData && (

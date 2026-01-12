@@ -543,6 +543,7 @@ export default function WorkspacePage() {
                 aiStatus={projectInfo?.aiStatus || null}
                 intakeData={projectInfo?.intakeData}
                 onRequestChange={handleRequestChange}
+                projectToken={token}
               />
             </TabsContent>
           )}

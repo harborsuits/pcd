@@ -508,9 +508,9 @@ export function IntakeForm({
         </div>
 
         <div>
-          <Label htmlFor="bookingLink">Booking link (optional)</Label>
+          <Label htmlFor="bookingLink">Calendar integration (optional)</Label>
           <p className="text-xs text-muted-foreground mb-1.5">
-            Calendly, Acuity, etc.
+            Connect Calendly, Acuity, or Google Calendar. The AI books directly.
           </p>
           <Input
             id="bookingLink"

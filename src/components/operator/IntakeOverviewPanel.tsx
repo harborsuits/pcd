@@ -520,7 +520,7 @@ export function IntakeOverviewPanel({ intake, intakeCreatedAt, intakeStatus, onA
                       <span className="text-muted-foreground">Text handling: </span>
                       {intake.text_handling.map((t) => (
                         <Badge key={t} variant="secondary" className="text-xs mr-1">
-                          {t === 'answer_faqs' ? 'Answer FAQs' : t === 'send_booking' ? 'Send booking link' : t === 'collect_info' ? 'Collect info' : t}
+                          {t === 'answer_faqs' ? 'Answer FAQs' : t === 'send_booking' ? 'Book appointments' : t === 'collect_info' ? 'Collect info' : t}
                         </Badge>
                       ))}
                     </div>
