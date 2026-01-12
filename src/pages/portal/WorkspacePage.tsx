@@ -19,6 +19,14 @@ import { useUnreadCounts } from "@/hooks/useUnreadCounts";
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
+// Valid tab keys for URL persistence
+const VALID_TABS = ["updates", "messages", "files", "website", "ai"] as const;
+type TabKey = typeof VALID_TABS[number];
+
+function isValidTab(tab: string | null): tab is TabKey {
+  return !!tab && (VALID_TABS as readonly string[]).includes(tab);
+}
+
 interface NeedsInfoItem {
   key: string;
   label: string;
@@ -89,14 +97,18 @@ interface ProjectInfo {
 
 export default function WorkspacePage() {
   const { token } = useParams<{ token: string }>();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [versions, setVersions] = useState<Version[]>([]);
   const [projectInfo, setProjectInfo] = useState<ProjectInfo | null>(null);
-  const [activeTab, setActiveTab] = useState("updates");
+  
+  // Initialize activeTab from URL, fallback to "updates"
+  const tabFromUrl = searchParams.get("tab");
+  const initialTab: TabKey = isValidTab(tabFromUrl) ? tabFromUrl : "updates";
+  const [activeTab, setActiveTab] = useState<TabKey>(initialTab);
   
   // AI Trial modal state
   const [showAITrialModal, setShowAITrialModal] = useState(false);
@@ -169,13 +181,47 @@ export default function WorkspacePage() {
     }
   }, [token, authSession]);
   
-  // Handle ai_trial query param
+  // Sync state FROM URL when user uses Back/Forward (URL changes externally)
   useEffect(() => {
-    if (searchParams.get("ai_trial") === "start") {
-      setShowAITrialModal(true);
-      navigate(`/w/${token}`, { replace: true });
+    const urlTab = searchParams.get("tab");
+    const nextTab: TabKey = isValidTab(urlTab) ? urlTab : "updates";
+    if (nextTab !== activeTab) setActiveTab(nextTab);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]); // intentionally omit activeTab to avoid loops
+
+  // Sync state TO URL when user clicks tabs (merge params, don't wipe)
+  useEffect(() => {
+    const current = searchParams.get("tab");
+    if (current === activeTab) return;
+
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set("tab", activeTab);
+      return next;
+    }, { replace: true });
+  }, [activeTab, searchParams, setSearchParams]);
+
+  // Handle ai_trial query param (consume and remove, preserve other params)
+  useEffect(() => {
+    if (searchParams.get("ai_trial") !== "start") return;
+
+    setShowAITrialModal(true);
+
+    // Remove ai_trial but preserve everything else including tab
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.delete("ai_trial");
+      if (!next.get("tab")) next.set("tab", "updates");
+      return next;
+    }, { replace: true });
+  }, [searchParams, setSearchParams]);
+  
+  // Wrapper function for components that pass string types
+  const handleTabChange = useCallback((tab: string) => {
+    if (isValidTab(tab)) {
+      setActiveTab(tab);
     }
-  }, [searchParams, token, navigate]);
+  }, []);
 
   // Fetch project info - uses authSession from useAuthReady
   const fetchProjectInfo = useCallback(async () => {
@@ -362,7 +408,7 @@ export default function WorkspacePage() {
           </div>
           <div className="flex items-center gap-3">
             {/* Notification bell */}
-            <NotificationBell token={token!} onNavigate={setActiveTab} />
+            <NotificationBell token={token!} onNavigate={handleTabChange} />
             
             <Badge variant="outline" className="text-xs">
               {serviceType === 'both' ? 'Website + AI' : 
@@ -387,7 +433,7 @@ export default function WorkspacePage() {
       </div>
 
       {/* Main content with tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="flex-1 flex flex-col min-h-0">
         {/* Tab navigation */}
         <div className="border-b border-border px-4 bg-muted/30 flex-shrink-0">
           <TabsList className="h-11 bg-transparent p-0 gap-1">
