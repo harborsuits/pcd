@@ -1,5 +1,5 @@
 import { useState, useEffect, createContext, useContext, useRef, useCallback } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -42,7 +42,17 @@ const OperatorContext = createContext<OperatorContextValue>({
 
 export const useOperatorContext = () => useContext(OperatorContext);
 
+const VALID_OP_TABS = ["projects", "inbox", "accounts", "leads", "outreach"] as const;
+type OpTab = typeof VALID_OP_TABS[number];
+
 export default function OperatorLayout() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabFromUrl = searchParams.get("tab");
+  const initialTab: OpTab = VALID_OP_TABS.includes(tabFromUrl as OpTab) 
+    ? (tabFromUrl as OpTab) 
+    : "projects";
+  
+  const [activeTab, setActiveTab] = useState<OpTab>(initialTab);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isAuthed, setIsAuthed] = useState(false);
@@ -70,6 +80,28 @@ export default function OperatorLayout() {
   useEffect(() => {
     sessionStorage.removeItem("admin_verified");
   }, []);
+  
+  // Sync URL → state when URL changes (browser back/forward)
+  useEffect(() => {
+    const urlTab = searchParams.get("tab");
+    if (urlTab && VALID_OP_TABS.includes(urlTab as OpTab) && urlTab !== activeTab) {
+      setActiveTab(urlTab as OpTab);
+    }
+  }, [searchParams]);
+  
+  // Sync state → URL when tab changes
+  useEffect(() => {
+    const currentTab = searchParams.get("tab");
+    if (currentTab !== activeTab) {
+      const newParams = new URLSearchParams(searchParams);
+      if (activeTab === "projects") {
+        newParams.delete("tab");
+      } else {
+        newParams.set("tab", activeTab);
+      }
+      setSearchParams(newParams, { replace: true });
+    }
+  }, [activeTab]);
 
   // React to session changes from useAuthReady - NO duplicate onAuthStateChange listener
   useEffect(() => {
@@ -342,7 +374,7 @@ export default function OperatorLayout() {
         </header>
 
         <main className="container mx-auto px-2 sm:px-4 py-3 sm:py-6">
-          <Tabs defaultValue="projects" className="space-y-4 sm:space-y-6">
+          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as OpTab)} className="space-y-4 sm:space-y-6">
             <div className="overflow-x-auto scrollbar-hide -mx-2 px-2">
               <TabsList className="inline-flex w-auto min-w-max sm:grid sm:w-full sm:max-w-3xl sm:grid-cols-5">
                 <TabsTrigger value="projects" className="gap-1.5 sm:gap-2 px-3 sm:px-4"><FolderOpen className="h-4 w-4" /><span className="text-xs sm:text-sm">Projects</span></TabsTrigger>
