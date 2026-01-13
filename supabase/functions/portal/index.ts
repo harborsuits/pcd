@@ -185,6 +185,13 @@ Deno.serve(async (req) => {
     return handleGetClientMilestones(token, corsHeaders);
   }
 
+  // GET /portal/:token/ai-events - Get AI receptionist events and stats
+  const aiEventsIdx = pathParts.indexOf("ai-events");
+  if (aiEventsIdx > portalIdx && req.method === "GET") {
+    const token = pathParts[portalIdx + 1];
+    return handleGetAIEvents(token, corsHeaders);
+  }
+
   // POST /portal/:token/phase-b - Save/complete Phase B intake
   if (phaseBIdx > portalIdx && req.method === "POST") {
     const token = pathParts[portalIdx + 1];
@@ -4699,6 +4706,127 @@ async function handleClaimProjects(
 
   } catch (error) {
     console.error("Claim projects error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+}
+
+// GET /portal/:token/ai-events - Get AI receptionist events and stats (token-based access)
+async function handleGetAIEvents(token: string, corsHeaders: Record<string, string>): Promise<Response> {
+  try {
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+
+    // Verify project exists and get AI status
+    const { data: project, error: projectError } = await supabase
+      .from("projects")
+      .select("id, project_token, ai_trial_status, business_name")
+      .eq("project_token", token)
+      .is("deleted_at", null)
+      .maybeSingle();
+
+    if (projectError || !project) {
+      console.error("AI events: Project not found", projectError);
+      return new Response(
+        JSON.stringify({ error: "Project not found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Only return events if AI is live
+    if (project.ai_trial_status !== 'live') {
+      return new Response(
+        JSON.stringify({ 
+          events: [], 
+          stats: null, 
+          message: "AI receptionist is not live yet" 
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Fetch AI events from last 7 days
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+    const { data: events, error: eventsError } = await supabase
+      .from("project_events")
+      .select("id, event_name, metadata, created_at")
+      .eq("project_token", token)
+      .like("event_name", "ai_%")
+      .gte("created_at", sevenDaysAgo.toISOString())
+      .order("created_at", { ascending: false })
+      .limit(50);
+
+    if (eventsError) {
+      console.error("Error fetching AI events:", eventsError);
+      return new Response(
+        JSON.stringify({ error: "Failed to fetch events" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Compute stats server-side
+    const aiEvents = events || [];
+    let callsAnswered = 0;
+    let appointmentsBooked = 0;
+    let escalations = 0;
+    let afterHours = 0;
+    let totalDuration = 0;
+    let callCount = 0;
+
+    for (const evt of aiEvents) {
+      const metadata = evt.metadata as Record<string, unknown> | null;
+      switch (evt.event_name) {
+        case 'ai_call_completed':
+        case 'ai_call_started':
+        case 'ai_call_ended':
+          callsAnswered++;
+          const duration = (metadata?.duration_seconds as number) || 0;
+          if (duration > 0) {
+            totalDuration += duration;
+            callCount++;
+          }
+          // Check if after hours (rough heuristic: before 8am or after 6pm)
+          const hour = new Date(evt.created_at).getHours();
+          if (hour < 8 || hour >= 18) {
+            afterHours++;
+          }
+          break;
+        case 'ai_appointment_booked':
+          appointmentsBooked++;
+          break;
+        case 'ai_escalation_triggered':
+          escalations++;
+          break;
+      }
+    }
+
+    const stats = {
+      callsAnswered,
+      appointmentsBooked,
+      escalations,
+      afterHours,
+      avgDuration: callCount > 0 ? Math.round(totalDuration / callCount) : 0,
+    };
+
+    console.log(`AI events fetched for ${project.business_name}: ${aiEvents.length} events`);
+
+    return new Response(
+      JSON.stringify({ 
+        events: aiEvents.slice(0, 20), 
+        stats,
+        total: aiEvents.length,
+      }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+
+  } catch (error) {
+    console.error("Get AI events error:", error);
     return new Response(
       JSON.stringify({ error: "Internal server error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }

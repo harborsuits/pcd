@@ -614,12 +614,19 @@ export function ProjectDetailDrawer({ project, open, onClose, onStatusChange }: 
       const res = await adminFetch(`/admin/projects/${project.project_token}/ai-status`, {
         method: "PATCH",
         body: JSON.stringify({ 
-          ai_trial_status: status,
+          status,
           ulio_business_id: ulioBusinessId,
           ulio_setup_url: ulioSetupUrl,
         }),
       });
-      if (!res.ok) throw new Error("Failed to update AI status");
+      
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        const error = new Error(data.error || "Failed to update AI status") as Error & { status?: number; conflict_project?: string };
+        error.status = res.status;
+        error.conflict_project = data.conflict_project;
+        throw error;
+      }
       return res.json();
     },
     onSuccess: () => {
@@ -627,8 +634,12 @@ export function ProjectDetailDrawer({ project, open, onClose, onStatusChange }: 
       queryClient.invalidateQueries({ queryKey: ["admin-projects"] });
       onStatusChange();
     },
-    onError: (error: Error) => {
-      toast.error(error.message);
+    onError: (error: Error & { status?: number; conflict_project?: string }) => {
+      if (error.status === 409) {
+        toast.error(error.message || "This Ulio Business ID is already used by another project");
+      } else {
+        toast.error(error.message || "Failed to update AI status");
+      }
     },
   });
 
