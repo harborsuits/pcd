@@ -677,7 +677,12 @@ export function ProjectWorkSurface({ project, onBack, onStatusChange }: ProjectW
       });
       if (res.status === 409) {
         const err = await res.json();
-        throw new Error(err.error || "Conflict");
+        const conflictName = err.conflict_project?.business_name;
+        throw new Error(
+          conflictName 
+            ? `Ulio ID already used by "${conflictName}"`
+            : err.error || "This Ulio ID is already linked to another project"
+        );
       }
       if (!res.ok) throw new Error("Failed to update");
       return res.json();
@@ -687,7 +692,7 @@ export function ProjectWorkSurface({ project, onBack, onStatusChange }: ProjectW
       onStatusChange();
       queryClient.invalidateQueries({ queryKey: ["admin-projects"] });
     },
-    onError: (err) => toast.error(err.message),
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Failed to update AI settings"),
   });
 
   const messages = messagesData?.messages || [];
@@ -1557,7 +1562,7 @@ export function ProjectWorkSurface({ project, onBack, onStatusChange }: ProjectW
                           Ulio Business ID (shop_id)
                         </label>
                         <Input
-                          placeholder="UUID from Ulio"
+                          placeholder="e.g. ac645e29-fc44-4a0d-8c2b-2d4f464ef61d"
                           defaultValue={project.ulio_business_id || ""}
                           onBlur={(e) => {
                             if (e.target.value !== project.ulio_business_id) {
@@ -1569,7 +1574,7 @@ export function ProjectWorkSurface({ project, onBack, onStatusChange }: ProjectW
                           }}
                         />
                         <p className="text-xs text-muted-foreground">
-                          This links Ulio webhook events to this project.
+                          Paste the UUID from Ulio (found in dashboard URL: /businesses/<strong>this-uuid</strong>)
                         </p>
                       </div>
 
