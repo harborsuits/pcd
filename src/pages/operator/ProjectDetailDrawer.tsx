@@ -22,7 +22,7 @@ import {
   Palette, Settings, CheckCircle, StickyNote, ListTodo, Trash2,
   Link, Plus, Eye, MessageCirclePlus, X, MessageSquareDot,
   ChevronRight, ChevronLeft, Hammer, Bot, Power, AlertTriangle,
-  Image as ImageIcon, Download, File, DollarSign
+  Image as ImageIcon, Download, File, DollarSign, RefreshCw
 } from "lucide-react";
 import { ServiceTypeBadge } from "@/components/operator/StageBadge";
 import { IntakeSummary } from "@/components/intake/IntakeSummary";
@@ -149,7 +149,9 @@ const STATUS_OPTIONS = [
 
 // Webhook Status Section Component
 function WebhookStatusSection({ projectToken }: { projectToken: string }) {
-  const { data, isLoading } = useQuery({
+  const queryClient = useQueryClient();
+  
+  const { data, isLoading, isFetching, refetch } = useQuery({
     queryKey: ["webhook-status", projectToken],
     queryFn: async () => {
       const sevenDaysAgo = new Date();
@@ -176,6 +178,7 @@ function WebhookStatusSection({ projectToken }: { projectToken: string }) {
   // Status indicator logic
   let statusColor = "bg-muted-foreground";
   let statusText = "No events";
+  let statusHint = "No AI events received. Check that the Ulio Business ID is correct.";
   
   if (lastEvent) {
     const lastEventTime = new Date(lastEvent.created_at);
@@ -184,12 +187,15 @@ function WebhookStatusSection({ projectToken }: { projectToken: string }) {
     if (hoursSince < 24) {
       statusColor = "bg-green-500";
       statusText = "Active";
+      statusHint = "Webhook is receiving events";
     } else if (hoursSince < 168) { // 7 days
       statusColor = "bg-amber-500";
       statusText = "Idle";
+      statusHint = "No events in the last 24 hours";
     } else {
       statusColor = "bg-destructive";
       statusText = "Stale";
+      statusHint = "No events in over 7 days. Webhook may be misconfigured.";
     }
   }
 
@@ -207,13 +213,29 @@ function WebhookStatusSection({ projectToken }: { projectToken: string }) {
       <div className="p-4 bg-muted/50 rounded-lg">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2 text-sm font-medium">
-            <div className={`w-2 h-2 rounded-full ${statusColor}`} />
+            <div className={`w-2 h-2 rounded-full ${statusColor} ${isFetching ? 'animate-pulse' : ''}`} />
             Webhook Status: {statusText}
           </div>
-          <Badge variant="outline" className="text-xs">
-            {eventCount} events (7d)
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="text-xs">
+              {eventCount} events (7d)
+            </Badge>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 px-2 text-xs"
+              onClick={() => refetch()}
+              disabled={isFetching}
+            >
+              {isFetching ? (
+                <Loader2 className="h-3 w-3 animate-spin" />
+              ) : (
+                <RefreshCw className="h-3 w-3" />
+              )}
+            </Button>
+          </div>
         </div>
+        <p className="text-xs text-muted-foreground mb-2">{statusHint}</p>
         {lastEvent && (
           <div className="text-xs text-muted-foreground">
             Last event: {format(new Date(lastEvent.created_at), "MMM d, h:mm a")} — {lastEvent.event_name}
