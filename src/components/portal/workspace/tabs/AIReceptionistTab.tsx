@@ -189,18 +189,16 @@ export function AIReceptionistTab({ aiStatus, intakeData, onRequestChange, proje
   const StatusIcon = config.Icon;
   
   const [events, setEvents] = useState<AIEvent[]>([]);
-  const [stats, setStats] = useState<AIStats>({
-    callsAnswered: 0,
-    appointmentsBooked: 0,
-    escalations: 0,
-    afterHours: 0,
-    avgDuration: 0,
-  });
+  const [stats, setStats] = useState<AIStats | null>(null);
+  const [statusNote, setStatusNote] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   // Fetch AI events via portal edge function (token-based access)
+  // Now fetches for setup, testing, AND live statuses
+  const shouldFetch = ['setup', 'testing', 'live'].includes(aiStatus || '');
+  
   useEffect(() => {
-    if (!projectToken || aiStatus !== 'live') return;
+    if (!projectToken || !shouldFetch) return;
     
     const fetchEvents = async () => {
       setLoading(true);
@@ -226,7 +224,10 @@ export function AIReceptionistTab({ aiStatus, intakeData, onRequestChange, proje
         // Set events
         setEvents((data.events || []) as AIEvent[]);
         
-        // Set stats from server response
+        // Set status note
+        setStatusNote(data.status_note || null);
+        
+        // Set stats from server response (only populated when live)
         if (data.stats) {
           setStats({
             callsAnswered: data.stats.callsAnswered || 0,
@@ -235,6 +236,8 @@ export function AIReceptionistTab({ aiStatus, intakeData, onRequestChange, proje
             afterHours: data.stats.afterHours || 0,
             avgDuration: data.stats.avgDuration || 0,
           });
+        } else {
+          setStats(null);
         }
       } catch (err) {
         console.error('Error fetching AI events:', err);
@@ -244,7 +247,7 @@ export function AIReceptionistTab({ aiStatus, intakeData, onRequestChange, proje
     };
     
     fetchEvents();
-  }, [projectToken, aiStatus]);
+  }, [projectToken, shouldFetch]);
 
   return (
     <div className="h-full overflow-y-auto">
@@ -311,8 +314,8 @@ export function AIReceptionistTab({ aiStatus, intakeData, onRequestChange, proje
           )}
         </div>
 
-        {/* Stats Cards - only show when live */}
-        {aiStatus === 'live' && projectToken && (
+        {/* Stats Cards - only show when live and stats available */}
+        {aiStatus === 'live' && stats && projectToken && (
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
             <StatCard 
               label="Calls Answered" 
@@ -342,14 +345,21 @@ export function AIReceptionistTab({ aiStatus, intakeData, onRequestChange, proje
           </div>
         )}
 
-        {/* Recent Activity - only show when live */}
-        {aiStatus === 'live' && projectToken && (
+        {/* Recent Activity - show for setup, testing, AND live */}
+        {shouldFetch && projectToken && (
           <div className="bg-card border border-border rounded-xl p-5 space-y-4">
             <h3 className="font-medium flex items-center gap-2">
               <TrendingUp className="h-4 w-4 text-muted-foreground" />
               Recent Activity
               <Badge variant="outline" className="text-xs ml-auto">Last 7 days</Badge>
             </h3>
+            
+            {/* Status note for non-live states */}
+            {statusNote && (
+              <div className="text-xs text-muted-foreground bg-muted/50 rounded-lg p-3">
+                {statusNote}
+              </div>
+            )}
             
             {loading ? (
               <div className="text-center text-muted-foreground text-sm py-8">
@@ -358,8 +368,12 @@ export function AIReceptionistTab({ aiStatus, intakeData, onRequestChange, proje
             ) : events.length === 0 ? (
               <div className="text-center text-muted-foreground text-sm py-8">
                 <Phone className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                <p>No calls yet.</p>
-                <p className="text-xs mt-1">Your AI will start answering soon.</p>
+                <p>No calls logged yet.</p>
+                <p className="text-xs mt-1">
+                  {aiStatus === 'live' 
+                    ? "Your AI will start answering soon." 
+                    : "Activity will appear here once testing begins."}
+                </p>
               </div>
             ) : (
               <div className="space-y-3">

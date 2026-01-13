@@ -430,6 +430,13 @@ Deno.serve(async (req) => {
     return handleBootstrap(req);
   }
 
+  // Route: POST /admin/projects/:token/test-ai-event - Insert test AI event for debugging
+  if (subPath.match(/^projects\/[^\/]+\/test-ai-event$/) && req.method === "POST") {
+    const parts = subPath.split("/");
+    const token = parts[1];
+    return handleInsertTestAiEvent(req, token);
+  }
+
   // Route: GET /admin/signed-url - Get signed URL for private bucket files
   if (subPath === "signed-url" && req.method === "GET") {
     return handleSignedUrl(req, url);
@@ -533,6 +540,77 @@ async function validateAdminAuth(req: Request): Promise<{ error: Response | null
 async function validateAdminKey(req: Request): Promise<Response | null> {
   const { error } = await validateAdminAuth(req);
   return error;
+}
+
+// POST /admin/projects/:token/test-ai-event - Insert a test AI event for debugging
+async function handleInsertTestAiEvent(req: Request, token: string): Promise<Response> {
+  const authError = await validateAdminKey(req);
+  if (authError) return authError;
+
+  const supabase = getSupabaseClient();
+
+  // Confirm project exists (and not deleted)
+  const { data: project, error: projErr } = await supabase
+    .from("projects")
+    .select("project_token, business_name, ulio_business_id, ai_trial_status")
+    .eq("project_token", token)
+    .is("deleted_at", null)
+    .maybeSingle();
+
+  if (projErr || !project) {
+    return new Response(
+      JSON.stringify({ error: "Project not found" }),
+      { status: 404, headers: corsHeaders }
+    );
+  }
+
+  const now = new Date();
+  const fakeShopId = project.ulio_business_id || "test-" + crypto.randomUUID().slice(0, 8);
+
+  const event = {
+    project_token: token,
+    event_name: "ai_call_ended",
+    created_at: now.toISOString(),
+    metadata: {
+      event: "call.ended",
+      timestamp: now.toISOString(),
+      test_mode: true,
+      data: {
+        intent: "appointment",
+        call_id: `test-${now.getTime()}`,
+        shop_id: fakeShopId,
+        caller_number: "+12075550123",
+        caller_phone_masked: "***-***-0123",
+        duration_seconds: 242,
+        sentiment: "positive",
+        calculated_value: 250,
+        callback_required: false,
+        summary: "Test call: Customer asked for availability next week and booked Tuesday at 2pm.",
+        transcript: "AI: Hi! Thanks for calling. How can I help?\nCustomer: I want to book an appointment next week.\nAI: Great — does Tuesday at 2pm work?\nCustomer: Yes.\nAI: Perfect, you're booked.",
+      },
+    },
+  };
+
+  const { data: inserted, error: insErr } = await supabase
+    .from("project_events")
+    .insert(event)
+    .select("id, event_name, metadata, created_at")
+    .maybeSingle();
+
+  if (insErr || !inserted) {
+    console.error("Failed to insert test event:", insErr);
+    return new Response(
+      JSON.stringify({ error: "Failed to insert test event" }),
+      { status: 500, headers: corsHeaders }
+    );
+  }
+
+  console.log(`Test AI event inserted for ${project.business_name}: ${inserted.id}`);
+
+  return new Response(
+    JSON.stringify({ ok: true, event: inserted }),
+    { status: 200, headers: corsHeaders }
+  );
 }
 
 // Log admin action for audit trail

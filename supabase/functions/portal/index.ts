@@ -4737,19 +4737,10 @@ async function handleGetAIEvents(token: string, corsHeaders: Record<string, stri
       );
     }
 
-    // Only return events if AI is live
-    if (project.ai_trial_status !== 'live') {
-      return new Response(
-        JSON.stringify({ 
-          events: [], 
-          stats: null, 
-          message: "AI receptionist is not live yet" 
-        }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+    const status = project.ai_trial_status || 'intake_received';
+    const showEvents = ['setup', 'testing', 'live'].includes(status);
 
-    // Fetch AI events from last 7 days
+    // Always fetch AI events from last 7 days (even during setup/testing)
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
@@ -4770,55 +4761,73 @@ async function handleGetAIEvents(token: string, corsHeaders: Record<string, stri
       );
     }
 
-    // Compute stats server-side
     const aiEvents = events || [];
-    let callsAnswered = 0;
-    let appointmentsBooked = 0;
-    let escalations = 0;
-    let afterHours = 0;
-    let totalDuration = 0;
-    let callCount = 0;
+    
+    // Only compute stats when live (stats only make sense with real traffic)
+    let stats: {
+      callsAnswered: number;
+      appointmentsBooked: number;
+      escalations: number;
+      afterHours: number;
+      avgDuration: number;
+    } | null = null;
 
-    for (const evt of aiEvents) {
-      const metadata = evt.metadata as Record<string, unknown> | null;
-      switch (evt.event_name) {
-        case 'ai_call_completed':
-        case 'ai_call_started':
-        case 'ai_call_ended':
-          callsAnswered++;
-          const duration = (metadata?.duration_seconds as number) || 0;
-          if (duration > 0) {
-            totalDuration += duration;
-            callCount++;
-          }
-          // Check if after hours (rough heuristic: before 8am or after 6pm)
-          const hour = new Date(evt.created_at).getHours();
-          if (hour < 8 || hour >= 18) {
-            afterHours++;
-          }
-          break;
-        case 'ai_appointment_booked':
-          appointmentsBooked++;
-          break;
-        case 'ai_escalation_triggered':
-          escalations++;
-          break;
+    if (status === 'live') {
+      let callsAnswered = 0;
+      let appointmentsBooked = 0;
+      let escalations = 0;
+      let afterHours = 0;
+      let totalDuration = 0;
+      let callCount = 0;
+
+      for (const evt of aiEvents) {
+        const metadata = evt.metadata as Record<string, unknown> | null;
+        switch (evt.event_name) {
+          case 'ai_call_completed':
+          case 'ai_call_started':
+          case 'ai_call_ended':
+            callsAnswered++;
+            const duration = (metadata?.duration_seconds as number) || 0;
+            if (duration > 0) {
+              totalDuration += duration;
+              callCount++;
+            }
+            // Check if after hours (rough heuristic: before 8am or after 6pm)
+            const hour = new Date(evt.created_at).getHours();
+            if (hour < 8 || hour >= 18) {
+              afterHours++;
+            }
+            break;
+          case 'ai_appointment_booked':
+            appointmentsBooked++;
+            break;
+          case 'ai_escalation_triggered':
+            escalations++;
+            break;
+        }
       }
+
+      stats = {
+        callsAnswered,
+        appointmentsBooked,
+        escalations,
+        afterHours,
+        avgDuration: callCount > 0 ? Math.round(totalDuration / callCount) : 0,
+      };
     }
 
-    const stats = {
-      callsAnswered,
-      appointmentsBooked,
-      escalations,
-      afterHours,
-      avgDuration: callCount > 0 ? Math.round(totalDuration / callCount) : 0,
-    };
+    // Status note for client UI to explain where they are in the process
+    const statusNote = status === 'live' 
+      ? null 
+      : "Your AI receptionist is not fully live yet. Recent activity may appear here during setup and testing.";
 
-    console.log(`AI events fetched for ${project.business_name}: ${aiEvents.length} events`);
+    console.log(`AI events fetched for ${project.business_name}: ${aiEvents.length} events, status: ${status}`);
 
     return new Response(
       JSON.stringify({ 
-        events: aiEvents.slice(0, 20), 
+        status,
+        status_note: statusNote,
+        events: showEvents ? aiEvents.slice(0, 25) : [],
         stats,
         total: aiEvents.length,
       }),

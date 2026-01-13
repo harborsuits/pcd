@@ -167,8 +167,12 @@ const AI_STATUS_OPTIONS = [
   { value: "canceled", label: "Canceled", color: "text-red-600" },
 ];
 
-// Webhook Status Section Component
-function WebhookStatusSection({ projectToken }: { projectToken: string }) {
+// Webhook Status Section Component - Shows AI events for operator console
+function WebhookStatusSection({ projectToken, onSendTestEvent, isSendingTest }: { 
+  projectToken: string;
+  onSendTestEvent?: () => void;
+  isSendingTest?: boolean;
+}) {
   const queryClient = useQueryClient();
   
   const { data, isLoading, isFetching, refetch } = useQuery({
@@ -184,7 +188,7 @@ function WebhookStatusSection({ projectToken }: { projectToken: string }) {
         .like("event_name", "ai_%")
         .gte("created_at", sevenDaysAgo.toISOString())
         .order("created_at", { ascending: false })
-        .limit(10);
+        .limit(15);
       
       if (error) throw error;
       return events || [];
@@ -218,6 +222,32 @@ function WebhookStatusSection({ projectToken }: { projectToken: string }) {
     }
   }
 
+  // Format event description for display
+  const formatEventDescription = (event: { event_name: string; metadata: unknown }) => {
+    const meta = (event.metadata as Record<string, unknown>) || {};
+    const data = (meta.data as Record<string, unknown>) || meta;
+    const phone = (data.caller_phone_masked as string) || (data.caller_number as string) || "caller";
+    const summary = (data.summary as string);
+    const duration = (data.duration_seconds as number);
+    
+    switch (event.event_name) {
+      case "ai_call_ended":
+      case "ai_call_completed":
+        const durationStr = duration ? ` (${Math.round(duration / 60)}m)` : "";
+        return summary ? `${summary.slice(0, 80)}${summary.length > 80 ? '...' : ''}` : `Call with ${phone}${durationStr}`;
+      case "ai_call_started":
+        return `Call started with ${phone}`;
+      case "ai_appointment_booked":
+        return `Appointment booked`;
+      case "ai_escalation_triggered":
+        return `Call escalated from ${phone}`;
+      case "ai_message_taken":
+        return `Message from ${phone}`;
+      default:
+        return event.event_name.replace(/^ai_/, "").replace(/_/g, " ");
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="p-4 bg-muted/50 rounded-lg animate-pulse">
@@ -228,6 +258,7 @@ function WebhookStatusSection({ projectToken }: { projectToken: string }) {
 
   return (
     <div className="space-y-4">
+      {/* Status Header */}
       <div className="p-4 bg-muted/50 rounded-lg">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2 text-sm font-medium">
@@ -261,21 +292,75 @@ function WebhookStatusSection({ projectToken }: { projectToken: string }) {
         )}
       </div>
 
+      {/* Test Event Button */}
+      {onSendTestEvent && (
+        <Button
+          variant="outline"
+          className="w-full gap-2"
+          onClick={onSendTestEvent}
+          disabled={isSendingTest}
+        >
+          {isSendingTest ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Plus className="h-4 w-4" />
+          )}
+          {isSendingTest ? "Sending…" : "Send Test Event"}
+        </Button>
+      )}
+
+      {/* Recent AI Events - Promoted to primary view */}
+      <div className="space-y-2">
+        <div className="text-sm font-medium text-muted-foreground">Recent AI Events</div>
+        {data && data.length > 0 ? (
+          <div className="border rounded-lg divide-y text-sm max-h-64 overflow-y-auto">
+            {data.map((evt) => {
+              const isTestEvent = (evt.metadata as Record<string, unknown>)?.test_mode === true || 
+                                  ((evt.metadata as Record<string, unknown>)?.data as Record<string, unknown>)?.test_mode === true;
+              return (
+                <div key={evt.id} className="p-3 space-y-1.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <Badge variant={isTestEvent ? "outline" : "secondary"} className="text-xs">
+                        {evt.event_name.replace("ai_", "")}
+                      </Badge>
+                      {isTestEvent && (
+                        <Badge variant="outline" className="text-xs text-amber-600 border-amber-300 bg-amber-50">
+                          Test
+                        </Badge>
+                      )}
+                    </div>
+                    <span className="text-xs text-muted-foreground">
+                      {format(new Date(evt.created_at), "MMM d, h:mm a")}
+                    </span>
+                  </div>
+                  <p className="text-xs text-foreground">{formatEventDescription(evt)}</p>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="text-center py-6 text-muted-foreground text-sm border rounded-lg">
+            <Bot className="h-6 w-6 mx-auto mb-2 opacity-50" />
+            <p>No AI events yet</p>
+            <p className="text-xs mt-1">Click "Send Test Event" to verify the pipeline works</p>
+          </div>
+        )}
+      </div>
+
+      {/* Raw metadata debug - keep collapsed */}
       {data && data.length > 0 && (
         <details className="group">
           <summary className="text-xs font-medium text-muted-foreground cursor-pointer hover:text-foreground flex items-center gap-1">
             <ChevronRight className="h-3 w-3 transition-transform group-open:rotate-90" />
-            Recent AI Events (Debug)
+            Raw Event Metadata (Debug)
           </summary>
-          <div className="mt-2 border rounded-lg divide-y text-xs max-h-64 overflow-y-auto">
-            {data.map((evt) => (
-              <div key={evt.id} className="p-2 space-y-1">
-                <div className="flex items-center justify-between">
-                  <Badge variant="secondary" className="text-[10px]">{evt.event_name}</Badge>
-                  <span className="text-muted-foreground">{format(new Date(evt.created_at), "MMM d, h:mm:ss a")}</span>
-                </div>
+          <div className="mt-2 border rounded-lg divide-y text-xs max-h-48 overflow-y-auto">
+            {data.slice(0, 5).map((evt) => (
+              <div key={evt.id} className="p-2">
+                <div className="text-[10px] text-muted-foreground mb-1">{evt.event_name}</div>
                 <pre className="text-[10px] text-muted-foreground bg-muted/50 p-1 rounded overflow-x-auto">
-                  {JSON.stringify(evt.metadata, null, 2).slice(0, 200)}
+                  {JSON.stringify(evt.metadata, null, 2).slice(0, 300)}
                 </pre>
               </div>
             ))}
@@ -693,6 +778,22 @@ export function ProjectWorkSurface({ project, onBack, onStatusChange }: ProjectW
       queryClient.invalidateQueries({ queryKey: ["admin-projects"] });
     },
     onError: (err) => toast.error(err instanceof Error ? err.message : "Failed to update AI settings"),
+  });
+
+  // Send test AI event mutation
+  const sendTestAiEventMutation = useMutation({
+    mutationFn: async () => {
+      const res = await adminFetch(`/admin/projects/${project.project_token}/test-ai-event`, {
+        method: "POST",
+      });
+      if (!res.ok) throw new Error("Failed to send test event");
+      return res.json();
+    },
+    onSuccess: () => {
+      toast.success("Test AI event inserted");
+      queryClient.invalidateQueries({ queryKey: ["webhook-status", project.project_token] });
+    },
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Failed to send test event"),
   });
 
   const messages = messagesData?.messages || [];
@@ -1578,10 +1679,28 @@ export function ProjectWorkSurface({ project, onBack, onStatusChange }: ProjectW
                         </p>
                       </div>
 
-                      {/* Webhook Status */}
-                      {project.ulio_business_id && (
-                        <WebhookStatusSection projectToken={project.project_token} />
+                      {/* Warning: No Ulio Business ID but status is active */}
+                      {!project.ulio_business_id && ['setup', 'testing', 'live', 'trial'].includes(project.ai_trial_status || '') && (
+                        <div className="p-3 rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 text-amber-900 dark:text-amber-200 text-sm">
+                          <div className="flex items-start gap-2">
+                            <Bot className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                            <div>
+                              <p className="font-medium">Missing Ulio Business ID</p>
+                              <p className="text-xs mt-1 text-amber-700 dark:text-amber-300">
+                                AI status is "{project.ai_trial_status}" but no Ulio Business ID is set. 
+                                Webhook events cannot be routed to this project.
+                              </p>
+                            </div>
+                          </div>
+                        </div>
                       )}
+
+                      {/* Webhook Status - always show for AI projects */}
+                      <WebhookStatusSection 
+                        projectToken={project.project_token}
+                        onSendTestEvent={() => sendTestAiEventMutation.mutate()}
+                        isSendingTest={sendTestAiEventMutation.isPending}
+                      />
                     </>
                   ) : (
                     <div className="text-center py-8 text-muted-foreground">
