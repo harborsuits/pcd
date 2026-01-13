@@ -115,6 +115,9 @@ interface Project {
   status: string;
   pipeline_stage: string | null;
   service_type: ServiceType;
+  ai_trial_status: string | null;
+  ulio_business_id: string | null;
+  ulio_setup_url: string | null;
   source_demo_token: string | null;
   contact_name: string | null;
   contact_phone: string | null;
