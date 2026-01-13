@@ -418,6 +418,13 @@ Deno.serve(async (req) => {
     return handleUpdateAIStatus(req, token);
   }
 
+  // Route: PATCH /admin/projects/:token/service-type - Update project service type
+  if (subPath.match(/^projects\/[^\/]+\/service-type$/) && req.method === "PATCH") {
+    const parts = subPath.split("/");
+    const token = parts[1];
+    return handleUpdateServiceType(req, token);
+  }
+
   // Route: POST /admin/bootstrap - Create first admin user (only works if no admins exist)
   if (subPath === "bootstrap" && req.method === "POST") {
     return handleBootstrap(req);
@@ -5289,6 +5296,87 @@ async function handleUpdateAIStatus(req: Request, token: string): Promise<Respon
 
   } catch (error) {
     console.error("Update AI status error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+}
+
+// PATCH /admin/projects/:token/service-type - Update project service type
+async function handleUpdateServiceType(req: Request, token: string): Promise<Response> {
+  const authError = await validateAdminKey(req);
+  if (authError) return authError;
+
+  if (!isValidToken(token)) {
+    return new Response(
+      JSON.stringify({ error: "Invalid token format" }),
+      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  try {
+    const body = await req.json();
+    const { service_type } = body;
+
+    const validTypes = ["website", "ai_receptionist", "both", "other"];
+    if (!service_type || !validTypes.includes(service_type)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid service_type. Valid values: " + validTypes.join(", ") }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log(`Updating project ${token} service_type to: ${service_type}`);
+
+    const supabase = getSupabaseClient();
+
+    // Build update object
+    const updateData: Record<string, unknown> = {
+      service_type,
+      updated_at: new Date().toISOString(),
+    };
+
+    // Auto-initialize ai_trial_status when switching to AI type
+    if (service_type === "ai_receptionist" || service_type === "both") {
+      const { data: current } = await supabase
+        .from("projects")
+        .select("ai_trial_status")
+        .eq("project_token", token)
+        .is("deleted_at", null)
+        .maybeSingle();
+
+      if (!current?.ai_trial_status) {
+        updateData.ai_trial_status = "intake_received";
+      }
+    }
+
+    // Update the project
+    const { data, error } = await supabase
+      .from("projects")
+      .update(updateData)
+      .eq("project_token", token)
+      .is("deleted_at", null)
+      .select("id, service_type, ai_trial_status")
+      .maybeSingle();
+
+    if (error || !data) {
+      console.error("Service type update error:", error);
+      return new Response(
+        JSON.stringify({ error: "Failed to update service type" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log(`Service type updated for project ${token}: ${service_type}`);
+
+    return new Response(
+      JSON.stringify({ success: true, project: data }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+
+  } catch (error) {
+    console.error("Update service type error:", error);
     return new Response(
       JSON.stringify({ error: "Internal server error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
