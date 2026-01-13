@@ -1,8 +1,8 @@
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
-// Service types for projects
-export type ServiceType = "website" | "ai" | "both" | "other";
+// Service types for projects - matches database reality
+export type ServiceType = "website" | "ai" | "ai_receptionist" | "both" | "other" | "demo";
 
 // Unified pipeline stages (works for all service types)
 export type PipelineStage = 
@@ -77,7 +77,7 @@ export const STAGE_CONFIG: Record<PipelineStage, { label: string; className: str
   },
 };
 
-// Service type configuration
+// Service type configuration - includes all database values
 export const SERVICE_TYPE_CONFIG: Record<ServiceType, { label: string; className: string; icon: string }> = {
   website: {
     label: "Website",
@@ -85,6 +85,11 @@ export const SERVICE_TYPE_CONFIG: Record<ServiceType, { label: string; className
     icon: "🌐",
   },
   ai: {
+    label: "AI Receptionist",
+    className: "bg-violet-500/10 text-violet-600 border-violet-200",
+    icon: "🤖",
+  },
+  ai_receptionist: {
     label: "AI Receptionist",
     className: "bg-violet-500/10 text-violet-600 border-violet-200",
     icon: "🤖",
@@ -98,6 +103,11 @@ export const SERVICE_TYPE_CONFIG: Record<ServiceType, { label: string; className
     label: "À la carte",
     className: "bg-amber-500/10 text-amber-700 border-amber-200",
     icon: "✨",
+  },
+  demo: {
+    label: "Demo",
+    className: "bg-gray-500/10 text-gray-600 border-gray-200",
+    icon: "👁️",
   },
 };
 
@@ -183,7 +193,20 @@ interface ServiceTypeBadgeProps {
 
 export function ServiceTypeBadge({ serviceType, className, showIcon = true }: ServiceTypeBadgeProps) {
   const normalized = (serviceType || "website") as ServiceType;
-  const config = SERVICE_TYPE_CONFIG[normalized] || SERVICE_TYPE_CONFIG.website;
+  const config = SERVICE_TYPE_CONFIG[normalized];
+
+  // If type is unknown, show a warning badge instead of silently defaulting
+  if (!config) {
+    return (
+      <Badge 
+        variant="outline" 
+        className={cn("text-xs bg-red-500/10 text-red-600 border-red-200", className)}
+      >
+        {showIcon && <span className="mr-1">⚠️</span>}
+        Unknown: {serviceType}
+      </Badge>
+    );
+  }
 
   return (
     <Badge 
@@ -212,7 +235,7 @@ export const PIPELINE_FILTERS = [
 export const SERVICE_TYPE_FILTERS = [
   { value: "all", label: "All Types" },
   { value: "website", label: "🌐 Website" },
-  { value: "ai", label: "🤖 AI" },
+  { value: "ai_receptionist", label: "🤖 AI" },
   { value: "both", label: "⚡ Both" },
   { value: "other", label: "✨ À la carte" },
 ] as const;

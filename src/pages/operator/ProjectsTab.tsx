@@ -719,12 +719,18 @@ export function ProjectsTab() {
     return projects.filter(p => {
       // Handle "archived" as a special filter
       if (pipelineFilter === "archived") {
-        return p.is_archived && (serviceTypeFilter === "all" || p.service_type === serviceTypeFilter);
+        const matchesServiceType = serviceTypeFilter === "all" || 
+          p.service_type === serviceTypeFilter ||
+          (serviceTypeFilter === "ai_receptionist" && p.service_type === "ai");
+        return p.is_archived && matchesServiceType;
       }
       // For non-archived filters, exclude archived projects
       if (p.is_archived) return false;
       const matchesPipeline = pipelineFilter === "all" || p.pipeline_stage === pipelineFilter;
-      const matchesServiceType = serviceTypeFilter === "all" || p.service_type === serviceTypeFilter;
+      // Handle both "ai" and "ai_receptionist" values for the AI filter
+      const matchesServiceType = serviceTypeFilter === "all" || 
+        p.service_type === serviceTypeFilter ||
+        (serviceTypeFilter === "ai_receptionist" && p.service_type === "ai");
       return matchesPipeline && matchesServiceType;
     });
   }, [projects, pipelineFilter, serviceTypeFilter]);

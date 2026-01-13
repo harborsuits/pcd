@@ -665,6 +665,25 @@ export function ProjectDetailDrawer({ project, open, onClose, onStatusChange }: 
     },
   });
 
+  // Update service type mutation
+  const updateServiceTypeMutation = useMutation({
+    mutationFn: async (serviceType: string) => {
+      if (!project) throw new Error("No project");
+      const res = await adminFetch(`/admin/projects/${project.project_token}/service-type`, {
+        method: "PATCH",
+        body: JSON.stringify({ service_type: serviceType }),
+      });
+      if (!res.ok) throw new Error("Failed to update service type");
+      return res.json();
+    },
+    onSuccess: () => {
+      toast.success("Service type updated");
+      queryClient.invalidateQueries({ queryKey: ["admin-projects"] });
+      onStatusChange();
+    },
+    onError: () => toast.error("Failed to update service type"),
+  });
+
   // Send message mutation
   const sendMessageMutation = useMutation({
     mutationFn: async (content: string) => {
@@ -1800,14 +1819,26 @@ export function ProjectDetailDrawer({ project, open, onClose, onStatusChange }: 
           <TabsContent value="ulio" className="flex-1 overflow-hidden mt-4">
             <ScrollArea className="h-full pr-4">
               <div className="space-y-6">
-                {/* Service Type */}
-                <div className="p-4 bg-muted/50 rounded-lg">
-                  <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Service Type</div>
-                  <div className="font-medium capitalize">
-                    {project.service_type === "both" ? "Website + AI Receptionist" : 
-                     project.service_type === "ai_receptionist" ? "AI Receptionist Only" : 
-                     "Website Only"}
-                  </div>
+                {/* Service Type - Editable */}
+                <div className="space-y-2">
+                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                    Service Type
+                  </label>
+                  <Select
+                    value={project.service_type || "website"}
+                    onValueChange={(v) => updateServiceTypeMutation.mutate(v)}
+                    disabled={updateServiceTypeMutation.isPending}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="website">🌐 Website Only</SelectItem>
+                      <SelectItem value="ai_receptionist">🤖 AI Receptionist Only</SelectItem>
+                      <SelectItem value="both">⚡ Website + AI Receptionist</SelectItem>
+                      <SelectItem value="other">✨ À la carte</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 {(project.service_type === "ai_receptionist" || project.service_type === "both") ? (
