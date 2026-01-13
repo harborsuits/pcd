@@ -14,7 +14,8 @@ import {
   MessageSquare, Send, Loader2, CheckCircle,
   Trash2, Plus, Eye, MessageCirclePlus,
   X, MessageSquareDot, Filter, Check, Circle,
-  ImageIcon, FileIcon, Upload, Download, Copy, Link2, Building2, Rocket, Target, ArrowRight
+  ImageIcon, FileIcon, Upload, Download, Copy, Link2, Building2, Rocket, Target, ArrowRight,
+  Bot, Power, RefreshCw, ChevronRight, Link
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -60,6 +61,10 @@ interface Project {
   project_token: string;
   status: string;
   pipeline_stage?: string | null;
+  service_type?: string | null;
+  ai_trial_status?: string | null;
+  ulio_business_id?: string | null;
+  ulio_setup_url?: string | null;
   contact_name: string | null;
   contact_phone: string | null;
   contact_email: string | null;
@@ -150,8 +155,136 @@ interface ProjectWorkSurfaceProps {
   onStatusChange: () => void;
 }
 
-const VALID_PANELS = ["overview", "milestones", "comments", "chat", "media", "launch"] as const;
+const VALID_PANELS = ["overview", "milestones", "comments", "chat", "media", "launch", "ai"] as const;
 type PanelType = typeof VALID_PANELS[number];
+
+const AI_STATUS_OPTIONS = [
+  { value: "inactive", label: "Inactive", color: "text-muted-foreground" },
+  { value: "setup_needed", label: "Setup Needed", color: "text-yellow-600" },
+  { value: "trial", label: "Trial", color: "text-blue-600" },
+  { value: "live", label: "Live", color: "text-green-600" },
+  { value: "paused", label: "Paused", color: "text-orange-600" },
+  { value: "canceled", label: "Canceled", color: "text-red-600" },
+];
+
+// Webhook Status Section Component
+function WebhookStatusSection({ projectToken }: { projectToken: string }) {
+  const queryClient = useQueryClient();
+  
+  const { data, isLoading, isFetching, refetch } = useQuery({
+    queryKey: ["webhook-status", projectToken],
+    queryFn: async () => {
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      
+      const { data: events, error } = await supabase
+        .from("project_events")
+        .select("id, event_name, metadata, created_at")
+        .eq("project_token", projectToken)
+        .like("event_name", "ai_%")
+        .gte("created_at", sevenDaysAgo.toISOString())
+        .order("created_at", { ascending: false })
+        .limit(10);
+      
+      if (error) throw error;
+      return events || [];
+    },
+    staleTime: 30000,
+  });
+
+  const lastEvent = data?.[0];
+  const eventCount = data?.length || 0;
+  
+  let statusColor = "bg-muted-foreground";
+  let statusText = "No events";
+  let statusHint = "No AI events received. Check that the Ulio Business ID is correct.";
+  
+  if (lastEvent) {
+    const lastEventTime = new Date(lastEvent.created_at);
+    const hoursSince = (Date.now() - lastEventTime.getTime()) / (1000 * 60 * 60);
+    
+    if (hoursSince < 24) {
+      statusColor = "bg-green-500";
+      statusText = "Active";
+      statusHint = "Webhook is receiving events";
+    } else if (hoursSince < 168) {
+      statusColor = "bg-amber-500";
+      statusText = "Idle";
+      statusHint = "No events in the last 24 hours";
+    } else {
+      statusColor = "bg-destructive";
+      statusText = "Stale";
+      statusHint = "No events in over 7 days. Webhook may be misconfigured.";
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="p-4 bg-muted/50 rounded-lg animate-pulse">
+        <div className="h-4 w-24 bg-muted rounded" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="p-4 bg-muted/50 rounded-lg">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2 text-sm font-medium">
+            <div className={`w-2 h-2 rounded-full ${statusColor} ${isFetching ? 'animate-pulse' : ''}`} />
+            Webhook Status: {statusText}
+          </div>
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="text-xs">
+              {eventCount} events (7d)
+            </Badge>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 px-2 text-xs"
+              onClick={() => refetch()}
+              disabled={isFetching}
+            >
+              {isFetching ? (
+                <Loader2 className="h-3 w-3 animate-spin" />
+              ) : (
+                <RefreshCw className="h-3 w-3" />
+              )}
+            </Button>
+          </div>
+        </div>
+        <p className="text-xs text-muted-foreground mb-2">{statusHint}</p>
+        {lastEvent && (
+          <div className="text-xs text-muted-foreground">
+            Last event: {format(new Date(lastEvent.created_at), "MMM d, h:mm a")} — {lastEvent.event_name}
+          </div>
+        )}
+      </div>
+
+      {data && data.length > 0 && (
+        <details className="group">
+          <summary className="text-xs font-medium text-muted-foreground cursor-pointer hover:text-foreground flex items-center gap-1">
+            <ChevronRight className="h-3 w-3 transition-transform group-open:rotate-90" />
+            Recent AI Events (Debug)
+          </summary>
+          <div className="mt-2 border rounded-lg divide-y text-xs max-h-64 overflow-y-auto">
+            {data.map((evt) => (
+              <div key={evt.id} className="p-2 space-y-1">
+                <div className="flex items-center justify-between">
+                  <Badge variant="secondary" className="text-[10px]">{evt.event_name}</Badge>
+                  <span className="text-muted-foreground">{format(new Date(evt.created_at), "MMM d, h:mm:ss a")}</span>
+                </div>
+                <pre className="text-[10px] text-muted-foreground bg-muted/50 p-1 rounded overflow-x-auto">
+                  {JSON.stringify(evt.metadata, null, 2).slice(0, 200)}
+                </pre>
+              </div>
+            ))}
+          </div>
+        </details>
+      )}
+    </div>
+  );
+}
 
 export function ProjectWorkSurface({ project, onBack, onStatusChange }: ProjectWorkSurfaceProps) {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -507,6 +640,54 @@ export function ProjectWorkSurface({ project, onBack, onStatusChange }: ProjectW
       queryClient.invalidateQueries({ queryKey: ["project-comments", project.project_token] });
     },
     onError: (error: Error) => toast.error(error.message),
+  });
+
+  // Update service type mutation
+  const updateServiceTypeMutation = useMutation({
+    mutationFn: async (serviceType: string) => {
+      const res = await adminFetch(`/admin/projects/${project.project_token}/service-type`, {
+        method: "PATCH",
+        body: JSON.stringify({ service_type: serviceType }),
+      });
+      if (!res.ok) throw new Error("Failed to update service type");
+      return res.json();
+    },
+    onSuccess: () => {
+      toast.success("Service type updated");
+      onStatusChange();
+      queryClient.invalidateQueries({ queryKey: ["admin-projects"] });
+    },
+    onError: () => toast.error("Failed to update service type"),
+  });
+
+  // Update AI status mutation
+  const updateAiStatusMutation = useMutation({
+    mutationFn: async ({ status, ulioBusinessId, ulioSetupUrl }: { 
+      status: string; 
+      ulioBusinessId?: string; 
+      ulioSetupUrl?: string; 
+    }) => {
+      const res = await adminFetch(`/admin/projects/${project.project_token}/ai-status`, {
+        method: "PATCH",
+        body: JSON.stringify({ 
+          ai_trial_status: status, 
+          ulio_business_id: ulioBusinessId,
+          ulio_setup_url: ulioSetupUrl,
+        }),
+      });
+      if (res.status === 409) {
+        const err = await res.json();
+        throw new Error(err.error || "Conflict");
+      }
+      if (!res.ok) throw new Error("Failed to update");
+      return res.json();
+    },
+    onSuccess: () => {
+      toast.success("AI settings updated");
+      onStatusChange();
+      queryClient.invalidateQueries({ queryKey: ["admin-projects"] });
+    },
+    onError: (err) => toast.error(err.message),
   });
 
   const messages = messagesData?.messages || [];
@@ -876,6 +1057,18 @@ export function ProjectWorkSurface({ project, onBack, onStatusChange }: ProjectW
                   <Rocket className="h-3 w-3 flex-shrink-0" />
                   Launch
                 </TabsTrigger>
+                <TabsTrigger value="ai" className="flex-none text-xs gap-1.5 px-3 py-1.5 rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm">
+                  <Bot className="h-3 w-3 flex-shrink-0" />
+                  AI
+                  {(project.service_type === "ai_receptionist" || project.service_type === "both") && project.ai_trial_status && (
+                    <Badge 
+                      variant="secondary" 
+                      className={`text-[10px] px-1 py-0 ml-1 ${project.ai_trial_status === "live" ? "bg-green-500/10 text-green-600" : ""}`}
+                    >
+                      {project.ai_trial_status}
+                    </Badge>
+                  )}
+                </TabsTrigger>
               </TabsList>
               {/* Scroll hint gradient */}
               <div className="pointer-events-none absolute right-0 top-0 h-full w-8 bg-gradient-to-l from-card to-transparent" />
@@ -1230,6 +1423,169 @@ export function ProjectWorkSurface({ project, onBack, onStatusChange }: ProjectW
                   projectStatus={project.status}
                   onLaunchComplete={() => queryClient.invalidateQueries({ queryKey: ["admin-projects"] })}
                 />
+              </TabsContent>
+
+              {/* AI Configuration */}
+              <TabsContent value="ai" className="h-full overflow-auto data-[state=inactive]:hidden m-0 p-4">
+                <div className="space-y-6 max-w-lg">
+                  {/* Service Type Dropdown */}
+                  <div className="space-y-2">
+                    <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                      Service Type
+                    </label>
+                    <Select
+                      value={project.service_type || "website"}
+                      onValueChange={(v) => updateServiceTypeMutation.mutate(v)}
+                      disabled={updateServiceTypeMutation.isPending}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="website">🌐 Website Only</SelectItem>
+                        <SelectItem value="ai_receptionist">🤖 AI Receptionist Only</SelectItem>
+                        <SelectItem value="both">⚡ Website + AI Receptionist</SelectItem>
+                        <SelectItem value="other">✨ À la carte</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Conditional AI Config - only show if AI type */}
+                  {(project.service_type === "ai_receptionist" || project.service_type === "both") ? (
+                    <>
+                      {/* AI Status Dropdown */}
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium flex items-center gap-2">
+                          <Bot className="h-4 w-4" />
+                          AI Status
+                        </label>
+                        <Select
+                          value={project.ai_trial_status || "inactive"}
+                          onValueChange={(v) => updateAiStatusMutation.mutate({ status: v })}
+                          disabled={updateAiStatusMutation.isPending}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {AI_STATUS_OPTIONS.map(opt => (
+                              <SelectItem key={opt.value} value={opt.value}>
+                                <span className={opt.color}>{opt.label}</span>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Kill Switch */}
+                      {(project.ai_trial_status === "live" || project.ai_trial_status === "trial") && (
+                        <Button
+                          variant="destructive"
+                          className="w-full gap-2"
+                          onClick={() => {
+                            if (confirm("Pause AI receptionist for this client?")) {
+                              updateAiStatusMutation.mutate({ status: "paused" });
+                            }
+                          }}
+                          disabled={updateAiStatusMutation.isPending}
+                        >
+                          <Power className="h-4 w-4" />
+                          Kill Switch (Pause AI)
+                        </Button>
+                      )}
+
+                      {/* Webhook URL */}
+                      <div className="p-4 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg space-y-3">
+                        <div className="flex items-center gap-2 text-sm font-medium text-blue-700 dark:text-blue-400">
+                          <Link className="h-4 w-4" />
+                          Webhook Integration
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          Paste this URL into Ulio's webhook settings.
+                        </p>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            readOnly
+                            value="https://ararrbvhzaudfaxjwdrc.supabase.co/functions/v1/ulio-webhook"
+                            className="text-xs font-mono bg-background"
+                          />
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              navigator.clipboard.writeText("https://ararrbvhzaudfaxjwdrc.supabase.co/functions/v1/ulio-webhook");
+                              toast.success("Webhook URL copied!");
+                            }}
+                          >
+                            Copy
+                          </Button>
+                        </div>
+                      </div>
+
+                      {/* Ulio Setup URL */}
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Ulio Setup URL</label>
+                        <Input
+                          placeholder="https://app.ulio.io/partner/businesses/..."
+                          defaultValue={project.ulio_setup_url || ""}
+                          onBlur={(e) => {
+                            if (e.target.value !== project.ulio_setup_url) {
+                              updateAiStatusMutation.mutate({ 
+                                status: project.ai_trial_status || "inactive",
+                                ulioSetupUrl: e.target.value 
+                              });
+                            }
+                          }}
+                        />
+                      </div>
+
+                      {/* Open Ulio Button */}
+                      {project.ulio_setup_url && (
+                        <Button
+                          variant="outline"
+                          className="w-full gap-2"
+                          onClick={() => window.open(project.ulio_setup_url!, "_blank")}
+                        >
+                          <ExternalLink className="h-4 w-4" />
+                          Open Ulio Dashboard
+                        </Button>
+                      )}
+
+                      {/* Ulio Business ID */}
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-muted-foreground">
+                          Ulio Business ID (shop_id)
+                        </label>
+                        <Input
+                          placeholder="UUID from Ulio"
+                          defaultValue={project.ulio_business_id || ""}
+                          onBlur={(e) => {
+                            if (e.target.value !== project.ulio_business_id) {
+                              updateAiStatusMutation.mutate({ 
+                                status: project.ai_trial_status || "inactive",
+                                ulioBusinessId: e.target.value 
+                              });
+                            }
+                          }}
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          This links Ulio webhook events to this project.
+                        </p>
+                      </div>
+
+                      {/* Webhook Status */}
+                      {project.ulio_business_id && (
+                        <WebhookStatusSection projectToken={project.project_token} />
+                      )}
+                    </>
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <Bot className="h-10 w-10 mx-auto mb-3 opacity-50" />
+                      <p>AI Receptionist not included</p>
+                      <p className="text-sm mt-1">Change service type above to enable AI settings</p>
+                    </div>
+                  )}
+                </div>
               </TabsContent>
             </div>
           </Tabs>
