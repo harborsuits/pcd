@@ -5160,7 +5160,7 @@ async function handleUpdateAIStatus(req: Request, token: string): Promise<Respon
 
   try {
     const body = await req.json();
-    const { status } = body;
+    const { status, ulio_business_id, ulio_setup_url } = body;
 
     const validStatuses = ["intake_received", "review", "setup", "testing", "live", "paused"];
     if (!status || !validStatuses.includes(status)) {
@@ -5170,14 +5170,14 @@ async function handleUpdateAIStatus(req: Request, token: string): Promise<Respon
       );
     }
 
-    console.log(`Updating project ${token} ai_trial_status to: ${status}`);
+    console.log(`Updating project ${token} ai_trial_status to: ${status}, ulio_business_id: ${ulio_business_id || 'not set'}`);
 
     const supabase = getSupabaseClient();
 
     // Get current project info
     const { data: currentProject, error: fetchError } = await supabase
       .from("projects")
-      .select("id, project_token, ai_trial_status, business_name")
+      .select("id, project_token, ai_trial_status, business_name, ulio_business_id, ulio_setup_url")
       .eq("project_token", token)
       .is("deleted_at", null)
       .maybeSingle();
@@ -5190,23 +5190,63 @@ async function handleUpdateAIStatus(req: Request, token: string): Promise<Respon
       );
     }
 
-    const previousStatus = currentProject.ai_trial_status || "intake_received";
+    // Check for ulio_business_id conflict with other projects
+    const cleanUlioBusinessId = ulio_business_id?.trim() || null;
+    if (cleanUlioBusinessId && cleanUlioBusinessId !== currentProject.ulio_business_id) {
+      const { data: conflict } = await supabase
+        .from("projects")
+        .select("project_token, business_name")
+        .eq("ulio_business_id", cleanUlioBusinessId)
+        .is("deleted_at", null)
+        .neq("project_token", token)
+        .maybeSingle();
+      
+      if (conflict) {
+        console.warn(`Ulio Business ID conflict: ${cleanUlioBusinessId} already used by ${conflict.business_name}`);
+        return new Response(
+          JSON.stringify({ 
+            error: `This Ulio Business ID is already linked to: ${conflict.business_name}`,
+            conflict_project: conflict.project_token
+          }),
+          { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
 
-    // Don't update if same status
-    if (previousStatus === status) {
+    const previousStatus = currentProject.ai_trial_status || "intake_received";
+    const statusChanged = previousStatus !== status;
+    const ulioChanged = cleanUlioBusinessId !== currentProject.ulio_business_id || 
+                        (ulio_setup_url?.trim() || null) !== currentProject.ulio_setup_url;
+
+    // Don't update if nothing changed
+    if (!statusChanged && !ulioChanged) {
       return new Response(
         JSON.stringify({ success: true, project: currentProject, message: "No change" }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Update the AI status
+    // Build update object
+    const updateData: Record<string, unknown> = { 
+      updated_at: new Date().toISOString() 
+    };
+    if (statusChanged) {
+      updateData.ai_trial_status = status;
+    }
+    if (ulio_business_id !== undefined) {
+      updateData.ulio_business_id = cleanUlioBusinessId;
+    }
+    if (ulio_setup_url !== undefined) {
+      updateData.ulio_setup_url = ulio_setup_url?.trim() || null;
+    }
+
+    // Update the project
     const { data, error } = await supabase
       .from("projects")
-      .update({ ai_trial_status: status, updated_at: new Date().toISOString() })
+      .update(updateData)
       .eq("project_token", token)
       .is("deleted_at", null)
-      .select("id, project_token, ai_trial_status")
+      .select("id, project_token, ai_trial_status, ulio_business_id, ulio_setup_url")
       .single();
 
     if (error) {
@@ -5217,28 +5257,30 @@ async function handleUpdateAIStatus(req: Request, token: string): Promise<Respon
       );
     }
 
-    // Insert audit message for status change
-    const statusLabels: Record<string, string> = {
-      intake_received: "Intake Received",
-      review: "Under Review",
-      setup: "Setting Up",
-      testing: "Testing",
-      live: "Live",
-      paused: "Paused",
-    };
+    // Insert audit message for status change (only if status actually changed)
+    if (statusChanged) {
+      const statusLabels: Record<string, string> = {
+        intake_received: "Intake Received",
+        review: "Under Review",
+        setup: "Setting Up",
+        testing: "Testing",
+        live: "Live",
+        paused: "Paused",
+      };
 
-    const auditContent = `[SYSTEM] AI status changed: ${statusLabels[previousStatus] || previousStatus} → ${statusLabels[status] || status}`;
+      const auditContent = `[SYSTEM] AI status changed: ${statusLabels[previousStatus] || previousStatus} → ${statusLabels[status] || status}`;
 
-    await supabase
-      .from("messages")
-      .insert({
-        project_id: currentProject.id,
-        project_token: currentProject.project_token,
-        sender_type: "system",
-        content: auditContent,
-      });
+      await supabase
+        .from("messages")
+        .insert({
+          project_id: currentProject.id,
+          project_token: currentProject.project_token,
+          sender_type: "system",
+          content: auditContent,
+        });
+    }
 
-    console.log(`AI status updated for ${currentProject.business_name}: ${previousStatus} → ${status}`);
+    console.log(`AI status updated for ${currentProject.business_name}: status=${statusChanged ? `${previousStatus} → ${status}` : 'unchanged'}, ulio=${ulioChanged ? 'updated' : 'unchanged'}`);
 
     return new Response(
       JSON.stringify({ success: true, project: data, previous_status: previousStatus }),

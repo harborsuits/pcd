@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { CheckCircle2, Clock, Settings2, Phone, AlertCircle, FileText, Calendar, TrendingUp, PhoneForwarded, Moon, Timer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { supabase } from "@/integrations/supabase/client";
 import { formatDistanceToNow, format, isToday, isYesterday } from "date-fns";
 
 interface AIReceptionistTabProps {
@@ -199,72 +198,44 @@ export function AIReceptionistTab({ aiStatus, intakeData, onRequestChange, proje
   });
   const [loading, setLoading] = useState(false);
 
-  // Fetch AI events and compute stats
+  // Fetch AI events via portal edge function (token-based access)
   useEffect(() => {
     if (!projectToken || aiStatus !== 'live') return;
     
     const fetchEvents = async () => {
       setLoading(true);
       try {
-        const sevenDaysAgo = new Date();
-        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        const res = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/portal/${projectToken}/ai-events`,
+          {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+              "apikey": import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+            },
+          }
+        );
         
-        const { data, error } = await supabase
-          .from('project_events')
-          .select('id, event_name, metadata, created_at')
-          .eq('project_token', projectToken)
-          .like('event_name', 'ai_%')
-          .gte('created_at', sevenDaysAgo.toISOString())
-          .order('created_at', { ascending: false })
-          .limit(50);
-        
-        if (error) {
-          console.error('Error fetching AI events:', error);
+        if (!res.ok) {
+          console.error('Error fetching AI events:', res.status);
           return;
         }
         
-        const aiEvents = (data || []) as AIEvent[];
-        setEvents(aiEvents.slice(0, 20));
+        const data = await res.json();
         
-        // Compute stats
-        let totalDuration = 0;
-        let callCount = 0;
+        // Set events
+        setEvents((data.events || []) as AIEvent[]);
         
-        const newStats: AIStats = {
-          callsAnswered: 0,
-          appointmentsBooked: 0,
-          escalations: 0,
-          afterHours: 0,
-          avgDuration: 0,
-        };
-        
-        for (const evt of aiEvents) {
-          switch (evt.event_name) {
-            case 'ai_call_completed':
-            case 'ai_call_started':
-              newStats.callsAnswered++;
-              const duration = (evt.metadata?.duration_seconds as number) || 0;
-              if (duration > 0) {
-                totalDuration += duration;
-                callCount++;
-              }
-              // Check if after hours (rough heuristic: before 8am or after 6pm)
-              const hour = new Date(evt.created_at).getHours();
-              if (hour < 8 || hour >= 18) {
-                newStats.afterHours++;
-              }
-              break;
-            case 'ai_appointment_booked':
-              newStats.appointmentsBooked++;
-              break;
-            case 'ai_escalation_triggered':
-              newStats.escalations++;
-              break;
-          }
+        // Set stats from server response
+        if (data.stats) {
+          setStats({
+            callsAnswered: data.stats.callsAnswered || 0,
+            appointmentsBooked: data.stats.appointmentsBooked || 0,
+            escalations: data.stats.escalations || 0,
+            afterHours: data.stats.afterHours || 0,
+            avgDuration: data.stats.avgDuration || 0,
+          });
         }
-        
-        newStats.avgDuration = callCount > 0 ? Math.round(totalDuration / callCount) : 0;
-        setStats(newStats);
       } catch (err) {
         console.error('Error fetching AI events:', err);
       } finally {
