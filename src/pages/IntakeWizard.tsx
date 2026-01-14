@@ -854,10 +854,22 @@ const GetDemo = () => {
           description="See an instant preview of your site in 3 styles. Takes 30 seconds."
         />
         <ServiceCard
+          value="website"
+          icon={Globe}
+          title="Website Build"
+          description="Custom website tailored to your business. Full design + build process."
+        />
+        <ServiceCard
           value="ai"
           icon={Bot}
           title="AI Receptionist"
           description="Set up your AI to answer calls 24/7. We'll guide you through the setup."
+        />
+        <ServiceCard
+          value="both"
+          icon={Package}
+          title="Complete Growth System"
+          description="Website + AI Receptionist working together for maximum impact."
         />
       </div>
     </div>
