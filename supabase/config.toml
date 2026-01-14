@@ -62,3 +62,6 @@ verify_jwt = false
 
 [functions.test-ai-call]
 verify_jwt = false
+
+[functions.create-deposit-checkout]
+verify_jwt = false

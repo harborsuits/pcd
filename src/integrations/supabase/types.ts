@@ -1251,6 +1251,7 @@ export type Database = {
           contact_phone: string | null
           created_at: string
           deleted_at: string | null
+          deposit_status: string | null
           email_verified: boolean
           final_approved_at: string | null
           id: string
@@ -1287,6 +1288,7 @@ export type Database = {
           contact_phone?: string | null
           created_at?: string
           deleted_at?: string | null
+          deposit_status?: string | null
           email_verified?: boolean
           final_approved_at?: string | null
           id?: string
@@ -1323,6 +1325,7 @@ export type Database = {
           contact_phone?: string | null
           created_at?: string
           deleted_at?: string | null
+          deposit_status?: string | null
           email_verified?: boolean
           final_approved_at?: string | null
           id?: string

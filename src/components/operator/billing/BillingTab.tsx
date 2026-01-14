@@ -17,6 +17,7 @@ interface BillingTabProps {
   stripeCustomerId: string | null;
   contactEmail: string | null;
   contactName: string | null;
+  depositStatus?: string | null;
 }
 
 type LineItemStatus = "proposed" | "accepted" | "invoiced" | "paid" | "cancelled" | "refunded";
@@ -48,6 +49,7 @@ export function BillingTab({
   stripeCustomerId,
   contactEmail,
   contactName,
+  depositStatus,
 }: BillingTabProps) {
   const [showAddModal, setShowAddModal] = useState(false);
   const queryClient = useQueryClient();
@@ -311,6 +313,18 @@ export function BillingTab({
     </div>
   );
 
+  const depositStatusColors: Record<string, string> = {
+    paid: "bg-green-100 text-green-800",
+    pending: "bg-yellow-100 text-yellow-800",
+    skipped: "bg-gray-100 text-gray-600",
+  };
+
+  const depositStatusLabels: Record<string, string> = {
+    paid: "Deposit Paid",
+    pending: "Deposit Pending",
+    skipped: "Skipped Deposit",
+  };
+
   return (
     <div className="space-y-6">
       {/* Customer Status Card */}
@@ -350,6 +364,12 @@ export function BillingTab({
               )}
             </div>
             <div>
+              <span className="text-muted-foreground">Deposit:</span>{" "}
+              <Badge className={depositStatusColors[depositStatus || "pending"]}>
+                {depositStatusLabels[depositStatus || "pending"] || "Pending"}
+              </Badge>
+            </div>
+            <div className="col-span-2">
               {!clientAccountId || !stripeCustomerId ? (
                 <Button
                   size="sm"

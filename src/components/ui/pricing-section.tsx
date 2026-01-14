@@ -381,9 +381,12 @@ export default function PricingSection() {
           </div>
         </TimelineContent>
 
-        {/* Boundaries note */}
+        {/* Payment expectations note */}
         <TimelineContent animationNum={10} timelineRef={pricingRef}>
-          <div className="text-center mt-8 max-w-2xl mx-auto">
+          <div className="text-center mt-8 max-w-2xl mx-auto space-y-4">
+            <p className="text-sm text-muted-foreground/80 italic">
+              Projects typically begin with a deposit. Final payment is due upon completion, before launch.
+            </p>
             <p className="text-sm text-muted-foreground">
               <span className="font-medium">Important Boundaries:</span> PCD provides coverage, responsiveness, and operational relief — 
               not a replacement for employees, medical records handling, or enterprise compliance.

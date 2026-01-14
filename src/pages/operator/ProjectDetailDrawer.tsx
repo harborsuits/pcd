@@ -1559,6 +1559,7 @@ export function ProjectDetailDrawer({ project, open, onClose, onStatusChange }: 
                 stripeCustomerId={project.client_account?.stripe_customer_id || null}
                 contactEmail={project.contact_email}
                 contactName={project.contact_name}
+                depositStatus={(project as any).deposit_status || null}
               />
             </ScrollArea>
           </TabsContent>
