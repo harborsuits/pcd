@@ -140,8 +140,46 @@ serve(async (req) => {
         const session = event.data.object as Stripe.Checkout.Session;
         console.log(`Checkout session completed: ${session.id}`);
 
-        if (session.metadata?.project_token && session.payment_intent) {
-          // Update line items with this payment intent
+        // Handle deposit payments
+        if (session.metadata?.payment_type === "deposit" && session.metadata?.project_token) {
+          console.log(`Deposit payment completed for project: ${session.metadata.project_token}`);
+          
+          const { error: depositError } = await supabaseAdmin
+            .from("projects")
+            .update({ deposit_status: "paid" })
+            .eq("project_token", session.metadata.project_token);
+
+          if (depositError) {
+            console.error("Failed to update deposit status:", depositError);
+          } else {
+            console.log(`Updated deposit_status to 'paid' for project ${session.metadata.project_token}`);
+          }
+
+          // Also record in payments table
+          const { data: project } = await supabaseAdmin
+            .from("projects")
+            .select("id")
+            .eq("project_token", session.metadata.project_token)
+            .single();
+
+          if (project) {
+            await supabaseAdmin.from("payments").insert({
+              project_id: project.id,
+              project_token: session.metadata.project_token,
+              amount_cents: session.amount_total || 0,
+              payment_type: "deposit",
+              status: "paid",
+              stripe_checkout_session_id: session.id,
+              stripe_payment_intent_id: typeof session.payment_intent === "string"
+                ? session.payment_intent
+                : null,
+              stripe_event_id: event.id,
+            });
+          }
+        }
+
+        // Handle regular line item payments
+        if (session.metadata?.project_token && session.payment_intent && session.metadata?.payment_type !== "deposit") {
           const { error } = await supabaseAdmin
             .from("project_line_items")
             .update({
