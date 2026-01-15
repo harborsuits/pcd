@@ -12,9 +12,19 @@ const ADMIN_TEST_PHONE = "+12073805680";
 const DAILY_CAP = 100;
 const HOURLY_CAP = 25;
 
+// Per-lead cooldown in days
+const COOLDOWN_DAYS = 7;
+
+// Check if outreach is enabled (kill switch)
+function isOutreachEnabled(): boolean {
+  const enabled = Deno.env.get("OUTREACH_ENABLED");
+  // Default to enabled if not set, disable only if explicitly "false"
+  return enabled !== "false";
+}
+
 // Validate Twilio webhook signature using Web Crypto API
 // See: https://www.twilio.com/docs/usage/webhooks/webhooks-security
-async function validateTwilioSignature(req: Request, rawBody: string): Promise<boolean> {
+async function validateTwilioSignature(req: Request, rawBody: string, endpoint: string): Promise<boolean> {
   const signature = req.headers.get("x-twilio-signature");
   const authToken = Deno.env.get("TWILIO_AUTH_TOKEN");
 
@@ -24,17 +34,15 @@ async function validateTwilioSignature(req: Request, rawBody: string): Promise<b
   }
 
   // Build the validation URL (Twilio uses the full URL including any query params)
-  // For edge functions, we need to use the actual public URL that Twilio calls
   const publicBaseUrl = Deno.env.get("PUBLIC_BASE_URL");
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
   
   // Construct the URL Twilio would have used to call this webhook
   let validationUrl: string;
   if (publicBaseUrl) {
-    // Use configured public URL for webhook
-    validationUrl = `${publicBaseUrl.replace(/\/$/, "")}/functions/v1/sms/inbound`;
+    validationUrl = `${publicBaseUrl.replace(/\/$/, "")}/functions/v1/sms/${endpoint}`;
   } else if (supabaseUrl) {
-    validationUrl = `${supabaseUrl.replace(/\/$/, "")}/functions/v1/sms/inbound`;
+    validationUrl = `${supabaseUrl.replace(/\/$/, "")}/functions/v1/sms/${endpoint}`;
   } else {
     console.error("No PUBLIC_BASE_URL or SUPABASE_URL configured");
     return false;
@@ -132,7 +140,7 @@ Deno.serve(async (req) => {
 });
 
 // Validate admin access via JWT and role check
-async function validateAdminAuth(req: Request): Promise<{ error: Response | null; userId?: string }> {
+async function validateAdminAuth(req: Request): Promise<{ error: Response | null; userId?: string; userEmail?: string }> {
   const authHeader = req.headers.get("Authorization");
   
   if (!authHeader?.startsWith("Bearer ")) {
@@ -164,6 +172,7 @@ async function validateAdminAuth(req: Request): Promise<{ error: Response | null
   }
 
   const userId = claimsData.claims.sub as string;
+  const userEmail = claimsData.claims.email as string || "unknown";
 
   // Check if user has admin role
   const supabase = getSupabaseClient();
@@ -183,7 +192,7 @@ async function validateAdminAuth(req: Request): Promise<{ error: Response | null
     };
   }
 
-  return { error: null, userId };
+  return { error: null, userId, userEmail };
 }
 
 function validateAdminKey(req: Request): Response | null {
@@ -212,6 +221,48 @@ function getSupabaseClient() {
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   return createClient(supabaseUrl, supabaseServiceKey);
+}
+
+// Log admin actions for audit trail
+async function logAdminAction(
+  action: string,
+  resourceType: string,
+  resourceId: string | null,
+  metadata: Record<string, unknown> = {},
+  userId?: string,
+  userEmail?: string
+): Promise<void> {
+  try {
+    const supabase = getSupabaseClient();
+    await supabase.from("admin_actions").insert({
+      user_id: userId || null,
+      user_email: userEmail || null,
+      action,
+      resource_type: resourceType,
+      resource_id: resourceId,
+      metadata,
+    });
+  } catch (error) {
+    console.error("Failed to log admin action:", error);
+    // Don't throw - audit logging should not break the main operation
+  }
+}
+
+// Check per-lead cooldown (7 days)
+async function isLeadInCooldown(leadId: string): Promise<boolean> {
+  const supabase = getSupabaseClient();
+  const cooldownDate = new Date(Date.now() - COOLDOWN_DAYS * 24 * 60 * 60 * 1000).toISOString();
+  
+  const { data } = await supabase
+    .from("lead_outreach_events")
+    .select("id")
+    .eq("lead_id", leadId)
+    .eq("direction", "outbound")
+    .in("status", ["sent", "queued"])
+    .gte("created_at", cooldownDate)
+    .limit(1);
+  
+  return Boolean(data && data.length > 0);
 }
 
 // Get quota usage for daily/hourly caps
@@ -268,6 +319,7 @@ async function handleQuota(req: Request): Promise<Response> {
         hourly_used: quota.hourly,
         daily_remaining: quota.dailyRemaining,
         hourly_remaining: quota.hourlyRemaining,
+        outreach_enabled: isOutreachEnabled(),
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
@@ -337,6 +389,14 @@ async function sendTwilioSMS(to: string, body: string): Promise<{ success: boole
 async function handleSend(req: Request): Promise<Response> {
   const authError = validateAdminKey(req);
   if (authError) return authError;
+
+  // Kill switch check
+  if (!isOutreachEnabled()) {
+    return new Response(
+      JSON.stringify({ error: "Outreach is temporarily disabled", code: "OUTREACH_DISABLED" }),
+      { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
 
   try {
     const body = await req.json().catch(() => ({}));
@@ -423,11 +483,12 @@ async function handleSend(req: Request): Promise<Response> {
 
     let sent = 0;
     let failed = 0;
+    let skippedCooldown = 0;
     const errors: string[] = [];
 
     for (const event of events) {
-      const lead = event.leads as any;
-      const bestPhone = lead.phone_e164 || lead.phone_raw || lead.phone;
+      const lead = event.leads as unknown as Record<string, unknown>;
+      const bestPhone = (lead.phone_e164 || lead.phone_raw || lead.phone) as string;
 
       // Skip if no phone
       if (!bestPhone) {
@@ -440,7 +501,7 @@ async function handleSend(req: Request): Promise<Response> {
       }
 
       // Skip if suppressed
-      if (suppressedPhones.has(bestPhone) || (lead.phone_e164 && suppressedPhones.has(lead.phone_e164))) {
+      if (suppressedPhones.has(bestPhone) || (lead.phone_e164 && suppressedPhones.has(lead.phone_e164 as string))) {
         await supabase
           .from("lead_outreach_events")
           .update({ status: "failed", error: "Phone is suppressed" })
@@ -448,7 +509,18 @@ async function handleSend(req: Request): Promise<Response> {
         await supabase
           .from("leads")
           .update({ outreach_status: "opted_out" })
-          .eq("id", lead.id);
+          .eq("id", lead.id as string);
+        failed++;
+        continue;
+      }
+
+      // Check per-lead cooldown (safety net)
+      if (await isLeadInCooldown(event.lead_id)) {
+        await supabase
+          .from("lead_outreach_events")
+          .update({ status: "failed", error: "Lead in cooldown period" })
+          .eq("id", event.id);
+        skippedCooldown++;
         failed++;
         continue;
       }
@@ -469,7 +541,14 @@ async function handleSend(req: Request): Promise<Response> {
         await supabase
           .from("leads")
           .update({ outreach_status: "sent" })
-          .eq("id", lead.id);
+          .eq("id", lead.id as string);
+
+        // Log audit action
+        await logAdminAction("outreach.sent", "lead", lead.id as string, {
+          phone: bestPhone,
+          message_id: result.messageId,
+          business_name: lead.business_name,
+        });
 
         sent++;
       } else {
@@ -481,7 +560,7 @@ async function handleSend(req: Request): Promise<Response> {
         await supabase
           .from("leads")
           .update({ outreach_status: "failed" })
-          .eq("id", lead.id);
+          .eq("id", lead.id as string);
 
         failed++;
         errors.push(`${lead.business_name}: ${result.error}`);
@@ -491,7 +570,7 @@ async function handleSend(req: Request): Promise<Response> {
       await new Promise((resolve) => setTimeout(resolve, 200));
     }
 
-    console.log(`SMS send complete: ${sent} sent, ${failed} failed`);
+    console.log(`SMS send complete: ${sent} sent, ${failed} failed, ${skippedCooldown} skipped (cooldown)`);
 
     // Get updated quota
     const updatedQuota = await getQuotaUsage();
@@ -501,7 +580,8 @@ async function handleSend(req: Request): Promise<Response> {
         ok: true, 
         sent, 
         failed, 
-        errors: errors.slice(0, 5), // Only return first 5 errors
+        skipped_cooldown: skippedCooldown,
+        errors: errors.slice(0, 5),
         total_processed: events.length,
         daily_remaining: updatedQuota.dailyRemaining,
         hourly_remaining: updatedQuota.hourlyRemaining,
@@ -519,8 +599,16 @@ async function handleSend(req: Request): Promise<Response> {
 
 // POST /sms/send-reply - Send a reply immediately (not queued)
 async function handleSendReply(req: Request): Promise<Response> {
-  const { error: authError } = await validateAdminAuth(req);
+  const { error: authError, userId, userEmail } = await validateAdminAuth(req);
   if (authError) return authError;
+
+  // Kill switch check
+  if (!isOutreachEnabled()) {
+    return new Response(
+      JSON.stringify({ error: "Outreach is temporarily disabled", code: "OUTREACH_DISABLED" }),
+      { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
 
   try {
     const body = await req.json();
@@ -613,6 +701,13 @@ async function handleSendReply(req: Request): Promise<Response> {
         provider_message_id: result.messageId,
       });
 
+    // Log audit action
+    await logAdminAction("outreach.reply_sent", "lead", lead_id, {
+      phone: bestPhone,
+      message_id: result.messageId,
+      business_name: lead.business_name,
+    }, userId, userEmail);
+
     console.log(`Reply sent to ${lead.business_name} (${bestPhone})`);
 
     return new Response(
@@ -636,6 +731,14 @@ async function handleSendReply(req: Request): Promise<Response> {
 async function handleSendTest(req: Request): Promise<Response> {
   const authError = validateAdminKey(req);
   if (authError) return authError;
+
+  // Kill switch check
+  if (!isOutreachEnabled()) {
+    return new Response(
+      JSON.stringify({ error: "Outreach is temporarily disabled", code: "OUTREACH_DISABLED" }),
+      { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
 
   try {
     const body = await req.json().catch(() => ({}));
@@ -714,7 +817,17 @@ async function handleSendTest(req: Request): Promise<Response> {
 // POST /sms/status-callback - Handle Twilio delivery status updates
 async function handleStatusCallback(req: Request): Promise<Response> {
   try {
+    // Read raw body ONCE for signature validation
     const rawBody = await req.text();
+    
+    // Validate Twilio signature
+    const isValidSignature = await validateTwilioSignature(req, rawBody, "status-callback");
+    if (!isValidSignature) {
+      console.error("Invalid Twilio signature on status callback - rejecting");
+      return new Response("Forbidden", { status: 403, headers: corsHeaders });
+    }
+    
+    // Parse from validated raw body
     const params = new URLSearchParams(rawBody);
     
     const messageSid = params.get("MessageSid");
@@ -729,7 +842,7 @@ async function handleStatusCallback(req: Request): Promise<Response> {
     
     const supabase = getSupabaseClient();
     
-    // Update the outreach event with delivery status
+    // Update the outreach event with delivery status (idempotent - matching by provider_message_id)
     const { error } = await supabase
       .from("lead_outreach_events")
       .update({
@@ -757,7 +870,7 @@ async function handleInbound(req: Request): Promise<Response> {
     const rawBody = await req.text();
     
     // Validate Twilio signature to prevent spoofed requests
-    const isValidSignature = await validateTwilioSignature(req, rawBody);
+    const isValidSignature = await validateTwilioSignature(req, rawBody, "inbound");
     if (!isValidSignature) {
       console.error("Invalid Twilio signature - rejecting request");
       return new Response(
@@ -769,7 +882,6 @@ async function handleInbound(req: Request): Promise<Response> {
     // Parse form data from validated request body
     const params = new URLSearchParams(rawBody);
     const from = params.get("From") as string;
-    const to = params.get("To") as string;
     const body = params.get("Body") as string;
     const messageSid = params.get("MessageSid") as string;
 
@@ -785,7 +897,6 @@ async function handleInbound(req: Request): Promise<Response> {
     const supabase = getSupabaseClient();
     
     // Sanitize and validate phone number format
-    // Only allow digits, plus sign, and common phone characters
     const normalizedFrom = from.replace(/\s+/g, "");
     const phoneRegex = /^\+?[0-9\-\(\)]{7,20}$/;
     if (!phoneRegex.test(normalizedFrom)) {
@@ -810,14 +921,20 @@ async function handleInbound(req: Request): Promise<Response> {
         .from("outreach_suppressions")
         .upsert({ phone: normalizedFrom, reason: "opted_out" }, { onConflict: "phone" });
 
-      // Find and update any matching leads - use separate queries to avoid SQL injection
+      // Log audit action for suppression
+      await logAdminAction("suppression.auto_added", "phone", normalizedFrom, {
+        reason: "opted_out",
+        source: "inbound_sms",
+        message: body.substring(0, 100),
+      });
+
+      // Find and update any matching leads
       const [{ data: leadsE164 }, { data: leadsRaw }, { data: leadsPhone }] = await Promise.all([
         supabase.from("leads").select("id").eq("phone_e164", normalizedFrom),
         supabase.from("leads").select("id").eq("phone_raw", normalizedFrom),
         supabase.from("leads").select("id").eq("phone", normalizedFrom),
       ]);
       
-      // Combine and deduplicate results
       const leadIds = new Set<string>();
       [...(leadsE164 || []), ...(leadsRaw || []), ...(leadsPhone || [])].forEach(l => leadIds.add(l.id));
       const leads = Array.from(leadIds).map(id => ({ id }));
@@ -838,20 +955,17 @@ async function handleInbound(req: Request): Promise<Response> {
       );
     }
 
-    // Store reply as outreach event
-    // First, find the lead by phone number - use separate queries to avoid SQL injection
+    // Find the lead by phone number
     const [{ data: replyLeadsE164 }, { data: replyLeadsRaw }, { data: replyLeadsPhone }] = await Promise.all([
       supabase.from("leads").select("id").eq("phone_e164", normalizedFrom).limit(1),
       supabase.from("leads").select("id").eq("phone_raw", normalizedFrom).limit(1),
       supabase.from("leads").select("id").eq("phone", normalizedFrom).limit(1),
     ]);
     
-    // Take the first matching lead
     const replyLeads = replyLeadsE164?.[0] || replyLeadsRaw?.[0] || replyLeadsPhone?.[0];
-    const leads = replyLeads ? [replyLeads] : null;
 
-    if (leads && leads.length > 0) {
-      const leadId = leads[0].id;
+    if (replyLeads) {
+      const leadId = replyLeads.id;
 
       // Insert reply event
       await supabase
@@ -859,7 +973,7 @@ async function handleInbound(req: Request): Promise<Response> {
         .insert({
           lead_id: leadId,
           channel: "sms",
-          message: body,
+          message: body.substring(0, 1600),
           status: "replied",
           direction: "inbound",
           provider_message_id: messageSid,
@@ -871,7 +985,19 @@ async function handleInbound(req: Request): Promise<Response> {
         .update({ outreach_status: "replied" })
         .eq("id", leadId);
     } else {
-      console.log(`No lead found for phone ${from}`);
+      // Phase 6: Log unmatched inbound to database
+      console.log(`No lead found for phone ${from} - logging as unmatched`);
+      
+      await supabase
+        .from("lead_outreach_events")
+        .insert({
+          lead_id: null, // Unmatched - no lead
+          channel: "sms",
+          message: body.substring(0, 1600),
+          status: "unmatched",
+          direction: "inbound",
+          provider_message_id: messageSid,
+        });
     }
 
     // Return empty TwiML response (no auto-reply for regular messages)
