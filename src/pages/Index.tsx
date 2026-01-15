@@ -300,7 +300,7 @@ const Index = () => {
               
               {/* CTA under video */}
               <div className="text-center lg:text-left">
-                <Link to="/get-demo?service=ai_receptionist">
+                <Link to="/get-demo?service=ai_receptionist&trial=true">
                   <Button size="lg" className="gap-2">
                     Try a 7-Day Demo <ArrowRight className="h-4 w-4" />
                   </Button>

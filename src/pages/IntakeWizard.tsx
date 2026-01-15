@@ -314,11 +314,15 @@ const GetDemo = () => {
   // Track if service came from URL param (skip choose step)
   const [skipChoose, setSkipChoose] = useState(false);
 
+  // Track if this is a 7-day AI trial
+  const [isTrial, setIsTrial] = useState(false);
+
   // Pre-select service type, tier, and product from URL params and skip choose step
   useEffect(() => {
     const serviceParam = searchParams.get("service");
     const tierParam = searchParams.get("tier");
     const productParam = searchParams.get("product");
+    const trialParam = searchParams.get("trial");
     
     const updates: Partial<FormData> = {};
     
@@ -339,6 +343,11 @@ const GetDemo = () => {
         updates.serviceType = "ai"; // Pilot is AI-only
         setSkipChoose(true);
       }
+    }
+    
+    // Check for 7-day trial flag
+    if (trialParam === "true") {
+      setIsTrial(true);
     }
     
     if (Object.keys(updates).length > 0) {
@@ -682,9 +691,9 @@ const GetDemo = () => {
           email: formData.email.trim(),
           your_name: formData.yourName.trim() || null,
           service_type: mapServiceType(formData.serviceType),
+          is_trial: isTrial, // 7-day AI trial flag
           tier: formData.tier || null,
           product_type: formData.productType || null,
-          intake_track: formData.intakeTrack || null,
           hero_line: formData.heroLine.trim() || null,
           about_blurb: formData.aboutBlurb.trim() || null,
           services_detailed: formData.servicesDetailed.length > 0 ? formData.servicesDetailed : null,

@@ -1405,6 +1405,8 @@ async function handleRequestDemo(req: Request): Promise<Response> {
       website_style?: string;
       receptionist_focus?: string;
       service_type?: string;
+      // 7-day AI trial flag
+      is_trial?: boolean;
       // Tier and product type (NEW)
       tier?: string;
       product_type?: string;
@@ -1511,6 +1513,8 @@ async function handleRequestDemo(req: Request): Promise<Response> {
       website_style,
       receptionist_focus,
       service_type,
+      // 7-day AI trial flag
+      is_trial,
       // Tier and product type (NEW)
       tier,
       product_type,
@@ -1949,8 +1953,15 @@ async function handleRequestDemo(req: Request): Promise<Response> {
         service_type: service_type || "demo",
         status: "lead",
         notes: projectNotes,
+        // Set AI trial fields for 7-day trials
+        is_ai_trial: is_trial === true,
+        ai_trial_ends_at: is_trial === true 
+          ? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() 
+          : null,
         // Set AI status for AI receptionist projects
-        ai_trial_status: (service_type === "ai_receptionist" || service_type === "both") ? "intake_received" : null,
+        ai_trial_status: is_trial === true 
+          ? "trial_active" 
+          : (service_type === "ai_receptionist" || service_type === "both") ? "intake_received" : null,
         // Set owner immediately if user is authenticated
         owner_user_id: authenticatedUserId,
       })

@@ -236,6 +236,7 @@ export const SERVICE_TYPE_FILTERS = [
   { value: "all", label: "All Types" },
   { value: "website", label: "🌐 Website" },
   { value: "ai_receptionist", label: "🤖 AI" },
+  { value: "ai_trial", label: "⏰ AI Trials" },
   { value: "both", label: "⚡ Both" },
   { value: "other", label: "✨ À la carte" },
 ] as const;

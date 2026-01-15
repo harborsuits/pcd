@@ -32,7 +32,8 @@ import {
   FolderOpen, Loader2, Clock,
   MessageSquare, ExternalLink, ChevronRight, Sparkles, Eye, ArrowRight,
   CheckCircle2, Circle, AlertCircle, Bell, LayoutGrid, List, Mail, ChevronDown,
-  FileText, Palette, Camera, Brush, ImagePlus, Link2, Award, Image, Archive, ArchiveRestore, Trash2
+  FileText, Palette, Camera, Brush, ImagePlus, Link2, Award, Image, Archive, ArchiveRestore, Trash2,
+  Timer, AlertTriangle
 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -136,6 +137,9 @@ interface Project {
   quote_count: number;
   has_claim: boolean;
   is_archived: boolean;
+  // AI trial fields
+  is_ai_trial: boolean;
+  ai_trial_ends_at: string | null;
 }
 
 type ViewMode = "list" | "kanban";
@@ -724,16 +728,18 @@ export function ProjectsTab() {
       if (pipelineFilter === "archived") {
         const matchesServiceType = serviceTypeFilter === "all" || 
           p.service_type === serviceTypeFilter ||
-          (serviceTypeFilter === "ai_receptionist" && p.service_type === "ai");
+          (serviceTypeFilter === "ai_receptionist" && p.service_type === "ai") ||
+          (serviceTypeFilter === "ai_trial" && p.is_ai_trial);
         return p.is_archived && matchesServiceType;
       }
       // For non-archived filters, exclude archived projects
       if (p.is_archived) return false;
       const matchesPipeline = pipelineFilter === "all" || p.pipeline_stage === pipelineFilter;
-      // Handle both "ai" and "ai_receptionist" values for the AI filter
+      // Handle both "ai" and "ai_receptionist" values for the AI filter, plus ai_trial filter
       const matchesServiceType = serviceTypeFilter === "all" || 
         p.service_type === serviceTypeFilter ||
-        (serviceTypeFilter === "ai_receptionist" && p.service_type === "ai");
+        (serviceTypeFilter === "ai_receptionist" && p.service_type === "ai") ||
+        (serviceTypeFilter === "ai_trial" && p.is_ai_trial);
       return matchesPipeline && matchesServiceType;
     });
   }, [projects, pipelineFilter, serviceTypeFilter]);
@@ -756,9 +762,27 @@ export function ProjectsTab() {
     projects.forEach(p => {
       const type = p.service_type || "website";
       counts[type] = (counts[type] || 0) + 1;
+      // Count AI trials separately
+      if (p.is_ai_trial) {
+        counts["ai_trial"] = (counts["ai_trial"] || 0) + 1;
+      }
     });
     return counts;
   }, [projects]);
+
+  // Helper to calculate trial days remaining
+  const getTrialDaysRemaining = (endsAt: string | null): { text: string; isExpired: boolean } => {
+    if (!endsAt) return { text: "", isExpired: false };
+    
+    const end = new Date(endsAt);
+    const now = new Date();
+    const diffMs = end.getTime() - now.getTime();
+    const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+    
+    if (diffDays <= 0) return { text: "Trial Expired", isExpired: true };
+    if (diffDays === 1) return { text: "1 day left", isExpired: false };
+    return { text: `${diffDays} days left`, isExpired: false };
+  };
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
@@ -932,6 +956,25 @@ export function ProjectsTab() {
                           </span>
                         )}
                         <ServiceTypeBadge serviceType={project.service_type} showIcon={true} />
+                        {/* AI Trial Badge */}
+                        {project.is_ai_trial && (() => {
+                          const trialInfo = getTrialDaysRemaining(project.ai_trial_ends_at);
+                          return (
+                            <Badge 
+                              variant="outline" 
+                              className={`text-xs gap-1 ${trialInfo.isExpired 
+                                ? 'bg-red-500/10 text-red-600 border-red-200' 
+                                : 'bg-amber-500/10 text-amber-600 border-amber-200'}`}
+                            >
+                              {trialInfo.isExpired ? (
+                                <AlertTriangle className="h-3 w-3" />
+                              ) : (
+                                <Timer className="h-3 w-3" />
+                              )}
+                              {trialInfo.text}
+                            </Badge>
+                          );
+                        })()}
                         <StageBadge stage={project.pipeline_stage} />
                         {project.is_archived && (
                           <Badge variant="outline" className="text-xs gap-1 text-muted-foreground border-muted-foreground/50">
