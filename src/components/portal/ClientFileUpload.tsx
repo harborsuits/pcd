@@ -15,6 +15,7 @@ import {
   Eye
 } from "lucide-react";
 import { proxyMediaUrl, isImageType, getFileIcon } from "@/lib/media";
+import { toast } from "sonner";
 
 interface PortalFile {
   id: string;
@@ -99,6 +100,10 @@ export function ClientFileUpload({
     const categoryLabel = FILE_CATEGORIES.find(c => c.id === category)?.label || category;
     
     setUploadQueue(filesArray.map(f => ({ name: f.name, status: 'pending' })));
+    const toastId = toast.loading(`Uploading ${filesArray.length} file${filesArray.length > 1 ? 's' : ''}...`);
+    
+    let successCount = 0;
+    let errorCount = 0;
     
     for (let i = 0; i < filesArray.length; i++) {
       const file = filesArray[i];
@@ -130,15 +135,27 @@ export function ClientFileUpload({
         setUploadQueue(prev => prev.map((item, idx) => 
           idx === i ? { ...item, status: 'done' } : item
         ));
+        successCount++;
       } catch (err: any) {
         setUploadQueue(prev => prev.map((item, idx) => 
           idx === i ? { ...item, status: 'error', error: err.message } : item
         ));
+        errorCount++;
       }
     }
     
     setUploading(prev => ({ ...prev, [category]: false }));
     setDescriptions(prev => ({ ...prev, [category]: "" }));
+    
+    // Show final toast
+    toast.dismiss(toastId);
+    if (errorCount === 0) {
+      toast.success(`${successCount} file${successCount > 1 ? 's' : ''} uploaded`);
+    } else if (successCount === 0) {
+      toast.error("Upload failed. Please try again.");
+    } else {
+      toast.warning(`${successCount} uploaded, ${errorCount} failed`);
+    }
     
     setTimeout(() => setUploadQueue([]), 3000);
   }, [token, descriptions, onFileUploaded, SUPABASE_URL]);

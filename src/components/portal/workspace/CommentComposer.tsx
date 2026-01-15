@@ -2,6 +2,7 @@ import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Send, Paperclip, X } from "lucide-react";
+import { toast } from "sonner";
 
 interface CommentComposerProps {
   onSubmit: (body: string, attachments?: File[]) => Promise<void>;
@@ -27,10 +28,16 @@ export function CommentComposer({
     if (!text.trim()) return;
     
     setSubmitting(true);
+    const toastId = toast.loading("Posting...");
     try {
       await onSubmit(text.trim(), files.length > 0 ? files : undefined);
       setText("");
       setFiles([]);
+      toast.dismiss(toastId);
+      toast.success("Feedback submitted");
+    } catch {
+      toast.dismiss(toastId);
+      toast.error("Couldn't submit. Try again.");
     } finally {
       setSubmitting(false);
     }

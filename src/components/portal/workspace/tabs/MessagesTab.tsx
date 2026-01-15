@@ -5,6 +5,7 @@ import { Send, Loader2, MessageCircle, WifiOff, RotateCcw, Sparkles } from "luci
 import { portalSupabase } from "@/integrations/supabase/portalClient";
 import { format, isToday, isYesterday, isSameDay } from "date-fns";
 import { reportError } from "@/lib/errorReporting";
+import { toast } from "sonner";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -260,6 +261,7 @@ export function MessagesTab({ token, businessName }: MessagesTabProps) {
     
     // Store message content for retry
     const messageContent = newMessage.trim();
+    const toastId = toast.loading("Sending...");
     
     try {
       const { data: { session }, error: sessErr } = await portalSupabase.auth.getSession();
@@ -268,6 +270,8 @@ export function MessagesTab({ token, businessName }: MessagesTabProps) {
       if (sessErr || !session?.access_token) {
         setSendError("Please sign in again to send messages.");
         reportError("No session for sendMessage", { action: 'sendMessage', token });
+        toast.dismiss(toastId);
+        toast.error("Please sign in again to send messages.");
         setSending(false);
         return;
       }
@@ -293,14 +297,20 @@ export function MessagesTab({ token, businessName }: MessagesTabProps) {
       if (res.ok) {
         setNewMessage("");
         await fetchMessages();
+        toast.dismiss(toastId);
+        toast.success("Message sent");
       } else {
         const errorData = await res.json().catch(() => ({ error: 'Failed to send' }));
         setSendError(errorData.error || 'Failed to send message');
+        toast.dismiss(toastId);
+        toast.error("Couldn't send. Try again.");
         reportError(`Send message failed: ${res.status}`, { action: 'sendMessage', token });
       }
     } catch (err) {
       console.error("Send message error:", err);
       setSendError('Network error. Please try again.');
+      toast.dismiss(toastId);
+      toast.error("Network error. Please try again.");
       reportError(err instanceof Error ? err : String(err), { action: 'sendMessage', token });
     } finally {
       setSending(false);

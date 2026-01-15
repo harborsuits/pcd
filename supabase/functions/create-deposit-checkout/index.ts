@@ -29,7 +29,7 @@ serve(async (req) => {
   }
 
   try {
-    const { project_token, tier_id, email, business_name } = await req.json();
+    const { project_token, tier_id, email, business_name, success_url, cancel_url } = await req.json();
 
     if (!project_token) {
       return new Response(
@@ -83,6 +83,12 @@ serve(async (req) => {
     // Get origin for success/cancel URLs
     const origin = req.headers.get("origin") || "https://pcd.lovable.app";
 
+    // Build default URLs (current behavior for IntakeWizard)
+    const defaultSuccessUrl = `${origin}/create-password?token=${project_token}&email=${encodeURIComponent(customerEmail || "")}&name=${encodeURIComponent(project.contact_name || "")}&business=${encodeURIComponent(customerBusinessName || "")}&deposit=paid`;
+    const defaultCancelUrl = `${origin}/create-password?token=${project_token}&email=${encodeURIComponent(customerEmail || "")}&name=${encodeURIComponent(project.contact_name || "")}&business=${encodeURIComponent(customerBusinessName || "")}&deposit=cancelled`;
+
+    console.log(`Using success_url: ${success_url || 'default'}, cancel_url: ${cancel_url || 'default'}`);
+
     // Create Stripe Checkout session
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
@@ -106,8 +112,8 @@ serve(async (req) => {
         tier_id: tier_id || "unknown",
         payment_type: "deposit",
       },
-      success_url: `${origin}/create-password?token=${project_token}&email=${encodeURIComponent(customerEmail || "")}&name=${encodeURIComponent(project.contact_name || "")}&business=${encodeURIComponent(customerBusinessName || "")}&deposit=paid`,
-      cancel_url: `${origin}/create-password?token=${project_token}&email=${encodeURIComponent(customerEmail || "")}&name=${encodeURIComponent(project.contact_name || "")}&business=${encodeURIComponent(customerBusinessName || "")}&deposit=cancelled`,
+      success_url: success_url || defaultSuccessUrl,
+      cancel_url: cancel_url || defaultCancelUrl,
     });
 
     console.log(`Checkout session created: ${session.id}`);
