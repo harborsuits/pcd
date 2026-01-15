@@ -447,7 +447,18 @@ async function handleInbound(req: Request): Promise<Response> {
     }
 
     const supabase = getSupabaseClient();
+    
+    // Sanitize and validate phone number format
+    // Only allow digits, plus sign, and common phone characters
     const normalizedFrom = from.replace(/\s+/g, "");
+    const phoneRegex = /^\+?[0-9\-\(\)]{7,20}$/;
+    if (!phoneRegex.test(normalizedFrom)) {
+      console.error("Invalid phone number format:", normalizedFrom.substring(0, 20));
+      return new Response(
+        '<?xml version="1.0" encoding="UTF-8"?><Response></Response>',
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "text/xml" } }
+      );
+    }
 
     // Check for opt-out keywords
     const optOutKeywords = ["STOP", "UNSUBSCRIBE", "CANCEL", "QUIT", "END"];
@@ -463,11 +474,17 @@ async function handleInbound(req: Request): Promise<Response> {
         .from("outreach_suppressions")
         .upsert({ phone: normalizedFrom, reason: "opted_out" }, { onConflict: "phone" });
 
-      // Find and update any matching leads
-      const { data: leads } = await supabase
-        .from("leads")
-        .select("id")
-        .or(`phone_e164.eq.${normalizedFrom},phone_raw.eq.${normalizedFrom},phone.eq.${normalizedFrom}`);
+      // Find and update any matching leads - use separate queries to avoid SQL injection
+      const [{ data: leadsE164 }, { data: leadsRaw }, { data: leadsPhone }] = await Promise.all([
+        supabase.from("leads").select("id").eq("phone_e164", normalizedFrom),
+        supabase.from("leads").select("id").eq("phone_raw", normalizedFrom),
+        supabase.from("leads").select("id").eq("phone", normalizedFrom),
+      ]);
+      
+      // Combine and deduplicate results
+      const leadIds = new Set<string>();
+      [...(leadsE164 || []), ...(leadsRaw || []), ...(leadsPhone || [])].forEach(l => leadIds.add(l.id));
+      const leads = Array.from(leadIds).map(id => ({ id }));
 
       if (leads && leads.length > 0) {
         for (const lead of leads) {
@@ -486,12 +503,16 @@ async function handleInbound(req: Request): Promise<Response> {
     }
 
     // Store reply as outreach event
-    // First, find the lead by phone number
-    const { data: leads } = await supabase
-      .from("leads")
-      .select("id")
-      .or(`phone_e164.eq.${normalizedFrom},phone_raw.eq.${normalizedFrom},phone.eq.${normalizedFrom}`)
-      .limit(1);
+    // First, find the lead by phone number - use separate queries to avoid SQL injection
+    const [{ data: replyLeadsE164 }, { data: replyLeadsRaw }, { data: replyLeadsPhone }] = await Promise.all([
+      supabase.from("leads").select("id").eq("phone_e164", normalizedFrom).limit(1),
+      supabase.from("leads").select("id").eq("phone_raw", normalizedFrom).limit(1),
+      supabase.from("leads").select("id").eq("phone", normalizedFrom).limit(1),
+    ]);
+    
+    // Take the first matching lead
+    const replyLeads = replyLeadsE164?.[0] || replyLeadsRaw?.[0] || replyLeadsPhone?.[0];
+    const leads = replyLeads ? [replyLeads] : null;
 
     if (leads && leads.length > 0) {
       const leadId = leads[0].id;
