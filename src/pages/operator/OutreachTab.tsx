@@ -286,14 +286,9 @@ export function OutreachTab() {
   const sendMutation = useMutation({
     mutationFn: async (limit: number) => {
       const headers = await getAuthHeaders();
-      // Use admin key for SMS send
-      const { data: { session } } = await operatorSupabase.auth.getSession();
       const res = await fetch(`${SUPABASE_URL}/functions/v1/sms/send`, {
         method: "POST",
-        headers: {
-          ...headers,
-          "x-admin-key": import.meta.env.VITE_ADMIN_KEY || "",
-        },
+        headers,
         body: JSON.stringify({ limit }),
       });
       if (!res.ok) throw new Error((await res.json()).error || "Send failed");
