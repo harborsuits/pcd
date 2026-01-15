@@ -465,7 +465,7 @@ export function OutreachTab() {
               </div>
 
               <p className="text-xs text-muted-foreground mb-2">
-                Daily limit: 100/day, 25/hour. Templates use {{'{'}}{'{'}site_url{'}'}{'}'}  → pleasantcovedesign.com
+                Daily limit: 100/day, 25/hour. Templates use {"{{site_url}}"} → pleasantcovedesign.com
               </p>
               {leadsLoading ? (
                 <div className="flex items-center justify-center py-8">
