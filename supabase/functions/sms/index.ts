@@ -387,7 +387,7 @@ async function sendTwilioSMS(to: string, body: string): Promise<{ success: boole
 
 // POST /sms/send - Send queued SMS messages (with daily caps)
 async function handleSend(req: Request): Promise<Response> {
-  const authError = validateAdminKey(req);
+  const { error: authError, userId, userEmail } = await validateAdminAuth(req);
   if (authError) return authError;
 
   // Kill switch check
@@ -571,6 +571,13 @@ async function handleSend(req: Request): Promise<Response> {
     }
 
     console.log(`SMS send complete: ${sent} sent, ${failed} failed, ${skippedCooldown} skipped (cooldown)`);
+
+    // Log audit action for batch send
+    await logAdminAction("outreach.batch_send", "batch", null, {
+      sent,
+      failed,
+      skipped_cooldown: skippedCooldown,
+    }, userId, userEmail);
 
     // Get updated quota
     const updatedQuota = await getQuotaUsage();
