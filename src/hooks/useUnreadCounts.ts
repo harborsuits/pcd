@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { portalSupabase } from '@/integrations/supabase/portalClient';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -49,7 +49,7 @@ export function useUnreadCounts(token: string) {
   // Fetch unread counts
   const fetchCounts = useCallback(async () => {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      const { data: { session } } = await portalSupabase.auth.getSession();
       if (!session?.access_token) return;
 
       const authToken = session.access_token;

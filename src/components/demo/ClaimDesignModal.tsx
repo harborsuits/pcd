@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2, Check, ArrowRight, LayoutGrid } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { portalSupabase } from "@/integrations/supabase/portalClient";
 import type { User, Session } from "@supabase/supabase-js";
 
 interface ClaimDesignModalProps {
@@ -51,13 +51,13 @@ export function ClaimDesignModal({ open, onOpenChange, businessName, projectToke
 
   // Check auth on mount
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = portalSupabase.auth.onAuthStateChange((event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
       setAuthChecking(false);
     });
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    portalSupabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
       setAuthChecking(false);
@@ -119,7 +119,7 @@ export function ClaimDesignModal({ open, onOpenChange, businessName, projectToke
     setLoading(true);
 
     try {
-      const { data, error: loginError } = await supabase.auth.signInWithPassword({
+      const { data, error: loginError } = await portalSupabase.auth.signInWithPassword({
         email,
         password,
       });
@@ -147,7 +147,7 @@ export function ClaimDesignModal({ open, onOpenChange, businessName, projectToke
     setLoading(true);
 
     try {
-      const { data, error: signUpError } = await supabase.auth.signUp({
+      const { data, error: signUpError } = await portalSupabase.auth.signUp({
         email,
         password,
         options: {

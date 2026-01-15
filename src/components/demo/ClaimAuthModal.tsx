@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { portalSupabase } from "@/integrations/supabase/portalClient";
 import {
   Dialog,
   DialogContent,
@@ -47,7 +47,7 @@ export function ClaimAuthModal({
 
     try {
       // Sign up with Supabase Auth
-      const { data, error: signUpError } = await supabase.auth.signUp({
+      const { data, error: signUpError } = await portalSupabase.auth.signUp({
         email,
         password,
         options: {
@@ -104,7 +104,7 @@ export function ClaimAuthModal({
     setLoading(true);
 
     try {
-      const { data, error: loginError } = await supabase.auth.signInWithPassword({
+      const { data, error: loginError } = await portalSupabase.auth.signInWithPassword({
         email,
         password,
       });

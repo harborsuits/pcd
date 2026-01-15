@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Upload, File, Image, FileText, Download, Loader2, FolderOpen, MessageSquare, Grid, List, Eye } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { supabase } from "@/integrations/supabase/client";
+import { portalSupabase } from "@/integrations/supabase/portalClient";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { ImagePreviewModal } from "@/components/portal/ImagePreviewModal";
@@ -158,7 +158,7 @@ export function FilesTab({ token }: FilesTabProps) {
 
   const fetchFiles = useCallback(async () => {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      const { data: { session } } = await portalSupabase.auth.getSession();
       const authToken = session?.access_token || SUPABASE_ANON_KEY;
       
       const res = await fetch(
@@ -197,7 +197,7 @@ export function FilesTab({ token }: FilesTabProps) {
     setUploading(true);
     
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      const { data: { session } } = await portalSupabase.auth.getSession();
       const authToken = session?.access_token || SUPABASE_ANON_KEY;
       
       for (const file of Array.from(selectedFiles)) {
@@ -243,7 +243,7 @@ export function FilesTab({ token }: FilesTabProps) {
 
     // Fallback to download endpoint
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      const { data: { session } } = await portalSupabase.auth.getSession();
       const authToken = session?.access_token || SUPABASE_ANON_KEY;
       
       const res = await fetch(

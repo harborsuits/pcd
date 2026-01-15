@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { Clock, ExternalLink, RefreshCw, Camera, Upload, Loader2, X, Send, Paperclip, Check, CircleDot, MessageCircle, CornerDownRight, MessageSquare, ChevronDown, WifiOff } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { portalSupabase } from "@/integrations/supabase/portalClient";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
@@ -156,7 +156,7 @@ export function WebsiteTab({
     setIsLoadingComments(true);
     try {
       // Get auth token for authenticated requests
-      const { data: { session } } = await supabase.auth.getSession();
+      const { data: { session } } = await portalSupabase.auth.getSession();
       const authToken = session?.access_token || SUPABASE_ANON_KEY;
       
       const res = await fetch(
@@ -225,7 +225,7 @@ export function WebsiteTab({
   useEffect(() => {
     if (!token) return;
 
-    const channel = supabase
+    const channel = portalSupabase
       .channel(`rt-comments-client-${token}`)
       .on(
         'postgres_changes',
@@ -255,7 +255,7 @@ export function WebsiteTab({
       });
 
     return () => {
-      supabase.removeChannel(channel);
+      portalSupabase.removeChannel(channel);
     };
   }, [token, selectedId, fetchComments, onRefreshComments]);
 

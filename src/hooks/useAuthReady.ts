@@ -1,34 +1,12 @@
 import { useEffect, useState, useRef } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { portalSupabase } from "@/integrations/supabase/portalClient";
 import type { Session } from "@supabase/supabase-js";
 
 const HYDRATION_TIMEOUT = 8000;
 
-// The operator console uses a different storage key - must match operatorClient.ts
-const OPERATOR_STORAGE_KEY = "pcd-operator-auth";
-
 type AuthReadyState = {
   hydrated: boolean;
   session: Session | null;
-};
-
-/**
- * Check if a session belongs to the operator (not client portal).
- * Compares user ID from session with user ID stored in operator storage.
- */
-const isOperatorSession = (session: Session | null): boolean => {
-  if (!session) return false;
-  
-  const operatorData = localStorage.getItem(OPERATOR_STORAGE_KEY);
-  if (!operatorData) return false;
-  
-  try {
-    const parsed = JSON.parse(operatorData);
-    // If session user ID matches operator storage user ID, it's an operator session
-    return parsed?.user?.id === session.user.id;
-  } catch {
-    return false;
-  }
 };
 
 /**
@@ -45,8 +23,24 @@ const hasOAuthTokensInUrl = (): boolean => {
 };
 
 /**
- * Client portal auth hook.
- * Ignores sessions from operator storage to prevent cross-contamination.
+ * Check if URL contains OAuth error
+ */
+const hasOAuthError = (): { error: string; description: string } | null => {
+  const params = new URLSearchParams(window.location.search);
+  const hashParams = new URLSearchParams(window.location.hash.slice(1));
+  
+  const error = params.get("error") || hashParams.get("error");
+  const description = params.get("error_description") || hashParams.get("error_description");
+  
+  if (error) {
+    return { error, description: description || "Authentication failed" };
+  }
+  return null;
+};
+
+/**
+ * Client portal auth hook using isolated portalSupabase client.
+ * No need to detect operator session bleed - separate storage keys prevent it.
  * Properly handles OAuth callbacks by waiting for token processing.
  */
 export function useAuthReady(): AuthReadyState {
@@ -62,11 +56,20 @@ export function useAuthReady(): AuthReadyState {
   useEffect(() => {
     let mounted = true;
 
-    // Check if we're on an operator route - if so, don't track client auth here
+    // Check if we're on an operator route - if so, don't track portal auth here
     const isOperatorRoute = window.location.pathname.startsWith("/operator");
     if (isOperatorRoute) {
       setState({ hydrated: true, session: null });
       return;
+    }
+
+    // Check for OAuth errors first
+    const oauthError = hasOAuthError();
+    if (oauthError) {
+      console.error("[useAuthReady] OAuth error:", oauthError);
+      // Clear the error from URL and continue without session
+      const cleanUrl = window.location.pathname;
+      window.history.replaceState({}, "", cleanUrl);
     }
 
     console.log("[useAuthReady] Starting auth detection, isOAuthCallback:", isOAuthCallback.current);
@@ -75,15 +78,6 @@ export function useAuthReady(): AuthReadyState {
       if (!mounted) return;
       
       console.log(`[useAuthReady] ${source}:`, !!session, session?.user?.email);
-      
-      // Ignore if this is an operator session bleeding through
-      if (isOperatorSession(session)) {
-        console.log("[useAuthReady] Ignoring operator session bleed");
-        if (!hasValidSession.current) {
-          setState({ hydrated: true, session: null });
-        }
-        return;
-      }
       
       if (session) {
         hasValidSession.current = true;
@@ -96,7 +90,7 @@ export function useAuthReady(): AuthReadyState {
     };
 
     // Set up auth listener FIRST - this catches SIGNED_IN from OAuth
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+    const { data: { subscription } } = portalSupabase.auth.onAuthStateChange(
       (event, session) => {
         console.log("[useAuthReady] onAuthStateChange:", event, !!session, session?.user?.email);
         
@@ -125,7 +119,7 @@ export function useAuthReady(): AuthReadyState {
       if (!mounted) return;
       
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        const { data: { session } } = await portalSupabase.auth.getSession();
         console.log("[useAuthReady] getSession result:", !!session, session?.user?.email);
         
         if (session) {
@@ -161,3 +155,8 @@ export function useAuthReady(): AuthReadyState {
 
   return state;
 }
+
+/**
+ * Export OAuth detection helpers for use in components
+ */
+export { hasOAuthTokensInUrl, hasOAuthError };

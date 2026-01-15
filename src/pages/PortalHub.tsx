@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, Link, useSearchParams } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { portalSupabase } from "@/integrations/supabase/portalClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,8 +14,7 @@ import { BrandCard } from "@/components/portal/BrandCard";
 import { FcGoogle } from "react-icons/fc";
 import { SEOHead } from "@/components/SEOHead";
 import { getAuthReturnPath } from "@/hooks/useSessionExpiry";
-import { useAuthReady } from "@/hooks/useAuthReady";
-
+import { useAuthReady, hasOAuthTokensInUrl, hasOAuthError } from "@/hooks/useAuthReady";
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
@@ -102,7 +101,7 @@ export default function PortalHub() {
 
   // Handle PASSWORD_RECOVERY event + redirect logic
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, currentSession) => {
+    const { data: { subscription } } = portalSupabase.auth.onAuthStateChange((event, currentSession) => {
       // Handle password recovery event
       if (event === "PASSWORD_RECOVERY") {
         setIsRecovery(true);
@@ -136,7 +135,7 @@ export default function PortalHub() {
 
     setRecoveryLoading(true);
     try {
-      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      const { error } = await portalSupabase.auth.updateUser({ password: newPassword });
       if (error) throw error;
 
       setIsRecovery(false);
@@ -198,7 +197,7 @@ export default function PortalHub() {
     if (!accessToken) return [];
     
     // Verify session is still valid before fetching
-    const { data: { session: currentSession } } = await supabase.auth.getSession();
+    const { data: { session: currentSession } } = await portalSupabase.auth.getSession();
     if (!currentSession) {
       console.log("No active session, skipping fetch");
       return [];
@@ -307,7 +306,7 @@ export default function PortalHub() {
     setInfo(null);
     setLoading(true);
 
-    const { error } = await supabase.auth.signInWithOAuth({
+    const { error } = await portalSupabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
         redirectTo: `${window.location.origin}/portal`,
@@ -327,7 +326,7 @@ export default function PortalHub() {
     setLoading(true);
 
     try {
-      const { data, error: loginError } = await supabase.auth.signInWithPassword({
+      const { data, error: loginError } = await portalSupabase.auth.signInWithPassword({
         email,
         password,
       });
@@ -424,7 +423,7 @@ export default function PortalHub() {
       
       // Step 2: OTP verified - NOW create the account
       console.log("📝 Creating account after email verification...");
-      const { data, error: signUpError } = await supabase.auth.signUp({
+      const { data, error: signUpError } = await portalSupabase.auth.signUp({
         email: pendingEmail,
         password,
         options: {
@@ -493,7 +492,7 @@ export default function PortalHub() {
       }
 
       // Check if email is already registered (try to sign in - will fail if not registered)
-      const { error: checkError } = await supabase.auth.signInWithPassword({
+      const { error: checkError } = await portalSupabase.auth.signInWithPassword({
         email,
         password: "dummy-check-password-that-wont-work",
       });
@@ -528,7 +527,7 @@ export default function PortalHub() {
     setLoading(true);
 
     try {
-      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+      const { error: resetError } = await portalSupabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/portal`,
       });
 
@@ -558,7 +557,7 @@ export default function PortalHub() {
     setLoading(true);
 
     try {
-      const { error: resendError } = await supabase.auth.resend({
+      const { error: resendError } = await portalSupabase.auth.resend({
         type: "signup",
         email,
       });
@@ -583,7 +582,7 @@ export default function PortalHub() {
 
   const handleLogout = async () => {
     try {
-      await supabase.auth.signOut();
+      await portalSupabase.auth.signOut();
       // Clear local state (session will be cleared by useAuthReady)
       setPortals([]);
       setArchivedPortals([]);
@@ -599,6 +598,49 @@ export default function PortalHub() {
       <div className="h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
+    );
+  }
+
+  // Check for OAuth error in URL
+  const oauthError = hasOAuthError();
+  
+  // Show OAuth loading state while processing callback
+  // This prevents showing login form while OAuth tokens are being processed
+  const isOAuthReturn = hasOAuthTokensInUrl();
+  if (isOAuthReturn && !session) {
+    return (
+      <div className="h-screen flex flex-col items-center justify-center bg-background gap-4">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="text-muted-foreground">Finishing sign-in...</p>
+      </div>
+    );
+  }
+
+  // Show OAuth error message if present
+  if (oauthError && !session) {
+    return (
+      <>
+        <SEOHead
+          title="Client Portal | Pleasant Cove Design"
+          description="Start a demo, set up your project, or access your active work — all in one place."
+          path="/portal"
+        />
+        <ClientLayout
+          title="Sign In Failed"
+          subtitle="There was a problem signing you in"
+          maxWidth="md"
+          centered
+        >
+          <BrandCard className="w-full max-w-md mx-auto">
+            <div className="text-center space-y-4">
+              <p className="text-destructive">{oauthError.description}</p>
+              <Button onClick={() => window.location.href = '/portal'}>
+                Try Again
+              </Button>
+            </div>
+          </BrandCard>
+        </ClientLayout>
+      </>
     );
   }
 
