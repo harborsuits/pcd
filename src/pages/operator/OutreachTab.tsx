@@ -113,6 +113,8 @@ async function getAuthHeaders() {
   };
 }
 
+import { Label } from "@/components/ui/label";
+
 export function OutreachTab() {
   const [activeSubTab, setActiveSubTab] = useState<"queue" | "activity" | "replies" | "suppression">("activity");
   const [selectedTemplate, setSelectedTemplate] = useState<string>("intro_v1");
@@ -124,6 +126,12 @@ export function OutreachTab() {
   const [showAddSuppression, setShowAddSuppression] = useState(false);
   const [newSuppressionPhone, setNewSuppressionPhone] = useState("");
   const [newSuppressionReason, setNewSuppressionReason] = useState("manual");
+  
+  // Manual lead entry state
+  const [showAddLead, setShowAddLead] = useState(false);
+  const [newLeadPhone, setNewLeadPhone] = useState("");
+  const [newLeadBusiness, setNewLeadBusiness] = useState("");
+  const [newLeadNotes, setNewLeadNotes] = useState("");
   
   const queryClient = useQueryClient();
 
@@ -349,11 +357,51 @@ export function OutreachTab() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  // Add manual lead mutation
+  const addLeadMutation = useMutation({
+    mutationFn: async () => {
+      // Normalize phone to E.164 format
+      const phoneClean = newLeadPhone.replace(/\D/g, "");
+      const phoneE164 = phoneClean.startsWith("1") ? `+${phoneClean}` : `+1${phoneClean}`;
+      
+      // Generate a manual place_id
+      const manualPlaceId = `manual-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      
+      const { data, error } = await operatorSupabase
+        .from("leads")
+        .insert({
+          place_id: manualPlaceId,
+          source: "manual",
+          business_name: newLeadBusiness.trim(),
+          phone: newLeadPhone.trim(),
+          phone_e164: phoneE164,
+          outreach_status: "new",
+          demo_review_status: "pending",
+          company_blurb: newLeadNotes.trim() || null,
+        })
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      toast.success("Lead added to queue");
+      setShowAddLead(false);
+      setNewLeadPhone("");
+      setNewLeadBusiness("");
+      setNewLeadNotes("");
+      queryClient.invalidateQueries({ queryKey: ["outreach-ready-leads"] });
+    },
+    onError: (err: Error) => {
+      toast.error(`Failed to add lead: ${err.message}`);
+    },
+  });
+
   const queuedCount = events.filter(e => e.status === "queued").length;
   const filteredSuppressions = suppressions.filter(s =>
     s.phone.includes(suppressionSearch) || (s.reason || "").includes(suppressionSearch)
   );
-
   const getStatusBadge = (event: OutreachEvent) => {
     if (event.direction === "inbound") {
       return <Badge variant="secondary" className="gap-1"><MessageSquare className="h-3 w-3" />Reply</Badge>;
@@ -461,6 +509,13 @@ export function OutreachTab() {
                 >
                   {sendMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
                   Send {Math.min(queuedCount, 25)} Queued
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowAddLead(true)}
+                >
+                  <Phone className="h-4 w-4 mr-2" />
+                  Add Lead
                 </Button>
               </div>
 
@@ -797,6 +852,60 @@ export function OutreachTab() {
             >
               {addSuppressionMutation.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
               Add
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Manual Lead Dialog */}
+      <Dialog open={showAddLead} onOpenChange={setShowAddLead}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add Manual Lead</DialogTitle>
+            <DialogDescription>
+              Enter a lead you sourced outside the system
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Phone Number *</Label>
+              <Input
+                placeholder="+1 (207) 555-1234"
+                value={newLeadPhone}
+                onChange={(e) => setNewLeadPhone(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                US numbers only. Will be formatted to E.164.
+              </p>
+            </div>
+            <div>
+              <Label>Business Name *</Label>
+              <Input
+                placeholder="Joe's Plumbing"
+                value={newLeadBusiness}
+                onChange={(e) => setNewLeadBusiness(e.target.value)}
+              />
+            </div>
+            <div>
+              <Label>Notes (optional)</Label>
+              <Textarea
+                placeholder="Met at Chamber of Commerce event..."
+                value={newLeadNotes}
+                onChange={(e) => setNewLeadNotes(e.target.value)}
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAddLead(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => addLeadMutation.mutate()}
+              disabled={!newLeadPhone.trim() || !newLeadBusiness.trim() || addLeadMutation.isPending}
+            >
+              {addLeadMutation.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+              Add to Queue
             </Button>
           </DialogFooter>
         </DialogContent>
