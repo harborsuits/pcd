@@ -8,6 +8,16 @@ const corsHeaders = {
 // Site URL for SMS templates
 const SITE_URL = "https://pleasantcovedesign.com/";
 
+// Per-lead cooldown in days
+const COOLDOWN_DAYS = 7;
+
+// Check if outreach is enabled (kill switch)
+function isOutreachEnabled(): boolean {
+  const enabled = Deno.env.get("OUTREACH_ENABLED");
+  // Default to enabled if not set, disable only if explicitly "false"
+  return enabled !== "false";
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -41,6 +51,12 @@ Deno.serve(async (req) => {
     return handleSuppress(req);
   }
 
+  // Route: DELETE /outreach/suppress/:phone (remove from suppression list)
+  if (subPath.startsWith("suppress/") && req.method === "DELETE") {
+    const phone = decodeURIComponent(subPath.replace("suppress/", ""));
+    return handleUnsuppress(req, phone);
+  }
+
   return new Response(
     JSON.stringify({ error: "Not found" }),
     { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -48,15 +64,17 @@ Deno.serve(async (req) => {
 });
 
 // Validate admin access via JWT and role check
-async function validateAdminKey(req: Request): Promise<Response | null> {
+async function validateAdminKey(req: Request): Promise<{ error: Response | null; userId?: string; userEmail?: string }> {
   const authHeader = req.headers.get("Authorization");
   
   if (!authHeader?.startsWith("Bearer ")) {
     console.log("Missing or invalid Authorization header");
-    return new Response(
-      JSON.stringify({ error: "Unauthorized", message: "Missing authentication token" }),
-      { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return {
+      error: new Response(
+        JSON.stringify({ error: "Unauthorized", message: "Missing authentication token" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      )
+    };
   }
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -72,14 +90,16 @@ async function validateAdminKey(req: Request): Promise<Response | null> {
 
   if (claimsError || !claimsData?.claims) {
     console.log("Invalid JWT token:", claimsError?.message);
-    return new Response(
-      JSON.stringify({ error: "Unauthorized", message: "Invalid or expired token" }),
-      { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return {
+      error: new Response(
+        JSON.stringify({ error: "Unauthorized", message: "Invalid or expired token" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      )
+    };
   }
 
   const userId = claimsData.claims.sub as string;
-  const email = claimsData.claims.email as string || "unknown";
+  const userEmail = claimsData.claims.email as string || "unknown";
 
   // Check if user has admin role using service client
   const supabase = getSupabaseClient();
@@ -92,28 +112,74 @@ async function validateAdminKey(req: Request): Promise<Response | null> {
 
   if (roleError) {
     console.error("Role check error:", roleError);
-    return new Response(
-      JSON.stringify({ error: "Server error", message: "Failed to verify permissions" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return {
+      error: new Response(
+        JSON.stringify({ error: "Server error", message: "Failed to verify permissions" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      )
+    };
   }
 
   if (!roleData) {
-    console.log(`User ${userId} (${email}) attempted admin access without admin role`);
-    return new Response(
-      JSON.stringify({ error: "Forbidden", message: "Admin access required" }),
-      { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    console.log(`User ${userId} (${userEmail}) attempted admin access without admin role`);
+    return {
+      error: new Response(
+        JSON.stringify({ error: "Forbidden", message: "Admin access required" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      )
+    };
   }
 
-  console.log(`Admin authenticated: ${email} (${userId})`);
-  return null; // Valid
+  console.log(`Admin authenticated: ${userEmail} (${userId})`);
+  return { error: null, userId, userEmail };
 }
 
 function getSupabaseClient() {
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   return createClient(supabaseUrl, supabaseServiceKey);
+}
+
+// Log admin actions for audit trail
+async function logAdminAction(
+  action: string,
+  resourceType: string,
+  resourceId: string | null,
+  metadata: Record<string, unknown> = {},
+  userId?: string,
+  userEmail?: string
+): Promise<void> {
+  try {
+    const supabase = getSupabaseClient();
+    await supabase.from("admin_actions").insert({
+      user_id: userId || null,
+      user_email: userEmail || null,
+      action,
+      resource_type: resourceType,
+      resource_id: resourceId,
+      metadata,
+    });
+  } catch (error) {
+    console.error("Failed to log admin action:", error);
+    // Don't throw - audit logging should not break the main operation
+  }
+}
+
+// Check per-lead cooldown (7 days)
+async function isLeadInCooldown(leadId: string): Promise<boolean> {
+  const supabase = getSupabaseClient();
+  const cooldownDate = new Date(Date.now() - COOLDOWN_DAYS * 24 * 60 * 60 * 1000).toISOString();
+  
+  const { data } = await supabase
+    .from("lead_outreach_events")
+    .select("id")
+    .eq("lead_id", leadId)
+    .eq("direction", "outbound")
+    .in("status", ["sent", "queued"])
+    .gte("created_at", cooldownDate)
+    .limit(1);
+  
+  return Boolean(data && data.length > 0);
 }
 
 // Render template with variables
@@ -125,8 +191,16 @@ function renderTemplate(templateBody: string, businessName: string): string {
 
 // POST /outreach/queue - Queue leads for outreach
 async function handleQueue(req: Request): Promise<Response> {
-  const authError = await validateAdminKey(req);
+  const { error: authError, userId, userEmail } = await validateAdminKey(req);
   if (authError) return authError;
+
+  // Kill switch check
+  if (!isOutreachEnabled()) {
+    return new Response(
+      JSON.stringify({ error: "Outreach is temporarily disabled", code: "OUTREACH_DISABLED" }),
+      { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
 
   try {
     const body = await req.json();
@@ -188,7 +262,7 @@ async function handleQueue(req: Request): Promise<Response> {
     const suppressedPhones = new Set((suppressions || []).map((s) => s.phone));
 
     for (const leadId of lead_ids) {
-      // Fetch lead with phone fields (removed demo requirements)
+      // Fetch lead with phone fields
       const { data: lead, error: leadError } = await supabase
         .from("leads")
         .select("id, business_name, phone, phone_raw, phone_e164, outreach_status")
@@ -224,6 +298,13 @@ async function handleQueue(req: Request): Promise<Response> {
         continue;
       }
 
+      // Check per-lead cooldown (7 days)
+      if (await isLeadInCooldown(leadId)) {
+        skippedReasons["cooldown_7d"] = (skippedReasons["cooldown_7d"] || 0) + 1;
+        skipped++;
+        continue;
+      }
+
       // Generate message using template from database
       const message = renderTemplate(templateBody, lead.business_name);
 
@@ -254,6 +335,14 @@ async function handleQueue(req: Request): Promise<Response> {
       queued++;
     }
 
+    // Log audit action
+    await logAdminAction("outreach.queued", "batch", null, {
+      queued_count: queued,
+      skipped_count: skipped,
+      skipped_reasons: skippedReasons,
+      total_requested: lead_ids.length,
+    }, userId, userEmail);
+
     console.log(`Outreach queue: ${queued} queued, ${skipped} skipped`);
 
     return new Response(
@@ -271,7 +360,7 @@ async function handleQueue(req: Request): Promise<Response> {
 
 // GET /outreach/events - List outreach events
 async function handleListEvents(req: Request): Promise<Response> {
-  const authError = await validateAdminKey(req);
+  const { error: authError } = await validateAdminKey(req);
   if (authError) return authError;
 
   try {
@@ -291,7 +380,9 @@ async function handleListEvents(req: Request): Promise<Response> {
         status,
         created_at,
         error,
-        leads!inner(id, business_name, phone, demo_url, outreach_status)
+        direction,
+        delivery_status,
+        leads(id, business_name, phone, demo_url, outreach_status)
       `)
       .order("created_at", { ascending: false })
       .limit(limit);
@@ -325,7 +416,7 @@ async function handleListEvents(req: Request): Promise<Response> {
 
 // PATCH /outreach/events/:id - Update event status
 async function handleUpdateEvent(req: Request, eventId: string): Promise<Response> {
-  const authError = await validateAdminKey(req);
+  const { error: authError } = await validateAdminKey(req);
   if (authError) return authError;
 
   try {
@@ -378,7 +469,7 @@ async function handleUpdateEvent(req: Request, eventId: string): Promise<Respons
     }
 
     // Optionally update lead status
-    if (update_lead_status !== false) {
+    if (update_lead_status !== false && event.lead_id) {
       await supabase
         .from("leads")
         .update({ outreach_status: status })
@@ -400,7 +491,7 @@ async function handleUpdateEvent(req: Request, eventId: string): Promise<Respons
 
 // POST /outreach/suppress - Add phone to suppression list
 async function handleSuppress(req: Request): Promise<Response> {
-  const authError = await validateAdminKey(req);
+  const { error: authError, userId, userEmail } = await validateAdminKey(req);
   if (authError) return authError;
 
   try {
@@ -429,6 +520,12 @@ async function handleSuppress(req: Request): Promise<Response> {
       );
     }
 
+    // Log audit action
+    await logAdminAction("suppression.added", "phone", phone, {
+      reason,
+      lead_id: lead_id || null,
+    }, userId, userEmail);
+
     // Update lead if provided
     if (lead_id) {
       await supabase
@@ -443,6 +540,51 @@ async function handleSuppress(req: Request): Promise<Response> {
     );
   } catch (error) {
     console.error("Suppress error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+}
+
+// DELETE /outreach/suppress/:phone - Remove phone from suppression list
+async function handleUnsuppress(req: Request, phone: string): Promise<Response> {
+  const { error: authError, userId, userEmail } = await validateAdminKey(req);
+  if (authError) return authError;
+
+  try {
+    if (!phone) {
+      return new Response(
+        JSON.stringify({ error: "phone is required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const supabase = getSupabaseClient();
+
+    // Remove from suppressions
+    const { error: deleteError } = await supabase
+      .from("outreach_suppressions")
+      .delete()
+      .eq("phone", phone);
+
+    if (deleteError) {
+      console.error("Unsuppress error:", deleteError);
+      return new Response(
+        JSON.stringify({ error: "Failed to remove suppression" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Log audit action
+    await logAdminAction("suppression.removed", "phone", phone, {}, userId, userEmail);
+
+    return new Response(
+      JSON.stringify({ ok: true }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  } catch (error) {
+    console.error("Unsuppress error:", error);
     return new Response(
       JSON.stringify({ error: "Internal server error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
