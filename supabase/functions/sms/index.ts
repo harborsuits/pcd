@@ -106,6 +106,11 @@ Deno.serve(async (req) => {
     return handleInbound(req);
   }
 
+  // Route: POST /sms/status-callback (Twilio delivery status webhook)
+  if (subPath === "status-callback" && req.method === "POST") {
+    return handleStatusCallback(req);
+  }
+
   return new Response(
     JSON.stringify({ error: "Not found" }),
     { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -156,11 +161,17 @@ async function sendTwilioSMS(to: string, body: string): Promise<{ success: boole
 
   try {
     const twilioUrl = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`;
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
     
     const formData = new URLSearchParams();
     formData.append("To", to);
     formData.append("Body", body);
     formData.append("MessagingServiceSid", messagingServiceSid);
+    
+    // Add status callback for delivery tracking
+    if (supabaseUrl) {
+      formData.append("StatusCallback", `${supabaseUrl}/functions/v1/sms/status-callback`);
+    }
 
     const response = await fetch(twilioUrl, {
       method: "POST",
@@ -411,6 +422,45 @@ async function handleSendTest(req: Request): Promise<Response> {
       JSON.stringify({ error: "Internal server error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
+  }
+}
+
+// POST /sms/status-callback - Handle Twilio delivery status updates
+async function handleStatusCallback(req: Request): Promise<Response> {
+  try {
+    const rawBody = await req.text();
+    const params = new URLSearchParams(rawBody);
+    
+    const messageSid = params.get("MessageSid");
+    const messageStatus = params.get("MessageStatus"); // queued, sent, delivered, failed, undelivered
+    const errorCode = params.get("ErrorCode");
+    
+    console.log(`Status callback: ${messageSid} -> ${messageStatus}`, errorCode ? `Error: ${errorCode}` : "");
+    
+    if (!messageSid || !messageStatus) {
+      return new Response("OK", { status: 200, headers: corsHeaders });
+    }
+    
+    const supabase = getSupabaseClient();
+    
+    // Update the outreach event with delivery status
+    const { error } = await supabase
+      .from("lead_outreach_events")
+      .update({
+        delivery_status: messageStatus,
+        delivery_status_at: new Date().toISOString(),
+        delivery_error_code: errorCode || null,
+      })
+      .eq("provider_message_id", messageSid);
+    
+    if (error) {
+      console.error("Failed to update delivery status:", error);
+    }
+    
+    return new Response("OK", { status: 200, headers: corsHeaders });
+  } catch (error) {
+    console.error("Status callback error:", error);
+    return new Response("OK", { status: 200, headers: corsHeaders });
   }
 }
 

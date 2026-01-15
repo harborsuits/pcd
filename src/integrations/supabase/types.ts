@@ -401,31 +401,46 @@ export type Database = {
         Row: {
           channel: string
           created_at: string
+          delivery_error_code: string | null
+          delivery_status: string | null
+          delivery_status_at: string | null
+          direction: string | null
           error: string | null
           id: string
           lead_id: string
           message: string | null
           provider_message_id: string | null
+          seen_at: string | null
           status: string
         }
         Insert: {
           channel: string
           created_at?: string
+          delivery_error_code?: string | null
+          delivery_status?: string | null
+          delivery_status_at?: string | null
+          direction?: string | null
           error?: string | null
           id?: string
           lead_id: string
           message?: string | null
           provider_message_id?: string | null
+          seen_at?: string | null
           status?: string
         }
         Update: {
           channel?: string
           created_at?: string
+          delivery_error_code?: string | null
+          delivery_status?: string | null
+          delivery_status_at?: string | null
+          direction?: string | null
           error?: string | null
           id?: string
           lead_id?: string
           message?: string | null
           provider_message_id?: string | null
+          seen_at?: string | null
           status?: string
         }
         Relationships: [
@@ -1722,6 +1737,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      sms_templates: {
+        Row: {
+          body: string
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          body: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          body?: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       thread_reads: {
         Row: {
