@@ -1962,6 +1962,8 @@ async function handleRequestDemo(req: Request): Promise<Response> {
         ai_trial_status: is_trial === true 
           ? "trial_active" 
           : (service_type === "ai_receptionist" || service_type === "both") ? "intake_received" : null,
+        // Set deposit_status - skip for free demos/trials
+        deposit_status: (is_trial === true || service_type === "demo") ? "skipped" : "pending",
         // Set owner immediately if user is authenticated
         owner_user_id: authenticatedUserId,
       })

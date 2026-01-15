@@ -12,7 +12,7 @@ interface UpdatesTabProps {
   projectStatus: 'lead' | 'contacted' | 'interested' | 'client' | 'completed' | 'archived' | null;
   intakeStatus: 'draft' | 'submitted' | 'approved' | null;
   portalStage: string;
-  serviceType: 'website' | 'ai_receptionist' | 'both' | null;
+  serviceType: 'website' | 'ai_receptionist' | 'both' | 'demo' | null;
   aiStatus: 'intake_received' | 'review' | 'setup' | 'testing' | 'live' | 'paused' | null;
   hasVersions: boolean;
   businessName: string;
@@ -20,6 +20,7 @@ interface UpdatesTabProps {
   needsInfoItems?: { key: string; label: string }[];
   needsInfoNote?: string | null;
   depositStatus?: 'pending' | 'paid' | 'skipped' | null;
+  isAITrial?: boolean;
   projectToken?: string;
   onRequestChange?: () => void;
   onUploadFiles?: () => void;
@@ -143,6 +144,7 @@ export function UpdatesTab({
   needsInfoItems = [],
   needsInfoNote,
   depositStatus,
+  isAITrial = false,
   projectToken,
   onRequestChange,
   onUploadFiles,
@@ -151,7 +153,10 @@ export function UpdatesTab({
   
   const includesWebsite = serviceType === 'website' || serviceType === 'both';
   const includesAI = serviceType === 'ai_receptionist' || serviceType === 'both';
-  const showDepositCta = depositStatus === 'pending' || depositStatus === 'skipped';
+  
+  // Don't show deposit CTA for free demos/trials
+  const isFreeDemo = isAITrial || serviceType === 'demo';
+  const showDepositCta = !isFreeDemo && (depositStatus === 'pending' || depositStatus === 'skipped');
   
   const websiteConfig = getWebsiteStatusConfig(intakeStatus, hasVersions);
   const aiConfig = getAIStatusConfig(aiStatus);
