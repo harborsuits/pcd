@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { AlaCarteRequestsPanel } from "./AlaCarteRequestsPanel";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -425,6 +426,9 @@ export function AcquisitionTab() {
 
   return (
     <div className="space-y-6">
+      {/* À La Carte Requests Panel */}
+      <AlaCarteRequestsPanel />
+
       {/* Stats Bar */}
       <div className="flex items-center gap-4">
         <Badge variant="outline" className="gap-1">
