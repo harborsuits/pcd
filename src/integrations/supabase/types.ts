@@ -443,7 +443,7 @@ export type Database = {
           direction: string | null
           error: string | null
           id: string
-          lead_id: string
+          lead_id: string | null
           message: string | null
           provider_message_id: string | null
           seen_at: string | null
@@ -458,7 +458,7 @@ export type Database = {
           direction?: string | null
           error?: string | null
           id?: string
-          lead_id: string
+          lead_id?: string | null
           message?: string | null
           provider_message_id?: string | null
           seen_at?: string | null
@@ -473,7 +473,7 @@ export type Database = {
           direction?: string | null
           error?: string | null
           id?: string
-          lead_id?: string
+          lead_id?: string | null
           message?: string | null
           provider_message_id?: string | null
           seen_at?: string | null
