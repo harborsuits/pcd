@@ -1241,6 +1241,7 @@ export type Database = {
       projects: {
         Row: {
           address: string | null
+          ai_trial_ends_at: string | null
           ai_trial_status: string | null
           business_name: string
           business_slug: string
@@ -1255,6 +1256,7 @@ export type Database = {
           email_verified: boolean
           final_approved_at: string | null
           id: string
+          is_ai_trial: boolean | null
           needs_info: boolean | null
           needs_info_items: Json | null
           needs_info_note: string | null
@@ -1278,6 +1280,7 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          ai_trial_ends_at?: string | null
           ai_trial_status?: string | null
           business_name: string
           business_slug: string
@@ -1292,6 +1295,7 @@ export type Database = {
           email_verified?: boolean
           final_approved_at?: string | null
           id?: string
+          is_ai_trial?: boolean | null
           needs_info?: boolean | null
           needs_info_items?: Json | null
           needs_info_note?: string | null
@@ -1315,6 +1319,7 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          ai_trial_ends_at?: string | null
           ai_trial_status?: string | null
           business_name?: string
           business_slug?: string
@@ -1329,6 +1334,7 @@ export type Database = {
           email_verified?: boolean
           final_approved_at?: string | null
           id?: string
+          is_ai_trial?: boolean | null
           needs_info?: boolean | null
           needs_info_items?: Json | null
           needs_info_note?: string | null
