@@ -258,7 +258,7 @@ async function isLeadInCooldown(leadId: string): Promise<boolean> {
     .select("id")
     .eq("lead_id", leadId)
     .eq("direction", "outbound")
-    .in("status", ["sent", "queued"])
+    .eq("status", "sent")
     .gte("created_at", cooldownDate)
     .limit(1);
   
