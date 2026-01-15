@@ -8,6 +8,10 @@ const corsHeaders = {
 // Admin test phone number for QA (server-side only)
 const ADMIN_TEST_PHONE = "+12073805680";
 
+// Rate limiting caps
+const DAILY_CAP = 100;
+const HOURLY_CAP = 25;
+
 // Validate Twilio webhook signature using Web Crypto API
 // See: https://www.twilio.com/docs/usage/webhooks/webhooks-security
 async function validateTwilioSignature(req: Request, rawBody: string): Promise<boolean> {
@@ -96,6 +100,11 @@ Deno.serve(async (req) => {
     return handleSend(req);
   }
 
+  // Route: POST /sms/send-reply (admin-only) - Send a reply immediately
+  if (subPath === "send-reply" && req.method === "POST") {
+    return handleSendReply(req);
+  }
+
   // Route: POST /sms/send-test (admin-only) - Send test SMS to admin phone
   if (subPath === "send-test" && req.method === "POST") {
     return handleSendTest(req);
@@ -111,11 +120,71 @@ Deno.serve(async (req) => {
     return handleStatusCallback(req);
   }
 
+  // Route: GET /sms/quota (admin-only) - Get current quota status
+  if (subPath === "quota" && req.method === "GET") {
+    return handleQuota(req);
+  }
+
   return new Response(
     JSON.stringify({ error: "Not found" }),
     { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
   );
 });
+
+// Validate admin access via JWT and role check
+async function validateAdminAuth(req: Request): Promise<{ error: Response | null; userId?: string }> {
+  const authHeader = req.headers.get("Authorization");
+  
+  if (!authHeader?.startsWith("Bearer ")) {
+    return {
+      error: new Response(
+        JSON.stringify({ error: "Unauthorized", message: "Missing authentication token" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      )
+    };
+  }
+
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+  
+  const supabaseWithAuth = createClient(supabaseUrl, supabaseAnonKey, {
+    global: { headers: { Authorization: authHeader } }
+  });
+
+  const token = authHeader.replace("Bearer ", "");
+  const { data: claimsData, error: claimsError } = await supabaseWithAuth.auth.getClaims(token);
+
+  if (claimsError || !claimsData?.claims) {
+    return {
+      error: new Response(
+        JSON.stringify({ error: "Unauthorized", message: "Invalid or expired token" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      )
+    };
+  }
+
+  const userId = claimsData.claims.sub as string;
+
+  // Check if user has admin role
+  const supabase = getSupabaseClient();
+  const { data: roleData, error: roleError } = await supabase
+    .from("user_roles")
+    .select("role")
+    .eq("user_id", userId)
+    .eq("role", "admin")
+    .maybeSingle();
+
+  if (roleError || !roleData) {
+    return {
+      error: new Response(
+        JSON.stringify({ error: "Forbidden", message: "Admin access required" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      )
+    };
+  }
+
+  return { error: null, userId };
+}
 
 function validateAdminKey(req: Request): Response | null {
   const adminKey = req.headers.get("x-admin-key");
@@ -143,6 +212,72 @@ function getSupabaseClient() {
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   return createClient(supabaseUrl, supabaseServiceKey);
+}
+
+// Get quota usage for daily/hourly caps
+async function getQuotaUsage(): Promise<{ daily: number; hourly: number; dailyRemaining: number; hourlyRemaining: number }> {
+  const supabase = getSupabaseClient();
+  
+  const now = new Date();
+  const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
+  const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000).toISOString();
+
+  // Count sent messages in last 24 hours
+  const { count: dailyCount } = await supabase
+    .from("lead_outreach_events")
+    .select("*", { count: "exact", head: true })
+    .eq("channel", "sms")
+    .eq("status", "sent")
+    .eq("direction", "outbound")
+    .gte("created_at", oneDayAgo);
+
+  // Count sent messages in last hour
+  const { count: hourlyCount } = await supabase
+    .from("lead_outreach_events")
+    .select("*", { count: "exact", head: true })
+    .eq("channel", "sms")
+    .eq("status", "sent")
+    .eq("direction", "outbound")
+    .gte("created_at", oneHourAgo);
+
+  const daily = dailyCount || 0;
+  const hourly = hourlyCount || 0;
+
+  return {
+    daily,
+    hourly,
+    dailyRemaining: Math.max(0, DAILY_CAP - daily),
+    hourlyRemaining: Math.max(0, HOURLY_CAP - hourly),
+  };
+}
+
+// GET /sms/quota - Get current quota status
+async function handleQuota(req: Request): Promise<Response> {
+  const { error: authError } = await validateAdminAuth(req);
+  if (authError) return authError;
+
+  try {
+    const quota = await getQuotaUsage();
+    
+    return new Response(
+      JSON.stringify({
+        ok: true,
+        daily_cap: DAILY_CAP,
+        hourly_cap: HOURLY_CAP,
+        daily_used: quota.daily,
+        hourly_used: quota.hourly,
+        daily_remaining: quota.dailyRemaining,
+        hourly_remaining: quota.hourlyRemaining,
+      }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  } catch (error) {
+    console.error("Quota error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
 }
 
 // Send SMS via Twilio
@@ -198,14 +333,48 @@ async function sendTwilioSMS(to: string, body: string): Promise<{ success: boole
   }
 }
 
-// POST /sms/send - Send queued SMS messages
+// POST /sms/send - Send queued SMS messages (with daily caps)
 async function handleSend(req: Request): Promise<Response> {
   const authError = validateAdminKey(req);
   if (authError) return authError;
 
   try {
     const body = await req.json().catch(() => ({}));
-    const limit = Math.min(body.limit || 25, 50); // Max 50 per batch
+    const requestedLimit = Math.min(body.limit || 25, 50); // Max 50 per batch
+
+    // Check quota before proceeding
+    const quota = await getQuotaUsage();
+    
+    if (quota.dailyRemaining === 0) {
+      return new Response(
+        JSON.stringify({ 
+          ok: false, 
+          error: "Daily limit reached",
+          blocked_by_cap: true,
+          daily_cap: DAILY_CAP,
+          daily_used: quota.daily,
+          daily_remaining: 0,
+        }),
+        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (quota.hourlyRemaining === 0) {
+      return new Response(
+        JSON.stringify({ 
+          ok: false, 
+          error: "Hourly limit reached. Try again in an hour.",
+          blocked_by_cap: true,
+          hourly_cap: HOURLY_CAP,
+          hourly_used: quota.hourly,
+          hourly_remaining: 0,
+        }),
+        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Limit to remaining quota
+    const limit = Math.min(requestedLimit, quota.dailyRemaining, quota.hourlyRemaining);
 
     const supabase = getSupabaseClient();
 
@@ -234,7 +403,14 @@ async function handleSend(req: Request): Promise<Response> {
 
     if (!events || events.length === 0) {
       return new Response(
-        JSON.stringify({ ok: true, sent: 0, failed: 0, message: "No queued events to send" }),
+        JSON.stringify({ 
+          ok: true, 
+          sent: 0, 
+          failed: 0, 
+          message: "No queued events to send",
+          daily_remaining: quota.dailyRemaining,
+          hourly_remaining: quota.hourlyRemaining,
+        }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -317,18 +493,138 @@ async function handleSend(req: Request): Promise<Response> {
 
     console.log(`SMS send complete: ${sent} sent, ${failed} failed`);
 
+    // Get updated quota
+    const updatedQuota = await getQuotaUsage();
+
     return new Response(
       JSON.stringify({ 
         ok: true, 
         sent, 
         failed, 
         errors: errors.slice(0, 5), // Only return first 5 errors
-        total_processed: events.length 
+        total_processed: events.length,
+        daily_remaining: updatedQuota.dailyRemaining,
+        hourly_remaining: updatedQuota.hourlyRemaining,
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
     console.error("Send error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+}
+
+// POST /sms/send-reply - Send a reply immediately (not queued)
+async function handleSendReply(req: Request): Promise<Response> {
+  const { error: authError } = await validateAdminAuth(req);
+  if (authError) return authError;
+
+  try {
+    const body = await req.json();
+    const { lead_id, message } = body as { lead_id?: string; message?: string };
+
+    if (!lead_id) {
+      return new Response(
+        JSON.stringify({ error: "lead_id is required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (!message || message.trim().length === 0) {
+      return new Response(
+        JSON.stringify({ error: "message is required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const supabase = getSupabaseClient();
+
+    // Get lead phone
+    const { data: lead, error: leadError } = await supabase
+      .from("leads")
+      .select("id, phone, phone_raw, phone_e164, business_name")
+      .eq("id", lead_id)
+      .single();
+
+    if (leadError || !lead) {
+      return new Response(
+        JSON.stringify({ error: "Lead not found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const bestPhone = lead.phone_e164 || lead.phone_raw || lead.phone;
+
+    if (!bestPhone) {
+      return new Response(
+        JSON.stringify({ error: "Lead has no phone number" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Check suppression list
+    const { data: suppression } = await supabase
+      .from("outreach_suppressions")
+      .select("id")
+      .eq("phone", bestPhone)
+      .maybeSingle();
+
+    if (suppression) {
+      return new Response(
+        JSON.stringify({ error: "Phone is on suppression list" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Send immediately via Twilio
+    const result = await sendTwilioSMS(bestPhone, message.trim());
+
+    if (!result.success) {
+      // Log the failed attempt
+      await supabase
+        .from("lead_outreach_events")
+        .insert({
+          lead_id,
+          channel: "sms",
+          message: message.trim(),
+          status: "failed",
+          direction: "outbound",
+          error: result.error,
+        });
+
+      return new Response(
+        JSON.stringify({ ok: false, error: result.error }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Log the sent message
+    await supabase
+      .from("lead_outreach_events")
+      .insert({
+        lead_id,
+        channel: "sms",
+        message: message.trim(),
+        status: "sent",
+        direction: "outbound",
+        provider_message_id: result.messageId,
+      });
+
+    console.log(`Reply sent to ${lead.business_name} (${bestPhone})`);
+
+    return new Response(
+      JSON.stringify({ 
+        ok: true, 
+        message_id: result.messageId,
+        sent_to: bestPhone,
+      }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  } catch (error) {
+    console.error("Send reply error:", error);
     return new Response(
       JSON.stringify({ error: "Internal server error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -368,18 +664,8 @@ async function handleSendTest(req: Request): Promise<Response> {
       );
     }
 
-    if (!lead.demo_url) {
-      return new Response(
-        JSON.stringify({ error: "Lead has no demo URL" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Build the same message that would go to the real lead
-    const publicBaseUrl = Deno.env.get("PUBLIC_BASE_URL") || "https://localsite.pro";
-    const demoFullUrl = `${publicBaseUrl.replace(/\/$/, "")}${lead.demo_url}`;
-    
-    const message = `Hi! I built a free website demo for ${lead.business_name}. Check it out: ${demoFullUrl} – Reply STOP to opt out.`;
+    // Build test message using site URL
+    const message = `[TEST] Hi! I help local businesses like ${lead.business_name} get found online. Check us out: https://pleasantcovedesign.com/ – Reply STOP to opt out.`;
 
     console.log(`Sending TEST SMS to ${ADMIN_TEST_PHONE} for lead: ${lead.business_name}`);
 
@@ -402,6 +688,7 @@ async function handleSendTest(req: Request): Promise<Response> {
         channel: "sms",
         message,
         status: "test_sent",
+        direction: "outbound",
         provider_message_id: result.messageId,
       });
 
@@ -412,7 +699,6 @@ async function handleSendTest(req: Request): Promise<Response> {
         ok: true, 
         message: `Test SMS sent to ${ADMIN_TEST_PHONE}`,
         lead_name: lead.business_name,
-        demo_url: demoFullUrl,
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
@@ -575,6 +861,7 @@ async function handleInbound(req: Request): Promise<Response> {
           channel: "sms",
           message: body,
           status: "replied",
+          direction: "inbound",
           provider_message_id: messageSid,
         });
 

@@ -5,6 +5,9 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Site URL for SMS templates
+const SITE_URL = "https://pleasantcovedesign.com/";
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -113,13 +116,12 @@ function getSupabaseClient() {
   return createClient(supabaseUrl, supabaseServiceKey);
 }
 
-// SMS Templates
-const smsTemplates: Record<string, (name: string, demoUrl: string) => string> = {
-  intro_v1: (name, demoUrl) =>
-    `Hi! I noticed ${name} doesn't have a website yet. I built a free demo for you to check out: ${demoUrl} - Reply STOP to opt out.`,
-  intro_v2: (name, demoUrl) =>
-    `Hey there! I created a quick website preview for ${name}: ${demoUrl} - Let me know what you think! Reply STOP to opt out.`,
-};
+// Render template with variables
+function renderTemplate(templateBody: string, businessName: string): string {
+  return templateBody
+    .replace(/\{\{business_name\}\}/g, businessName)
+    .replace(/\{\{site_url\}\}/g, SITE_URL);
+}
 
 // POST /outreach/queue - Queue leads for outreach
 async function handleQueue(req: Request): Promise<Response> {
@@ -128,7 +130,7 @@ async function handleQueue(req: Request): Promise<Response> {
 
   try {
     const body = await req.json();
-    const { lead_ids, template = "intro_v1" } = body as { lead_ids?: string[]; template?: string };
+    const { lead_ids, template_id } = body as { lead_ids?: string[]; template_id?: string };
 
     if (!lead_ids || !Array.isArray(lead_ids) || lead_ids.length === 0) {
       return new Response(
@@ -137,14 +139,44 @@ async function handleQueue(req: Request): Promise<Response> {
       );
     }
 
-    if (!smsTemplates[template]) {
+    const supabase = getSupabaseClient();
+
+    // Fetch template from database
+    let templateBody: string | null = null;
+    
+    if (template_id) {
+      const { data: template, error: templateError } = await supabase
+        .from("sms_templates")
+        .select("body")
+        .eq("id", template_id)
+        .eq("is_active", true)
+        .single();
+      
+      if (!templateError && template) {
+        templateBody = template.body;
+      }
+    }
+
+    // Fallback: fetch first active template
+    if (!templateBody) {
+      const { data: defaultTemplate } = await supabase
+        .from("sms_templates")
+        .select("body")
+        .eq("is_active", true)
+        .order("name")
+        .limit(1)
+        .single();
+      
+      templateBody = defaultTemplate?.body || null;
+    }
+
+    if (!templateBody) {
       return new Response(
-        JSON.stringify({ error: `Invalid template. Options: ${Object.keys(smsTemplates).join(", ")}` }),
+        JSON.stringify({ error: "No active SMS template found. Please create a template first." }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const supabase = getSupabaseClient();
     let queued = 0;
     let skipped = 0;
     const skippedReasons: Record<string, number> = {};
@@ -156,24 +188,16 @@ async function handleQueue(req: Request): Promise<Response> {
     const suppressedPhones = new Set((suppressions || []).map((s) => s.phone));
 
     for (const leadId of lead_ids) {
-      // Fetch lead with phone fields AND review status
+      // Fetch lead with phone fields (removed demo requirements)
       const { data: lead, error: leadError } = await supabase
         .from("leads")
-        .select("id, business_name, phone, phone_raw, phone_e164, demo_url, outreach_status, demo_review_status")
+        .select("id, business_name, phone, phone_raw, phone_e164, outreach_status")
         .eq("id", leadId)
         .single();
 
       if (leadError || !lead) {
         skippedReasons["not_found"] = (skippedReasons["not_found"] || 0) + 1;
         skipped++;
-        continue;
-      }
-
-      // CRITICAL: Only allow approved demos to be queued for outreach
-      if (lead.demo_review_status !== "approved") {
-        skippedReasons["not_approved"] = (skippedReasons["not_approved"] || 0) + 1;
-        skipped++;
-        console.log(`Skipping lead ${leadId}: demo_review_status is ${lead.demo_review_status}, not approved`);
         continue;
       }
 
@@ -193,12 +217,6 @@ async function handleQueue(req: Request): Promise<Response> {
         continue;
       }
 
-      if (!lead.demo_url) {
-        skippedReasons["no_demo"] = (skippedReasons["no_demo"] || 0) + 1;
-        skipped++;
-        continue;
-      }
-
       // Check suppression with best phone (prefer E.164 for consistency)
       if (suppressedPhones.has(bestPhone) || (lead.phone_e164 && suppressedPhones.has(lead.phone_e164))) {
         skippedReasons["suppressed"] = (skippedReasons["suppressed"] || 0) + 1;
@@ -206,8 +224,8 @@ async function handleQueue(req: Request): Promise<Response> {
         continue;
       }
 
-      // Generate message
-      const message = smsTemplates[template](lead.business_name, lead.demo_url);
+      // Generate message using template from database
+      const message = renderTemplate(templateBody, lead.business_name);
 
       // Insert outreach event
       const { error: insertError } = await supabase
@@ -217,6 +235,7 @@ async function handleQueue(req: Request): Promise<Response> {
           channel: "sms",
           message,
           status: "queued",
+          direction: "outbound",
         });
 
       if (insertError) {

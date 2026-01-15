@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2, Send, Phone, Building2, Ban, CheckCircle2, XCircle, Clock } from "lucide-react";
 import { toast } from "sonner";
-import { format, formatDistanceToNow } from "date-fns";
+import { format } from "date-fns";
 import { operatorSupabase } from "@/integrations/supabase/operatorClient";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
@@ -91,7 +91,7 @@ export function ConversationThread({ leadId, open, onOpenChange }: ConversationT
     refetchInterval: 10000, // Poll every 10s for new messages
   });
 
-  // Send reply mutation
+  // Send reply mutation - sends immediately via /sms/send-reply
   const sendReplyMutation = useMutation({
     mutationFn: async (message: string) => {
       if (!lead) throw new Error("Lead not found");
@@ -100,23 +100,23 @@ export function ConversationThread({ leadId, open, onOpenChange }: ConversationT
 
       const headers = await getAuthHeaders();
       
-      // Use the sms send-test style but for a real reply
-      // For now, we'll create the event and rely on the send queue
-      const { error } = await operatorSupabase
-        .from("lead_outreach_events")
-        .insert({
-          lead_id: leadId,
-          channel: "sms",
-          message,
-          status: "queued",
-          direction: "outbound",
-        });
+      // Call the send-reply endpoint to send immediately
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/sms/send-reply`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ lead_id: leadId, message }),
+      });
       
-      if (error) throw error;
-      return { ok: true };
+      const data = await res.json();
+      
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to send reply");
+      }
+      
+      return data;
     },
     onSuccess: () => {
-      toast.success("Reply queued for sending");
+      toast.success("Reply sent");
       setReplyText("");
       queryClient.invalidateQueries({ queryKey: ["lead-conversation", leadId] });
       queryClient.invalidateQueries({ queryKey: ["outreach-events"] });
@@ -261,11 +261,11 @@ export function ConversationThread({ leadId, open, onOpenChange }: ConversationT
                   ) : (
                     <Send className="h-4 w-4 mr-2" />
                   )}
-                  Queue Reply
+                  Send Reply
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground">
-                Press ⌘+Enter to send • Reply will be queued and sent with the next batch
+                Press ⌘+Enter to send instantly
               </p>
             </div>
           </>
