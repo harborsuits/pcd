@@ -285,8 +285,10 @@ const Index = () => {
           </div>
 
           <div className="max-w-6xl mx-auto grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
-            <div>
-              <div className="relative aspect-video rounded-2xl overflow-hidden shadow-2xl border border-accent/20">
+            <div className="space-y-6">
+              <div className="relative aspect-video rounded-2xl overflow-hidden shadow-2xl border border-accent/20 bg-black max-w-2xl mx-auto lg:mx-0">
+                {/* Inner shadow overlay to blend edges */}
+                <div className="absolute inset-0 shadow-[inset_0_0_20px_rgba(0,0,0,0.5)] pointer-events-none z-10 rounded-2xl" />
                 <iframe
                   src="https://www.youtube.com/embed/9A8WrDvIyQA"
                   title="AI Receptionist Demo"
@@ -294,6 +296,18 @@ const Index = () => {
                   allowFullScreen
                   className="absolute inset-0 w-full h-full"
                 />
+              </div>
+              
+              {/* CTA under video */}
+              <div className="text-center lg:text-left">
+                <Link to="/get-demo?service=ai_receptionist">
+                  <Button size="lg" className="gap-2">
+                    Try a 7-Day Demo <ArrowRight className="h-4 w-4" />
+                  </Button>
+                </Link>
+                <p className="text-sm text-muted-foreground mt-2">
+                  No commitment. See it work for your business.
+                </p>
               </div>
             </div>
             
@@ -305,7 +319,7 @@ const Index = () => {
                   </div>
                   <div>
                     <h4 className="font-semibold text-foreground mb-1">Instant Response</h4>
-                    <p className="text-sm text-muted-foreground">Responds to missed calls, texts, and forms in seconds — not hours.</p>
+                    <p className="text-sm text-muted-foreground">Texts back in under 60 seconds — before leads call your competitor.</p>
                   </div>
                 </div>
               </GlowCard>
@@ -317,7 +331,7 @@ const Index = () => {
                   </div>
                   <div>
                     <h4 className="font-semibold text-foreground mb-1">Smart Qualification</h4>
-                    <p className="text-sm text-muted-foreground">Asks the right questions so you only deal with serious leads.</p>
+                    <p className="text-sm text-muted-foreground">Collects name, service needed, urgency, and address automatically.</p>
                   </div>
                 </div>
               </GlowCard>
@@ -329,7 +343,7 @@ const Index = () => {
                   </div>
                   <div>
                     <h4 className="font-semibold text-foreground mb-1">24/7 Availability</h4>
-                    <p className="text-sm text-muted-foreground">Schedules appointments or escalates priority inquiries automatically.</p>
+                    <p className="text-sm text-muted-foreground">Captures leads at 2 AM, on weekends, and while you're on the job.</p>
                   </div>
                 </div>
               </GlowCard>
@@ -341,7 +355,7 @@ const Index = () => {
                   </div>
                   <div>
                     <h4 className="font-semibold text-foreground mb-1">Direct Booking</h4>
-                    <p className="text-sm text-muted-foreground">Books appointments into Calendly, Acuity, or Google Calendar automatically.</p>
+                    <p className="text-sm text-muted-foreground">Syncs directly to your calendar — no double-booking, no back-and-forth.</p>
                   </div>
                 </div>
               </GlowCard>

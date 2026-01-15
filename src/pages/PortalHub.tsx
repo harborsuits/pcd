@@ -12,6 +12,7 @@ import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp
 import { ClientLayout } from "@/components/portal/ClientLayout";
 import { BrandCard } from "@/components/portal/BrandCard";
 import { FcGoogle } from "react-icons/fc";
+import { TrustFooter } from "@/components/portal/TrustFooter";
 import { SEOHead } from "@/components/SEOHead";
 import { getAuthReturnPath } from "@/hooks/useSessionExpiry";
 import { useAuthReady, hasOAuthTokensInUrl, hasOAuthError } from "@/hooks/useAuthReady";
@@ -1234,6 +1235,9 @@ export default function PortalHub() {
           </Link>
         </p>
       </BrandCard>
+      
+      {/* Trust footer for logged-out users */}
+      <TrustFooter className="mt-8" />
     </ClientLayout>
     </>
   );
