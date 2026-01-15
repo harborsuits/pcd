@@ -12,20 +12,7 @@ export function PortalHeader({ rightSlot }: PortalHeaderProps) {
         <Link to="/" className="font-serif text-xl font-bold tracking-tight text-foreground">
           Pleasant Cove Design
         </Link>
-        <div className="flex items-center gap-4">
-          {rightSlot}
-          <nav className="hidden sm:flex items-center gap-4 text-sm text-muted-foreground">
-            <Link to="/pricing" className="hover:text-foreground transition-colors">
-              Pricing
-            </Link>
-            <Link to="/#demos" className="hover:text-foreground transition-colors">
-              See a Demo
-            </Link>
-            <Link to="/portal" className="hover:text-foreground transition-colors">
-              Client Portal
-            </Link>
-          </nav>
-        </div>
+        {rightSlot}
       </div>
     </header>
   );
