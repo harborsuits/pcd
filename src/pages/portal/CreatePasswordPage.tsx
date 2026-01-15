@@ -24,6 +24,7 @@ export default function CreatePasswordPage() {
   const email = searchParams.get("email") || "";
   const name = searchParams.get("name") || "";
   const businessName = searchParams.get("business") || "";
+  const depositStatus = searchParams.get("deposit") || ""; // "paid", "cancelled", "skipped", or ""
 
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -77,17 +78,16 @@ export default function CreatePasswordPage() {
 
         const data = await res.json();
         
-        // If account exists, redirect to login
+        // If account exists, redirect to workspace with login prompt
         if (data.existing) {
           setExistingAccount(true);
           toast({
             title: "Account already exists",
-            description: "Please log in with your existing password.",
+            description: "Please log in to access your project.",
           });
-          // Short delay then redirect (include existing=true to show message + business name)
+          // Short delay then redirect to workspace (they'll be prompted to login)
           setTimeout(() => {
-            const businessParam = businessName ? `&business=${encodeURIComponent(businessName)}` : "";
-            navigate(`/portal?email=${encodeURIComponent(email)}&existing=true${businessParam}`);
+            navigate(`/w/${projectToken}`, { replace: true });
           }, 1500);
           return;
         }
@@ -136,13 +136,13 @@ export default function CreatePasswordPage() {
         throw new Error(data.error || "Failed to create account");
       }
 
-      // If user already exists, redirect to login
+      // If user already exists, redirect to workspace (they'll be prompted to login)
       if (data.existing) {
         toast({
           title: "Account already exists",
-          description: "Please log in with your existing password.",
+          description: "Please log in to access your project.",
         });
-        navigate(`/portal?email=${encodeURIComponent(email)}`);
+        navigate(`/w/${projectToken}`, { replace: true });
         return;
       }
 
@@ -205,26 +205,23 @@ export default function CreatePasswordPage() {
           </div>
           <h1 className="text-2xl font-bold">Account already exists</h1>
           <p className="text-muted-foreground">
-            You already have an account with this email. Redirecting to login...
+            Redirecting you to your project workspace...
           </p>
           <Loader2 className="h-6 w-6 mx-auto animate-spin text-primary" />
           <div className="pt-2">
             <button
               type="button"
-              onClick={() => {
-                const businessParam = businessName ? `&business=${encodeURIComponent(businessName)}` : "";
-                navigate(`/portal?email=${encodeURIComponent(email)}&existing=true${businessParam}`);
-              }}
+              onClick={() => navigate(`/w/${projectToken}`, { replace: true })}
               className="text-sm text-primary hover:underline"
             >
-              Go to login now →
+              Go to workspace now →
             </button>
             <span className="mx-2 text-muted-foreground">·</span>
             <button
               type="button"
               onClick={async () => {
                 const { error } = await supabase.auth.resetPasswordForEmail(email, {
-                  redirectTo: `${window.location.origin}/portal`,
+                  redirectTo: `${window.location.origin}/w/${projectToken}`,
                 });
                 if (!error) {
                   toast({
@@ -277,6 +274,15 @@ export default function CreatePasswordPage() {
       {/* Main content */}
       <main className="flex-1 flex items-center justify-center px-4 py-12">
         <div className="w-full max-w-md space-y-8">
+          {/* Deposit success message */}
+          {depositStatus === "paid" && (
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
+              <CheckCircle2 className="h-6 w-6 text-green-600 mx-auto mb-2" />
+              <p className="text-green-800 font-medium">Deposit received!</p>
+              <p className="text-green-700 text-sm">Thank you for securing your project.</p>
+            </div>
+          )}
+          
           {/* Welcome message */}
           <div className="text-center space-y-2">
             <div className="w-12 h-12 mx-auto rounded-full bg-primary/10 flex items-center justify-center mb-4">

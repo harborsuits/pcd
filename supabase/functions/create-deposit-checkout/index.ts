@@ -56,7 +56,7 @@ serve(async (req) => {
     // Fetch project to verify it exists
     const { data: project, error: projectError } = await supabaseAdmin
       .from("projects")
-      .select("id, business_name, contact_email")
+      .select("id, business_name, contact_email, contact_name")
       .eq("project_token", project_token)
       .single();
 
@@ -106,8 +106,8 @@ serve(async (req) => {
         tier_id: tier_id || "unknown",
         payment_type: "deposit",
       },
-      success_url: `${origin}/create-password?token=${project_token}&email=${encodeURIComponent(customerEmail || "")}&deposit=paid`,
-      cancel_url: `${origin}/create-password?token=${project_token}&email=${encodeURIComponent(customerEmail || "")}&deposit=skipped`,
+      success_url: `${origin}/create-password?token=${project_token}&email=${encodeURIComponent(customerEmail || "")}&name=${encodeURIComponent(project.contact_name || "")}&business=${encodeURIComponent(customerBusinessName || "")}&deposit=paid`,
+      cancel_url: `${origin}/create-password?token=${project_token}&email=${encodeURIComponent(customerEmail || "")}&name=${encodeURIComponent(project.contact_name || "")}&business=${encodeURIComponent(customerBusinessName || "")}&deposit=cancelled`,
     });
 
     console.log(`Checkout session created: ${session.id}`);

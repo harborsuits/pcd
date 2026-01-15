@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, ArrowRight, Loader2, Sparkles, Check, Bot, Globe, Package, Palette, Image, Search, Phone, Clock, AlertTriangle, Users, MessageSquare, FileText, CheckCircle2, Upload } from "lucide-react";
+import { ArrowLeft, ArrowRight, Loader2, Sparkles, Check, Bot, Globe, Package, Palette, Image, Search, Phone, Clock, AlertTriangle, Users, MessageSquare, FileText, CheckCircle2, Upload, CreditCard } from "lucide-react";
+import { findTierById } from "@/lib/pricingMenu";
 import { categoryServicesMap, generateTagline, getServicesForTemplate } from "@/lib/categoryServices";
 import { FileDropZone, UploadedFile, uploadIntakeFiles } from "@/components/intake/FileDropZone";
 import pcdLogo from "@/assets/pcd-logo.jpeg";
@@ -426,6 +427,11 @@ const GetDemo = () => {
       steps.push({ id: "other", label: "Services" });
     }
     
+    // Add deposit step for paid services (website, ai, both) - NOT for demo or other
+    if (formData.serviceType === "website" || formData.serviceType === "ai" || formData.serviceType === "both") {
+      steps.push({ id: "deposit", label: "Deposit" });
+    }
+    
     return steps;
   };
 
@@ -550,14 +556,94 @@ const GetDemo = () => {
         return formData.reviewConfirmed;
       case "other":
         return formData.selectedServices.length > 0 || formData.customRequest.trim().length > 0;
+      case "deposit":
+        return true; // Can always proceed - deposit is optional
       default:
         return true;
     }
   };
 
+  // State to track submitted project info for deposit step
+  const [submittedProject, setSubmittedProject] = useState<{
+    project_token: string;
+    email: string;
+    name: string;
+    business: string;
+  } | null>(null);
+  const [depositLoading, setDepositLoading] = useState(false);
+
+  // Handle deposit payment redirect to Stripe
+  const handlePayDeposit = async () => {
+    if (!submittedProject) {
+      toast({
+        title: "Missing project info",
+        description: "Please complete the form first.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setDepositLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("create-deposit-checkout", {
+        body: {
+          project_token: submittedProject.project_token,
+          tier_id: formData.tier || "starter",
+          email: submittedProject.email,
+          business_name: submittedProject.business,
+        },
+      });
+
+      if (error) throw error;
+      if (data?.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error("No checkout URL returned");
+      }
+    } catch (err) {
+      console.error("Deposit checkout error:", err);
+      toast({
+        title: "Payment setup failed",
+        description: "Please try again or continue without payment.",
+        variant: "destructive",
+      });
+    } finally {
+      setDepositLoading(false);
+    }
+  };
+
+  // Handle skipping deposit
+  const handleSkipDeposit = () => {
+    if (!submittedProject) return;
+    
+    if (isLoggedIn) {
+      navigate(`/w/${submittedProject.project_token}`);
+    } else {
+      const params = new URLSearchParams({
+        token: submittedProject.project_token,
+        email: submittedProject.email,
+        name: submittedProject.name,
+        business: submittedProject.business,
+        deposit: "skipped",
+      });
+      navigate(`/create-password?${params.toString()}`);
+    }
+  };
+
   const handleNext = () => {
+    // If we're on deposit step and already submitted, don't re-submit
+    if (currentStepId === "deposit" && submittedProject) {
+      // User clicked continue on deposit step - skip deposit
+      handleSkipDeposit();
+      return;
+    }
+    
     if (currentStep < steps.length - 1) {
       setCurrentStep(currentStep + 1);
+      // If moving to deposit step, submit form first
+      if (steps[currentStep + 1]?.id === "deposit") {
+        handleSubmitForDeposit();
+      }
     } else {
       handleSubmit();
     }
@@ -575,6 +661,127 @@ const GetDemo = () => {
   const mapServiceType = (type: ServiceType): string => {
     if (type === "ai") return "ai_receptionist";
     return type;
+  };
+
+  // Submit form and store project info for deposit step (doesn't navigate)
+  const handleSubmitForDeposit = async () => {
+    setIsLoading(true);
+
+    try {
+      const headers: Record<string, string> = {};
+      if (accessToken) {
+        headers.Authorization = `Bearer ${accessToken}`;
+      }
+
+      const { data, error } = await supabase.functions.invoke("leads/request-demo", {
+        headers,
+        body: {
+          business_name: formData.businessName.trim(),
+          city: formData.serviceArea.trim() || null,
+          phone: formData.phone.trim(),
+          email: formData.email.trim(),
+          your_name: formData.yourName.trim() || null,
+          service_type: mapServiceType(formData.serviceType),
+          tier: formData.tier || null,
+          product_type: formData.productType || null,
+          intake_track: formData.intakeTrack || null,
+          hero_line: formData.heroLine.trim() || null,
+          about_blurb: formData.aboutBlurb.trim() || null,
+          services_detailed: formData.servicesDetailed.length > 0 ? formData.servicesDetailed : null,
+          primary_cta: formData.primaryCta || null,
+          gbp_link: formData.gbpLink.trim() || null,
+          facebook_handle: formData.facebookHandle.trim() || null,
+          instagram_handle: formData.instagramHandle.trim() || null,
+          reviews_google_link: formData.reviewsGoogleLink.trim() || null,
+          reviews_yelp_link: formData.reviewsYelpLink.trim() || null,
+          business_hours_detailed: Object.keys(formData.businessHoursDetailed).length > 0 ? formData.businessHoursDetailed : null,
+          service_area_detailed: formData.serviceAreaDetailed.trim() || null,
+          preferred_contact_method: formData.preferredContactMethod || null,
+          vibe: formData.vibe || null,
+          logo_status: formData.logoStatus || null,
+          brand_colors: formData.brandColors.trim() || null,
+          photo_readiness: formData.photoReadiness || null,
+          features_needed: formData.featuresNeeded.length > 0 ? formData.featuresNeeded : null,
+          existing_platform: formData.existingPlatform || null,
+          existing_platform_other: formData.existingPlatformOther.trim() || null,
+          existing_site_url: formData.existingSiteUrl.trim() || null,
+          work_requested: formData.workRequested.length > 0 ? formData.workRequested : null,
+          access_method: formData.accessMethod || null,
+          access_instructions: formData.accessInstructions.trim() || null,
+          access_checklist: Object.keys(formData.accessChecklist).length > 0 ? formData.accessChecklist : null,
+          website_goal: formData.websiteGoal || formData.primaryCta || null,
+          timeline: formData.timeline || null,
+          services_list: formData.servicesList.trim() || null,
+          business_phone: formData.businessPhone.trim() || null,
+          business_hours: formData.businessHours.trim() || null,
+          services_offered: formData.servicesOffered.trim() || null,
+          escalation_number: formData.escalationNumber.trim() || null,
+          emergency_triggers: formData.emergencyTriggers.length > 0 ? formData.emergencyTriggers : null,
+          emergency_other: formData.emergencyOther.trim() || null,
+          preferred_tone: formData.preferredTone || null,
+          booking_link: formData.bookingLink.trim() || null,
+          faqs: formData.faqs.trim() || null,
+          call_handling: formData.callHandling || null,
+          after_hours_action: formData.afterHoursAction || null,
+          text_handling: formData.textHandling.length > 0 ? formData.textHandling : null,
+          team_names: formData.teamNames.trim() || null,
+          customer_faqs: formData.customerFaqs.trim() || null,
+          do_not_say: formData.doNotSay.trim() || null,
+          guarantees_policies: formData.guaranteesPolicies.trim() || null,
+          business_personality: formData.businessPersonality.length > 0 ? formData.businessPersonality : null,
+          lead_fields: formData.leadFields.length > 0 ? formData.leadFields : null,
+          qualified_lead_rules: formData.qualifiedLeadRules.trim() || null,
+          service_constraints: formData.serviceConstraints.trim() || null,
+          service_area_rules: formData.serviceAreaRules.trim() || null,
+          pricing_guidance: formData.pricingGuidance || null,
+          handoff_triggers: formData.handoffTriggers.length > 0 ? formData.handoffTriggers : null,
+          handoff_method: formData.handoffMethod || null,
+          selected_services: formData.selectedServices.length > 0 ? formData.selectedServices : null,
+          custom_request: formData.customRequest.trim() || null,
+        },
+      });
+
+      if (error) throw error;
+
+      // Upload files
+      if (data?.project_token) {
+        const filesToUpload = [
+          { files: formData.photoFiles, category: "Photos" },
+          { files: formData.policyFiles, category: "Policy" },
+        ].filter(g => g.files.length > 0);
+
+        for (const group of filesToUpload) {
+          const result = await uploadIntakeFiles(data.project_token, group.files, group.category);
+          if (result.errors.length > 0) {
+            console.warn(`File upload errors (${group.category}):`, result.errors);
+          }
+        }
+
+        // Store project info for deposit step
+        setSubmittedProject({
+          project_token: data.project_token,
+          email: formData.email.trim(),
+          name: formData.yourName?.trim() || "",
+          business: formData.businessName.trim(),
+        });
+
+        toast({
+          title: "Project created!",
+          description: "Now let's secure your spot with a deposit.",
+        });
+      }
+    } catch (err) {
+      console.error("Submit for deposit error:", err);
+      toast({
+        title: "Something went wrong",
+        description: "Please try again.",
+        variant: "destructive",
+      });
+      // Go back one step on error
+      setCurrentStep(currentStep - 1);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleSubmit = async () => {
@@ -3167,6 +3374,87 @@ const GetDemo = () => {
     </div>
   );
 
+  // Render the deposit step
+  const renderDepositStep = () => {
+    const tier = findTierById(formData.tier);
+    const tierLabel = tier?.label || "Selected Package";
+    const tierPrice = tier?.price || "Custom pricing";
+    
+    // Show loading if we're still submitting the project
+    if (isLoading && !submittedProject) {
+      return (
+        <div className="space-y-6 text-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
+          <p className="text-muted-foreground">Creating your project...</p>
+        </div>
+      );
+    }
+    
+    return (
+      <div className="space-y-6">
+        <div className="text-center">
+          <div className="w-16 h-16 mx-auto rounded-full bg-primary/10 flex items-center justify-center mb-4">
+            <CreditCard className="h-8 w-8 text-primary" />
+          </div>
+          <h2 className="font-serif text-2xl font-bold mb-2">Secure Your Project</h2>
+          <p className="text-muted-foreground">
+            A 50% deposit secures your spot and gets us started right away.
+          </p>
+        </div>
+        
+        {/* Package Summary */}
+        <div className="bg-card border border-border rounded-xl p-5 space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-muted-foreground">Package</span>
+            <span className="font-medium">{tierLabel}</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-muted-foreground">Pricing</span>
+            <span className="font-medium">{tierPrice}</span>
+          </div>
+          <div className="border-t border-border pt-3 flex items-center justify-between">
+            <span className="text-muted-foreground">Deposit (50%)</span>
+            <span className="font-bold text-primary">Due today</span>
+          </div>
+        </div>
+        
+        {/* CTA Buttons */}
+        <div className="space-y-3">
+          <Button 
+            onClick={handlePayDeposit}
+            disabled={depositLoading || !submittedProject}
+            className="w-full h-12 text-base"
+          >
+            {depositLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Setting up payment...
+              </>
+            ) : (
+              <>
+                <CreditCard className="mr-2 h-4 w-4" />
+                Pay Deposit Now
+              </>
+            )}
+          </Button>
+          
+          <Button 
+            variant="outline"
+            onClick={handleSkipDeposit}
+            disabled={depositLoading || !submittedProject}
+            className="w-full"
+          >
+            I'll Pay Later
+          </Button>
+        </div>
+        
+        <p className="text-center text-xs text-muted-foreground">
+          Final payment is due before launch. You can pay the deposit anytime from your portal.
+        </p>
+      </div>
+    );
+  };
+
   const renderCurrentStep = () => {
     switch (currentStepId) {
       case "choose":
@@ -3218,6 +3506,8 @@ const GetDemo = () => {
         return renderAIReviewStep();
       case "other":
         return renderOtherStep();
+      case "deposit":
+        return renderDepositStep();
       default:
         return renderChooseStep();
     }
