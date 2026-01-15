@@ -55,7 +55,7 @@ export function useAuthReady(): AuthReadyState {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         if (!mounted) return;
-        console.log("[useAuthReady] onAuthStateChange:", event);
+        console.log("[useAuthReady] onAuthStateChange:", event, !!session);
         
         // Ignore if this is an operator session bleeding through
         if (isOperatorSession(session)) {
@@ -68,7 +68,37 @@ export function useAuthReady(): AuthReadyState {
       }
     );
 
-    // THEN do ONE initial session check (no retries)
+    // Check if URL contains OAuth callback tokens (hash fragment from Google OAuth)
+    // Supabase automatically processes these, but we need to wait for it
+    const hasOAuthCallback = window.location.hash.includes("access_token") || 
+                              window.location.hash.includes("error");
+    
+    if (hasOAuthCallback) {
+      // Let onAuthStateChange handle it - Supabase will emit SIGNED_IN event
+      console.log("[useAuthReady] OAuth callback detected, waiting for auth event");
+      // Set a longer timeout for OAuth callbacks
+      const oauthTimeout = setTimeout(() => {
+        if (mounted && !state.hydrated) {
+          console.log("[useAuthReady] OAuth timeout, checking session");
+          supabase.auth.getSession().then(({ data: { session } }) => {
+            if (!mounted) return;
+            if (isOperatorSession(session)) {
+              setState({ hydrated: true, session: null });
+              return;
+            }
+            setState({ hydrated: true, session });
+          });
+        }
+      }, 2000);
+      
+      return () => {
+        mounted = false;
+        clearTimeout(oauthTimeout);
+        subscription.unsubscribe();
+      };
+    }
+
+    // Normal flow: do ONE initial session check
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!mounted) return;
       console.log("[useAuthReady] Initial getSession:", !!session);
