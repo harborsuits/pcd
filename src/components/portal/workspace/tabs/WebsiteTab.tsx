@@ -490,12 +490,20 @@ export function WebsiteTab({
   // Has versions - show version selector + preview
   return (
     <div className="h-full flex flex-col">
+      {/* Guidance banner for clients */}
+      <div className="px-4 py-3 bg-primary/5 border-b border-primary/20">
+        <p className="text-sm text-center text-muted-foreground">
+          <span className="font-medium text-foreground">How it works:</span>{" "}
+          Pick a version to preview → Capture a screenshot + leave comments → We'll respond in Messages
+        </p>
+      </div>
+      
       <div className="flex-1 flex min-h-0">
         {/* Left: Version list + feedback items */}
         <div className="w-56 border-r border-border flex-shrink-0 flex flex-col min-h-0">
           <VersionsList
             versions={versions}
-            selectedId={selectedId}
+            selectedId={selectedId ?? null}
             onSelect={handleSelect}
           />
           

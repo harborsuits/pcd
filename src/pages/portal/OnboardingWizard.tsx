@@ -309,7 +309,7 @@ export default function OnboardingWizard() {
       console.error("Create project error:", err);
       toast({
         title: "Something went wrong",
-        description: err instanceof Error ? err.message : "Please try again or contact us.",
+        description: "Please try again or contact us for help.",
         variant: "destructive",
       });
     } finally {
