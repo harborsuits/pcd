@@ -12,6 +12,7 @@ import { AcquisitionTab } from "./AcquisitionTab";
 import { DeliveryTab } from "./DeliveryTab";
 import { ProjectsTab } from "./ProjectsTab";
 import { AccountsTab } from "./AccountsTab";
+import { OutreachTab } from "./OutreachTab";
 import { DataFreshnessPill } from "@/components/operator/DataFreshnessPill";
 import { 
   AdminAuthError, 
@@ -389,7 +390,7 @@ export default function OperatorLayout() {
             <TabsContent value="accounts"><AccountsTab /></TabsContent>
             <TabsContent value="leads"><AcquisitionTab /></TabsContent>
             <TabsContent value="outreach">
-              <Card><CardHeader><CardTitle>Outreach</CardTitle></CardHeader><CardContent><p className="text-muted-foreground">Outreach tracking coming soon.</p></CardContent></Card>
+              <OutreachTab />
             </TabsContent>
           </Tabs>
         </main>
