@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { portalSupabase } from "@/integrations/supabase/portalClient";
 import { toast } from "@/hooks/use-toast";
 
 const SESSION_WARNING_THRESHOLD_MS = 10 * 60 * 1000; // 10 minutes before expiry
@@ -26,7 +26,7 @@ export function useSessionExpiry() {
       if (warningShownRef.current) return;
 
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        const { data: { session } } = await portalSupabase.auth.getSession();
         
         if (!session?.expires_at) return;
 
@@ -56,7 +56,7 @@ export function useSessionExpiry() {
     checkIntervalRef.current = window.setInterval(checkSessionExpiry, 2 * 60 * 1000);
 
     // Also listen for auth state changes to reset warning flag on new session
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+    const { data: { subscription } } = portalSupabase.auth.onAuthStateChange((event) => {
       if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
         // Reset the warning flag when user gets a new session
         warningShownRef.current = false;

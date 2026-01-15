@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { portalSupabase } from "@/integrations/supabase/portalClient";
 import { useQuery } from "@tanstack/react-query";
 import {
   Dialog,
@@ -416,7 +416,7 @@ export function FeedbackDetailModal({
     const replyContent = replyText.trim();
     
     try {
-      const { data, error } = await supabase.auth.getSession();
+      const { data, error } = await portalSupabase.auth.getSession();
       const accessToken = data?.session?.access_token;
 
       if (error || !accessToken) {

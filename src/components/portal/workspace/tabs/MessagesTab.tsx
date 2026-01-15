@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Send, Loader2, MessageCircle, WifiOff, RotateCcw, Sparkles } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { portalSupabase } from "@/integrations/supabase/portalClient";
 import { format, isToday, isYesterday, isSameDay } from "date-fns";
 import { reportError } from "@/lib/errorReporting";
 
@@ -111,7 +111,7 @@ export function MessagesTab({ token, businessName }: MessagesTabProps) {
     // Call mark-read endpoint - fire and forget
     const markRead = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        const { data: { session } } = await portalSupabase.auth.getSession();
         if (!session?.access_token) return;
         
         await fetch(
@@ -136,7 +136,7 @@ export function MessagesTab({ token, businessName }: MessagesTabProps) {
   // Fetch messages
   const fetchMessages = useCallback(async () => {
     try {
-      const { data: { session }, error: sessErr } = await supabase.auth.getSession();
+      const { data: { session }, error: sessErr } = await portalSupabase.auth.getSession();
       
       // Hard fail if no session - don't fallback to anon
       if (sessErr || !session?.access_token) {
@@ -211,7 +211,7 @@ export function MessagesTab({ token, businessName }: MessagesTabProps) {
     fetchMessages();
     
     // Subscribe to realtime message updates (token-scoped)
-    const channel = supabase
+    const channel = portalSupabase
       .channel(`messages-${token}`)
       .on(
         'postgres_changes',
@@ -241,7 +241,7 @@ export function MessagesTab({ token, businessName }: MessagesTabProps) {
       });
 
     return () => {
-      supabase.removeChannel(channel);
+      portalSupabase.removeChannel(channel);
     };
   }, [token, fetchMessages]);
 
@@ -262,7 +262,7 @@ export function MessagesTab({ token, businessName }: MessagesTabProps) {
     const messageContent = newMessage.trim();
     
     try {
-      const { data: { session }, error: sessErr } = await supabase.auth.getSession();
+      const { data: { session }, error: sessErr } = await portalSupabase.auth.getSession();
       
       // Hard fail if no session - require auth
       if (sessErr || !session?.access_token) {

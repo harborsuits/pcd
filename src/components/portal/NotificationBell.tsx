@@ -8,7 +8,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { supabase } from '@/integrations/supabase/client';
+import { portalSupabase } from '@/integrations/supabase/portalClient';
 import { formatDistanceToNow } from 'date-fns';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
@@ -92,7 +92,7 @@ export function NotificationBell({ token, onNavigate }: NotificationBellProps) {
   // Fetch notifications
   const fetchNotifications = useCallback(async () => {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      const { data: { session } } = await portalSupabase.auth.getSession();
       if (!session?.access_token) return;
 
       const res = await fetch(

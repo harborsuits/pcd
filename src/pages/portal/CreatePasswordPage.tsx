@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { portalSupabase } from "@/integrations/supabase/portalClient";
 import pcdLogo from "@/assets/pcd-logo.jpeg";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
@@ -48,7 +48,7 @@ export default function CreatePasswordPage() {
 
     // Check if already logged in OR if account already exists
     const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+      const { data: { session } } = await portalSupabase.auth.getSession();
       if (session) {
         // Already logged in - go straight to workspace
         navigate(`/w/${projectToken}`, { replace: true });
@@ -147,7 +147,7 @@ export default function CreatePasswordPage() {
       }
 
       // Sign in with the new credentials
-      const { error: signInError } = await supabase.auth.signInWithPassword({
+      const { error: signInError } = await portalSupabase.auth.signInWithPassword({
         email,
         password,
       });
@@ -220,7 +220,7 @@ export default function CreatePasswordPage() {
             <button
               type="button"
               onClick={async () => {
-                const { error } = await supabase.auth.resetPasswordForEmail(email, {
+                const { error } = await portalSupabase.auth.resetPasswordForEmail(email, {
                   redirectTo: `${window.location.origin}/w/${projectToken}`,
                 });
                 if (!error) {

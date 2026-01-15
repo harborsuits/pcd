@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { portalSupabase } from "@/integrations/supabase/portalClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -40,7 +40,7 @@ export function PortalAuthPage({ projectToken, businessName, onAuthSuccess }: Po
 
     try {
       // Sign up with Supabase Auth
-      const { data, error: signUpError } = await supabase.auth.signUp({
+      const { data, error: signUpError } = await portalSupabase.auth.signUp({
         email,
         password,
         options: {
@@ -88,7 +88,7 @@ export function PortalAuthPage({ projectToken, businessName, onAuthSuccess }: Po
     setLoading(true);
 
     try {
-      const { data, error: loginError } = await supabase.auth.signInWithPassword({
+      const { data, error: loginError } = await portalSupabase.auth.signInWithPassword({
         email,
         password,
       });
@@ -102,8 +102,8 @@ export function PortalAuthPage({ projectToken, businessName, onAuthSuccess }: Po
         // Verify user owns this project or link if first time
         const verified = await verifyOrLinkProject(data.session.access_token);
         if (!verified) {
-          setError("You don't have access to this portal.");
-          await supabase.auth.signOut();
+        setError("You don't have access to this portal.");
+        await portalSupabase.auth.signOut();
           return;
         }
 
@@ -135,7 +135,7 @@ export function PortalAuthPage({ projectToken, businessName, onAuthSuccess }: Po
 
   const handleBackToCredentials = async () => {
     // Sign out the pending session
-    await supabase.auth.signOut();
+    await portalSupabase.auth.signOut();
     setPendingSession(null);
     setStep("credentials");
     setEmail("");
