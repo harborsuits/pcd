@@ -72,14 +72,11 @@ export function ClientLayout({
             </div>
 
             <div className="flex items-center gap-4">
-              <Link to="/pricing" className="hover:text-foreground transition-colors">
-                Pricing
+              <Link to="/privacy" className="hover:text-foreground transition-colors">
+                Privacy
               </Link>
-              <Link to="/what-we-build" className="hover:text-foreground transition-colors">
-                Demos
-              </Link>
-              <Link to="/portal" className="hover:text-foreground transition-colors">
-                Client Portal
+              <Link to="/terms" className="hover:text-foreground transition-colors">
+                Terms
               </Link>
             </div>
           </div>
