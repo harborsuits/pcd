@@ -127,15 +127,14 @@ export function OutreachTab() {
   
   const queryClient = useQueryClient();
 
-  // Fetch approved leads ready for outreach
+  // Fetch leads ready for outreach (just needs phone, not suppressed)
   const { data: readyLeads = [], isLoading: leadsLoading } = useQuery({
     queryKey: ["outreach-ready-leads"],
     queryFn: async () => {
       const { data, error } = await operatorSupabase
         .from("leads")
         .select("id, business_name, phone, phone_e164, demo_url, outreach_status, demo_review_status")
-        .eq("demo_review_status", "approved")
-        .not("demo_url", "is", null)
+        .not("phone", "is", null)
         .not("outreach_status", "in", "(sent,opted_out,queued)")
         .order("created_at", { ascending: false })
         .limit(200);
@@ -244,14 +243,14 @@ export function OutreachTab() {
     staleTime: 60_000,
   });
 
-  // Queue mutation
+  // Queue mutation - now passes template_id
   const queueMutation = useMutation({
-    mutationFn: async ({ leadIds, template }: { leadIds: string[]; template: string }) => {
+    mutationFn: async ({ leadIds, templateId }: { leadIds: string[]; templateId: string }) => {
       const headers = await getAuthHeaders();
       const res = await fetch(`${SUPABASE_URL}/functions/v1/outreach/queue`, {
         method: "POST",
         headers,
-        body: JSON.stringify({ lead_ids: leadIds, template }),
+        body: JSON.stringify({ lead_ids: leadIds, template_id: templateId }),
       });
       if (!res.ok) throw new Error((await res.json()).error || "Queue failed");
       return res.json();
@@ -449,7 +448,7 @@ export function OutreachTab() {
                   </Select>
                 </div>
                 <Button
-                  onClick={() => queueMutation.mutate({ leadIds: Array.from(selectedLeads), template: selectedTemplate })}
+                  onClick={() => queueMutation.mutate({ leadIds: Array.from(selectedLeads), templateId: selectedTemplate })}
                   disabled={selectedLeads.size === 0 || queueMutation.isPending}
                 >
                   {queueMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Plus className="h-4 w-4 mr-2" />}
@@ -465,6 +464,9 @@ export function OutreachTab() {
                 </Button>
               </div>
 
+              <p className="text-xs text-muted-foreground mb-2">
+                Daily limit: 100/day, 25/hour. Templates use {{'{'}}{'{'}site_url{'}'}{'}'}  → pleasantcovedesign.com
+              </p>
               {leadsLoading ? (
                 <div className="flex items-center justify-center py-8">
                   <Loader2 className="h-6 w-6 animate-spin" />
