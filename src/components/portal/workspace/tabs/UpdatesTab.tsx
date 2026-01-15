@@ -1,7 +1,12 @@
-import { CheckCircle2, Clock, Rocket, Settings2, Phone, AlertCircle, Upload, FileText, Calendar, ClipboardList, Palette, MapPin, Image } from "lucide-react";
+import { useState } from "react";
+import { CheckCircle2, Clock, Rocket, Settings2, Phone, AlertCircle, Upload, FileText, Calendar, ClipboardList, Palette, MapPin, Image, CreditCard, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
 import type { LucideIcon } from "lucide-react";
+
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
 interface UpdatesTabProps {
   projectStatus: 'lead' | 'contacted' | 'interested' | 'client' | 'completed' | 'archived' | null;
@@ -14,6 +19,8 @@ interface UpdatesTabProps {
   needsInfo?: boolean;
   needsInfoItems?: { key: string; label: string }[];
   needsInfoNote?: string | null;
+  depositStatus?: 'pending' | 'paid' | 'skipped' | null;
+  projectToken?: string;
   onRequestChange?: () => void;
   onUploadFiles?: () => void;
 }
@@ -135,18 +142,92 @@ export function UpdatesTab({
   needsInfo,
   needsInfoItems = [],
   needsInfoNote,
+  depositStatus,
+  projectToken,
   onRequestChange,
   onUploadFiles,
 }: UpdatesTabProps) {
+  const [isLoadingDeposit, setIsLoadingDeposit] = useState(false);
+  
   const includesWebsite = serviceType === 'website' || serviceType === 'both';
   const includesAI = serviceType === 'ai_receptionist' || serviceType === 'both';
+  const showDepositCta = depositStatus === 'pending' || depositStatus === 'skipped';
   
   const websiteConfig = getWebsiteStatusConfig(intakeStatus, hasVersions);
   const aiConfig = getAIStatusConfig(aiStatus);
   
+  const handlePayDeposit = async () => {
+    if (!projectToken) return;
+    setIsLoadingDeposit(true);
+    try {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/create-deposit-checkout`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": SUPABASE_ANON_KEY,
+        },
+        body: JSON.stringify({
+          project_token: projectToken,
+          success_url: `${window.location.origin}/w/${projectToken}?tab=updates&deposit=paid`,
+          cancel_url: `${window.location.origin}/w/${projectToken}?tab=updates&deposit=cancelled`,
+        }),
+      });
+      
+      const data = await res.json();
+      
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to create checkout");
+      }
+      
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    } catch (err) {
+      console.error("Deposit checkout error:", err);
+      toast.error("Something went wrong. Please try again or contact us.");
+    } finally {
+      setIsLoadingDeposit(false);
+    }
+  };
+  
   return (
     <div className="h-full overflow-y-auto">
       <div className="max-w-2xl mx-auto px-4 py-8 space-y-6">
+        {/* Deposit CTA Banner */}
+        {showDepositCta && (
+          <div className="border border-blue-200 bg-blue-50 dark:bg-blue-950/30 rounded-xl p-5">
+            <div className="flex items-start gap-3">
+              <div className="h-8 w-8 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0">
+                <CreditCard className="h-4 w-4 text-blue-600" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="font-semibold text-blue-800 dark:text-blue-300">Complete your deposit</h3>
+                <p className="text-sm text-blue-700 dark:text-blue-400 mb-3">
+                  Secure your spot and we'll start building right away. Your deposit is applied to your final balance.
+                </p>
+                <Button 
+                  onClick={handlePayDeposit}
+                  disabled={isLoadingDeposit}
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                  size="sm"
+                >
+                  {isLoadingDeposit ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Redirecting...
+                    </>
+                  ) : (
+                    <>
+                      <CreditCard className="h-4 w-4 mr-2" />
+                      Pay Deposit Now
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Project header */}
         <div className="text-center mb-8">
           <h1 className="font-serif text-2xl font-bold mb-2">{businessName}</h1>

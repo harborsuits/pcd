@@ -178,7 +178,7 @@ export default function CreatePasswordPage() {
       console.error("Create account error:", err);
       toast({
         title: "Something went wrong",
-        description: err instanceof Error ? err.message : "Please try again.",
+        description: "Please try again or contact us for help.",
         variant: "destructive",
       });
     } finally {

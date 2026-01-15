@@ -4,10 +4,12 @@ import { Loader2, AlertCircle, Home, Settings2, ExternalLink, Activity, MessageC
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { checkAdminRole } from "@/lib/adminFetch";
 import { portalSupabase } from "@/integrations/supabase/portalClient";
 import { AIReceptionistSetup } from "@/components/portal/AIReceptionistSetup";
 import { SessionExpiredModal } from "@/components/portal/SessionExpiredModal";
+import { TrustFooter } from "@/components/portal/TrustFooter";
 import { useSessionExpiry, storeAuthReturnPath } from "@/hooks/useSessionExpiry";
 import { useToast } from "@/hooks/use-toast";
 import { UpdatesTab, MessagesTab, FilesTab, WebsiteTab, AIReceptionistTab } from "@/components/portal/workspace/tabs";
@@ -93,6 +95,7 @@ interface ProjectInfo {
   needsInfoItems: NeedsInfoItem[];
   needsInfoNote: string | null;
   aiStatus: 'intake_received' | 'review' | 'setup' | 'testing' | 'live' | 'paused' | null;
+  depositStatus: 'pending' | 'paid' | 'skipped' | null;
 }
 
 export default function WorkspacePage() {
@@ -272,6 +275,7 @@ export default function WorkspacePage() {
           needsInfoItems: data.business.needs_info_items || [],
           needsInfoNote: data.business.needs_info_note || null,
           aiStatus: data.business.ai_trial_status || null,
+          depositStatus: data.business.deposit_status || null,
         });
       }
     } catch (err) {
@@ -410,6 +414,28 @@ export default function WorkspacePage() {
             {/* Notification bell */}
             <NotificationBell token={token!} onNavigate={handleTabChange} />
             
+            {/* Need Help button - opens Messages tab */}
+            {!isOperator && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="gap-1.5 text-muted-foreground hover:text-foreground"
+                      onClick={() => setActiveTab('messages')}
+                    >
+                      <HelpCircle className="h-4 w-4" />
+                      <span className="hidden sm:inline">Need Help?</span>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Send us a message</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+            
             <Badge variant="outline" className="text-xs">
               {serviceType === 'both' ? 'Website + AI' : 
                serviceType === 'ai_receptionist' ? 'AI Receptionist' : 'Website'}
@@ -510,6 +536,8 @@ export default function WorkspacePage() {
               needsInfo={projectInfo?.needsInfo}
               needsInfoItems={projectInfo?.needsInfoItems}
               needsInfoNote={projectInfo?.needsInfoNote}
+              depositStatus={projectInfo?.depositStatus}
+              projectToken={token}
               onRequestChange={handleRequestChange}
               onUploadFiles={() => setActiveTab('files')}
             />
@@ -582,6 +610,9 @@ export default function WorkspacePage() {
         open={showAuthModal}
         onOpenChange={setShowAuthModal}
       />
+      
+      {/* Trust Footer - only show to clients, not operators */}
+      {!isOperator && <TrustFooter />}
     </div>
   );
 }

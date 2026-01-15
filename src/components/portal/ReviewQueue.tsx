@@ -106,10 +106,11 @@ export function ReviewQueue({ items, token, onItemUpdated }: ReviewQueueProps) {
       onItemUpdated(itemId, data.status, action === "request_changes" ? feedbackText : undefined);
       setExpandedItem(null);
       setFeedbackText("");
-    } catch (err: any) {
+    } catch (err: unknown) {
+      console.error("Review action error:", err);
       toast({
-        title: "Error",
-        description: err.message || "Something went wrong",
+        title: "Something went wrong",
+        description: "Please try again or contact us for help.",
         variant: "destructive",
       });
     } finally {
