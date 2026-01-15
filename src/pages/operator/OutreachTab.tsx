@@ -70,7 +70,7 @@ interface Lead {
 
 interface OutreachEvent {
   id: string;
-  lead_id: string;
+  lead_id: string | null;
   channel: string;
   message: string | null;
   status: string;
@@ -79,15 +79,16 @@ interface OutreachEvent {
   delivery_status: string | null;
   delivery_status_at: string | null;
   delivery_error_code: string | null;
-  direction: string;
+  direction: string | null;
   seen_at: string | null;
   provider_message_id: string | null;
+  from_phone?: string | null;
   leads: {
     id: string;
     business_name: string;
     phone: string | null;
     phone_e164: string | null;
-  };
+  } | null;
 }
 
 interface Suppression {
@@ -152,7 +153,7 @@ export function OutreachTab() {
     staleTime: 30_000,
   });
 
-  // Fetch all outreach events
+  // Fetch all outreach events (LEFT JOIN to include unmatched)
   const { data: events = [], isLoading: eventsLoading } = useQuery({
     queryKey: ["outreach-events", activityFilter],
     queryFn: async () => {
@@ -172,7 +173,7 @@ export function OutreachTab() {
           direction,
           seen_at,
           provider_message_id,
-          leads!inner(id, business_name, phone, phone_e164)
+          leads(id, business_name, phone, phone_e164)
         `)
         .order("created_at", { ascending: false })
         .limit(500);
@@ -182,6 +183,7 @@ export function OutreachTab() {
       else if (activityFilter === "delivered") query = query.eq("delivery_status", "delivered");
       else if (activityFilter === "failed") query = query.or("status.eq.failed,delivery_status.eq.failed,delivery_status.eq.undelivered");
       else if (activityFilter === "inbound") query = query.eq("direction", "inbound");
+      else if (activityFilter === "unmatched") query = query.is("lead_id", null);
 
       const { data, error } = await query;
       if (error) throw error;
@@ -190,7 +192,7 @@ export function OutreachTab() {
     staleTime: 15_000,
   });
 
-  // Fetch inbound replies (for Replies tab)
+  // Fetch inbound replies (for Replies tab) - only matched leads for replies tab
   const { data: replies = [], isLoading: repliesLoading } = useQuery({
     queryKey: ["outreach-replies"],
     queryFn: async () => {
@@ -207,9 +209,10 @@ export function OutreachTab() {
           direction,
           seen_at,
           provider_message_id,
-          leads!inner(id, business_name, phone, phone_e164)
+          leads(id, business_name, phone, phone_e164)
         `)
         .eq("direction", "inbound")
+        .not("lead_id", "is", null)
         .order("created_at", { ascending: false })
         .limit(200);
       if (error) throw error;
@@ -402,7 +405,27 @@ export function OutreachTab() {
   const filteredSuppressions = suppressions.filter(s =>
     s.phone.includes(suppressionSearch) || (s.reason || "").includes(suppressionSearch)
   );
+  // Retry failed mutation
+  const retryMutation = useMutation({
+    mutationFn: async (eventId: string) => {
+      const { error } = await operatorSupabase
+        .from("lead_outreach_events")
+        .update({ status: "queued", error: null, delivery_status: null, delivery_error_code: null })
+        .eq("id", eventId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Message re-queued for sending");
+      queryClient.invalidateQueries({ queryKey: ["outreach-events"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const getStatusBadge = (event: OutreachEvent) => {
+    // Unmatched inbound (no lead_id)
+    if (event.status === "unmatched" || (event.direction === "inbound" && !event.lead_id)) {
+      return <Badge variant="outline" className="gap-1 border-orange-500 text-orange-600"><AlertCircle className="h-3 w-3" />Unmatched</Badge>;
+    }
     if (event.direction === "inbound") {
       return <Badge variant="secondary" className="gap-1"><MessageSquare className="h-3 w-3" />Reply</Badge>;
     }
@@ -422,6 +445,10 @@ export function OutreachTab() {
       return <Badge variant="outline" className="gap-1"><Clock className="h-3 w-3" />Queued</Badge>;
     }
     return <Badge variant="outline">{event.status}</Badge>;
+  };
+
+  const isFailedEvent = (event: OutreachEvent) => {
+    return event.status === "failed" || event.delivery_status === "failed" || event.delivery_status === "undelivered";
   };
 
   return (
@@ -596,6 +623,7 @@ export function OutreachTab() {
                     <SelectItem value="delivered">Delivered</SelectItem>
                     <SelectItem value="failed">Failed</SelectItem>
                     <SelectItem value="inbound">Inbound</SelectItem>
+                    <SelectItem value="unmatched">Unmatched</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -623,9 +651,13 @@ export function OutreachTab() {
                     </TableHeader>
                     <TableBody>
                       {events.map((event) => (
-                        <TableRow key={event.id} className={event.direction === "inbound" ? "bg-muted/30" : ""}>
-                          <TableCell className="font-medium">{event.leads.business_name}</TableCell>
-                          <TableCell className="font-mono text-xs">{event.leads.phone_e164 || event.leads.phone || "—"}</TableCell>
+                        <TableRow key={event.id} className={event.direction === "inbound" ? "bg-muted/30" : !event.lead_id ? "bg-orange-500/5" : ""}>
+                          <TableCell className="font-medium">
+                            {event.leads?.business_name || <span className="text-muted-foreground italic">Unknown</span>}
+                          </TableCell>
+                          <TableCell className="font-mono text-xs">
+                            {event.leads?.phone_e164 || event.leads?.phone || event.from_phone || "—"}
+                          </TableCell>
                           <TableCell className="max-w-[200px] truncate text-sm">{event.message || "—"}</TableCell>
                           <TableCell>{getStatusBadge(event)}</TableCell>
                           <TableCell className="text-xs text-muted-foreground">
@@ -634,14 +666,27 @@ export function OutreachTab() {
                           <TableCell className="text-xs text-destructive max-w-[100px] truncate">
                             {event.error || event.delivery_error_code || "—"}
                           </TableCell>
-                          <TableCell>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setShowConversation(event.lead_id)}
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
+                          <TableCell className="flex items-center gap-1">
+                            {event.lead_id && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setShowConversation(event.lead_id)}
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                            )}
+                            {isFailedEvent(event) && event.lead_id && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => retryMutation.mutate(event.id)}
+                                disabled={retryMutation.isPending}
+                                title="Retry send"
+                              >
+                                <RefreshCw className={`h-4 w-4 ${retryMutation.isPending ? "animate-spin" : ""}`} />
+                              </Button>
+                            )}
                           </TableCell>
                         </TableRow>
                       ))}
@@ -680,17 +725,17 @@ export function OutreachTab() {
                           if (!reply.seen_at) {
                             markSeenMutation.mutate(reply.id);
                           }
-                          setShowConversation(reply.lead_id);
+                          if (reply.lead_id) setShowConversation(reply.lead_id);
                         }}
                       >
                         <div className="flex items-start justify-between gap-4">
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
-                              <span className="font-medium">{reply.leads.business_name}</span>
+                              <span className="font-medium">{reply.leads?.business_name || "Unknown"}</span>
                               {!reply.seen_at && <Badge variant="destructive" className="text-xs">New</Badge>}
                             </div>
                             <p className="text-sm text-muted-foreground font-mono">
-                              {reply.leads.phone_e164 || reply.leads.phone}
+                              {reply.leads?.phone_e164 || reply.leads?.phone || "—"}
                             </p>
                             <p className="text-sm mt-1 line-clamp-2">{reply.message}</p>
                           </div>
@@ -699,22 +744,24 @@ export function OutreachTab() {
                           </div>
                         </div>
                         <div className="flex items-center gap-2 mt-3">
+                          {reply.lead_id && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setShowConversation(reply.lead_id);
+                              }}
+                            >
+                              <Reply className="h-3 w-3 mr-1" />Reply
+                            </Button>
+                          )}
                           <Button
                             variant="outline"
                             size="sm"
                             onClick={(e) => {
                               e.stopPropagation();
-                              setShowConversation(reply.lead_id);
-                            }}
-                          >
-                            <Reply className="h-3 w-3 mr-1" />Reply
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              const phone = reply.leads.phone_e164 || reply.leads.phone;
+                              const phone = reply.leads?.phone_e164 || reply.leads?.phone;
                               if (phone) {
                                 addSuppressionMutation.mutate({ phone, reason: "manual" });
                               }
