@@ -96,6 +96,7 @@ interface ProjectInfo {
   needsInfoNote: string | null;
   aiStatus: 'intake_received' | 'review' | 'setup' | 'testing' | 'live' | 'paused' | null;
   depositStatus: 'pending' | 'paid' | 'skipped' | null;
+  isAITrial: boolean;
 }
 
 export default function WorkspacePage() {
@@ -276,6 +277,7 @@ export default function WorkspacePage() {
           needsInfoNote: data.business.needs_info_note || null,
           aiStatus: data.business.ai_trial_status || null,
           depositStatus: data.business.deposit_status || null,
+          isAITrial: data.business.is_ai_trial || false,
         });
       }
     } catch (err) {
@@ -537,6 +539,7 @@ export default function WorkspacePage() {
               needsInfoItems={projectInfo?.needsInfoItems}
               needsInfoNote={projectInfo?.needsInfoNote}
               depositStatus={projectInfo?.depositStatus}
+              isAITrial={projectInfo?.isAITrial}
               projectToken={token}
               onRequestChange={handleRequestChange}
               onUploadFiles={() => setActiveTab('files')}
