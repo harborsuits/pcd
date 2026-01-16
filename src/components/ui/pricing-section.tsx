@@ -356,7 +356,7 @@ export default function PricingSection() {
             </div>
             
             <div className="text-center mt-6">
-              <Link to="/get-demo" className="inline-flex items-center gap-2 text-sm text-primary hover:underline">
+              <Link to="/get-demo?service=other" className="inline-flex items-center gap-2 text-sm text-primary hover:underline">
                 Have something else in mind? Let's talk <ArrowRight className="h-4 w-4" />
               </Link>
             </div>

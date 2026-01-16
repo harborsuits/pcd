@@ -1229,7 +1229,7 @@ export default function PortalHub() {
         </Tabs>
 
         <p className="text-sm text-muted-foreground text-center mt-6">
-          <Link to="/get-demo" className="text-accent hover:underline">
+          <Link to="/get-demo?service=demo" className="text-accent hover:underline">
             <Sparkles className="inline h-3 w-3 mr-1" />
             Get a free demo
           </Link>
