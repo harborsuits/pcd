@@ -68,6 +68,9 @@ interface Project {
     id: string;
     stripe_customer_id: string | null;
   } | null;
+  deposit_status?: string | null;
+  deposit_amount_cents?: number | null;
+  selected_tier?: string | null;
 }
 
 const AI_STATUS_OPTIONS = [
@@ -1559,7 +1562,9 @@ export function ProjectDetailDrawer({ project, open, onClose, onStatusChange }: 
                 stripeCustomerId={project.client_account?.stripe_customer_id || null}
                 contactEmail={project.contact_email}
                 contactName={project.contact_name}
-                depositStatus={(project as any).deposit_status || null}
+                depositStatus={project.deposit_status || null}
+                selectedTier={project.selected_tier || null}
+                depositAmountCents={project.deposit_amount_cents || null}
               />
             </ScrollArea>
           </TabsContent>

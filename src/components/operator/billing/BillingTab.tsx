@@ -609,20 +609,23 @@ export function BillingTab({
                   </div>
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <span>{format(new Date(payment.created_at), "MMM d, yyyy h:mm a")}</span>
-                    {payment.stripe_checkout_session_id && (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() =>
-                          window.open(
-                            `https://dashboard.stripe.com/payments/${payment.stripe_payment_intent_id}`,
-                            "_blank"
-                          )
-                        }
-                      >
-                        <ExternalLink className="h-4 w-4" />
-                      </Button>
-                    )}
+                    {(() => {
+                      const stripeUrl = payment.stripe_payment_intent_id
+                        ? `https://dashboard.stripe.com/payments/${payment.stripe_payment_intent_id}`
+                        : payment.stripe_checkout_session_id
+                          ? `https://dashboard.stripe.com/checkout/sessions/${payment.stripe_checkout_session_id}`
+                          : null;
+                      
+                      return stripeUrl ? (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => window.open(stripeUrl, "_blank")}
+                        >
+                          <ExternalLink className="h-4 w-4" />
+                        </Button>
+                      ) : null;
+                    })()}
                   </div>
                 </div>
               ))}
