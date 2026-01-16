@@ -4,11 +4,24 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
+import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { Plus, CreditCard, Check, X, Send, ExternalLink, RefreshCw } from "lucide-react";
+import { Plus, CreditCard, Check, X, Send, ExternalLink, RefreshCw, Copy, Banknote, History, SkipForward, DollarSign } from "lucide-react";
 import { LineItemModal, LineItemFormData } from "./LineItemModal";
 import { format } from "date-fns";
+
+// Tier deposit amounts in cents
+const TIER_DEPOSITS: Record<string, { label: string; amount: number }> = {
+  starter: { label: "Starter ($500)", amount: 50000 },
+  growth: { label: "Growth ($1,000)", amount: 100000 },
+  full_ops: { label: "Full Ops ($1,625)", amount: 162500 },
+  website_essential: { label: "Website Essential ($375)", amount: 37500 },
+  website_growth: { label: "Website Growth ($750)", amount: 75000 },
+  website_premium: { label: "Website Premium ($1,250)", amount: 125000 },
+  ai_front_door: { label: "AI Front Door ($225)", amount: 22500 },
+  ai_booking: { label: "AI Booking ($350)", amount: 35000 },
+  ai_full: { label: "AI Full ($475)", amount: 47500 },
+};
 
 interface BillingTabProps {
   projectId: string;
@@ -18,6 +31,8 @@ interface BillingTabProps {
   contactEmail: string | null;
   contactName: string | null;
   depositStatus?: string | null;
+  selectedTier?: string | null;
+  depositAmountCents?: number | null;
 }
 
 type LineItemStatus = "proposed" | "accepted" | "invoiced" | "paid" | "cancelled" | "refunded";
@@ -42,6 +57,18 @@ interface LineItem {
   stripe_payment_intent_id: string | null;
 }
 
+interface Payment {
+  id: string;
+  amount_cents: number;
+  payment_type: string;
+  status: string;
+  stripe_checkout_session_id: string | null;
+  stripe_payment_intent_id: string | null;
+  stripe_event_id: string | null;
+  stripe_subscription_id: string | null;
+  created_at: string;
+}
+
 export function BillingTab({
   projectId,
   projectToken,
@@ -50,8 +77,11 @@ export function BillingTab({
   contactEmail,
   contactName,
   depositStatus,
+  selectedTier,
+  depositAmountCents,
 }: BillingTabProps) {
   const [showAddModal, setShowAddModal] = useState(false);
+  const [customDepositAmount, setCustomDepositAmount] = useState("");
   const queryClient = useQueryClient();
 
   // Fetch line items
@@ -65,6 +95,20 @@ export function BillingTab({
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data as LineItem[];
+    },
+  });
+
+  // Fetch payments
+  const { data: payments, isLoading: loadingPayments } = useQuery({
+    queryKey: ["payments", projectId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("payments")
+        .select("*")
+        .eq("project_id", projectId)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data as Payment[];
     },
   });
 
@@ -181,6 +225,69 @@ export function BillingTab({
       toast.error(`Failed to create invoice: ${error.message}`);
     },
   });
+
+  // Skip deposit mutation
+  const skipDepositMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase
+        .from("projects")
+        .update({ 
+          deposit_status: "skipped",
+          portal_stage: "build",
+          portal_stage_changed_at: new Date().toISOString(),
+        })
+        .eq("id", projectId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Deposit skipped - project moved to Build stage");
+      queryClient.invalidateQueries({ queryKey: ["project", projectToken] });
+      queryClient.invalidateQueries({ queryKey: ["admin-projects"] });
+    },
+    onError: (error) => {
+      toast.error(`Failed to skip deposit: ${error.message}`);
+    },
+  });
+
+  // Set custom deposit amount mutation
+  const setCustomDepositMutation = useMutation({
+    mutationFn: async (amountCents: number) => {
+      const { error } = await supabase
+        .from("projects")
+        .update({ deposit_amount_cents: amountCents })
+        .eq("id", projectId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Custom deposit amount saved");
+      setCustomDepositAmount("");
+      queryClient.invalidateQueries({ queryKey: ["project", projectToken] });
+    },
+    onError: (error) => {
+      toast.error(`Failed to set deposit amount: ${error.message}`);
+    },
+  });
+
+  // Generate deposit link
+  const generateDepositLink = async () => {
+    try {
+      const response = await supabase.functions.invoke("create-deposit-checkout", {
+        body: {
+          project_token: projectToken,
+          success_url: `${window.location.origin}/portal?token=${projectToken}&deposit=success`,
+          cancel_url: `${window.location.origin}/portal?token=${projectToken}&deposit=cancelled`,
+        },
+      });
+
+      if (response.error) throw new Error(response.error.message);
+      if (response.data?.url) {
+        navigator.clipboard.writeText(response.data.url);
+        toast.success("Payment link copied to clipboard!");
+      }
+    } catch (error) {
+      toast.error(`Failed to generate payment link: ${error instanceof Error ? error.message : "Unknown error"}`);
+    }
+  };
 
   const formatCurrency = (cents: number) => {
     return new Intl.NumberFormat("en-US", {
@@ -325,8 +432,100 @@ export function BillingTab({
     skipped: "Skipped Deposit",
   };
 
+  // Calculate effective deposit amount for display
+  const effectiveDepositAmount = depositAmountCents || 
+    (selectedTier && TIER_DEPOSITS[selectedTier]?.amount) || 
+    TIER_DEPOSITS.starter.amount;
+
   return (
     <div className="space-y-6">
+      {/* Deposit Controls Card */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Banknote className="h-5 w-5" />
+            Deposit
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Status:</span>
+                <Badge className={depositStatusColors[depositStatus || "pending"]}>
+                  {depositStatusLabels[depositStatus || "pending"] || "Pending"}
+                </Badge>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Amount:</span>
+                <span className="font-semibold">{formatCurrency(effectiveDepositAmount)}</span>
+                {selectedTier && TIER_DEPOSITS[selectedTier] && (
+                  <Badge variant="outline" className="text-xs">
+                    {TIER_DEPOSITS[selectedTier].label.split(" ")[0]}
+                  </Badge>
+                )}
+                {depositAmountCents && (
+                  <Badge variant="secondary" className="text-xs">Custom</Badge>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Deposit Actions - only show if not paid */}
+          {depositStatus !== "paid" && (
+            <div className="space-y-3 pt-2 border-t">
+              {/* Generate Payment Link */}
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={generateDepositLink}
+                  className="flex-1"
+                >
+                  <Copy className="h-4 w-4 mr-2" />
+                  Copy Payment Link
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => skipDepositMutation.mutate()}
+                  disabled={skipDepositMutation.isPending || depositStatus === "skipped"}
+                >
+                  <SkipForward className="h-4 w-4 mr-2" />
+                  Skip
+                </Button>
+              </div>
+
+              {/* Custom Amount */}
+              <div className="flex items-center gap-2">
+                <div className="relative flex-1">
+                  <DollarSign className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    type="number"
+                    placeholder="Custom amount"
+                    value={customDepositAmount}
+                    onChange={(e) => setCustomDepositAmount(e.target.value)}
+                    className="pl-8"
+                  />
+                </div>
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    const amount = parseFloat(customDepositAmount);
+                    if (amount > 0) {
+                      setCustomDepositMutation.mutate(Math.round(amount * 100));
+                    }
+                  }}
+                  disabled={!customDepositAmount || setCustomDepositMutation.isPending}
+                >
+                  Set
+                </Button>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Customer Status Card */}
       <Card>
         <CardHeader className="pb-3">
@@ -363,12 +562,6 @@ export function BillingTab({
                 </Badge>
               )}
             </div>
-            <div>
-              <span className="text-muted-foreground">Deposit:</span>{" "}
-              <Badge className={depositStatusColors[depositStatus || "pending"]}>
-                {depositStatusLabels[depositStatus || "pending"] || "Pending"}
-              </Badge>
-            </div>
             <div className="col-span-2">
               {!clientAccountId || !stripeCustomerId ? (
                 <Button
@@ -383,6 +576,58 @@ export function BillingTab({
               ) : null}
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Payment History */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg flex items-center gap-2">
+            <History className="h-5 w-5" />
+            Payment History
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {loadingPayments ? (
+            <div className="text-center py-4 text-muted-foreground">Loading...</div>
+          ) : !payments?.length ? (
+            <div className="text-center py-4 text-muted-foreground">
+              No payments recorded yet.
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {payments.map((payment) => (
+                <div
+                  key={payment.id}
+                  className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
+                >
+                  <div className="flex items-center gap-3">
+                    <Badge variant={payment.status === "paid" ? "default" : "secondary"}>
+                      {payment.payment_type}
+                    </Badge>
+                    <span className="font-semibold">{formatCurrency(payment.amount_cents)}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <span>{format(new Date(payment.created_at), "MMM d, yyyy h:mm a")}</span>
+                    {payment.stripe_checkout_session_id && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() =>
+                          window.open(
+                            `https://dashboard.stripe.com/payments/${payment.stripe_payment_intent_id}`,
+                            "_blank"
+                          )
+                        }
+                      >
+                        <ExternalLink className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
 

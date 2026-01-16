@@ -144,15 +144,33 @@ serve(async (req) => {
         if (session.metadata?.payment_type === "deposit" && session.metadata?.project_token) {
           console.log(`Deposit payment completed for project: ${session.metadata.project_token}`);
           
-          const { error: depositError } = await supabaseAdmin
+          // Update deposit status AND advance portal stage to 'build'
+          const { data: updatedProject, error: depositError } = await supabaseAdmin
             .from("projects")
-            .update({ deposit_status: "paid" })
-            .eq("project_token", session.metadata.project_token);
+            .update({ 
+              deposit_status: "paid",
+              portal_stage: "build",
+              portal_stage_changed_at: new Date().toISOString(),
+            })
+            .eq("project_token", session.metadata.project_token)
+            .select("id, business_name")
+            .single();
 
           if (depositError) {
             console.error("Failed to update deposit status:", depositError);
           } else {
-            console.log(`Updated deposit_status to 'paid' for project ${session.metadata.project_token}`);
+            console.log(`Updated deposit_status to 'paid' and portal_stage to 'build' for project ${session.metadata.project_token}`);
+            
+            // Create a system message announcing the deposit
+            if (updatedProject) {
+              await supabaseAdmin.from("messages").insert({
+                project_id: updatedProject.id,
+                project_token: session.metadata.project_token,
+                sender_type: "system",
+                content: `✅ Deposit received! Your project is now in the build phase. We'll share your first preview soon.`,
+              });
+              console.log(`System message created for project ${session.metadata.project_token}`);
+            }
           }
 
           // Also record in payments table
