@@ -38,10 +38,6 @@ serve(async (req) => {
       );
     }
 
-    // Calculate deposit amount based on tier
-    const depositCents = TIER_DEPOSITS[tier_id] || TIER_DEPOSITS.starter;
-    console.log(`Creating deposit checkout for project ${project_token}, tier: ${tier_id}, amount: ${depositCents}`);
-
     // Initialize Stripe
     const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
       apiVersion: "2023-10-16",
@@ -56,7 +52,7 @@ serve(async (req) => {
     // Fetch project to verify it exists
     const { data: project, error: projectError } = await supabaseAdmin
       .from("projects")
-      .select("id, business_name, contact_email, contact_name")
+      .select("id, business_name, contact_email, contact_name, selected_tier, deposit_amount_cents")
       .eq("project_token", project_token)
       .single();
 
@@ -70,6 +66,13 @@ serve(async (req) => {
 
     const customerEmail = email || project.contact_email;
     const customerBusinessName = business_name || project.business_name;
+    
+    // Determine deposit amount: custom amount > tier from request > tier from project > default
+    const effectiveTier = tier_id || project.selected_tier || "starter";
+    const depositCentsFromTier = TIER_DEPOSITS[effectiveTier] || TIER_DEPOSITS.starter;
+    const depositCents = project.deposit_amount_cents || depositCentsFromTier;
+    
+    console.log(`Creating deposit checkout for project ${project_token}, tier: ${effectiveTier}, amount: ${depositCents} (custom: ${!!project.deposit_amount_cents})`);
 
     // Check if customer already exists in Stripe
     let customerId: string | undefined;

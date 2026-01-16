@@ -1303,6 +1303,7 @@ export type Database = {
           contact_phone: string | null
           created_at: string
           deleted_at: string | null
+          deposit_amount_cents: number | null
           deposit_status: string | null
           email_verified: boolean
           final_approved_at: string | null
@@ -1318,6 +1319,7 @@ export type Database = {
           portal_stage_changed_at: string | null
           portal_stage_changed_by: string | null
           project_token: string
+          selected_tier: string | null
           service_type: string
           source: string
           source_demo_token: string | null
@@ -1342,6 +1344,7 @@ export type Database = {
           contact_phone?: string | null
           created_at?: string
           deleted_at?: string | null
+          deposit_amount_cents?: number | null
           deposit_status?: string | null
           email_verified?: boolean
           final_approved_at?: string | null
@@ -1357,6 +1360,7 @@ export type Database = {
           portal_stage_changed_at?: string | null
           portal_stage_changed_by?: string | null
           project_token: string
+          selected_tier?: string | null
           service_type?: string
           source?: string
           source_demo_token?: string | null
@@ -1381,6 +1385,7 @@ export type Database = {
           contact_phone?: string | null
           created_at?: string
           deleted_at?: string | null
+          deposit_amount_cents?: number | null
           deposit_status?: string | null
           email_verified?: boolean
           final_approved_at?: string | null
@@ -1396,6 +1401,7 @@ export type Database = {
           portal_stage_changed_at?: string | null
           portal_stage_changed_by?: string | null
           project_token?: string
+          selected_tier?: string | null
           service_type?: string
           source?: string
           source_demo_token?: string | null
