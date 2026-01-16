@@ -656,7 +656,7 @@ export function OutreachTab() {
                           <TableCell className="max-w-[200px] truncate text-sm">{event.message || "—"}</TableCell>
                           <TableCell>{getStatusBadge(event)}</TableCell>
                           <TableCell className="text-xs text-muted-foreground">
-                            {formatDistanceToNow(new Date(event.created_at), { addSuffix: true })}
+                            {format(new Date(event.created_at), "MMM d, h:mm a")}
                           </TableCell>
                           <TableCell className="text-xs text-destructive max-w-[100px] truncate">
                             {event.error || event.delivery_error_code || "—"}
@@ -735,7 +735,7 @@ export function OutreachTab() {
                             <p className="text-sm mt-1 line-clamp-2">{reply.message}</p>
                           </div>
                           <div className="text-xs text-muted-foreground whitespace-nowrap">
-                            {formatDistanceToNow(new Date(reply.created_at), { addSuffix: true })}
+                            {format(new Date(reply.created_at), "MMM d, h:mm a")}
                           </div>
                         </div>
                         <div className="flex items-center gap-2 mt-3">
