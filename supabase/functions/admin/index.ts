@@ -1616,6 +1616,7 @@ async function handleProjects(req: Request): Promise<Response> {
         project_token,
         status,
         pipeline_stage,
+        portal_stage,
         service_type,
         source_demo_token,
         contact_name,
@@ -1630,7 +1631,14 @@ async function handleProjects(req: Request): Promise<Response> {
         owner_user_id,
         created_at,
         updated_at,
-        deleted_at
+        deleted_at,
+        deposit_status,
+        deposit_amount_cents,
+        selected_tier,
+        ai_trial_status,
+        ulio_business_id,
+        ulio_setup_url,
+        client_account_id
       `)
       .neq("source", "lead_engine_bulk")
       .order("created_at", { ascending: false });
