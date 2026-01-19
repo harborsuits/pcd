@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, Lock, Mail, ArrowRight, Sparkles, User as UserIcon, RefreshCw, Plus, Archive, Trash2, ChevronDown, ChevronUp } from "lucide-react";
+import { Loader2, Lock, Mail, ArrowRight, Sparkles, User as UserIcon, RefreshCw, Plus, Archive, Trash2, ChevronDown, ChevronUp, Link2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/hooks/use-toast";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
@@ -47,6 +47,11 @@ export default function PortalHub() {
   const [archivedPortals, setArchivedPortals] = useState<Portal[]>([]);
   const [loadingPortals, setLoadingPortals] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
+  
+  // Claim-by-token state
+  const [claimToken, setClaimToken] = useState("");
+  const [claimLoading, setClaimLoading] = useState(false);
+  const [claimError, setClaimError] = useState<string | null>(null);
 
   // Track if user was redirected from create-password (existing account)
   const [showExistingAccountMessage, setShowExistingAccountMessage] = useState(false);
@@ -592,6 +597,53 @@ export default function PortalHub() {
     }
   };
 
+  // Handle claiming a project by token
+  const handleClaimByToken = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!claimToken.trim() || !session?.access_token) return;
+    
+    setClaimLoading(true);
+    setClaimError(null);
+    
+    try {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/portal/claim-by-token`, {
+        method: "POST",
+        headers: {
+          "apikey": SUPABASE_ANON_KEY,
+          "Authorization": `Bearer ${session.access_token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ project_token: claimToken.trim() }),
+      });
+      
+      const data = await res.json();
+      
+      if (!res.ok) {
+        setClaimError(data.error || "Failed to claim project");
+        return;
+      }
+      
+      if (data.already_owned) {
+        toast({ title: "You already own this project" });
+      } else if (data.claimed) {
+        toast({ 
+          title: "Project claimed!", 
+          description: `"${data.project.business_name}" has been added to your projects.` 
+        });
+      }
+      
+      // Refresh the projects list
+      setClaimToken("");
+      fetchMyPortals(session.access_token);
+      
+    } catch (err) {
+      console.error("Claim by token error:", err);
+      setClaimError("Something went wrong. Please try again.");
+    } finally {
+      setClaimLoading(false);
+    }
+  };
+
 
   // Show loading while checking auth state - prevents flash of login form
   if (!hydrated) {
@@ -842,21 +894,43 @@ export default function PortalHub() {
               ))}
             </div>
           ) : portals.length === 0 ? (
-            <BrandCard variant="highlight" className="text-center py-10">
-              <div className="w-14 h-14 rounded-full bg-accent/10 flex items-center justify-center mx-auto mb-4">
-                <Sparkles className="h-7 w-7 text-accent" />
-              </div>
-              <h3 className="font-serif text-xl font-bold mb-2">No projects yet</h3>
-              <p className="text-muted-foreground max-w-sm mx-auto mb-6">
-                Fill out our quick intake form to get started with your project.
-              </p>
-              <Button asChild size="lg">
-                <Link to="/get-demo">
-                  <Sparkles className="mr-2 h-4 w-4" />
-                  Start your project
-                </Link>
-              </Button>
-            </BrandCard>
+            <div className="space-y-6">
+              <BrandCard variant="highlight" className="text-center py-10">
+                <div className="w-14 h-14 rounded-full bg-accent/10 flex items-center justify-center mx-auto mb-4">
+                  <Sparkles className="h-7 w-7 text-accent" />
+                </div>
+                <h3 className="font-serif text-xl font-bold mb-2">No projects yet</h3>
+                <p className="text-muted-foreground max-w-sm mx-auto mb-6">
+                  Fill out our quick intake form to get started with your project.
+                </p>
+                <Button asChild size="lg">
+                  <Link to="/get-demo">
+                    <Sparkles className="mr-2 h-4 w-4" />
+                    Start your project
+                  </Link>
+                </Button>
+              </BrandCard>
+              
+              {/* Claim by token - empty state */}
+              <BrandCard variant="muted" className="text-center">
+                <h4 className="text-sm font-medium mb-2">Have a project code?</h4>
+                <p className="text-xs text-muted-foreground mb-4">
+                  If you received a project code, enter it below to link the project to your account.
+                </p>
+                <form onSubmit={handleClaimByToken} className="flex gap-2 max-w-xs mx-auto">
+                  <Input
+                    placeholder="Enter project code"
+                    value={claimToken}
+                    onChange={(e) => { setClaimToken(e.target.value); setClaimError(null); }}
+                    className="flex-1"
+                  />
+                  <Button type="submit" disabled={claimLoading || !claimToken.trim()}>
+                    {claimLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Link2 className="h-4 w-4" />}
+                  </Button>
+                </form>
+                {claimError && <p className="text-xs text-destructive mt-2">{claimError}</p>}
+              </BrandCard>
+            </div>
           ) : (
             <div className="space-y-4">
               {/* Start new project button at top when user has portals */}
@@ -956,6 +1030,30 @@ export default function PortalHub() {
                 </div>
               )}
             </div>
+          )}
+          
+          {/* Claim by token - always visible when logged in with projects */}
+          {portals.length > 0 && (
+            <BrandCard variant="muted" className="mt-4">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                <div className="flex-1">
+                  <h4 className="text-sm font-medium">Have a project code?</h4>
+                  <p className="text-xs text-muted-foreground">Link an existing project to your account</p>
+                </div>
+                <form onSubmit={handleClaimByToken} className="flex gap-2 w-full sm:w-auto">
+                  <Input
+                    placeholder="Enter code"
+                    value={claimToken}
+                    onChange={(e) => { setClaimToken(e.target.value); setClaimError(null); }}
+                    className="flex-1 sm:w-40"
+                  />
+                  <Button type="submit" size="sm" disabled={claimLoading || !claimToken.trim()}>
+                    {claimLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Claim"}
+                  </Button>
+                </form>
+              </div>
+              {claimError && <p className="text-xs text-destructive mt-2">{claimError}</p>}
+            </BrandCard>
           )}
         </div>
       </ClientLayout>

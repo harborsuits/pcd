@@ -442,6 +442,18 @@ Deno.serve(async (req) => {
     return handleSignedUrl(req, url);
   }
 
+  // Route: POST /admin/projects/:token/assign-owner - Assign owner_user_id to a project
+  if (subPath.match(/^projects\/[^\/]+\/assign-owner$/) && req.method === "POST") {
+    const parts = subPath.split("/");
+    const token = parts[1];
+    return handleAssignOwner(req, token);
+  }
+
+  // Route: GET /admin/unowned-projects - Get projects with no owner
+  if (subPath === "unowned-projects" && req.method === "GET") {
+    return handleGetUnownedProjects(req);
+  }
+
   return new Response(
     JSON.stringify({ error: "Not found" }),
     { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -5609,6 +5621,130 @@ async function handleSignedUrl(req: Request, url: URL): Promise<Response> {
     );
   } catch (error) {
     console.error("Signed URL error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+}
+
+// POST /admin/projects/:token/assign-owner - Assign owner to a project
+async function handleAssignOwner(req: Request, token: string): Promise<Response> {
+  const { error: authError, context } = await validateAdminAuth(req);
+  if (authError) return authError;
+
+  try {
+    const body = await req.json().catch(() => ({}));
+    const { user_email } = body;
+
+    if (!user_email || typeof user_email !== "string") {
+      return new Response(
+        JSON.stringify({ error: "user_email is required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const supabase = getSupabaseClient();
+
+    // Verify project exists
+    const { data: project, error: projectError } = await supabase
+      .from("projects")
+      .select("id, business_name, owner_user_id")
+      .eq("project_token", token)
+      .is("deleted_at", null)
+      .maybeSingle();
+
+    if (projectError || !project) {
+      return new Response(
+        JSON.stringify({ error: "Project not found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Look up user by email
+    const { data: userData, error: userError } = await supabase.auth.admin.listUsers({
+      page: 1,
+      perPage: 1,
+    });
+
+    // We need to search for the specific email
+    const { data: allUsers } = await supabase.auth.admin.listUsers({ perPage: 1000 });
+    const targetUser = allUsers?.users?.find(u => 
+      u.email?.toLowerCase() === user_email.toLowerCase()
+    );
+
+    if (!targetUser) {
+      return new Response(
+        JSON.stringify({ error: "No user found with that email" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Assign ownership
+    const { error: updateError } = await supabase
+      .from("projects")
+      .update({ owner_user_id: targetUser.id })
+      .eq("id", project.id);
+
+    if (updateError) {
+      console.error("Failed to assign owner:", updateError);
+      return new Response(
+        JSON.stringify({ error: "Failed to assign owner" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log(`[Admin] ${context?.email} assigned ${user_email} as owner of ${project.business_name}`);
+
+    return new Response(
+      JSON.stringify({ 
+        ok: true, 
+        message: `Assigned ${user_email} as owner`,
+        previous_owner: project.owner_user_id,
+      }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+
+  } catch (error) {
+    console.error("Assign owner error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+}
+
+// GET /admin/unowned-projects - Get projects with no owner assigned
+async function handleGetUnownedProjects(req: Request): Promise<Response> {
+  const { error: authError } = await validateAdminAuth(req);
+  if (authError) return authError;
+
+  try {
+    const supabase = getSupabaseClient();
+
+    const { data: projects, error } = await supabase
+      .from("projects")
+      .select("id, project_token, business_name, contact_email, created_at, status")
+      .is("owner_user_id", null)
+      .is("deleted_at", null)
+      .order("created_at", { ascending: false })
+      .limit(50);
+
+    if (error) {
+      console.error("Error fetching unowned projects:", error);
+      return new Response(
+        JSON.stringify({ error: "Failed to fetch projects" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    return new Response(
+      JSON.stringify({ projects: projects || [], count: projects?.length || 0 }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+
+  } catch (error) {
+    console.error("Get unowned projects error:", error);
     return new Response(
       JSON.stringify({ error: "Internal server error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }

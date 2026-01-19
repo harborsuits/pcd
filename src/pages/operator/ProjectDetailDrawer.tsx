@@ -1081,6 +1081,44 @@ export function ProjectDetailDrawer({ project, open, onClose, onStatusChange }: 
               <span>{[project.city, project.state].filter(Boolean).join(", ")}</span>
             </div>
           )}
+          
+          {/* Owner status warning */}
+          {!project.owner_user_id && (
+            <div className="flex items-center gap-2 text-sm text-amber-600 bg-amber-50 dark:bg-amber-950/30 rounded p-2 mt-2">
+              <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+              <span className="text-xs">No portal owner assigned</span>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-6 text-xs ml-auto"
+                onClick={async () => {
+                  const email = prompt("Enter user email to assign as owner:", project.contact_email || "");
+                  if (!email) return;
+                  
+                  try {
+                    const res = await adminFetch(`/admin/projects/${project.project_token}/assign-owner`, {
+                      method: "POST",
+                      body: JSON.stringify({ user_email: email }),
+                    });
+                    
+                    if (!res.ok) {
+                      const data = await res.json().catch(() => ({}));
+                      toast.error(data.error || "Failed to assign owner");
+                      return;
+                    }
+                    
+                    toast.success(`Assigned ${email} as owner`);
+                    queryClient.invalidateQueries({ queryKey: ["admin-projects"] });
+                    onStatusChange();
+                  } catch (err) {
+                    toast.error("Failed to assign owner");
+                  }
+                }}
+              >
+                Assign Owner
+              </Button>
+            </div>
+          )}
         </div>
 
         {/* Tabs: Intake / Messages / Notes / Checklist */}
