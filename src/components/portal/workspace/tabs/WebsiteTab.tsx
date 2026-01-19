@@ -340,8 +340,16 @@ export function WebsiteTab({
     setAttachments(prev => prev.filter((_, i) => i !== index));
   };
 
+  // Helper to get current auth token
+  const getAuthToken = async (): Promise<string> => {
+    const { data: { session } } = await portalSupabase.auth.getSession();
+    return session?.access_token || SUPABASE_ANON_KEY;
+  };
+
   // Upload screenshot to storage
   const uploadScreenshot = async (blob: Blob, prototypeId?: string): Promise<{ mediaId: string; path: string }> => {
+    const authToken = await getAuthToken();
+    
     const formData = new FormData();
     formData.append("file", blob, `screenshot-${Date.now()}.png`);
     if (prototypeId) {
@@ -354,7 +362,7 @@ export function WebsiteTab({
         method: "POST",
         headers: {
           apikey: SUPABASE_ANON_KEY,
-          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+          Authorization: `Bearer ${authToken}`,
         },
         body: formData,
       }
@@ -384,6 +392,9 @@ export function WebsiteTab({
       const fullBlob = await fullResponse.blob();
       const fullUpload = await uploadScreenshot(fullBlob, selectedVersion.id);
 
+      // Get auth token once for all remaining requests
+      const authToken = await getAuthToken();
+
       // Upload attachment files and collect media IDs
       const attachmentMediaIds: string[] = [];
       if (attachments.length > 0) {
@@ -398,7 +409,7 @@ export function WebsiteTab({
               method: "POST",
               headers: {
                 apikey: SUPABASE_ANON_KEY,
-                Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+                Authorization: `Bearer ${authToken}`,
               },
               body: formData,
             }
@@ -421,7 +432,7 @@ export function WebsiteTab({
           headers: {
             "Content-Type": "application/json",
             apikey: SUPABASE_ANON_KEY,
-            Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+            Authorization: `Bearer ${authToken}`,
           },
           body: JSON.stringify({
             action: "create",
