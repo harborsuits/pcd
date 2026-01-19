@@ -806,6 +806,11 @@ export function ProjectsTab() {
     );
   }
 
+  // Count unowned projects for warning
+  const unownedCount = useMemo(() => {
+    return projects.filter(p => !p.owner_user_id && !p.is_archived).length;
+  }, [projects]);
+
   return (
     <Card>
       <CardHeader className="pb-3">
@@ -837,6 +842,16 @@ export function ProjectsTab() {
             <Badge variant="outline">{projects.length} total</Badge>
           </div>
         </div>
+        
+        {/* Unowned projects warning */}
+        {unownedCount > 0 && (
+          <div className="flex items-center gap-2 text-amber-600 bg-amber-50 dark:bg-amber-950/30 rounded-lg px-3 py-2 mt-3">
+            <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+            <span className="text-sm">
+              <strong>{unownedCount}</strong> project{unownedCount === 1 ? '' : 's'} without an owner — clients won't see these in their portal
+            </span>
+          </div>
+        )}
       </CardHeader>
       <CardContent className="p-0">
         {/* Filters row */}

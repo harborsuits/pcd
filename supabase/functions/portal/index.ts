@@ -89,6 +89,12 @@ Deno.serve(async (req) => {
     return handleClaimProjects(req, corsHeaders);
   }
 
+  // POST /portal/claim-by-token - Manually claim a project by token
+  const claimByTokenIdx = pathParts.indexOf("claim-by-token");
+  if (claimByTokenIdx > portalIdx && req.method === "POST") {
+    return handleClaimByToken(req, corsHeaders);
+  }
+
   // GET /portal/:token/whoami - Check if user is operator (server-verified)
   if (whoamiIdx > portalIdx && req.method === "GET") {
     const token = pathParts[portalIdx + 1];
@@ -4839,6 +4845,129 @@ async function handleGetAIEvents(token: string, corsHeaders: Record<string, stri
 
   } catch (error) {
     console.error("Get AI events error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+}
+
+// POST /portal/claim-by-token - Manually claim a project by entering its token
+async function handleClaimByToken(req: Request, corsHeaders: Record<string, string>): Promise<Response> {
+  try {
+    // Require authentication
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(
+        JSON.stringify({ error: "Authentication required" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const jwt = authHeader.replace("Bearer ", "");
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+
+    // Get user from JWT
+    const { data: { user }, error: authError } = await supabase.auth.getUser(jwt);
+    if (authError || !user) {
+      console.error("Claim by token: Auth error", authError);
+      return new Response(
+        JSON.stringify({ error: "Invalid token" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Parse request body
+    const body = await req.json().catch(() => ({}));
+    const { project_token } = body;
+
+    if (!project_token || typeof project_token !== "string") {
+      return new Response(
+        JSON.stringify({ error: "Project token is required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Normalize token (trim, lowercase for case-insensitive match)
+    const normalizedToken = project_token.trim();
+
+    // Find the project
+    const { data: project, error: projectError } = await supabase
+      .from("projects")
+      .select("id, project_token, owner_user_id, business_name, contact_email")
+      .eq("project_token", normalizedToken)
+      .is("deleted_at", null)
+      .maybeSingle();
+
+    if (projectError || !project) {
+      console.log(`Claim by token: Project not found for token ${normalizedToken.slice(0, 8)}...`);
+      return new Response(
+        JSON.stringify({ error: "Project not found. Check the code and try again." }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Check if project already has an owner
+    if (project.owner_user_id) {
+      if (project.owner_user_id === user.id) {
+        // User already owns this project
+        return new Response(
+          JSON.stringify({ 
+            ok: true, 
+            already_owned: true,
+            message: "You already own this project",
+            project: {
+              project_token: project.project_token,
+              business_name: project.business_name,
+            }
+          }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      
+      // Someone else owns this project
+      console.log(`Claim by token: Project ${normalizedToken.slice(0, 8)}... already owned by ${project.owner_user_id}`);
+      return new Response(
+        JSON.stringify({ error: "This project is already claimed by another account" }),
+        { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Claim the project
+    const { error: updateError } = await supabase
+      .from("projects")
+      .update({ owner_user_id: user.id })
+      .eq("id", project.id)
+      .is("owner_user_id", null); // Only claim if still unowned (race condition protection)
+
+    if (updateError) {
+      console.error("Claim by token: Update error", updateError);
+      return new Response(
+        JSON.stringify({ error: "Failed to claim project" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log(`Claim by token: User ${user.id} claimed project ${project.business_name} (${normalizedToken.slice(0, 8)}...)`);
+
+    return new Response(
+      JSON.stringify({
+        ok: true,
+        claimed: true,
+        message: "Project claimed successfully",
+        project: {
+          project_token: project.project_token,
+          business_name: project.business_name,
+        }
+      }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+
+  } catch (error) {
+    console.error("Claim by token error:", error);
     return new Response(
       JSON.stringify({ error: "Internal server error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
