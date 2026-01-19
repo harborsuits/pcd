@@ -16,10 +16,17 @@ import { Button } from "@/components/ui/button";
 import { MessageCircle, Settings2, Home } from "lucide-react";
 import { checkAdminRole } from "@/lib/adminFetch";
 import { useAuthReady } from "@/hooks/useAuthReady";
+import { portalSupabase } from "@/integrations/supabase/portalClient";
 import type { CommentData } from "./FeedbackCard";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
+// Helper to get current auth token
+const getAuthToken = async (): Promise<string> => {
+  const { data: { session } } = await portalSupabase.auth.getSession();
+  return session?.access_token || SUPABASE_ANON_KEY;
+};
 
 interface IntakeData {
   // Core fields from new simplified wizard
@@ -155,6 +162,8 @@ export function ProjectWorkspace({
 
   // Upload screenshot to storage and get media_id
   const uploadScreenshot = useCallback(async (file: File | Blob, prototypeId?: string): Promise<{ mediaId: string; path: string }> => {
+    const authToken = await getAuthToken();
+    
     const formData = new FormData();
     formData.append("file", file);
     if (prototypeId) {
@@ -168,7 +177,7 @@ export function ProjectWorkspace({
         method: "POST",
         headers: {
           apikey: SUPABASE_ANON_KEY,
-          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+          Authorization: `Bearer ${authToken}`,
         },
         body: formData,
       }
@@ -261,6 +270,9 @@ export function ProjectWorkspace({
       
       const { mediaId, path } = await uploadScreenshot(file, selectedVersion?.id);
 
+      // Get auth token for all remaining requests
+      const authToken = await getAuthToken();
+
       // Upload attachment files and collect media IDs
       const attachmentMediaIds: string[] = [];
       if (data.attachments && data.attachments.length > 0) {
@@ -277,7 +289,7 @@ export function ProjectWorkspace({
               method: "POST",
               headers: {
                 apikey: SUPABASE_ANON_KEY,
-                Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+                Authorization: `Bearer ${authToken}`,
               },
               body: formData,
             }
@@ -300,7 +312,7 @@ export function ProjectWorkspace({
           headers: {
             "Content-Type": "application/json",
             apikey: SUPABASE_ANON_KEY,
-            Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+            Authorization: `Bearer ${authToken}`,
           },
           body: JSON.stringify({
             action: "create",
@@ -334,6 +346,8 @@ export function ProjectWorkspace({
     if (!selectedVersion) return;
 
     try {
+      const authToken = await getAuthToken();
+      
       const res = await fetch(
         `${SUPABASE_URL}/functions/v1/portal/${token}/comments`,
         {
@@ -341,7 +355,7 @@ export function ProjectWorkspace({
           headers: {
             "Content-Type": "application/json",
             apikey: SUPABASE_ANON_KEY,
-            Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+            Authorization: `Bearer ${authToken}`,
           },
           body: JSON.stringify({
             action: "create",
@@ -365,6 +379,7 @@ export function ProjectWorkspace({
 
   // Comment actions
   const handleResolve = useCallback(async (id: string) => {
+    const authToken = await getAuthToken();
     const res = await fetch(
       `${SUPABASE_URL}/functions/v1/portal/${token}/comments`,
       {
@@ -372,7 +387,7 @@ export function ProjectWorkspace({
         headers: {
           "Content-Type": "application/json",
           apikey: SUPABASE_ANON_KEY,
-          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+          Authorization: `Bearer ${authToken}`,
         },
         body: JSON.stringify({ action: "resolve", comment_id: id }),
       }
@@ -384,6 +399,7 @@ export function ProjectWorkspace({
   }, [token, onRefreshComments]);
 
   const handleUnresolve = useCallback(async (id: string) => {
+    const authToken = await getAuthToken();
     const res = await fetch(
       `${SUPABASE_URL}/functions/v1/portal/${token}/comments`,
       {
@@ -391,7 +407,7 @@ export function ProjectWorkspace({
         headers: {
           "Content-Type": "application/json",
           apikey: SUPABASE_ANON_KEY,
-          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+          Authorization: `Bearer ${authToken}`,
         },
         body: JSON.stringify({ action: "unresolve", comment_id: id }),
       }
@@ -403,6 +419,7 @@ export function ProjectWorkspace({
   }, [token, onRefreshComments]);
 
   const handleMarkInProgress = useCallback(async (id: string) => {
+    const authToken = await getAuthToken();
     const res = await fetch(
       `${SUPABASE_URL}/functions/v1/portal/${token}/comments`,
       {
@@ -410,7 +427,7 @@ export function ProjectWorkspace({
         headers: {
           "Content-Type": "application/json",
           apikey: SUPABASE_ANON_KEY,
-          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+          Authorization: `Bearer ${authToken}`,
         },
         body: JSON.stringify({ action: "update_status", comment_id: id, status: "in_progress" }),
       }
