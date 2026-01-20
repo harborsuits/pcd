@@ -77,13 +77,13 @@ function ProjectCard({ project, isDragging, onOpenWorkSurface, onOpenPortal }: P
             <div className="min-w-0">
               <p className="font-medium text-sm truncate flex items-center gap-1.5">
                 <Building2 className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                {project.business_name}
+                {String(project.business_name || '')}
               </p>
               <div className="flex items-center gap-1.5 mt-0.5">
                 {project.contact_name && (
                   <span className="text-xs text-muted-foreground truncate flex items-center gap-1">
                     <User className="h-3 w-3" />
-                    {project.contact_name}
+                    {String(project.contact_name)}
                   </span>
                 )}
                 <span className="text-xs" title={SERVICE_TYPE_CONFIG[project.service_type]?.label}>

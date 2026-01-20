@@ -17,6 +17,33 @@ import {
   AlertTriangle
 } from "lucide-react";
 
+// Safe render helper: never returns an object/array as a React child
+function renderSafe(value: unknown): string {
+  if (value == null) return "";
+  
+  const t = typeof value;
+  if (t === "string") return value as string;
+  if (t === "number" || t === "boolean" || t === "bigint") return String(value);
+  
+  // Dates
+  if (value instanceof Date) return isNaN(value.getTime()) ? "" : value.toISOString();
+  
+  // Arrays
+  if (Array.isArray(value)) {
+    const allPrimitive = value.every(
+      (v) => v == null || ["string", "number", "boolean", "bigint"].includes(typeof v) || v instanceof Date
+    );
+    return allPrimitive ? value.map(renderSafe).filter(Boolean).join(", ") : JSON.stringify(value);
+  }
+  
+  // Objects (includes empty {} / map[])
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return String(value);
+  }
+}
+
 interface IntakeData {
   // Tier and product type (NEW)
   tier?: string;
@@ -454,12 +481,16 @@ export function IntakeOverviewPanel({ intake, intakeCreatedAt, intakeStatus, onA
                     <div>
                       <p className="text-xs font-medium text-muted-foreground mb-1">Services ({intake.intake_details.content.services.length}):</p>
                       <ul className="list-disc list-inside space-y-0.5">
-                        {intake.intake_details.content.services.map((svc: { name: string; description?: string }, i: number) => (
-                          <li key={i} className="text-muted-foreground">
-                            <span className="font-medium text-foreground">{svc.name}</span>
-                            {svc.description && <span className="text-xs"> — {svc.description}</span>}
-                          </li>
-                        ))}
+                        {intake.intake_details.content.services.map((svc: unknown, i: number) => {
+                          const name = typeof svc === 'string' ? svc : ((svc as { name?: string })?.name ?? renderSafe(svc));
+                          const desc = (svc as { description?: string })?.description ? renderSafe((svc as { description?: string }).description) : null;
+                          return (
+                            <li key={i} className="text-muted-foreground">
+                              <span className="font-medium text-foreground">{name}</span>
+                              {desc && <span className="text-xs"> — {desc}</span>}
+                            </li>
+                          );
+                        })}
                       </ul>
                     </div>
                   )}
@@ -495,52 +526,62 @@ export function IntakeOverviewPanel({ intake, intakeCreatedAt, intakeStatus, onA
                   {intake.preferred_tone && (
                     <div className="flex items-center gap-2">
                       <span className="text-muted-foreground">Tone:</span>
-                      <Badge variant="outline" className="text-xs capitalize">{intake.preferred_tone}</Badge>
+                      <Badge variant="outline" className="text-xs capitalize">{renderSafe(intake.preferred_tone)}</Badge>
                     </div>
                   )}
                   {intake.business_personality && intake.business_personality.length > 0 && (
                     <div className="flex flex-wrap gap-1">
-                      {intake.business_personality.map((p) => (
-                        <Badge key={p} variant="outline" className="text-xs capitalize">{p.replace('_', ' ')}</Badge>
-                      ))}
+                      {intake.business_personality.map((p, i) => {
+                        const pStr = typeof p === 'string' ? p : renderSafe(p);
+                        return (
+                          <Badge key={pStr + i} variant="outline" className="text-xs capitalize">
+                            {pStr.replace('_', ' ')}
+                          </Badge>
+                        );
+                      })}
                     </div>
                   )}
                   {intake.call_handling && (
                     <p className="text-muted-foreground">
-                      Call handling: {intake.call_handling === 'after_hours' ? 'After hours only' : intake.call_handling === 'always' ? 'Always on' : intake.call_handling}
+                      Call handling: {intake.call_handling === 'after_hours' ? 'After hours only' : intake.call_handling === 'always' ? 'Always on' : renderSafe(intake.call_handling)}
                     </p>
                   )}
                   {intake.after_hours_action && (
                     <p className="text-muted-foreground">
-                      After hours: {intake.after_hours_action === 'book' ? 'Book appointments' : intake.after_hours_action === 'message' ? 'Take messages' : intake.after_hours_action}
+                      After hours: {intake.after_hours_action === 'book' ? 'Book appointments' : intake.after_hours_action === 'message' ? 'Take messages' : renderSafe(intake.after_hours_action)}
                     </p>
                   )}
                   {intake.text_handling && intake.text_handling.length > 0 && (
                     <div>
                       <span className="text-muted-foreground">Text handling: </span>
-                      {intake.text_handling.map((t) => (
-                        <Badge key={t} variant="secondary" className="text-xs mr-1">
-                          {t === 'answer_faqs' ? 'Answer FAQs' : t === 'send_booking' ? 'Book appointments' : t === 'collect_info' ? 'Collect info' : t}
-                        </Badge>
-                      ))}
+                      {intake.text_handling.map((t, i) => {
+                        const tStr = typeof t === 'string' ? t : renderSafe(t);
+                        return (
+                          <Badge key={tStr + i} variant="secondary" className="text-xs mr-1">
+                            {tStr === 'answer_faqs' ? 'Answer FAQs' : tStr === 'send_booking' ? 'Book appointments' : tStr === 'collect_info' ? 'Collect info' : tStr}
+                          </Badge>
+                        );
+                      })}
                     </div>
                   )}
                   {intake.handoff_triggers && intake.handoff_triggers.length > 0 && (
                     <p className="text-muted-foreground">
-                      Handoff when: {intake.handoff_triggers.join(', ')}
+                      Handoff when: {Array.isArray(intake.handoff_triggers) 
+                        ? intake.handoff_triggers.map(t => typeof t === 'string' ? t : renderSafe(t)).join(', ')
+                        : renderSafe(intake.handoff_triggers)}
                     </p>
                   )}
                   {intake.handoff_method && (
                     <p className="text-muted-foreground">
-                      Handoff via: {intake.handoff_method === 'message' ? 'Text message' : intake.handoff_method === 'call' ? 'Phone call' : intake.handoff_method}
+                      Handoff via: {intake.handoff_method === 'message' ? 'Text message' : intake.handoff_method === 'call' ? 'Phone call' : renderSafe(intake.handoff_method)}
                     </p>
                   )}
                   {intake.escalation_number && (
-                    <p className="text-muted-foreground">Escalation: {intake.escalation_number}</p>
+                    <p className="text-muted-foreground">Escalation: {renderSafe(intake.escalation_number)}</p>
                   )}
                   {intake.pricing_guidance && (
                     <p className="text-muted-foreground">
-                      Pricing: {intake.pricing_guidance === 'follow_up' ? 'Follow up for quote' : intake.pricing_guidance === 'provide' ? 'Provide prices' : intake.pricing_guidance}
+                      Pricing: {intake.pricing_guidance === 'follow_up' ? 'Follow up for quote' : intake.pricing_guidance === 'provide' ? 'Provide prices' : renderSafe(intake.pricing_guidance)}
                     </p>
                   )}
                 </div>
