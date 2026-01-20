@@ -359,16 +359,16 @@ export function IntakeOverviewPanel({ intake, intakeCreatedAt, intakeStatus, onA
 
             <Section icon={Building2} title="Business">
               <div className="space-y-1.5 text-sm">
-                {intake.business_name && <p className="font-medium">{intake.business_name}</p>}
-                {intake.your_name && <p className="text-muted-foreground">Contact: {intake.your_name}</p>}
-                {intake.city && <p className="text-muted-foreground flex items-center gap-1"><MapPin className="h-3 w-3" />{intake.city}</p>}
+                {intake.business_name && <p className="font-medium">{renderSafe(intake.business_name)}</p>}
+                {intake.your_name && <p className="text-muted-foreground">Contact: {renderSafe(intake.your_name)}</p>}
+                {intake.city && <p className="text-muted-foreground flex items-center gap-1"><MapPin className="h-3 w-3" />{renderSafe(intake.city)}</p>}
                 {(intake.email || intake.phone) && (
                   <p className="text-muted-foreground">
-                    {intake.email}{intake.phone ? ` · ${intake.phone}` : ''}
+                    {renderSafe(intake.email)}{intake.phone ? ` · ${renderSafe(intake.phone)}` : ''}
                   </p>
                 )}
                 {intake.business_phone && intake.business_phone !== intake.phone && (
-                  <p className="text-muted-foreground">Business: {intake.business_phone}</p>
+                  <p className="text-muted-foreground">Business: {renderSafe(intake.business_phone)}</p>
                 )}
               </div>
             </Section>
@@ -384,11 +384,11 @@ export function IntakeOverviewPanel({ intake, intakeCreatedAt, intakeStatus, onA
                       {intake.website_goal === 'calls' && 'Goal: Get Calls'}
                       {intake.website_goal === 'info' && 'Goal: Provide Info'}
                       {intake.website_goal === 'quotes' && 'Goal: Get Quotes'}
-                      {!['bookings', 'calls', 'info', 'quotes'].includes(intake.website_goal) && intake.website_goal}
+                      {!['bookings', 'calls', 'info', 'quotes'].includes(String(intake.website_goal)) && renderSafe(intake.website_goal)}
                     </Badge>
                   )}
                   {intake.services_list && (
-                    <p className="text-muted-foreground">Services: {intake.services_list}</p>
+                    <p className="text-muted-foreground">Services: {renderSafe(intake.services_list)}</p>
                   )}
                 </div>
               </Section>
@@ -400,19 +400,19 @@ export function IntakeOverviewPanel({ intake, intakeCreatedAt, intakeStatus, onA
                 <div className="space-y-2 text-sm">
                   {intake.intake_details.existing_site.url && (
                     <a 
-                      href={intake.intake_details.existing_site.url} 
+                      href={renderSafe(intake.intake_details.existing_site.url)} 
                       target="_blank" 
                       rel="noopener noreferrer" 
                       className="text-primary hover:underline block"
                     >
-                      {intake.intake_details.existing_site.url}
+                      {renderSafe(intake.intake_details.existing_site.url)}
                     </a>
                   )}
                   {intake.intake_details.existing_site.platform && (
                     <p className="text-muted-foreground">
                       Platform: <span className="capitalize">{intake.intake_details.existing_site.platform === 'platform_other' 
-                        ? intake.intake_details.existing_site.platform_other 
-                        : intake.intake_details.existing_site.platform}</span>
+                        ? renderSafe(intake.intake_details.existing_site.platform_other)
+                        : renderSafe(intake.intake_details.existing_site.platform)}</span>
                     </p>
                   )}
                   {intake.intake_details.existing_site.work_requested && intake.intake_details.existing_site.work_requested.length > 0 && (
