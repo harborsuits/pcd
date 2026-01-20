@@ -1297,6 +1297,9 @@ export type Database = {
           business_name: string
           business_slug: string
           city: string | null
+          claim_code: string | null
+          claim_code_created_at: string | null
+          claim_code_used_at: string | null
           client_account_id: string | null
           contact_email: string | null
           contact_name: string | null
@@ -1338,6 +1341,9 @@ export type Database = {
           business_name: string
           business_slug: string
           city?: string | null
+          claim_code?: string | null
+          claim_code_created_at?: string | null
+          claim_code_used_at?: string | null
           client_account_id?: string | null
           contact_email?: string | null
           contact_name?: string | null
@@ -1379,6 +1385,9 @@ export type Database = {
           business_name?: string
           business_slug?: string
           city?: string | null
+          claim_code?: string | null
+          claim_code_created_at?: string | null
+          claim_code_used_at?: string | null
           client_account_id?: string | null
           contact_email?: string | null
           contact_name?: string | null

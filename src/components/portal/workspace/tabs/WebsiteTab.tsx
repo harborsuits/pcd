@@ -370,6 +370,11 @@ export function WebsiteTab({
 
     if (!res.ok) {
       const error = await res.json().catch(() => ({ error: "Unknown error" }));
+      // Handle auth required response
+      if (res.status === 401 && error.requires_auth) {
+        toast.error("Please sign in to leave feedback");
+        throw new Error("AUTH_REQUIRED");
+      }
       throw new Error(error.error || "Failed to upload screenshot");
     }
     const data = await res.json();
@@ -456,7 +461,15 @@ export function WebsiteTab({
         }
       );
 
-      if (!res.ok) throw new Error("Failed to create comment");
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({ error: "Unknown error" }));
+        // Handle auth required response
+        if (res.status === 401 && error.requires_auth) {
+          toast.error("Please sign in to leave feedback");
+          return;
+        }
+        throw new Error(error.error || "Failed to create comment");
+      }
 
       toast.success("Feedback submitted!");
       setMode({ type: "preview" });
@@ -465,6 +478,10 @@ export function WebsiteTab({
       fetchComments(); // Refresh comments list
       onRefreshComments?.();
     } catch (err) {
+      if (err instanceof Error && err.message === "AUTH_REQUIRED") {
+        // Already handled via toast
+        return;
+      }
       console.error("Submit feedback failed:", err);
       toast.error("Failed to submit feedback");
     } finally {

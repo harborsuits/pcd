@@ -184,7 +184,12 @@ export function ProjectWorkspace({
     );
 
     if (!res.ok) {
-      throw new Error("Failed to upload screenshot");
+      const error = await res.json().catch(() => ({ error: "Unknown error" }));
+      if (res.status === 401 && error.requires_auth) {
+        toast.error("Please sign in to upload files");
+        throw new Error("AUTH_REQUIRED");
+      }
+      throw new Error(error.error || "Failed to upload screenshot");
     }
 
     const data = await res.json();
@@ -330,7 +335,14 @@ export function ProjectWorkspace({
         }
       );
 
-      if (!res.ok) throw new Error("Failed to create comment");
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({ error: "Unknown error" }));
+        if (res.status === 401 && error.requires_auth) {
+          toast.error("Please sign in to leave feedback");
+          return;
+        }
+        throw new Error(error.error || "Failed to create comment");
+      }
 
       toast.success("Feedback submitted");
       setMode({ type: "preview" });
@@ -366,7 +378,14 @@ export function ProjectWorkspace({
         }
       );
 
-      if (!res.ok) throw new Error("Failed to create comment");
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({ error: "Unknown error" }));
+        if (res.status === 401 && error.requires_auth) {
+          toast.error("Please sign in to leave feedback");
+          return;
+        }
+        throw new Error(error.error || "Failed to create comment");
+      }
 
       toast.success("Comment added");
       setMode({ type: "preview" });
