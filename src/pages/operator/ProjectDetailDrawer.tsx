@@ -958,7 +958,7 @@ export function ProjectDetailDrawer({ project, open, onClose, onStatusChange }: 
           <div className="flex items-start justify-between">
             <div>
               <SheetTitle className="text-xl flex items-center gap-2">
-                {project.business_name}
+                {String(project.business_name || '')}
                 <ServiceTypeBadge serviceType={project.service_type} />
               </SheetTitle>
               <p className="text-sm text-muted-foreground mt-1">
