@@ -816,6 +816,11 @@ export function ProjectsTab() {
     return counts;
   }, [projects]);
 
+  // Count unowned projects for warning - MUST be before early return to maintain consistent hook count
+  const unownedCount = useMemo(() => {
+    return projects.filter(p => !p.owner_user_id && !p.is_archived).length;
+  }, [projects]);
+
   // Helper to calculate trial days remaining
   const getTrialDaysRemaining = (endsAt: string | null): { text: string; isExpired: boolean } => {
     if (!endsAt) return { text: "", isExpired: false };
@@ -851,11 +856,6 @@ export function ProjectsTab() {
       />
     );
   }
-
-  // Count unowned projects for warning
-  const unownedCount = useMemo(() => {
-    return projects.filter(p => !p.owner_user_id && !p.is_archived).length;
-  }, [projects]);
 
   return (
     <Card>
