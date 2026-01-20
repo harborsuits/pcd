@@ -54,6 +54,33 @@ import {
 } from "@/components/operator/StageBadge";
 import { KanbanBoard, KanbanProject } from "@/components/operator/KanbanBoard";
 
+// Safe render helper: never returns an object/array as a React child
+export function renderSafe(value: unknown): string {
+  if (value == null) return "";
+  
+  const t = typeof value;
+  if (t === "string") return value as string;
+  if (t === "number" || t === "boolean" || t === "bigint") return String(value);
+  
+  // Dates
+  if (value instanceof Date) return isNaN(value.getTime()) ? "" : value.toISOString();
+  
+  // Arrays
+  if (Array.isArray(value)) {
+    const allPrimitive = value.every(
+      (v) => v == null || ["string", "number", "boolean", "bigint"].includes(typeof v) || v instanceof Date
+    );
+    return allPrimitive ? value.map(renderSafe).filter(Boolean).join(", ") : JSON.stringify(value);
+  }
+  
+  // Objects (includes empty {} / map[])
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return String(value);
+  }
+}
+
 interface PhaseBData {
   // Card 1: Brand & Identity
   logoStatus: "uploaded" | "create" | "";
@@ -665,11 +692,14 @@ export function ProjectsTab() {
 
   // Calculate Phase B progress from intake data
   const getPhaseBProgress = (intake: ProjectIntake | null): { completed: number; total: number; missing: string[]; photosPlan?: string } => {
-    if (!intake || !intake.phase_b_json) {
+    const pb = intake?.phase_b_json;
+    const pbIsEmptyObject = pb && typeof pb === "object" && !Array.isArray(pb) && Object.keys(pb as object).length === 0;
+    
+    if (!intake || !pb || pbIsEmptyObject) {
       return { completed: 0, total: 4, missing: ["Brand", "Content", "Photos", "Style"] };
     }
     
-    const data = intake.phase_b_json;
+    const data = pb;
     const missing: string[] = [];
     let completed = 0;
 
@@ -720,9 +750,9 @@ export function ProjectsTab() {
     return projects.map(p => ({
       id: p.id,
       token: p.project_token,
-      business_name: p.business_name,
-      contact_name: p.contact_name,
-      contact_email: p.contact_email,
+      business_name: String(p.business_name || ''),
+      contact_name: p.contact_name ? String(p.contact_name) : null,
+      contact_email: p.contact_email ? String(p.contact_email) : null,
       pipeline_stage: (p.pipeline_stage || "new") as PipelineStage,
       service_type: (p.service_type || "website") as ServiceType,
       phase_b_status: p.intake?.phase_b_status,
@@ -979,11 +1009,11 @@ export function ProjectsTab() {
                       {/* Row 1: Name + location + type + stage */}
                       <div className="flex items-center gap-1.5 sm:gap-2 mb-1 flex-wrap">
                         <span className="font-medium text-sm sm:text-base truncate max-w-[180px] sm:max-w-none">
-                          {project.business_name}
+                          {renderSafe(project.business_name)}
                         </span>
                         {project.city && (
                           <span className="text-xs text-muted-foreground hidden sm:inline">
-                            {project.city}{project.state ? `, ${project.state}` : ""}
+                            {renderSafe(project.city)}{project.state ? `, ${renderSafe(project.state)}` : ""}
                           </span>
                         )}
                         <ServiceTypeBadge serviceType={project.service_type} showIcon={true} />
@@ -1076,23 +1106,23 @@ export function ProjectsTab() {
                       {(project.contact_name || project.contact_email || project.contact_phone) && (
                         <div className="mt-2 text-xs text-muted-foreground bg-muted/30 rounded-md px-2.5 py-1.5 space-y-0.5">
                           {project.contact_name && (
-                            <div className="font-medium text-foreground/80">{project.contact_name}</div>
+                            <div className="font-medium text-foreground/80">{renderSafe(project.contact_name)}</div>
                           )}
                           <div className="flex flex-wrap gap-x-3 gap-y-0.5">
                             {project.contact_email && (
-                              <span className="truncate max-w-[200px]">{project.contact_email}</span>
+                              <span className="truncate max-w-[200px]">{renderSafe(project.contact_email)}</span>
                             )}
                             {project.contact_phone && (
-                              <span>{project.contact_phone}</span>
+                              <span>{renderSafe(project.contact_phone)}</span>
                             )}
                           </div>
                         </div>
                       )}
                       
                       {/* Row 5: Notes preview - only if notes exist and aren't just contact info */}
-                      {project.notes && !project.notes.toLowerCase().includes('contact:') && (
+                      {project.notes && !String(project.notes).toLowerCase().includes('contact:') && (
                         <div className="mt-2 text-xs text-muted-foreground bg-muted/50 rounded px-2 py-1 whitespace-pre-line line-clamp-2">
-                          {project.notes}
+                          {renderSafe(project.notes)}
                         </div>
                       )}
                     </div>

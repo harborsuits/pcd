@@ -14,6 +14,7 @@ import { ProjectsTab } from "./ProjectsTab";
 import { AccountsTab } from "./AccountsTab";
 import { OutreachTab } from "./OutreachTab";
 import { DataFreshnessPill } from "@/components/operator/DataFreshnessPill";
+import { OperatorErrorBoundary } from "@/components/operator/OperatorErrorBoundary";
 import { 
   AdminAuthError, 
   signInAdmin,
@@ -375,24 +376,26 @@ export default function OperatorLayout() {
         </header>
 
         <main className="container mx-auto px-2 sm:px-4 py-3 sm:py-6">
-          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as OpTab)} className="space-y-4 sm:space-y-6">
-            <div className="overflow-x-auto scrollbar-hide -mx-2 px-2">
-              <TabsList className="inline-flex w-auto min-w-max sm:grid sm:w-full sm:max-w-3xl sm:grid-cols-5">
-                <TabsTrigger value="projects" className="gap-1.5 sm:gap-2 px-3 sm:px-4"><FolderOpen className="h-4 w-4" /><span className="text-xs sm:text-sm">Projects</span></TabsTrigger>
-                <TabsTrigger value="inbox" className="gap-1.5 sm:gap-2 px-3 sm:px-4"><Inbox className="h-4 w-4" /><span className="text-xs sm:text-sm">Inbox</span></TabsTrigger>
-                <TabsTrigger value="accounts" className="gap-1.5 sm:gap-2 px-3 sm:px-4"><Users className="h-4 w-4" /><span className="text-xs sm:text-sm">Accounts</span></TabsTrigger>
-                <TabsTrigger value="leads" className="gap-1.5 sm:gap-2 px-3 sm:px-4"><Rocket className="h-4 w-4" /><span className="text-xs sm:text-sm">Leads</span></TabsTrigger>
-                <TabsTrigger value="outreach" className="gap-1.5 sm:gap-2 px-3 sm:px-4"><Send className="h-4 w-4" /><span className="text-xs sm:text-sm">Outreach</span></TabsTrigger>
-              </TabsList>
-            </div>
-            <TabsContent value="projects"><ProjectsTab /></TabsContent>
-            <TabsContent value="inbox"><DeliveryTab /></TabsContent>
-            <TabsContent value="accounts"><AccountsTab /></TabsContent>
-            <TabsContent value="leads"><AcquisitionTab /></TabsContent>
-            <TabsContent value="outreach">
-              <OutreachTab />
-            </TabsContent>
-          </Tabs>
+          <OperatorErrorBoundary>
+            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as OpTab)} className="space-y-4 sm:space-y-6">
+              <div className="overflow-x-auto scrollbar-hide -mx-2 px-2">
+                <TabsList className="inline-flex w-auto min-w-max sm:grid sm:w-full sm:max-w-3xl sm:grid-cols-5">
+                  <TabsTrigger value="projects" className="gap-1.5 sm:gap-2 px-3 sm:px-4"><FolderOpen className="h-4 w-4" /><span className="text-xs sm:text-sm">Projects</span></TabsTrigger>
+                  <TabsTrigger value="inbox" className="gap-1.5 sm:gap-2 px-3 sm:px-4"><Inbox className="h-4 w-4" /><span className="text-xs sm:text-sm">Inbox</span></TabsTrigger>
+                  <TabsTrigger value="accounts" className="gap-1.5 sm:gap-2 px-3 sm:px-4"><Users className="h-4 w-4" /><span className="text-xs sm:text-sm">Accounts</span></TabsTrigger>
+                  <TabsTrigger value="leads" className="gap-1.5 sm:gap-2 px-3 sm:px-4"><Rocket className="h-4 w-4" /><span className="text-xs sm:text-sm">Leads</span></TabsTrigger>
+                  <TabsTrigger value="outreach" className="gap-1.5 sm:gap-2 px-3 sm:px-4"><Send className="h-4 w-4" /><span className="text-xs sm:text-sm">Outreach</span></TabsTrigger>
+                </TabsList>
+              </div>
+              <TabsContent value="projects"><ProjectsTab /></TabsContent>
+              <TabsContent value="inbox"><DeliveryTab /></TabsContent>
+              <TabsContent value="accounts"><AccountsTab /></TabsContent>
+              <TabsContent value="leads"><AcquisitionTab /></TabsContent>
+              <TabsContent value="outreach">
+                <OutreachTab />
+              </TabsContent>
+            </Tabs>
+          </OperatorErrorBoundary>
         </main>
       </div>
     </OperatorContext.Provider>
