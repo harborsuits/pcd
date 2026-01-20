@@ -160,10 +160,26 @@ function PhaseBModal({
   const data = project.intake?.phase_b_json;
   const phaseBStatus = project.intake?.phase_b_status;
   
-  const renderValue = (value: string | number | boolean | null | undefined, fallback = "Not provided") => {
-    if (value === null || value === undefined || value === "") return <span className="text-muted-foreground italic">{fallback}</span>;
+  const renderValue = (value: unknown, fallback = "Not provided"): React.ReactNode => {
+    if (value === null || value === undefined || value === "") {
+      return <span className="text-muted-foreground italic">{fallback}</span>;
+    }
     if (typeof value === "boolean") return value ? "Yes" : "No";
-    return value;
+    if (typeof value === "string" || typeof value === "number") return String(value);
+    // Handle arrays - join with commas or render as list
+    if (Array.isArray(value)) {
+      if (value.length === 0) return <span className="text-muted-foreground italic">{fallback}</span>;
+      return value.map(v => typeof v === "object" ? JSON.stringify(v) : String(v)).join(", ");
+    }
+    // Handle objects - stringify safely
+    if (typeof value === "object") {
+      try {
+        return JSON.stringify(value);
+      } catch {
+        return <span className="text-muted-foreground italic">Complex data</span>;
+      }
+    }
+    return String(value);
   };
 
   const getGoalLabel = (goal?: string) => {
