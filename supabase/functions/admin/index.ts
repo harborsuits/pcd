@@ -1648,6 +1648,8 @@ async function handleProjects(req: Request): Promise<Response> {
         deposit_amount_cents,
         selected_tier,
         ai_trial_status,
+        is_ai_trial,
+        ai_trial_ends_at,
         ulio_business_id,
         ulio_setup_url,
         client_account_id
