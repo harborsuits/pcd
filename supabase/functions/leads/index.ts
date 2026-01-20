@@ -1978,6 +1978,42 @@ async function handleRequestDemo(req: Request): Promise<Response> {
       );
     }
 
+    // Generate secure claim code for unauthenticated submissions
+    let claimCode: string | null = null;
+    if (!authenticatedUserId) {
+      // Generate claim code (PCD-XXXX-XXXX format, human-readable chars only)
+      const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+      const generateCode = () => {
+        const part = (n: number) =>
+          Array.from({ length: n }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+        return `PCD-${part(4)}-${part(4)}`;
+      };
+
+      // Try up to 5 times to generate a unique code
+      for (let attempt = 0; attempt < 5; attempt++) {
+        const candidate = generateCode();
+        const { error: codeError } = await supabase
+          .from("projects")
+          .update({
+            claim_code: candidate,
+            claim_code_created_at: new Date().toISOString(),
+          })
+          .eq("id", newProject.id);
+
+        if (!codeError) {
+          claimCode = candidate;
+          console.log(`Claim code generated for project ${projectToken}: ${candidate}`);
+          break;
+        } else if (codeError.code === "23505") {
+          // Unique constraint violation, try again
+          console.log(`Claim code collision, retrying (attempt ${attempt + 1})`);
+        } else {
+          console.error("Failed to set claim code:", codeError);
+          break;
+        }
+      }
+    }
+
     // Create intake record with all the form data including new intake_details structure
     const intakeData = {
       // Tier and pricing (NEW)
@@ -2161,6 +2197,7 @@ async function handleRequestDemo(req: Request): Promise<Response> {
           ok: true,
           demo_url: demoUrl,
           project_token: projectToken,
+          claim_code: claimCode, // Include claim code in response
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
@@ -2174,6 +2211,7 @@ async function handleRequestDemo(req: Request): Promise<Response> {
       JSON.stringify({
         ok: true,
         project_token: projectToken,
+        claim_code: claimCode, // Include claim code in response
         message: "Your request has been submitted. We'll be in touch soon!",
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }

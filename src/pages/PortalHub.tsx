@@ -597,7 +597,7 @@ export default function PortalHub() {
     }
   };
 
-  // Handle claiming a project by token
+  // Handle claiming a project by token or claim code
   const handleClaimByToken = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!claimToken.trim() || !session?.access_token) return;
@@ -606,14 +606,25 @@ export default function PortalHub() {
     setClaimError(null);
     
     try {
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/portal/claim-by-token`, {
+      const inputValue = claimToken.trim().toUpperCase();
+      
+      // Detect if it's a claim code (PCD-XXXX-XXXX format) or project token
+      const isClaimCode = /^PCD-[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(inputValue);
+      
+      const endpoint = isClaimCode 
+        ? `${SUPABASE_URL}/functions/v1/portal/claim-by-code`
+        : `${SUPABASE_URL}/functions/v1/portal/claim-by-token`;
+      
+      const bodyKey = isClaimCode ? "claim_code" : "project_token";
+      
+      const res = await fetch(endpoint, {
         method: "POST",
         headers: {
           "apikey": SUPABASE_ANON_KEY,
           "Authorization": `Bearer ${session.access_token}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ project_token: claimToken.trim() }),
+        body: JSON.stringify({ [bodyKey]: isClaimCode ? inputValue : claimToken.trim() }),
       });
       
       const data = await res.json();
@@ -637,7 +648,7 @@ export default function PortalHub() {
       fetchMyPortals(session.access_token);
       
     } catch (err) {
-      console.error("Claim by token error:", err);
+      console.error("Claim error:", err);
       setClaimError("Something went wrong. Please try again.");
     } finally {
       setClaimLoading(false);
