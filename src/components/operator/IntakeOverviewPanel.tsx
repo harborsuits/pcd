@@ -595,19 +595,19 @@ export function IntakeOverviewPanel({ intake, intakeCreatedAt, intakeStatus, onA
                   {intake.customer_faqs && (
                     <div>
                       <p className="text-xs font-medium text-muted-foreground mb-1">FAQs:</p>
-                      <p className="text-sm text-foreground whitespace-pre-wrap bg-muted/30 rounded p-2">{intake.customer_faqs}</p>
+                      <p className="text-sm text-foreground whitespace-pre-wrap bg-muted/30 rounded p-2">{renderSafe(intake.customer_faqs)}</p>
                     </div>
                   )}
                   {intake.guarantees_policies && (
                     <div>
                       <p className="text-xs font-medium text-muted-foreground mb-1">Guarantees/Policies:</p>
-                      <p className="text-sm text-foreground whitespace-pre-wrap bg-muted/30 rounded p-2">{intake.guarantees_policies}</p>
+                      <p className="text-sm text-foreground whitespace-pre-wrap bg-muted/30 rounded p-2">{renderSafe(intake.guarantees_policies)}</p>
                     </div>
                   )}
                   {intake.do_not_say && (
                     <div>
                       <p className="text-xs font-medium text-muted-foreground mb-1">Do NOT say:</p>
-                      <p className="text-sm text-foreground whitespace-pre-wrap bg-muted/30 rounded p-2">{intake.do_not_say}</p>
+                      <p className="text-sm text-foreground whitespace-pre-wrap bg-muted/30 rounded p-2">{renderSafe(intake.do_not_say)}</p>
                     </div>
                   )}
                 </div>
@@ -622,15 +622,15 @@ export function IntakeOverviewPanel({ intake, intakeCreatedAt, intakeStatus, onA
                     <div className="flex flex-wrap gap-1">
                       <span className="text-muted-foreground">Collect:</span>
                       {intake.lead_fields.map((f) => (
-                        <Badge key={f} variant="outline" className="text-xs capitalize">{f.replace('_', ' ')}</Badge>
+                        <Badge key={typeof f === 'string' ? f : String(f)} variant="outline" className="text-xs capitalize">{typeof f === 'string' ? f.replace('_', ' ') : renderSafe(f)}</Badge>
                       ))}
                     </div>
                   )}
                   {intake.booking_link && (
-                    <p className="text-muted-foreground">Booking: {intake.booking_link}</p>
+                    <p className="text-muted-foreground">Booking: {renderSafe(intake.booking_link)}</p>
                   )}
                   {intake.team_names && (
-                    <p className="text-muted-foreground">Team: {intake.team_names}</p>
+                    <p className="text-muted-foreground">Team: {renderSafe(intake.team_names)}</p>
                   )}
                 </div>
               </Section>
@@ -638,7 +638,7 @@ export function IntakeOverviewPanel({ intake, intakeCreatedAt, intakeStatus, onA
 
             {intake.business_hours && (
               <Section icon={Clock} title="Hours">
-                <p className="text-sm text-muted-foreground">{intake.business_hours}</p>
+                <p className="text-sm text-muted-foreground">{renderSafe(intake.business_hours)}</p>
               </Section>
             )}
           </>
@@ -649,11 +649,11 @@ export function IntakeOverviewPanel({ intake, intakeCreatedAt, intakeStatus, onA
           <>
             <Section icon={Building2} title="Business">
               <div className="space-y-1.5 text-sm">
-                {intake.businessName && <p className="font-medium">{intake.businessName}</p>}
-                {intake.businessType && <p className="text-muted-foreground">{BUSINESS_TYPE_LABELS[intake.businessType] || intake.businessType}</p>}
-                {intake.serviceArea && <p className="text-muted-foreground flex items-center gap-1"><MapPin className="h-3 w-3" />{intake.serviceArea}</p>}
-                {intake.contactEmail && <p className="text-muted-foreground">{intake.contactEmail}{intake.contactPhone ? ` · ${intake.contactPhone}` : ''}</p>}
-                {intake.websiteUrl && <a href={intake.websiteUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1"><Globe className="h-3 w-3" />{intake.websiteUrl}</a>}
+                {intake.businessName && <p className="font-medium">{renderSafe(intake.businessName)}</p>}
+                {intake.businessType && <p className="text-muted-foreground">{BUSINESS_TYPE_LABELS[intake.businessType] || renderSafe(intake.businessType)}</p>}
+                {intake.serviceArea && <p className="text-muted-foreground flex items-center gap-1"><MapPin className="h-3 w-3" />{renderSafe(intake.serviceArea)}</p>}
+                {intake.contactEmail && <p className="text-muted-foreground">{renderSafe(intake.contactEmail)}{intake.contactPhone ? ` · ${renderSafe(intake.contactPhone)}` : ''}</p>}
+                {intake.websiteUrl && <a href={renderSafe(intake.websiteUrl)} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1"><Globe className="h-3 w-3" />{renderSafe(intake.websiteUrl)}</a>}
               </div>
             </Section>
 
@@ -711,9 +711,9 @@ export function IntakeOverviewPanel({ intake, intakeCreatedAt, intakeStatus, onA
             {(intake.styleVibe || intake.selectedDemo) && (
               <Section icon={Palette} title="Style">
                 <div className="space-y-1.5 text-sm">
-                  {intake.selectedDemo && <p className="text-muted-foreground">Demo: {intake.selectedDemo}</p>}
-                  {intake.styleVibe && <p>{STYLE_LABELS[intake.styleVibe] || intake.styleVibe}</p>}
-                  {intake.inspirationLinks && <p className="text-xs text-muted-foreground mt-1">{intake.inspirationLinks}</p>}
+                  {intake.selectedDemo && <p className="text-muted-foreground">Demo: {renderSafe(intake.selectedDemo)}</p>}
+                  {intake.styleVibe && <p>{STYLE_LABELS[intake.styleVibe] || renderSafe(intake.styleVibe)}</p>}
+                  {intake.inspirationLinks && <p className="text-xs text-muted-foreground mt-1">{renderSafe(intake.inspirationLinks)}</p>}
                 </div>
               </Section>
             )}
@@ -729,7 +729,7 @@ export function IntakeOverviewPanel({ intake, intakeCreatedAt, intakeStatus, onA
 
             {intake.notes && (
               <Section icon={FileText} title="Notes">
-                <p className="text-sm text-muted-foreground whitespace-pre-wrap">{intake.notes}</p>
+                <p className="text-sm text-muted-foreground whitespace-pre-wrap">{renderSafe(intake.notes)}</p>
               </Section>
             )}
           </>
