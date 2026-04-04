@@ -470,7 +470,7 @@ const Index = () => {
         brandName="Pleasant Cove Design"
         socialLinks={[]}
         mainLinks={[
-          { href: "/what-we-build", label: "What We Build" },
+          { href: "/what-we-build", label: "Services" },
           { href: "/pricing", label: "Pricing" },
           { href: "/portal", label: "Client Portal" },
           { href: "mailto:hello@pleasantcove.design", label: "Contact" },
