@@ -330,8 +330,8 @@ const Index = () => {
                     <Brain className="h-5 w-5 text-accent" />
                   </div>
                   <div>
-                    <h4 className="font-semibold text-foreground mb-1">Smart Qualification</h4>
-                    <p className="text-sm text-muted-foreground">Collects name, service needed, urgency, and address automatically.</p>
+                    <h4 className="font-semibold text-foreground mb-1">Confusing navigation</h4>
+                    <p className="text-sm text-muted-foreground">If visitors can't find your services in 5 seconds, they leave.</p>
                   </div>
                 </div>
               </GlowCard>
