@@ -318,8 +318,8 @@ const Index = () => {
                     <Phone className="h-5 w-5 text-accent" />
                   </div>
                   <div>
-                    <h4 className="font-semibold text-foreground mb-1">Instant Response</h4>
-                    <p className="text-sm text-muted-foreground">Texts back in under 60 seconds — before leads call your competitor.</p>
+                    <h4 className="font-semibold text-foreground mb-1">Missed calls & slow response</h4>
+                    <p className="text-sm text-muted-foreground">67% of customers won't call back if they don't get a response within an hour.</p>
                   </div>
                 </div>
               </GlowCard>
