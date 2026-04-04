@@ -300,13 +300,13 @@ const Index = () => {
               
               {/* CTA under video */}
               <div className="text-center lg:text-left">
-                <Link to="/get-demo?service=ai_receptionist&trial=true">
+                <Link to="/get-demo?service=review">
                   <Button size="lg" className="gap-2">
-                    Try a 7-Day Demo <ArrowRight className="h-4 w-4" />
+                    Get Your Free Review <ArrowRight className="h-4 w-4" />
                   </Button>
                 </Link>
                 <p className="text-sm text-muted-foreground mt-2">
-                  No commitment. See it work for your business.
+                  No commitment. See what's costing you customers.
                 </p>
               </div>
             </div>
