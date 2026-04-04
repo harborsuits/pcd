@@ -592,10 +592,10 @@ const WhatWeBuild = () => {
         <div className="container mx-auto px-6 relative z-10">
           <div className="text-center mb-12">
             <h2 className="font-serif text-3xl md:text-4xl lg:text-5xl font-bold mb-3 text-foreground">
-              What We Build
+              Our Services
             </h2>
             <p className="text-muted-foreground max-w-md mx-auto">
-              Tools that help you look sharp and run smooth.
+              Everything we offer to help your business look sharp and convert.
             </p>
           </div>
 
