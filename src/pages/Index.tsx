@@ -284,10 +284,10 @@ const Index = () => {
             </p>
           </div>
 
-          <div className="max-w-6xl mx-auto grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+          <div className="max-w-6xl mx-auto grid lg:grid-cols-1 gap-12 lg:gap-16 items-center">
+            {/* VIDEO SECTION - hidden but preserved for future use
             <div className="space-y-6">
               <div className="relative aspect-video rounded-2xl overflow-hidden shadow-2xl border border-accent/20 bg-black max-w-2xl mx-auto lg:mx-0">
-                {/* Inner shadow overlay to blend edges */}
                 <div className="absolute inset-0 shadow-[inset_0_0_20px_rgba(0,0,0,0.5)] pointer-events-none z-10 rounded-2xl" />
                 <iframe
                   src="https://www.youtube.com/embed/9A8WrDvIyQA"
@@ -297,8 +297,6 @@ const Index = () => {
                   className="absolute inset-0 w-full h-full"
                 />
               </div>
-              
-              {/* CTA under video */}
               <div className="text-center lg:text-left">
                 <Link to="/get-demo?service=review">
                   <Button size="lg" className="gap-2">
@@ -310,8 +308,9 @@ const Index = () => {
                 </p>
               </div>
             </div>
+            END VIDEO SECTION */}
             
-            <div className="space-y-4">
+            <div className="grid md:grid-cols-2 gap-4 max-w-4xl mx-auto">
               <GlowCard customSize glowColor="teal" className="p-5 bg-card/60">
                 <div className="flex items-center gap-4">
                   <div className="p-2 rounded-lg bg-accent/10">
@@ -359,6 +358,17 @@ const Index = () => {
                   </div>
                 </div>
               </GlowCard>
+            </div>
+
+            <div className="text-center mt-8">
+              <Link to="/get-demo?service=review">
+                <Button size="lg" className="gap-2">
+                  Get Your Free Review <ArrowRight className="h-4 w-4" />
+                </Button>
+              </Link>
+              <p className="text-sm text-muted-foreground mt-2">
+                No commitment. See what's costing you customers.
+              </p>
             </div>
           </div>
         </div>
