@@ -342,8 +342,8 @@ const Index = () => {
                     <Clock3 className="h-5 w-5 text-accent" />
                   </div>
                   <div>
-                    <h4 className="font-semibold text-foreground mb-1">24/7 Availability</h4>
-                    <p className="text-sm text-muted-foreground">Captures leads at 2 AM, on weekends, and while you're on the job.</p>
+                    <h4 className="font-semibold text-foreground mb-1">No mobile experience</h4>
+                    <p className="text-sm text-muted-foreground">Over 60% of your traffic is mobile. If it's broken, you're losing jobs.</p>
                   </div>
                 </div>
               </GlowCard>
