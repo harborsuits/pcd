@@ -354,8 +354,8 @@ const Index = () => {
                     <Calendar className="h-5 w-5 text-accent" />
                   </div>
                   <div>
-                    <h4 className="font-semibold text-foreground mb-1">Direct Booking</h4>
-                    <p className="text-sm text-muted-foreground">Syncs directly to your calendar — no double-booking, no back-and-forth.</p>
+                    <h4 className="font-semibold text-foreground mb-1">No clear next step</h4>
+                    <p className="text-sm text-muted-foreground">No booking button, no contact form, no reason to stay.</p>
                   </div>
                 </div>
               </GlowCard>
