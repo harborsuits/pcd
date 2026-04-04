@@ -394,7 +394,7 @@ const Index = () => {
           <div className="text-center">
             <Link to="/what-we-build">
               <Button variant="ghost" size="lg" className="text-muted-foreground hover:text-foreground">
-                See Everything We Build
+                See all our services
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </Link>
