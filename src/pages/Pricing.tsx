@@ -8,7 +8,7 @@ const Pricing = () => {
     <div className="min-h-screen flex flex-col bg-page-bg text-foreground">
       <SEOHead
         title="Pricing & Services"
-        description="Straightforward pricing for websites, AI receptionists, and digital infrastructure for local businesses. Choose a bundle that fits."
+        description="Straightforward pricing for website refreshes, one-page builds, and booking flow fixes for small businesses. No retainers, no surprises."
         path="/pricing"
       />
       {/* Header */}
