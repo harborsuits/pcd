@@ -259,10 +259,10 @@ const Index = () => {
         <div className="container mx-auto px-6">
           <div className="text-center mb-10">
             <h2 className="font-serif text-3xl md:text-4xl font-bold mb-3">
-              Recent website fixes we've done.
-            </h2>
-            <p className="text-muted-foreground">
-              See real before-and-after examples — no commitment.
+               See what we build for businesses like yours.
+             </h2>
+             <p className="text-muted-foreground">
+               Click any demo to explore — no commitment, just a preview.
             </p>
           </div>
           
