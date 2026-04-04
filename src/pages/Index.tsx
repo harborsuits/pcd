@@ -166,15 +166,15 @@ const Index = () => {
         <div className="relative container mx-auto px-6">
           <div className="text-center max-w-3xl mx-auto">
             <h1 className="font-serif text-4xl md:text-5xl lg:text-6xl font-bold leading-tight mb-2">
-              Never miss a lead again.
+              Your website is losing you customers.
             </h1>
             <h2 className="font-serif text-2xl md:text-3xl lg:text-4xl font-semibold italic text-accent mb-6">
               <Typewriter
                 text={[
-                  "With leads captured, qualified, and followed up automatically.",
-                  "With missed calls turned into booked jobs.",
-                  "With instant replies to every call and text.",
-                  "With systems that convert visitors into customers.",
+                  "Outdated design drives visitors away.",
+                  "Broken contact forms lose leads.",
+                  "Confusing navigation kills conversions.",
+                  "Poor mobile experience costs you jobs.",
                 ]}
                 speed={60}
                 deleteSpeed={30}
@@ -185,7 +185,7 @@ const Index = () => {
             </h2>
             
             <p className="text-lg md:text-xl text-muted-foreground leading-relaxed max-w-2xl mx-auto">
-              We design custom websites for service businesses and power them with an AI receptionist that answers calls, books appointments, and follows up automatically.
+              We fix outdated websites, broken contact flows, and confusing customer journeys for small businesses — so you stop losing the customers you're already attracting.
             </p>
           </div>
         </div>
