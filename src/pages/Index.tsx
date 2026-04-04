@@ -204,7 +204,7 @@ const Index = () => {
           </div>
           
           <div className="grid sm:grid-cols-3 gap-4 max-w-3xl mx-auto">
-            <Link to="/get-demo?service=ai_receptionist">
+            <Link to="/get-demo?service=website_refresh">
               <GlowCard
                 customSize
                 glowColor="teal"
@@ -213,12 +213,12 @@ const Index = () => {
                 <div className="p-3 rounded-xl bg-accent/10 w-fit mx-auto mb-4">
                   <Bot className="h-8 w-8 text-accent" />
                 </div>
-                <h3 className="font-semibold text-lg text-foreground mb-2">AI Receptionist</h3>
-                <p className="text-sm text-muted-foreground">Answers calls, books appointments, and follows up — 24/7.</p>
+                <h3 className="font-semibold text-lg text-foreground mb-2">Website Refresh</h3>
+                <p className="text-sm text-muted-foreground">Your site looks outdated and customers don't trust it.</p>
               </GlowCard>
             </Link>
             
-            <Link to="/get-demo?service=website">
+            <Link to="/get-demo?service=one_page">
               <GlowCard
                 customSize
                 glowColor="emerald"
@@ -227,12 +227,12 @@ const Index = () => {
                 <div className="p-3 rounded-xl bg-accent/10 w-fit mx-auto mb-4">
                   <Globe className="h-8 w-8 text-accent" />
                 </div>
-                <h3 className="font-semibold text-lg text-foreground mb-2">Website</h3>
-                <p className="text-sm text-muted-foreground">A fast, modern site that converts visitors into customers.</p>
+                <h3 className="font-semibold text-lg text-foreground mb-2">One-Page Website</h3>
+                <p className="text-sm text-muted-foreground">You need a simple, professional site that actually converts.</p>
               </GlowCard>
             </Link>
             
-            <Link to="/get-demo?service=both">
+            <Link to="/get-demo?service=contact_fix">
               <GlowCard
                 customSize
                 glowColor="purple"
@@ -241,8 +241,8 @@ const Index = () => {
                 <div className="p-3 rounded-xl bg-accent/10 w-fit mx-auto mb-4">
                   <Sparkles className="h-8 w-8 text-accent" />
                 </div>
-                <h3 className="font-semibold text-lg text-foreground mb-2">Complete Growth System</h3>
-                <p className="text-sm text-muted-foreground">Website + AI Receptionist — the complete lead-capture system.</p>
+                <h3 className="font-semibold text-lg text-foreground mb-2">Booking & Contact Fix</h3>
+                <p className="text-sm text-muted-foreground">Customers can't easily reach you or book your services.</p>
                 <span className="inline-block mt-3 text-xs bg-accent/20 text-accent px-2 py-1 rounded-full">Most Popular</span>
               </GlowCard>
             </Link>
