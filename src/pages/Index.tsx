@@ -416,10 +416,10 @@ const Index = () => {
           
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 max-w-4xl mx-auto">
             {[
-              { num: 1, title: "Quick call", desc: "15 minutes to understand your business." },
-              { num: 2, title: "We build", desc: "Custom site + portal, no templates." },
-              { num: 3, title: "You review", desc: "Preview, feedback, approve — in your portal." },
-              { num: 4, title: "Go live", desc: "Launch + ongoing support included." },
+              { num: 1, title: "Free review", desc: "We audit your website and show you what's costing you customers." },
+              { num: 2, title: "Fix plan", desc: "You get a clear list of what to fix and what it costs." },
+              { num: 3, title: "We fix it", desc: "We handle everything — design, code, launch." },
+              { num: 4, title: "You grow", desc: "More calls, more bookings, more customers." },
             ].map((step) => (
               <GlowCard
                 key={step.num}
