@@ -410,7 +410,7 @@ const Index = () => {
               How It Works
             </h2>
             <p className="text-muted-foreground">
-              From first call to live site — simple and stress-free.
+              From free review to live site — simple and stress-free.
             </p>
           </div>
           
