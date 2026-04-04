@@ -442,14 +442,14 @@ const Index = () => {
       <section className="py-16 border-t border-border">
         <div className="container mx-auto px-6 text-center">
           <h2 className="font-serif text-3xl md:text-4xl font-bold mb-4">
-            Ready to see it for your business?
+            Find out what your website is costing you.
           </h2>
           <p className="text-muted-foreground max-w-md mx-auto mb-8">
-            Get a personalized website demo — no pressure, no commitment.
+            Get a free website review — we'll show you exactly what to fix.
           </p>
-          <Link to="/get-demo?service=demo">
+          <Link to="/get-demo?service=review">
             <LiquidButton size="lg">
-              See a Demo
+              Get My Free Review
             </LiquidButton>
           </Link>
         </div>
