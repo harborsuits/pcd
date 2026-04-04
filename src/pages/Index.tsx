@@ -277,10 +277,10 @@ const Index = () => {
         <div className="container mx-auto px-6">
           <div className="text-center mb-10">
             <h2 className="font-serif text-3xl md:text-4xl lg:text-5xl font-bold mb-3">
-              Your AI Front Desk
+              Problems we find on every audit
             </h2>
             <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto">
-              Answers calls, texts, and forms instantly. Qualifies leads. Books appointments directly into your calendar — 24/7.
+              Most small business websites have the same issues. Here's what we look for — and fix.
             </p>
           </div>
 
