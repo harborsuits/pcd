@@ -139,7 +139,7 @@ const Index = () => {
                   className="text-lg font-medium hover:text-accent transition-colors"
                   onClick={() => setMobileMenuOpen(false)}
                 >
-                  What We Build
+                  Services
                 </Link>
                 <Link 
                   to="/pricing" 
