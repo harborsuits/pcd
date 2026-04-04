@@ -52,33 +52,33 @@ const exampleDemos = [
 const capabilities = [
   {
     icon: Globe,
-    title: "Websites",
-    description: "Fast, modern, mobile-first — built to convert.",
+    title: "Outdated Design",
+    description: "Modern, clean look that builds trust instantly.",
   },
   {
     icon: FolderOpen,
-    title: "Client Portal",
-    description: "Messages, files, approvals — all in one place.",
+    title: "Broken Contact Flow",
+    description: "Clear paths to reach you — forms, calls, booking.",
   },
   {
     icon: CalendarCheck,
-    title: "Booking + Intake",
-    description: "Forms, scheduling, and smart routing.",
+    title: "Missing Booking",
+    description: "Online scheduling so customers don't have to chase you.",
   },
   {
     icon: CreditCard,
-    title: "Payments",
-    description: "Invoices, deposits, and payment links.",
+    title: "Weak Mobile Experience",
+    description: "Sites that work perfectly on every phone and tablet.",
   },
   {
     icon: Zap,
-    title: "Automations",
-    description: "Follow-ups, reminders, and lead capture.",
+    title: "Poor SEO",
+    description: "Show up when customers search for what you do.",
   },
   {
     icon: Bot,
-    title: "AI Receptionist",
-    description: "Answers calls and books appointments 24/7.",
+    title: "No Follow-Up",
+    description: "Automated responses so leads don't go cold.",
   },
 ];
 

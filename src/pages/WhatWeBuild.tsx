@@ -752,11 +752,11 @@ const WhatWeBuild = () => {
       <section className="py-20 border-t border-border">
         <div className="container mx-auto px-6 text-center">
           <h2 className="font-serif text-2xl md:text-3xl font-bold mb-6">
-            Ready to see yours?
+            Ready to fix your website?
           </h2>
           <Button asChild size="lg" className="group">
-            <Link to="/get-demo?service=demo">
-              Get Your Demo
+            <Link to="/get-demo?service=review">
+              Get Your Free Review
               <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
             </Link>
           </Button>
