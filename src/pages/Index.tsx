@@ -196,10 +196,10 @@ const Index = () => {
         <div className="container mx-auto px-6">
           <div className="text-center mb-8">
             <h2 className="font-serif text-2xl md:text-3xl font-bold mb-2">
-              What are you looking for?
+              What's hurting your business?
             </h2>
             <p className="text-muted-foreground">
-              Choose your starting point — we'll handle the rest.
+              Pick what sounds familiar — we'll show you how to fix it.
             </p>
           </div>
           
