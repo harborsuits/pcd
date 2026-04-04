@@ -52,33 +52,33 @@ const exampleDemos = [
 const capabilities = [
   {
     icon: Globe,
-    title: "Websites",
-    description: "Fast, modern, mobile-first — built to convert.",
+    title: "Outdated Design",
+    description: "Modern, clean look that builds trust instantly.",
   },
   {
     icon: FolderOpen,
-    title: "Client Portal",
-    description: "Messages, files, approvals — all in one place.",
+    title: "Broken Contact Flow",
+    description: "Clear paths to reach you — forms, calls, booking.",
   },
   {
     icon: CalendarCheck,
-    title: "Booking + Intake",
-    description: "Forms, scheduling, and smart routing.",
+    title: "Missing Booking",
+    description: "Online scheduling so customers don't have to chase you.",
   },
   {
     icon: CreditCard,
-    title: "Payments",
-    description: "Invoices, deposits, and payment links.",
+    title: "Weak Mobile Experience",
+    description: "Sites that work perfectly on every phone and tablet.",
   },
   {
     icon: Zap,
-    title: "Automations",
-    description: "Follow-ups, reminders, and lead capture.",
+    title: "Poor SEO",
+    description: "Show up when customers search for what you do.",
   },
   {
     icon: Bot,
-    title: "AI Receptionist",
-    description: "Answers calls and books appointments 24/7.",
+    title: "No Follow-Up",
+    description: "Automated responses so leads don't go cold.",
   },
 ];
 
@@ -101,8 +101,8 @@ const Index = () => {
   return (
     <div className="min-h-screen flex flex-col bg-page-bg text-foreground">
       <SEOHead
-        title="Pleasant Cove Design — Web Design Studio"
-        description="Modern New England web design studio helping owner-operated businesses turn missed calls and inquiries into booked clients with smart, automated websites."
+        title="Pleasant Cove Design — We Fix Websites That Cost You Customers"
+        description="We help small businesses fix outdated websites, broken contact flows, and confusing customer journeys. Get a free website review."
         path="/"
       />
       {/* Header */}
@@ -115,7 +115,7 @@ const Index = () => {
           {/* Desktop nav */}
           <nav className="hidden sm:flex items-center gap-4">
             <Button asChild variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
-              <Link to="/what-we-build">What We Build</Link>
+              <Link to="/what-we-build">Services</Link>
             </Button>
             <Button asChild variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
               <Link to="/pricing">Pricing</Link>
@@ -139,7 +139,7 @@ const Index = () => {
                   className="text-lg font-medium hover:text-accent transition-colors"
                   onClick={() => setMobileMenuOpen(false)}
                 >
-                  What We Build
+                  Services
                 </Link>
                 <Link 
                   to="/pricing" 
@@ -166,15 +166,15 @@ const Index = () => {
         <div className="relative container mx-auto px-6">
           <div className="text-center max-w-3xl mx-auto">
             <h1 className="font-serif text-4xl md:text-5xl lg:text-6xl font-bold leading-tight mb-2">
-              Never miss a lead again.
+              Your website is losing you customers.
             </h1>
             <h2 className="font-serif text-2xl md:text-3xl lg:text-4xl font-semibold italic text-accent mb-6">
               <Typewriter
                 text={[
-                  "With leads captured, qualified, and followed up automatically.",
-                  "With missed calls turned into booked jobs.",
-                  "With instant replies to every call and text.",
-                  "With systems that convert visitors into customers.",
+                  "Outdated design drives visitors away.",
+                  "Broken contact forms lose leads.",
+                  "Confusing navigation kills conversions.",
+                  "Poor mobile experience costs you jobs.",
                 ]}
                 speed={60}
                 deleteSpeed={30}
@@ -185,7 +185,7 @@ const Index = () => {
             </h2>
             
             <p className="text-lg md:text-xl text-muted-foreground leading-relaxed max-w-2xl mx-auto">
-              We design custom websites for service businesses and power them with an AI receptionist that answers calls, books appointments, and follows up automatically.
+              We fix outdated websites, broken contact flows, and confusing customer journeys for small businesses — so you stop losing the customers you're already attracting.
             </p>
           </div>
         </div>
@@ -196,15 +196,15 @@ const Index = () => {
         <div className="container mx-auto px-6">
           <div className="text-center mb-8">
             <h2 className="font-serif text-2xl md:text-3xl font-bold mb-2">
-              What are you looking for?
+              What's hurting your business?
             </h2>
             <p className="text-muted-foreground">
-              Choose your starting point — we'll handle the rest.
+              Pick what sounds familiar — we'll show you how to fix it.
             </p>
           </div>
           
           <div className="grid sm:grid-cols-3 gap-4 max-w-3xl mx-auto">
-            <Link to="/get-demo?service=ai_receptionist">
+            <Link to="/get-demo?service=website_refresh">
               <GlowCard
                 customSize
                 glowColor="teal"
@@ -213,12 +213,12 @@ const Index = () => {
                 <div className="p-3 rounded-xl bg-accent/10 w-fit mx-auto mb-4">
                   <Bot className="h-8 w-8 text-accent" />
                 </div>
-                <h3 className="font-semibold text-lg text-foreground mb-2">AI Receptionist</h3>
-                <p className="text-sm text-muted-foreground">Answers calls, books appointments, and follows up — 24/7.</p>
+                <h3 className="font-semibold text-lg text-foreground mb-2">Website Refresh</h3>
+                <p className="text-sm text-muted-foreground">Your site looks outdated and customers don't trust it.</p>
               </GlowCard>
             </Link>
             
-            <Link to="/get-demo?service=website">
+            <Link to="/get-demo?service=one_page">
               <GlowCard
                 customSize
                 glowColor="emerald"
@@ -227,12 +227,12 @@ const Index = () => {
                 <div className="p-3 rounded-xl bg-accent/10 w-fit mx-auto mb-4">
                   <Globe className="h-8 w-8 text-accent" />
                 </div>
-                <h3 className="font-semibold text-lg text-foreground mb-2">Website</h3>
-                <p className="text-sm text-muted-foreground">A fast, modern site that converts visitors into customers.</p>
+                <h3 className="font-semibold text-lg text-foreground mb-2">One-Page Website</h3>
+                <p className="text-sm text-muted-foreground">You need a simple, professional site that actually converts.</p>
               </GlowCard>
             </Link>
             
-            <Link to="/get-demo?service=both">
+            <Link to="/get-demo?service=contact_fix">
               <GlowCard
                 customSize
                 glowColor="purple"
@@ -241,8 +241,8 @@ const Index = () => {
                 <div className="p-3 rounded-xl bg-accent/10 w-fit mx-auto mb-4">
                   <Sparkles className="h-8 w-8 text-accent" />
                 </div>
-                <h3 className="font-semibold text-lg text-foreground mb-2">Complete Growth System</h3>
-                <p className="text-sm text-muted-foreground">Website + AI Receptionist — the complete lead-capture system.</p>
+                <h3 className="font-semibold text-lg text-foreground mb-2">Booking & Contact Fix</h3>
+                <p className="text-sm text-muted-foreground">Customers can't easily reach you or book your services.</p>
                 <span className="inline-block mt-3 text-xs bg-accent/20 text-accent px-2 py-1 rounded-full">Most Popular</span>
               </GlowCard>
             </Link>
@@ -259,10 +259,10 @@ const Index = () => {
         <div className="container mx-auto px-6">
           <div className="text-center mb-10">
             <h2 className="font-serif text-3xl md:text-4xl font-bold mb-3">
-              Real websites. Smarter lead handling.
+              Recent website fixes we've done.
             </h2>
             <p className="text-muted-foreground">
-              Click any demo to explore — no commitment, just a preview.
+              See real before-and-after examples — no commitment.
             </p>
           </div>
           
@@ -277,10 +277,10 @@ const Index = () => {
         <div className="container mx-auto px-6">
           <div className="text-center mb-10">
             <h2 className="font-serif text-3xl md:text-4xl lg:text-5xl font-bold mb-3">
-              Your AI Front Desk
+              Problems we find on every audit
             </h2>
             <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto">
-              Answers calls, texts, and forms instantly. Qualifies leads. Books appointments directly into your calendar — 24/7.
+              Most small business websites have the same issues. Here's what we look for — and fix.
             </p>
           </div>
 
@@ -300,13 +300,13 @@ const Index = () => {
               
               {/* CTA under video */}
               <div className="text-center lg:text-left">
-                <Link to="/get-demo?service=ai_receptionist&trial=true">
+                <Link to="/get-demo?service=review">
                   <Button size="lg" className="gap-2">
-                    Try a 7-Day Demo <ArrowRight className="h-4 w-4" />
+                    Get Your Free Review <ArrowRight className="h-4 w-4" />
                   </Button>
                 </Link>
                 <p className="text-sm text-muted-foreground mt-2">
-                  No commitment. See it work for your business.
+                  No commitment. See what's costing you customers.
                 </p>
               </div>
             </div>
@@ -318,8 +318,8 @@ const Index = () => {
                     <Phone className="h-5 w-5 text-accent" />
                   </div>
                   <div>
-                    <h4 className="font-semibold text-foreground mb-1">Instant Response</h4>
-                    <p className="text-sm text-muted-foreground">Texts back in under 60 seconds — before leads call your competitor.</p>
+                    <h4 className="font-semibold text-foreground mb-1">Missed calls & slow response</h4>
+                    <p className="text-sm text-muted-foreground">67% of customers won't call back if they don't get a response within an hour.</p>
                   </div>
                 </div>
               </GlowCard>
@@ -330,8 +330,8 @@ const Index = () => {
                     <Brain className="h-5 w-5 text-accent" />
                   </div>
                   <div>
-                    <h4 className="font-semibold text-foreground mb-1">Smart Qualification</h4>
-                    <p className="text-sm text-muted-foreground">Collects name, service needed, urgency, and address automatically.</p>
+                    <h4 className="font-semibold text-foreground mb-1">Confusing navigation</h4>
+                    <p className="text-sm text-muted-foreground">If visitors can't find your services in 5 seconds, they leave.</p>
                   </div>
                 </div>
               </GlowCard>
@@ -342,8 +342,8 @@ const Index = () => {
                     <Clock3 className="h-5 w-5 text-accent" />
                   </div>
                   <div>
-                    <h4 className="font-semibold text-foreground mb-1">24/7 Availability</h4>
-                    <p className="text-sm text-muted-foreground">Captures leads at 2 AM, on weekends, and while you're on the job.</p>
+                    <h4 className="font-semibold text-foreground mb-1">No mobile experience</h4>
+                    <p className="text-sm text-muted-foreground">Over 60% of your traffic is mobile. If it's broken, you're losing jobs.</p>
                   </div>
                 </div>
               </GlowCard>
@@ -354,8 +354,8 @@ const Index = () => {
                     <Calendar className="h-5 w-5 text-accent" />
                   </div>
                   <div>
-                    <h4 className="font-semibold text-foreground mb-1">Direct Booking</h4>
-                    <p className="text-sm text-muted-foreground">Syncs directly to your calendar — no double-booking, no back-and-forth.</p>
+                    <h4 className="font-semibold text-foreground mb-1">No clear next step</h4>
+                    <p className="text-sm text-muted-foreground">No booking button, no contact form, no reason to stay.</p>
                   </div>
                 </div>
               </GlowCard>
@@ -369,10 +369,10 @@ const Index = () => {
         <div className="container mx-auto px-6">
           <div className="text-center mb-12">
             <h2 className="font-serif text-3xl md:text-4xl font-bold mb-3">
-              What We Build
+              What we fix
             </h2>
             <p className="text-muted-foreground max-w-xl mx-auto">
-              Everything a local service business needs to look professional and run smoothly.
+              Common issues we solve for small businesses every week.
             </p>
           </div>
           
@@ -394,7 +394,7 @@ const Index = () => {
           <div className="text-center">
             <Link to="/what-we-build">
               <Button variant="ghost" size="lg" className="text-muted-foreground hover:text-foreground">
-                See Everything We Build
+                See all our services
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </Link>
@@ -410,16 +410,16 @@ const Index = () => {
               How It Works
             </h2>
             <p className="text-muted-foreground">
-              From first call to live site — simple and stress-free.
+              From free review to live site — simple and stress-free.
             </p>
           </div>
           
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 max-w-4xl mx-auto">
             {[
-              { num: 1, title: "Quick call", desc: "15 minutes to understand your business." },
-              { num: 2, title: "We build", desc: "Custom site + portal, no templates." },
-              { num: 3, title: "You review", desc: "Preview, feedback, approve — in your portal." },
-              { num: 4, title: "Go live", desc: "Launch + ongoing support included." },
+              { num: 1, title: "Free review", desc: "We audit your website and show you what's costing you customers." },
+              { num: 2, title: "Fix plan", desc: "You get a clear list of what to fix and what it costs." },
+              { num: 3, title: "We fix it", desc: "We handle everything — design, code, launch." },
+              { num: 4, title: "You grow", desc: "More calls, more bookings, more customers." },
             ].map((step) => (
               <GlowCard
                 key={step.num}
@@ -442,14 +442,14 @@ const Index = () => {
       <section className="py-16 border-t border-border">
         <div className="container mx-auto px-6 text-center">
           <h2 className="font-serif text-3xl md:text-4xl font-bold mb-4">
-            Ready to see it for your business?
+            Find out what your website is costing you.
           </h2>
           <p className="text-muted-foreground max-w-md mx-auto mb-8">
-            Get a personalized website demo — no pressure, no commitment.
+            Get a free website review — we'll show you exactly what to fix.
           </p>
-          <Link to="/get-demo?service=demo">
+          <Link to="/get-demo?service=review">
             <LiquidButton size="lg">
-              See a Demo
+              Get My Free Review
             </LiquidButton>
           </Link>
         </div>
@@ -470,7 +470,7 @@ const Index = () => {
         brandName="Pleasant Cove Design"
         socialLinks={[]}
         mainLinks={[
-          { href: "/what-we-build", label: "What We Build" },
+          { href: "/what-we-build", label: "Services" },
           { href: "/pricing", label: "Pricing" },
           { href: "/portal", label: "Client Portal" },
           { href: "mailto:hello@pleasantcove.design", label: "Contact" },
