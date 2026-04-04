@@ -562,8 +562,8 @@ const WhatWeBuild = () => {
   return (
     <div className="min-h-screen flex flex-col bg-page-bg text-foreground">
       <SEOHead
-        title="What We Build"
-        description="Websites, AI front desk, client portals, booking systems, and automations for local businesses. See how we help owner-operated businesses grow."
+        title="Our Services"
+        description="Website refreshes, one-page builds, booking flow fixes, and more for small businesses. See how we help you stop losing customers."
         path="/what-we-build"
       />
       {/* Header */}
