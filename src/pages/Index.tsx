@@ -369,10 +369,10 @@ const Index = () => {
         <div className="container mx-auto px-6">
           <div className="text-center mb-12">
             <h2 className="font-serif text-3xl md:text-4xl font-bold mb-3">
-              What We Build
+              What we fix
             </h2>
             <p className="text-muted-foreground max-w-xl mx-auto">
-              Everything a local service business needs to look professional and run smoothly.
+              Common issues we solve for small businesses every week.
             </p>
           </div>
           
