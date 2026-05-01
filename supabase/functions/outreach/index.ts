@@ -262,15 +262,23 @@ async function handleQueue(req: Request): Promise<Response> {
     const suppressedPhones = new Set((suppressions || []).map((s) => s.phone));
 
     for (const leadId of lead_ids) {
-      // Fetch lead with phone fields
+      // Fetch lead with phone fields + demo review status
       const { data: lead, error: leadError } = await supabase
         .from("leads")
-        .select("id, business_name, phone, phone_raw, phone_e164, outreach_status")
+        .select("id, business_name, phone, phone_raw, phone_e164, outreach_status, demo_review_status, demo_status")
         .eq("id", leadId)
         .single();
 
       if (leadError || !lead) {
         skippedReasons["not_found"] = (skippedReasons["not_found"] || 0) + 1;
+        skipped++;
+        continue;
+      }
+
+      // SECURITY GATE: Demo must be approved before any outreach can be queued.
+      // This mirrors the UI gate but enforces it server-side so it cannot be bypassed.
+      if (lead.demo_review_status !== "approved") {
+        skippedReasons["demo_not_approved"] = (skippedReasons["demo_not_approved"] || 0) + 1;
         skipped++;
         continue;
       }
