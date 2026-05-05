@@ -13,6 +13,8 @@ import { Typewriter } from "@/components/ui/typewriter-text";
 import pcdLogo from "@/assets/pcd-logo.jpeg";
 import { SEOHead } from "@/components/SEOHead";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { LocalProofStrip } from "@/components/LocalProofStrip";
+import { NAP } from "@/lib/localPages";
 
 // Lazy load 3D component to isolate React Three Fiber from crashing the whole app
 const Hero3DModel = lazy(() => import("@/components/Hero3DModel").then(m => ({ default: m.Hero3DModel })));
