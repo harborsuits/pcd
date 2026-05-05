@@ -6,21 +6,18 @@ const items = [
   {
     icon: Hammer,
     trade: "Roofer",
-    location: "Damariscotta-area",
     fix: "Clear quote button + mobile fix",
     href: "/demos/roofer",
   },
   {
     icon: UtensilsCrossed,
     trade: "Restaurant",
-    location: "Boothbay-area",
     fix: "Fast menu + reservations on mobile",
     href: "/demos/restaurant",
   },
   {
     icon: Scissors,
     trade: "Salon",
-    location: "Camden-area",
     fix: "Online booking right on the homepage",
     href: "/demos/salon",
   },
@@ -35,10 +32,10 @@ export function LocalProofStrip() {
             Built for Midcoast Maine
           </p>
           <h2 className="font-serif text-2xl md:text-3xl font-bold mb-2">
-            Recent demos for local businesses
+            Sample layouts by trade
           </h2>
           <p className="text-muted-foreground text-sm max-w-xl mx-auto">
-            Real layouts we've built for trades around Damariscotta, Boothbay, Camden, and Rockland.
+            Example designs showing how a clean, mobile-friendly site looks for common Midcoast trades.
           </p>
         </div>
 
@@ -56,7 +53,7 @@ export function LocalProofStrip() {
                   </div>
                   <div>
                     <h3 className="font-semibold text-foreground leading-tight">{it.trade}</h3>
-                    <p className="text-xs text-muted-foreground">{it.location}</p>
+                    <p className="text-xs text-muted-foreground">Sample design</p>
                   </div>
                 </div>
                 <p className="text-sm text-muted-foreground">{it.fix}</p>
