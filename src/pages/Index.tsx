@@ -167,6 +167,9 @@ const Index = () => {
       <section className="pt-12 md:pt-16 pb-10 md:pb-12 relative overflow-hidden">
         <div className="relative container mx-auto px-6">
           <div className="text-center max-w-3xl mx-auto">
+            <p className="text-xs uppercase tracking-wider text-accent font-semibold mb-4">
+              Midcoast Maine · Based in Newcastle
+            </p>
             <h1 className="font-serif text-4xl md:text-5xl lg:text-6xl font-bold leading-tight mb-2">
               Your website is losing you customers.
             </h1>
@@ -185,13 +188,18 @@ const Index = () => {
                 cursor="|"
               />
             </h2>
-            
-            <p className="text-lg md:text-xl text-muted-foreground leading-relaxed max-w-2xl mx-auto">
+
+            <p className="text-lg md:text-xl text-muted-foreground leading-relaxed max-w-2xl mx-auto mb-3">
               We fix outdated websites, broken contact flows, and confusing customer journeys for small businesses — so you stop losing the customers you're already attracting.
+            </p>
+            <p className="text-sm text-muted-foreground/80">
+              Serving Damariscotta, Wiscasset, Boothbay, Camden, Rockland, Brunswick, Bath, and the rest of Midcoast Maine.
             </p>
           </div>
         </div>
       </section>
+
+      <LocalProofStrip />
 
       {/* 2️⃣ SERVICE CHOOSER - What do you need? */}
       <section className="py-12 md:py-16 border-t border-border bg-card/30">
@@ -320,7 +328,7 @@ const Index = () => {
                   </div>
                   <div>
                     <h4 className="font-semibold text-foreground mb-1">Missed calls & slow response</h4>
-                    <p className="text-sm text-muted-foreground">67% of customers won't call back if they don't get a response within an hour.</p>
+                    <p className="text-sm text-muted-foreground">If no one answers, most people won't call back. Slow follow-up quietly kills jobs.</p>
                   </div>
                 </div>
               </GlowCard>
@@ -344,7 +352,7 @@ const Index = () => {
                   </div>
                   <div>
                     <h4 className="font-semibold text-foreground mb-1">No mobile experience</h4>
-                    <p className="text-sm text-muted-foreground">Over 60% of your traffic is mobile. If it's broken, you're losing jobs.</p>
+                    <p className="text-sm text-muted-foreground">Most of your traffic is on a phone. If the site is hard to use there, you're losing jobs.</p>
                   </div>
                 </div>
               </GlowCard>
@@ -467,11 +475,17 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Already a Client */}
+      {/* Already a Client + Local NAP */}
       <section className="py-10 border-t border-border">
-        <div className="container mx-auto px-6 text-center">
-          <p className="text-muted-foreground mb-4">
+        <div className="container mx-auto px-6 text-center space-y-3">
+          <p className="text-muted-foreground">
             Already a client? <Link to="/portal" className="text-accent hover:underline">Log in to your portal</Link>
+          </p>
+          <p className="text-sm text-muted-foreground/80">
+            {NAP.name} · {NAP.city}, {NAP.region} · <a href={`mailto:${NAP.email}`} className="hover:text-accent">{NAP.email}</a>
+          </p>
+          <p className="text-xs text-muted-foreground/70">
+            <Link to="/midcoast-maine" className="hover:text-accent">Serving Midcoast Maine →</Link>
           </p>
         </div>
       </section>
