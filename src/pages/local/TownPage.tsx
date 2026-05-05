@@ -81,10 +81,11 @@ const TownPage = () => {
           </h2>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 max-w-4xl mx-auto">
             {VERTICALS.map((v) => (
-              <Link key={v.slug} to={`/websites-for/${v.slug}`}>
+              <Link key={v.slug} to={v.demoPath ?? `/websites-for/${v.slug}`}>
                 <GlowCard customSize glowColor="emerald" className="bg-card/80 p-4 hover:bg-card transition-all h-full">
                   <h3 className="font-semibold text-foreground">{v.name}</h3>
                   <p className="text-xs text-muted-foreground mt-1">{v.outcome}</p>
+                  {v.demoPath && <p className="text-xs text-accent mt-2">View demo →</p>}
                 </GlowCard>
               </Link>
             ))}
