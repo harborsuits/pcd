@@ -5,6 +5,7 @@ import { ShaderAnimation } from "@/components/ui/shader-animation";
 import { ImageAutoSlider } from "@/components/ui/image-auto-slider";
 import { GlowCard } from "@/components/ui/spotlight-card";
 import salonHeroModel from "@/assets/salon/salon-hero-model.png";
+import salonServicesModel from "@/assets/salon/salon-services-model.png";
 import salonMakeup from "@/assets/salon/makeup.jpg";
 import salonHair1 from "@/assets/salon/hair1.jpg";
 import salonHair2 from "@/assets/salon/hair2.jpeg";
@@ -95,7 +96,7 @@ const SalonDemo = () => {
         {/* Decorative background image */}
         <div className="absolute right-0 top-0 h-full w-1/2 pointer-events-none">
           <img 
-            src={salonHeroModel} 
+            src={salonServicesModel} 
             alt="" 
             className="h-full w-auto object-contain object-right opacity-10"
           />

@@ -35,7 +35,7 @@ const RooferDemo = () => {
   return (
     <div className="min-h-screen bg-slate-950 text-white">
       {/* Header */}
-      <header className="bg-slate-950/80 backdrop-blur-md border-b border-slate-800 sticky top-0 z-50">
+      <header className="bg-slate-950/95 backdrop-blur-xl border-b border-slate-800 sticky top-0 z-50">
         <div className="container mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-6">
             <Link to="/" className="flex items-center gap-1.5 text-slate-500 hover:text-slate-300 transition-colors text-xs opacity-70 hover:opacity-100">
