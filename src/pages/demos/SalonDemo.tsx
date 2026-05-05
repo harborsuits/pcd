@@ -83,10 +83,6 @@ const SalonDemo = () => {
               <Star className="h-5 w-5 text-rose-400" />
               <span>4.9★ (320+ Reviews)</span>
             </div>
-            <div className="flex items-center gap-2 bg-white/60 backdrop-blur-sm px-4 py-2 rounded-full">
-              <MapPin className="h-5 w-5 text-rose-400" />
-              <span>Uptown Village</span>
-            </div>
           </div>
         </div>
       </section>
@@ -258,14 +254,12 @@ const SalonDemo = () => {
                 </div>
               </div>
               <div>
-                <h4 className="font-medium mb-4 text-white">Location</h4>
+                <h4 className="font-medium mb-4 text-white">Contact</h4>
                 <div className="space-y-2 text-sm text-rose-200">
-                  <p>789 Uptown Boulevard</p>
-                  <p>Suite 101</p>
-                  <p>Anytown, USA 12345</p>
-                  <p className="mt-4">
+                  <p>
                     <a href="tel:5554567890" className="text-white hover:underline">(555) 456-7890</a>
                   </p>
+                  <p>hello@blushandbloom.com</p>
                 </div>
               </div>
             </div>

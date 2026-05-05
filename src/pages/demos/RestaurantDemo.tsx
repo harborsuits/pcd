@@ -217,29 +217,29 @@ const RestaurantDemo = () => {
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 max-w-5xl mx-auto relative z-40">
             <AwardBadge
               variant="badge"
-              title="Best of Portland"
-              subtitle="Portland Magazine"
+              title="Best Fine Dining"
+              subtitle="Critics' Choice"
               date="2008"
               level="gold"
             />
             <AwardBadge
               variant="badge"
               title="Top Restaurant"
-              subtitle="Down East Magazine"
+              subtitle="Editors' Pick"
               date="2018"
               level="gold"
             />
             <AwardBadge
               variant="badge"
               title="Best New Chef"
-              subtitle="Maine Restaurant Assoc."
+              subtitle="Restaurant Assoc."
               date="2016"
               level="silver"
             />
             <AwardBadge
               variant="badge"
               title="Eaters Choice"
-              subtitle="Portland Press Herald"
+              subtitle="Reader Awards"
               date="2005"
               level="platinum"
             />
@@ -261,10 +261,6 @@ const RestaurantDemo = () => {
             <div className="flex items-center gap-2">
               <Star className="h-5 w-5 text-amber-400" />
               <span className="text-stone-200" style={{ textShadow: "0 1px 4px rgba(0,0,0,0.5)" }}>4.8★ (450+ Reviews)</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <MapPin className="h-5 w-5 text-amber-400" />
-              <span className="text-stone-200" style={{ textShadow: "0 1px 4px rgba(0,0,0,0.5)" }}>Old Port, Portland</span>
             </div>
           </div>
         </div>
@@ -316,13 +312,12 @@ const RestaurantDemo = () => {
               </div>
             </div>
             <div>
-              <h4 className="font-medium mb-2 text-stone-100">Location</h4>
+              <h4 className="font-medium mb-2 text-stone-100">Contact</h4>
               <div className="space-y-1 text-sm text-stone-300">
-                <p>123 Fore Street, Old Port</p>
-                <p>Portland, ME 04101</p>
-                <p className="mt-2">
+                <p>
                   <a href="tel:5559876543" className="text-amber-400 hover:underline">(555) 987-6543</a>
                 </p>
+                <p>reservations@goldenfork.com</p>
               </div>
             </div>
           </div>
