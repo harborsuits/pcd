@@ -82,7 +82,7 @@ const MidcoastPillar = () => {
 
       <footer className="border-t border-border py-8 mt-8">
         <div className="container mx-auto px-6 text-center text-sm text-muted-foreground">
-          <p className="mb-1">{NAP.name} · {NAP.city}, {NAP.region} · {NAP.email}</p>
+          <p className="mb-1">{NAP.name} · {NAP.city}, {NAP.region} · <a href={`tel:${NAP.phoneE164}`} className="hover:text-accent">{NAP.phone}</a> · {NAP.email}</p>
           <p>{NAP.serviceArea}</p>
         </div>
       </footer>
