@@ -168,7 +168,7 @@ const Index = () => {
         <div className="relative container mx-auto px-6">
           <div className="text-center max-w-3xl mx-auto">
             <p className="text-xs uppercase tracking-wider text-accent font-semibold mb-4">
-              Midcoast Maine · Based in Newcastle
+              Midcoast Maine
             </p>
             <h1 className="font-serif text-4xl md:text-5xl lg:text-6xl font-bold leading-tight mb-2">
               Your website is losing you customers.

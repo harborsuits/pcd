@@ -42,7 +42,7 @@ export function SEOHead({
         email: "hello@pleasantcove.design",
         address: {
           "@type": "PostalAddress",
-          addressLocality: "Newcastle",
+          addressLocality: "Midcoast Maine",
           addressRegion: "ME",
           addressCountry: "US",
         },
