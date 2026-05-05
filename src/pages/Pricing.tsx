@@ -35,17 +35,23 @@ const Pricing = () => {
       <section className="pt-12 pb-6 md:pt-16 md:pb-8 relative overflow-hidden">
         <div className="relative container mx-auto px-6 text-center">
           <h1 className="font-serif text-4xl md:text-5xl lg:text-6xl font-bold leading-tight mb-4">
-            Pricing & Services
+            Simple pricing for small businesses
           </h1>
-          <p className="text-lg md:text-xl text-muted-foreground leading-relaxed max-w-2xl mx-auto mb-2">
-            Straightforward pricing. No retainers, no surprises.
+          <p className="text-lg md:text-xl text-muted-foreground leading-relaxed max-w-2xl mx-auto mb-4">
+            Two phases, no surprises:
           </p>
-          <p className="text-base text-muted-foreground/80 max-w-2xl mx-auto mb-3">
-            Website refreshes, one-page builds, and booking flow fixes for small businesses.
-            Pick what you need.
-          </p>
+          <div className="max-w-2xl mx-auto grid sm:grid-cols-2 gap-4 mb-6 text-left">
+            <div className="rounded-lg border border-border bg-card/60 p-4">
+              <p className="text-sm font-semibold text-accent mb-1">Phase 1 — Build</p>
+              <p className="text-sm text-muted-foreground">A one-time fee to design, build, and launch your site.</p>
+            </div>
+            <div className="rounded-lg border border-border bg-card/60 p-4">
+              <p className="text-sm font-semibold text-accent mb-1">Phase 2 — Keep it running</p>
+              <p className="text-sm text-muted-foreground">A small monthly care plan for hosting, updates, and small changes.</p>
+            </div>
+          </div>
           <p className="text-sm text-muted-foreground/70">
-            Most clients start with a free website review — then choose a plan that fits.
+            Optional add-ons: booking, local SEO, AI receptionist. Most clients start with a free website review.
           </p>
         </div>
       </section>

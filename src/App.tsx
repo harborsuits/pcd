@@ -26,6 +26,9 @@ import BoutiqueDemo from "./pages/demos/BoutiqueDemo";
 import BoutiqueProductPage from "./pages/demos/BoutiqueProductPage";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfService from "./pages/TermsOfService";
+import MidcoastPillar from "./pages/local/MidcoastPillar";
+import TownPage from "./pages/local/TownPage";
+import VerticalPage from "./pages/local/VerticalPage";
 
 const queryClient = new QueryClient();
 
@@ -73,11 +76,16 @@ const App = () => (
           <Route path="/admin" element={<Navigate to="/operator" replace />} />
           <Route path="/admin/*" element={<Navigate to="/operator" replace />} />
           
+          {/* Local SEO landing pages */}
+          <Route path="/midcoast-maine" element={<MidcoastPillar />} />
+          <Route path="/web-design/:town" element={<TownPage />} />
+          <Route path="/websites-for/:vertical" element={<VerticalPage />} />
+
           {/* Squarespace legacy URL redirects */}
           <Route path="/web-services" element={<Navigate to="/what-we-build" replace />} />
           <Route path="/services" element={<Navigate to="/what-we-build" replace />} />
           <Route path="/web-design-studio" element={<Navigate to="/what-we-build" replace />} />
-          <Route path="/web-design" element={<Navigate to="/what-we-build" replace />} />
+          <Route path="/web-design" element={<Navigate to="/midcoast-maine" replace />} />
           <Route path="/studio" element={<Navigate to="/what-we-build" replace />} />
 
           {/* Catch-all */}
