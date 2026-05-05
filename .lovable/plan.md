@@ -1,124 +1,111 @@
+# Midcoast Maine Repositioning + Local SEO Plan
 
-
-# Repositioning: Copy-Only Changes
-
-All UI components, layouts, animations, and visual elements stay exactly as they are. We are only changing text content to match the new positioning: "We help small businesses fix websites that are costing them customers."
+This plan acts on the audit. All changes are copy + new landing pages + light structural additions. No backend, auth, or operator console changes. Visual system (emerald, fonts, layout) stays.
 
 ---
 
-## Changes by file
+## 1. Local identity (homepage + global)
 
-### 1. `src/pages/Index.tsx` — Homepage
+**`src/pages/Index.tsx` — hero & nav**
+- Subhead: add "Based in Newcastle, Maine — serving Midcoast: Damariscotta, Wiscasset, Boothbay, Camden, Rockland, Brunswick, Bath."
+- Add a small "Midcoast Maine" eyebrow chip above the H1.
+- New "Why local matters" one-liner under the hero CTAs.
 
-**SEO Head** (line 104-106)
-- Title: "Pleasant Cove Design — We Fix Websites That Cost You Customers"
-- Description: "We help small businesses fix outdated websites, broken contact flows, and confusing customer journeys. Get a free website review."
+**`src/components/portal/TrustFooter.tsx` and footer on Index/Pricing/WhatWeBuild**
+- Add NAP block: "Pleasant Cove Design · Newcastle, ME · hello@pleasantcove.design · phone".
+- Add service-area line.
 
-**Hero h1** (line 168-169)
-- From: "Never miss a lead again."
-- To: "Your website is losing you customers."
-
-**Hero Typewriter** (lines 173-177) — keeps the Typewriter component, just new strings:
-- "Outdated design drives visitors away."
-- "Broken contact forms lose leads."
-- "Confusing navigation kills conversions."
-- "Poor mobile experience costs you jobs."
-
-**Hero paragraph** (lines 187-189)
-- To: "We fix outdated websites, broken contact flows, and confusing customer journeys for small businesses — so you stop losing the customers you're already attracting."
-
-**Service Chooser section** (lines 196-254) — same 3-card layout, new text:
-- Section heading: "What do you need?" → "What's hurting your business?"
-- Subheading: "Choose your starting point — we'll handle the rest." → "Pick what sounds familiar — we'll show you how to fix it."
-- Card 1 (Bot icon stays): "AI Receptionist" → "Website Refresh" / "Your site looks outdated and customers don't trust it."
-- Card 2 (Globe icon stays): "Website" → "One-Page Website" / "You need a simple, professional site that actually converts."
-- Card 3 (Sparkles icon stays): "Complete Growth System" → "Booking & Contact Fix" / "Customers can't easily reach you or book your services."
-- Links updated: `/get-demo?service=website_refresh`, `?service=one_page`, `?service=contact_fix`
-- Bottom text: "Need something else? Tell us what you're looking for →" stays, link unchanged.
-
-**Demos section** (lines 258-272) — accordion component untouched, just heading text:
-- "Real websites. Smarter lead handling." → "Recent website fixes we've done."
-- "Click any demo to explore — no commitment, just a preview." → "See real before-and-after examples — no commitment."
-
-**AI Receptionist section** (lines 275-365) — all cards stay, just text updates:
-- "Your AI Front Desk" → "Problems we find on every audit"
-- Subtitle → "Most small business websites have the same issues. Here's what we look for — and fix."
-- 4 GlowCards become proof/audit items (same icons, same layout):
-  - "Missed calls & slow response" / "67% of customers won't call back if they don't get a response within an hour."
-  - "Confusing navigation" / "If visitors can't find your services in 5 seconds, they leave."
-  - "No mobile experience" / "Over 60% of your traffic is mobile. If it's broken, you're losing jobs."
-  - "No clear next step" / "No booking button, no contact form, no reason to stay."
-- YouTube iframe + "Try a 7-Day Demo" button → change button text to "Get Your Free Review" and link to `/get-demo?service=review`
-- Video stays as-is (still relevant social proof)
-
-**What We Build section** (lines 367-402) — capabilities array updated:
-- "What We Build" → "What we fix"
-- Subtext → "Common issues we solve for small businesses every week."
-- 6 cards become:
-  - Websites → "Outdated Design" / "Modern, clean look that builds trust instantly."
-  - Client Portal → "Broken Contact Flow" / "Clear paths to reach you — forms, calls, booking."
-  - Booking + Intake → "Missing Booking" / "Online scheduling so customers don't have to chase you."
-  - Payments → "Weak Mobile Experience" / "Sites that work perfectly on every phone and tablet."
-  - Automations → "Poor SEO" / "Show up when customers search for what you do."
-  - AI Receptionist → "No Follow-Up" / "Automated responses so leads don't go cold."
-- "See Everything We Build" link text → "See all our services"
-
-**How It Works** (lines 405-438) — same 4-step layout:
-1. "Quick call" / "15 minutes to understand your business." → "Free review" / "We audit your website and show you what's costing you customers."
-2. "We build" / "Custom site + portal, no templates." → "Fix plan" / "You get a clear list of what to fix and what it costs."
-3. "You review" / "Preview, feedback, approve — in your portal." → "We fix it" / "We handle everything — design, code, launch."
-4. "Go live" / "Launch + ongoing support included." → "You grow" / "More calls, more bookings, more customers."
-
-**Final CTA** (lines 441-455):
-- "Ready to see it for your business?" → "Find out what your website is costing you."
-- "Get a personalized website demo — no pressure, no commitment." → "Get a free website review — we'll show you exactly what to fix."
-- Button: "See a Demo" → "Get My Free Review"
-- Link: `/get-demo?service=demo` → `/get-demo?service=review`
-
-**Already a Client** (lines 458-465) — stays exactly as-is.
-
-**Footer** — stays exactly as-is.
-
-**Nav links** (lines 116-126):
-- "What We Build" → "Services"
-- "Pricing" stays
-- "Client Portal" stays
-
-**Mobile nav** (lines 136-158) — same changes as desktop nav.
-
-### 2. `src/components/portal/PortalHeader.tsx`
-- No changes (it's the portal, not marketing).
-
-### 3. `src/pages/Pricing.tsx`
-- SEO description: update to mention website fixes/reviews instead of AI receptionists
-- Hero heading stays "Pricing & Services"
-- Subtitle → "Straightforward pricing. No retainers, no surprises."
-- Body text → "Website refreshes, one-page builds, and booking flow fixes for small businesses. Pick what you need."
-- "Most clients start with a free demo" → "Most clients start with a free website review."
-
-### 4. `src/pages/WhatWeBuild.tsx`
-- Only the FEATURES array text and page heading copy updates to align with "services we offer" framing instead of "infrastructure we build" framing. The video/image bento grid stays untouched.
-
-### 5. `src/components/SEOHead.tsx`
-- No changes (it's a utility component).
+**`src/components/SEOHead.tsx`**
+- Extend props with optional `localBusiness` flag; when true, inject JSON-LD `LocalBusiness` schema (name, areaServed = Midcoast towns, address region = ME). Use on Index + each town page.
 
 ---
 
-## What does NOT change
-- All UI components, animations, layouts, cards, grids
-- The Typewriter component (just new strings)
-- The 3D model / HeroStatic fallback
-- The FeaturedDemosAccordion
-- The YouTube embed
-- The GlowCard components
-- Footer structure
-- Portal, operator, demo pages
-- Any edge functions, database, or backend code
-- Color scheme, fonts, spacing
+## 2. Social proof section (homepage)
+
+New component `src/components/LocalProofStrip.tsx`:
+- 2–3 mini case-study cards (use existing demo pages as the "before/after" — link to `/d/...` demos already generated for local trades).
+- Each card: trade icon, business type, one-line outcome ("Roofer in Damariscotta — clear quote button + mobile fix"), thumbnail, link to demo.
+- Inserted on Index between hero and "What's hurting your business?".
+
+If we don't yet have real testimonials, label honestly as "Recent demos we built for local businesses" — not fake quotes.
+
+---
+
+## 3. Simplify pricing presentation
+
+**`src/components/ui/pricing-section.tsx` + `src/pages/Pricing.tsx`**
+- Reframe top of pricing into two phases above the bundle cards:
+  - **Phase 1 — Build** (one-time, range)
+  - **Phase 2 — Keep it running** (monthly care)
+  - **Optional add-ons** (booking, local SEO, AI receptionist)
+- Keep existing bundle cards but rename emphasis: lead with "Build + monthly care," demote "AI/CRM dashboards" language to the "Full Ops" card description only.
+- Remove unsourced stats anywhere they appear; replace with plain-language statements ("Slow follow-up loses jobs.").
+- Hero copy on `/pricing`: drop "AI Front Door" from the first paragraph; surface it inside Starter card only.
+
+---
+
+## 4. Homepage copy de-jargoning
+
+**`src/pages/Index.tsx`**
+- Audit `capabilities` array and any AI/CRM-forward headings. Push AI/CRM mentions out of hero and primary capability cards. Reframe primary capabilities as: "Fix your website," "Make the phone ring," "Book more jobs," "Stay maintained."
+- Remove the unsourced "67%…" stat if present anywhere; replace with "Most people won't call back if no one answers."
+
+---
+
+## 5. Local + vertical SEO landing pages
+
+New route group `src/pages/local/` with a single shared template + data file.
+
+**`src/lib/localPages.ts`** — data:
+```ts
+export const TOWNS = [
+  { slug: "newcastle", name: "Newcastle", ... },
+  { slug: "damariscotta", ... },
+  // wiscasset, boothbay, camden, rockland, brunswick, bath
+];
+export const VERTICALS = [
+  { slug: "roofers", name: "Roofers", outcome: "more quote calls", demoSlug: "..." },
+  // painters, landscapers, restaurants, salons, contractors, galleries, boutiques, marinas, inns
+];
+```
+
+**`src/pages/local/TownPage.tsx`** — `/web-design/:town`
+- H1: "Web design in {Town}, Maine"
+- Local intro, service list, link to free review CTA, embedded map of service area, list of verticals served, JSON-LD LocalBusiness with `areaServed = town`.
+
+**`src/pages/local/VerticalPage.tsx`** — `/websites-for/:vertical`
+- H1: "Websites for {Vertical} in Midcoast Maine"
+- Trade-specific pain points, link to a matching demo (`/d/...`), CTA to free review with `?service={vertical}`.
+
+**`src/pages/local/MidcoastPillar.tsx`** — `/midcoast-maine`
+- Pillar page linking to all town + vertical pages.
+
+**`src/App.tsx`** — register the three new routes.
+
+**`public/sitemap.xml`** — add all new URLs.
+
+**`public/robots.txt`** — already permissive, no change.
+
+---
+
+## 6. Outreach surface (optional, low risk)
+
+Add a `?ref=outreach&town=...&vertical=...` capture on `/get-demo` so the operator hub can attribute closed deals to the outreach channel. Just stash in `project_intakes.metadata`. (No schema change — column already JSONB.)
+
+---
+
+## Out of scope (explicitly not touching)
+- Operator hub, auth, RLS, edge functions, Stripe flow, portal — all stable per last audit.
+- Color system, 3D hero, fonts, animation.
+- Demo generation pipeline.
+
+---
 
 ## Technical notes
-- The `capabilities` array at the top of Index.tsx gets new title/description strings
-- The `exampleDemos` array stays unchanged
-- Nav link labels are inline text in JSX, simple string swaps
-- All `/get-demo` links still work — just different `?service=` query params
+- All new pages use existing `SEOHead`, `LiquidButton`, `Card`, and the emerald page background.
+- JSON-LD added via `react-helmet-async` inside `SEOHead` when `localBusiness` prop is set.
+- New routes are static React pages — no DB, no edge functions.
+- Total new files: ~6. Edited files: `Index.tsx`, `Pricing.tsx`, `pricing-section.tsx`, `SEOHead.tsx`, `App.tsx`, `sitemap.xml`, `TrustFooter.tsx`.
+- After approval I'll ask once for: your phone number for NAP, and confirmation of the 7 town slugs + 9 vertical slugs to generate.
 
+Approve and I'll implement, then come back with the two small inputs needed (phone + final town/vertical lists).
