@@ -235,10 +235,6 @@ const RooferDemo = () => {
                   <Mail className="h-4 w-4 text-orange-400" />
                   <span>info@summitroofing.com</span>
                 </a>
-                <div className="flex items-center gap-2 text-slate-400">
-                  <MapPin className="h-4 w-4 text-orange-400" />
-                  <span>123 Main St, Anytown USA</span>
-                </div>
               </div>
             </div>
 

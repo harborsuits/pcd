@@ -19,7 +19,7 @@ const galleryCards = [
   {
     title: "Fog & Pines",
     pseudonym: "E. Maris",
-    tags: "Maine • Mist • Evergreens",
+    tags: "Coastal • Mist • Evergreens",
     image: "https://images.unsplash.com/photo-1542273917363-3b1817f69a2d?auto=format&fit=crop&w=1600&q=80",
   },
   {
@@ -65,14 +65,14 @@ const photographerItems = [
   {
     id: "jonas-berg",
     title: "Jonas Berg — The Fog Whisperer",
-    description: "A former Finnish submarine captain, Jonas moved to Maine in 2015 seeking silence. He wakes at 3am to catch the first fog and hasn't missed a sunrise in 9 years. National Geographic calls him 'the man who photographs ghosts.'",
+    description: "A former Finnish submarine captain, Jonas moved to the coast in 2015 seeking silence. He wakes at 3am to catch the first fog and hasn't missed a sunrise in 9 years. National Geographic calls him 'the man who photographs ghosts.'",
     href: "#contact",
     image: maineFogImage,
   },
   {
     id: "ruth-blackwood",
     title: "Ruth Blackwood — Lighthouse Keeper's Daughter",
-    description: "Born in a lighthouse during a blizzard, Ruth grew up without electricity until age 12. Her long-exposure night shots of Maine's 65 lighthouses took 11 years to complete. The collection sold to a private buyer for $2.1 million.",
+    description: "Born in a lighthouse during a blizzard, Ruth grew up without electricity until age 12. Her long-exposure night shots of 65 historic lighthouses took 11 years to complete. The collection sold to a private buyer for $2.1 million.",
     href: "#contact",
     image: montaukLighthouseImage,
   },
@@ -110,7 +110,7 @@ export default function GalleryDemo() {
               Featured Collections
             </h2>
             <p className="mx-auto mt-4 max-w-2xl text-lg text-slate-600">
-              A curated selection of original works celebrating Maine's rugged beauty and timeless spirit.
+              A curated selection of original works celebrating rugged coastal beauty and timeless spirit.
             </p>
           </motion.div>
 
@@ -146,7 +146,7 @@ export default function GalleryDemo() {
       <section id="artists" className="bg-slate-50">
         <Gallery4
           title="Featured Photographers"
-          description="Extraordinary artists with extraordinary stories. Each brings a lifetime of experience and a unique lens to the Maine coast."
+          description="Extraordinary artists with extraordinary stories. Each brings a lifetime of experience and a unique lens to the coast."
           items={photographerItems}
         />
       </section>
@@ -164,7 +164,7 @@ export default function GalleryDemo() {
                 Visit Us
               </h2>
               <p className="mt-4 text-lg text-slate-600">
-                We're located in the heart of Boothbay Harbor, just steps from the waterfront.
+                We're located in the heart of the harbor district, just steps from the waterfront.
               </p>
 
               <div className="mt-8 space-y-4 text-slate-700">
@@ -174,13 +174,8 @@ export default function GalleryDemo() {
                   <p>Monday – Wednesday: By appointment</p>
                 </div>
                 <div>
-                  <h4 className="font-medium text-slate-900">Address</h4>
-                  <p>123 Harbor Street</p>
-                  <p>Boothbay Harbor, ME 04538</p>
-                </div>
-                <div>
                   <h4 className="font-medium text-slate-900">Contact</h4>
-                  <p>Phone: (207) 555-1234</p>
+                  <p>Phone: (555) 555-1234</p>
                   <p>Email: hello@harborlight.gallery</p>
                 </div>
               </div>
@@ -265,7 +260,7 @@ export default function GalleryDemo() {
               <div className="text-sm font-medium text-amber-600">Opening</div>
               <h3 className="mt-2 text-xl font-medium text-slate-900">Winter Solstice Show</h3>
               <p className="mt-2 text-slate-600">
-                A special exhibition celebrating the beauty of Maine winters through local eyes.
+                A special exhibition celebrating the quiet beauty of winter through local eyes.
               </p>
               <p className="mt-4 text-sm text-slate-500">January 18, 2025 • 4–7pm</p>
             </motion.div>
@@ -350,7 +345,7 @@ export default function GalleryDemo() {
         <div className="mx-auto max-w-7xl text-center">
           <p className="font-serif text-xl text-slate-900">Harborlight Gallery</p>
           <p className="mt-2 text-sm text-slate-500">
-            Boothbay Harbor, Maine • Coastal art for modern living
+            Coastal art for modern living
           </p>
           <p className="mt-6 text-xs text-slate-400">
             Demo site by Pleasant Cove Design

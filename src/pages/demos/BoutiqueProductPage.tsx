@@ -10,10 +10,10 @@ const products = {
   "wool-cardigan": {
     name: "Hand-Knit Wool Cardigan",
     price: "$595",
-    subtitle: "Maine wool • hand-finished",
+    subtitle: "Pure wool • hand-finished",
     image: woolCardigan,
-    description: "Spun from Maine wool and finished by hand in our coastal studio. Each stitch considered. Each button sourced from local artisans. A piece that softens with wear and improves with age.",
-    details: ["100% Maine wool", "Hand-finished seams", "Artisan bone buttons", "Relaxed fit", "Dry clean recommended"]
+    description: "Spun from pure wool and finished by hand in our coastal studio. Each stitch considered. Each button sourced from local artisans. A piece that softens with wear and improves with age.",
+    details: ["100% wool", "Hand-finished seams", "Artisan bone buttons", "Relaxed fit", "Dry clean recommended"]
   },
   "leather-tote": {
     name: "Artisan Leather Tote",
@@ -136,7 +136,7 @@ const BoutiqueProductPage = () => {
       {/* Minimal Footer */}
       <footer className="border-t border-stone-200 py-8">
         <div className="container mx-auto px-6 text-center text-xs text-stone-400">
-          <p>© 2024 The Copper Fox · Kennebunkport, Maine</p>
+          <p>© 2024 The Copper Fox</p>
           <p className="mt-2">
             Demo site by <Link to="/" className="transition-colors hover:text-stone-600" style={{ color: '#B87333' }}>Pleasant Cove Design</Link>
           </p>

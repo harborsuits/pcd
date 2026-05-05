@@ -126,10 +126,6 @@ const BoutiqueDemo = () => {
               <Star className="h-4 w-4" style={{ color: '#B87333' }} />
               <span>4.9★ Local Favorite</span>
             </div>
-            <div className="flex items-center gap-2 bg-white/60 backdrop-blur-sm px-4 py-2 rounded-full">
-              <MapPin className="h-4 w-4" style={{ color: '#B87333' }} />
-              <span>Dock Square</span>
-            </div>
           </div>
         </div>
       </section>
@@ -158,7 +154,7 @@ const BoutiqueDemo = () => {
               },
               { 
                 title: "The Coastal Chapter", 
-                description: "Seasonal silhouettes inspired by Maine's understated elegance. Refined, never contrived.",
+                description: "Seasonal silhouettes inspired by understated coastal elegance. Refined, never contrived.",
                 image: coastalChapter,
                 items: "Limited"
               },
@@ -198,7 +194,7 @@ const BoutiqueDemo = () => {
           
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-5xl mx-auto">
             {[
-              { name: "Hand-Knit Wool Cardigan", price: "$595", subtitle: "Maine wool • hand-finished", image: woolCardigan, slug: "wool-cardigan" },
+              { name: "Hand-Knit Wool Cardigan", price: "$595", subtitle: "Pure wool • hand-finished", image: woolCardigan, slug: "wool-cardigan" },
               { name: "Artisan Leather Tote", price: "$685", subtitle: "Vegetable-tanned • hand-stitched", image: leatherTote, slug: "leather-tote" },
               { name: "Woven Leather Ballet Flats", price: "$385", subtitle: "Italian leather • hand-woven", image: balletFlats, slug: "ballet-flats" },
               { name: "Silk Coastal Scarf", price: "$245", subtitle: "Mulberry silk • hand-dyed", image: silkScarf, slug: "silk-scarf" },
@@ -272,7 +268,7 @@ const BoutiqueDemo = () => {
                 <AwardBadge
                   variant="badge"
                   title="Best Boutique"
-                  subtitle="Kennebunkport"
+                  subtitle="Editors' Choice"
                   date="2025"
                   level="gold"
                 />
@@ -338,28 +334,28 @@ const BoutiqueDemo = () => {
               <p className="text-stone-700 italic leading-relaxed mb-4">
                 "I packed three outfits for a week in Paris. Never once felt underdressed."
               </p>
-              <p className="text-stone-500 text-sm">A.M. — Kennebunkport</p>
+              <p className="text-stone-500 text-sm">A.M.</p>
             </div>
             
             <div className="bg-orange-50/50 p-8 rounded-xl">
               <p className="text-stone-700 italic leading-relaxed mb-4">
                 "Finally, a shop that doesn't make me think. Everything just works together."
               </p>
-              <p className="text-stone-500 text-sm">C.L. — Portland</p>
+              <p className="text-stone-500 text-sm">C.L.</p>
             </div>
             
             <div className="bg-orange-50/50 p-8 rounded-xl">
               <p className="text-stone-700 italic leading-relaxed mb-4">
                 "My closet is half the size and I get twice the compliments."
               </p>
-              <p className="text-stone-500 text-sm">R.H. — Boston</p>
+              <p className="text-stone-500 text-sm">R.H.</p>
             </div>
             
             <div className="bg-orange-50/50 p-8 rounded-xl">
               <p className="text-stone-700 italic leading-relaxed mb-4">
                 "Sarah understood exactly what I needed before I could articulate it."
               </p>
-              <p className="text-stone-500 text-sm">M.W. — Cape Elizabeth</p>
+              <p className="text-stone-500 text-sm">M.W.</p>
             </div>
           </div>
         </div>
@@ -370,11 +366,11 @@ const BoutiqueDemo = () => {
         <div className="container mx-auto px-6">
           <div className="max-w-2xl mx-auto text-center">
             <h2 className="font-serif text-3xl md:text-4xl mb-6 tracking-tight">
-              Visit Us in Kennebunkport
+              Visit the Shop
             </h2>
             <p className="text-white/80 text-lg md:text-xl leading-relaxed mb-12 font-light">
-              Dock Square, Kennebunkport<br />
-              <span className="text-white/60">A considered space. A slower pace.</span>
+              A considered space.<br />
+              <span className="text-white/60">A slower pace.</span>
             </p>
             
             {/* Hairline divider */}
@@ -382,9 +378,8 @@ const BoutiqueDemo = () => {
             
             {/* Quiet metadata */}
             <div className="space-y-2 text-white/70 text-sm tracking-wide">
-              <p className="font-light">28 Dock Square · Kennebunkport, ME 04046</p>
               <p className="font-light">Mon–Sat 10–6 · Sun 11–5</p>
-              <p className="font-light">(207) 967-8520</p>
+              <p className="font-light">(555) 967-8520</p>
             </div>
           </div>
         </div>
