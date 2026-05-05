@@ -482,7 +482,7 @@ const Index = () => {
             Already a client? <Link to="/portal" className="text-accent hover:underline">Log in to your portal</Link>
           </p>
           <p className="text-sm text-muted-foreground/80">
-            {NAP.name} · {NAP.city}, {NAP.region} · <a href={`mailto:${NAP.email}`} className="hover:text-accent">{NAP.email}</a>
+            {NAP.name} · {NAP.city}, {NAP.region} · <a href={`tel:${NAP.phoneE164}`} className="hover:text-accent">{NAP.phone}</a> · <a href={`mailto:${NAP.email}`} className="hover:text-accent">{NAP.email}</a>
           </p>
           <p className="text-xs text-muted-foreground/70">
             <Link to="/midcoast-maine" className="hover:text-accent">Serving Midcoast Maine →</Link>
