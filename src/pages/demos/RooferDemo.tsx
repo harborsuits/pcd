@@ -59,74 +59,70 @@ const RooferDemo = () => {
         </div>
       </header>
 
-      {/* Hero with Lamp Effect */}
+      {/* Hero */}
       <div className="relative overflow-hidden [transform:translateZ(0)]">
-        {/* Hero bg image layer - fades out smoothly via mask */}
+        {/* Hero bg image */}
         <div
-          className="absolute inset-0 -z-10 bg-cover bg-center"
-          style={{
-            backgroundImage: `url(${rooferBg})`,
-            WebkitMaskImage: "linear-gradient(to bottom, black 0%, black 60%, transparent 100%)",
-            maskImage: "linear-gradient(to bottom, black 0%, black 60%, transparent 100%)",
-          }}
+          className="absolute inset-0 bg-cover bg-center"
+          style={{ backgroundImage: `url(${rooferBg})` }}
         />
-        {/* Dark overlay to blend with lamp */}
-        <div className="absolute inset-0 bg-slate-950/60" />
-        
-        <LampContainer className="min-h-[700px] relative z-10">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5, duration: 0.8 }}
-          className="text-center"
-        >
-          <p className="text-white font-medium mb-4 tracking-wider uppercase text-sm">
-            Licensed & Insured Roofing Experts
-          </p>
-          <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 leading-tight bg-gradient-to-b from-white to-slate-400 bg-clip-text text-transparent">
-            Protecting Your Home
-            <br />
-            From the Top Down
-          </h1>
-          <p className="text-lg md:text-xl text-slate-400 max-w-2xl mx-auto mb-8">
-            Professional roof repair, replacement, and installation services. 
-            Serving the greater metro area for over 20 years.
-          </p>
-          
-          <div className="flex flex-wrap justify-center gap-4 mb-8">
-            <ShimmerButton 
-              shimmerColor="#94a3b8" 
-              background="rgba(30, 41, 59, 0.9)"
-              className="text-base font-medium px-6 py-3"
-            >
-              <Phone className="mr-2 h-5 w-5" />
-              Call: (555) 123-4567
-            </ShimmerButton>
-            <ShimmerButton 
-              shimmerColor="#94a3b8" 
-              background="rgba(30, 41, 59, 0.8)"
-              className="backdrop-blur text-base font-medium"
-            >
-              Schedule Inspection
-            </ShimmerButton>
-          </div>
-          
-          <div className="flex flex-wrap justify-center gap-6 text-sm text-slate-300">
-            <div className="flex items-center gap-2">
-              <Shield className="h-5 w-5 text-orange-400" />
-              <span>25-Year Warranty</span>
+        {/* Navy opaque wash */}
+        <div className="absolute inset-0 bg-slate-950/70" />
+
+        <div className="relative z-10 min-h-[700px] flex items-center justify-center px-6 py-24">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2, duration: 0.8 }}
+            className="text-center max-w-4xl"
+          >
+            <p className="text-white font-medium mb-4 tracking-wider uppercase text-sm">
+              Licensed & Insured Roofing Experts
+            </p>
+            <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 leading-tight bg-gradient-to-b from-white to-slate-300 bg-clip-text text-transparent">
+              Protecting Your Home
+              <br />
+              From the Top Down
+            </h1>
+            <p className="text-lg md:text-xl text-slate-200 max-w-2xl mx-auto mb-8">
+              Professional roof repair, replacement, and installation services.
+              Serving the greater metro area for over 20 years.
+            </p>
+
+            <div className="flex flex-wrap justify-center gap-4 mb-8">
+              <ShimmerButton
+                shimmerColor="#94a3b8"
+                background="rgba(30, 41, 59, 0.9)"
+                className="text-base font-medium px-6 py-3"
+              >
+                <Phone className="mr-2 h-5 w-5" />
+                Call: (555) 123-4567
+              </ShimmerButton>
+              <ShimmerButton
+                shimmerColor="#94a3b8"
+                background="rgba(30, 41, 59, 0.8)"
+                className="backdrop-blur text-base font-medium"
+              >
+                Schedule Inspection
+              </ShimmerButton>
             </div>
-            <div className="flex items-center gap-2">
-              <Clock className="h-5 w-5 text-orange-400" />
-              <span>Same-Day Estimates</span>
+
+            <div className="flex flex-wrap justify-center gap-6 text-sm text-slate-200">
+              <div className="flex items-center gap-2">
+                <Shield className="h-5 w-5 text-orange-400" />
+                <span>25-Year Warranty</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Clock className="h-5 w-5 text-orange-400" />
+                <span>Same-Day Estimates</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Star className="h-5 w-5 text-orange-400" />
+                <span>4.9★ (200+ Reviews)</span>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Star className="h-5 w-5 text-orange-400" />
-              <span>4.9★ (200+ Reviews)</span>
-            </div>
-          </div>
-        </motion.div>
-      </LampContainer>
+          </motion.div>
+        </div>
         
       </div>
 

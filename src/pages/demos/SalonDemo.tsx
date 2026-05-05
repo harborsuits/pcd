@@ -93,14 +93,7 @@ const SalonDemo = () => {
 
       {/* Services */}
       <section id="services" className="py-20 bg-white relative overflow-hidden">
-        {/* Decorative background image */}
-        <div className="absolute right-0 top-0 h-full w-1/2 pointer-events-none">
-          <img 
-            src={salonServicesModel} 
-            alt="" 
-            className="h-full w-auto object-contain object-right opacity-10"
-          />
-        </div>
+        
         
         <div className="container mx-auto px-6 relative z-10">
           <h2 className="font-serif text-4xl text-center mb-4 text-rose-900">Our Services</h2>
