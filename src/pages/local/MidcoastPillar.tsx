@@ -11,7 +11,7 @@ const MidcoastPillar = () => {
     <div className="min-h-screen flex flex-col bg-page-bg text-foreground">
       <SEOHead
         title="Web Design in Midcoast Maine"
-        description="Local web design and website fixes for small businesses in Midcoast Maine — Newcastle, Damariscotta, Boothbay, Camden, Rockland, and more."
+        description="Local web design and website fixes for small businesses in Midcoast Maine — Damariscotta, Boothbay, Camden, Rockland, and more."
         path="/midcoast-maine"
         localBusiness
       />
@@ -29,7 +29,7 @@ const MidcoastPillar = () => {
       <section className="pt-16 pb-10">
         <div className="container mx-auto px-6 text-center max-w-3xl">
           <p className="text-xs uppercase tracking-wider text-accent font-semibold mb-3">
-            Based in Newcastle, Maine
+            Based in Midcoast Maine
           </p>
           <h1 className="font-serif text-4xl md:text-5xl lg:text-6xl font-bold mb-4">
             Web design for Midcoast Maine

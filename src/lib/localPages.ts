@@ -17,7 +17,7 @@ export interface Vertical {
 }
 
 export const TOWNS: Town[] = [
-  { slug: "newcastle", name: "Newcastle", blurb: "Our home base on the Damariscotta River." },
+  { slug: "newcastle", name: "Newcastle", blurb: "Historic river town with a tight-knit business community." },
   { slug: "damariscotta", name: "Damariscotta", blurb: "Main Street businesses, restaurants, and shops." },
   { slug: "wiscasset", name: "Wiscasset", blurb: "Working waterfront, antique shops, and seasonal traffic." },
   { slug: "boothbay-harbor", name: "Boothbay Harbor", blurb: "Tourism, marinas, inns, and seafood." },
@@ -145,7 +145,7 @@ export const VERTICALS: Vertical[] = [
 
 export const NAP = {
   name: "Pleasant Cove Design",
-  city: "Newcastle",
+  city: "Midcoast Maine",
   region: "ME",
   email: "hello@pleasantcove.design",
   phone: "(207) 380-5680",
