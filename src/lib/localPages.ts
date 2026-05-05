@@ -148,7 +148,7 @@ export const NAP = {
   city: "Newcastle",
   region: "ME",
   email: "hello@pleasantcove.design",
-  // TODO: replace with real number when ready
-  phone: "(207) 200-4281",
+  phone: "(207) 380-5680",
+  phoneE164: "+12073805680",
   serviceArea: "Midcoast Maine — Newcastle, Damariscotta, Wiscasset, Boothbay Harbor, Camden, Rockland, Brunswick, Bath",
 };
