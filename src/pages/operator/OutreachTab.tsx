@@ -310,10 +310,8 @@ export function OutreachTab() {
   // Add suppression mutation
   const addSuppressionMutation = useMutation({
     mutationFn: async ({ phone, reason }: { phone: string; reason: string }) => {
-      const headers = await getAuthHeaders();
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/outreach/suppress`, {
+      const res = await adminFetch("/outreach/suppress", {
         method: "POST",
-        headers,
         body: JSON.stringify({ phone, reason }),
       });
       if (!res.ok) throw new Error((await res.json()).error || "Failed to add suppression");
