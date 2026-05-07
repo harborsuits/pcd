@@ -276,10 +276,8 @@ export function OutreachTab() {
   // Send queued mutation
   const sendMutation = useMutation({
     mutationFn: async (limit: number) => {
-      const headers = await getAuthHeaders();
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/sms/send`, {
+      const res = await adminFetch("/sms/send", {
         method: "POST",
-        headers,
         body: JSON.stringify({ limit }),
       });
       if (!res.ok) throw new Error((await res.json()).error || "Send failed");
