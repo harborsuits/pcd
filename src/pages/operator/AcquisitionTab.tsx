@@ -18,21 +18,9 @@ import {
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { AlaCarteRequestsPanel } from "./AlaCarteRequestsPanel";
+import { adminFetch } from "@/lib/adminFetch";
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 const PUBLIC_BASE_URL = import.meta.env.VITE_PUBLIC_BASE_URL || window.location.origin;
-
-// Helper to get auth headers for edge function calls
-function getAuthHeaders() {
-  const adminKey = localStorage.getItem("admin_key") || "";
-  return {
-    "Content-Type": "application/json",
-    "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
-    "apikey": SUPABASE_ANON_KEY,
-    "x-admin-key": adminKey,
-  };
-}
 
 // Safe JSON reader that handles non-JSON responses
 async function readJsonSafe(res: Response) {
