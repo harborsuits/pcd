@@ -18,21 +18,9 @@ import {
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { AlaCarteRequestsPanel } from "./AlaCarteRequestsPanel";
+import { adminFetch } from "@/lib/adminFetch";
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 const PUBLIC_BASE_URL = import.meta.env.VITE_PUBLIC_BASE_URL || window.location.origin;
-
-// Helper to get auth headers for edge function calls
-function getAuthHeaders() {
-  const adminKey = localStorage.getItem("admin_key") || "";
-  return {
-    "Content-Type": "application/json",
-    "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
-    "apikey": SUPABASE_ANON_KEY,
-    "x-admin-key": adminKey,
-  };
-}
 
 // Safe JSON reader that handles non-JSON responses
 async function readJsonSafe(res: Response) {
@@ -137,9 +125,7 @@ export function AcquisitionTab() {
   const { data: leadsData, isLoading: leadsLoading } = useQuery({
     queryKey: ["ops-leads"],
     queryFn: async () => {
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/leads?limit=200`, {
-        headers: getAuthHeaders(),
-      });
+      const res = await adminFetch("/leads?limit=200");
       if (!res.ok) throw new Error("Failed to fetch leads");
       return res.json() as Promise<{ leads: Lead[] }>;
     },
@@ -150,9 +136,7 @@ export function AcquisitionTab() {
   const { data: outreachData } = useQuery({
     queryKey: ["ops-outreach"],
     queryFn: async () => {
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/outreach/events?limit=50`, {
-        headers: getAuthHeaders(),
-      });
+      const res = await adminFetch("/outreach/events?limit=50");
       if (!res.ok) throw new Error("Failed to fetch outreach");
       return res.json() as Promise<{ events: OutreachEvent[] }>;
     },
@@ -163,17 +147,14 @@ export function AcquisitionTab() {
   const searchMutation = useMutation({
     mutationFn: async () => {
       console.log("SEARCH MUTATION TRIGGERED", { query, location, radius, maxDemos });
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/leads/search-and-generate`, {
-        method: "POST",
-        headers: getAuthHeaders(),
+      const res = await adminFetch("/leads/search-and-generate", { method: "POST",
         body: JSON.stringify({
           query,
           location,
           radius_m: Number(radius) || 24140,
           max_demos: Number(maxDemos) || 10,
           queue_outreach: false,
-        }),
-      });
+        }) });
       console.log("Search response status:", res.status);
       const data = await readJsonSafe(res);
       console.log("Search response data:", data);
@@ -224,11 +205,8 @@ export function AcquisitionTab() {
   // Send SMS mutation
   const sendSmsMutation = useMutation({
     mutationFn: async () => {
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/sms`, {
-        method: "POST",
-        headers: getAuthHeaders(),
-        body: JSON.stringify({ action: "send_queued" }),
-      });
+      const res = await adminFetch("/sms", { method: "POST",
+        body: JSON.stringify({ action: "send_queued" }) });
       const data = await readJsonSafe(res);
       if (!res.ok) {
         throw new Error(data?.error || "SMS send failed");
@@ -247,11 +225,8 @@ export function AcquisitionTab() {
   // Generate demo for single lead (supports force regeneration)
   const generateDemoMutation = useMutation({
     mutationFn: async ({ leadId, force = false }: { leadId: string; force?: boolean }) => {
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/leads/${leadId}/generate-demo`, {
-        method: "POST",
-        headers: getAuthHeaders(),
-        body: JSON.stringify({ force }),
-      });
+      const res = await adminFetch("/leads/${leadId}/generate-demo", { method: "POST",
+        body: JSON.stringify({ force }) });
       const data = await readJsonSafe(res);
       if (!res.ok) {
         throw new Error(data?.error || "Failed to generate demo");
@@ -279,11 +254,8 @@ export function AcquisitionTab() {
   // Queue outreach for single lead
   const queueOutreachMutation = useMutation({
     mutationFn: async (leadId: string) => {
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/outreach/queue`, {
-        method: "POST",
-        headers: getAuthHeaders(),
-        body: JSON.stringify({ lead_id: leadId }),
-      });
+      const res = await adminFetch("/outreach/queue", { method: "POST",
+        body: JSON.stringify({ lead_id: leadId }) });
       const data = await readJsonSafe(res);
       if (!res.ok) {
         throw new Error(data?.error || "Failed to queue outreach");
@@ -303,11 +275,8 @@ export function AcquisitionTab() {
   // Review demo mutation (approve/reject)
   const reviewDemoMutation = useMutation({
     mutationFn: async ({ leadId, status }: { leadId: string; status: "approved" | "rejected" | "pending" }) => {
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/leads/${leadId}/review`, {
-        method: "POST",
-        headers: getAuthHeaders(),
-        body: JSON.stringify({ status }),
-      });
+      const res = await adminFetch("/leads/${leadId}/review", { method: "POST",
+        body: JSON.stringify({ status }) });
       const data = await readJsonSafe(res);
       if (!res.ok) {
         throw new Error(data?.error || "Failed to update review status");
@@ -326,11 +295,8 @@ export function AcquisitionTab() {
   // Send test SMS to admin phone (for QA)
   const sendTestSmsMutation = useMutation({
     mutationFn: async (leadId: string) => {
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/sms/send-test`, {
-        method: "POST",
-        headers: getAuthHeaders(),
-        body: JSON.stringify({ lead_id: leadId }),
-      });
+      const res = await adminFetch("/sms/send-test", { method: "POST",
+        body: JSON.stringify({ lead_id: leadId }) });
       const data = await readJsonSafe(res);
       if (!res.ok) {
         throw new Error(data?.error || "Test SMS failed");
@@ -349,10 +315,7 @@ export function AcquisitionTab() {
   // Clear all leads with demos
   const clearLeadsMutation = useMutation({
     mutationFn: async () => {
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/leads/clear-demos`, {
-        method: "POST",
-        headers: getAuthHeaders(),
-      });
+      const res = await adminFetch("/leads/clear-demos", { method: "POST" });
       const data = await readJsonSafe(res);
       if (!res.ok) {
         throw new Error(data?.error || "Failed to clear leads");

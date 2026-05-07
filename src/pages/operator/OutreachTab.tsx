@@ -56,7 +56,7 @@ import { operatorSupabase } from "@/integrations/supabase/operatorClient";
 import { ConversationThread } from "@/components/operator/ConversationThread";
 import { TemplateManager } from "@/components/operator/TemplateManager";
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+import { adminFetch } from "@/lib/adminFetch";
 
 interface Lead {
   id: string;
@@ -106,13 +106,6 @@ interface Template {
   created_at: string;
 }
 
-async function getAuthHeaders() {
-  const { data: { session } } = await operatorSupabase.auth.getSession();
-  return {
-    Authorization: `Bearer ${session?.access_token || ""}`,
-    "Content-Type": "application/json",
-  };
-}
 
 import { Label } from "@/components/ui/label";
 
@@ -257,10 +250,8 @@ export function OutreachTab() {
   // Queue mutation - now passes template_id
   const queueMutation = useMutation({
     mutationFn: async ({ leadIds, templateId }: { leadIds: string[]; templateId: string }) => {
-      const headers = await getAuthHeaders();
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/outreach/queue`, {
+      const res = await adminFetch("/outreach/queue", {
         method: "POST",
-        headers,
         body: JSON.stringify({ lead_ids: leadIds, template_id: templateId }),
       });
       if (!res.ok) throw new Error((await res.json()).error || "Queue failed");
@@ -285,10 +276,8 @@ export function OutreachTab() {
   // Send queued mutation
   const sendMutation = useMutation({
     mutationFn: async (limit: number) => {
-      const headers = await getAuthHeaders();
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/sms/send`, {
+      const res = await adminFetch("/sms/send", {
         method: "POST",
-        headers,
         body: JSON.stringify({ limit }),
       });
       if (!res.ok) throw new Error((await res.json()).error || "Send failed");
@@ -321,10 +310,8 @@ export function OutreachTab() {
   // Add suppression mutation
   const addSuppressionMutation = useMutation({
     mutationFn: async ({ phone, reason }: { phone: string; reason: string }) => {
-      const headers = await getAuthHeaders();
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/outreach/suppress`, {
+      const res = await adminFetch("/outreach/suppress", {
         method: "POST",
-        headers,
         body: JSON.stringify({ phone, reason }),
       });
       if (!res.ok) throw new Error((await res.json()).error || "Failed to add suppression");
