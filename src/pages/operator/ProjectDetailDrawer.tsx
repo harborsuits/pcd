@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { operatorSupabase as supabase } from "@/integrations/supabase/operatorClient";
 import { adminFetch } from "@/lib/adminFetch";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
