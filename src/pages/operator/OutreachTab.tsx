@@ -250,10 +250,8 @@ export function OutreachTab() {
   // Queue mutation - now passes template_id
   const queueMutation = useMutation({
     mutationFn: async ({ leadIds, templateId }: { leadIds: string[]; templateId: string }) => {
-      const headers = await getAuthHeaders();
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/outreach/queue`, {
+      const res = await adminFetch("/outreach/queue", {
         method: "POST",
-        headers,
         body: JSON.stringify({ lead_ids: leadIds, template_id: templateId }),
       });
       if (!res.ok) throw new Error((await res.json()).error || "Queue failed");
