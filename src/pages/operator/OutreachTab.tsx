@@ -56,7 +56,7 @@ import { operatorSupabase } from "@/integrations/supabase/operatorClient";
 import { ConversationThread } from "@/components/operator/ConversationThread";
 import { TemplateManager } from "@/components/operator/TemplateManager";
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+import { adminFetch } from "@/lib/adminFetch";
 
 interface Lead {
   id: string;
@@ -106,13 +106,6 @@ interface Template {
   created_at: string;
 }
 
-async function getAuthHeaders() {
-  const { data: { session } } = await operatorSupabase.auth.getSession();
-  return {
-    Authorization: `Bearer ${session?.access_token || ""}`,
-    "Content-Type": "application/json",
-  };
-}
 
 import { Label } from "@/components/ui/label";
 
