@@ -1,5 +1,5 @@
 import { Helmet } from "react-helmet-async";
-import { NAP } from "@/lib/localPages";
+import { NAP, VERTICALS } from "@/lib/localPages";
 
 interface FAQItem {
   question: string;
@@ -9,6 +9,13 @@ interface FAQItem {
 interface BreadcrumbItem {
   name: string;
   path: string;
+}
+
+interface ServiceSchema {
+  slug: string;
+  name: string;
+  description: string;
+  serviceType?: string;
 }
 
 interface SEOHeadProps {
@@ -22,6 +29,10 @@ interface SEOHeadProps {
   breadcrumbs?: BreadcrumbItem[];
   image?: string;
   noindex?: boolean;
+  socialLinks?: string[];
+  service?: ServiceSchema;
+  datePublished?: string;
+  dateModified?: string;
 }
 
 const DOMAIN = "https://pleasantcovedesign.com";
@@ -39,52 +50,104 @@ const DEFAULT_AREAS = [
   "Bath, ME",
 ];
 
-// Stable Organization + WebSite schema, included on every page so AI engines
-// (Google AI Overviews, ChatGPT, Perplexity) consistently identify the brand.
+// Stable IDs let nodes cross-reference each other in the @graph.
 const ORG_ID = `${DOMAIN}/#organization`;
 const WEBSITE_ID = `${DOMAIN}/#website`;
 
-const baseGraph = [
-  {
-    "@type": "Organization",
-    "@id": ORG_ID,
-    name: NAP.name,
-    url: DOMAIN,
-    email: NAP.email,
-    telephone: NAP.phoneE164,
-    logo: {
-      "@type": "ImageObject",
-      url: `${DOMAIN}/apple-touch-icon.png`,
+const BUILD_DATE = new Date().toISOString().slice(0, 10);
+
+// Cross-reference every vertical Service node (defined per /websites-for/[slug] page).
+// This wires the Organization to its full service catalog at the entity level.
+const OFFER_CATALOG = {
+  "@type": "OfferCatalog",
+  name: "Web design services",
+  itemListElement: VERTICALS.map((v) => ({
+    "@type": "Offer",
+    itemOffered: { "@id": `${DOMAIN}/websites-for/${v.slug}#service` },
+  })),
+};
+
+function buildBaseGraph(socialLinks: string[]) {
+  return [
+    {
+      "@type": "Organization",
+      "@id": ORG_ID,
+      name: NAP.name,
+      url: DOMAIN,
+      email: NAP.email,
+      telephone: NAP.phoneE164,
+      logo: {
+        "@type": "ImageObject",
+        url: `${DOMAIN}/apple-touch-icon.png`,
+        width: 512,
+        height: 512,
+        caption: NAP.name,
+      },
+      image: DEFAULT_IMAGE,
+      description:
+        "Midcoast Maine web design studio helping small businesses fix outdated websites, broken contact flows, and weak mobile experiences that cost them customers.",
+      address: {
+        "@type": "PostalAddress",
+        addressLocality: NAP.city,
+        addressRegion: NAP.region,
+        addressCountry: "US",
+      },
+      areaServed: DEFAULT_AREAS.map((a) => ({ "@type": "City", name: a })),
+      contactPoint: [
+        {
+          "@type": "ContactPoint",
+          telephone: NAP.phoneE164,
+          email: NAP.email,
+          contactType: "customer service",
+          areaServed: "US",
+          availableLanguage: ["English"],
+        },
+      ],
+      knowsAbout: [
+        "Web design",
+        "Small business websites",
+        "Local SEO",
+        "Booking integrations",
+        "AI receptionist",
+        "Website redesign",
+      ],
+      sameAs: socialLinks,
+      hasOfferCatalog: OFFER_CATALOG,
+      potentialAction: {
+        "@type": "ReserveAction",
+        name: "Book a Free Demo",
+        target: {
+          "@type": "EntryPoint",
+          urlTemplate: `${DOMAIN}/get-demo`,
+          actionPlatform: [
+            "http://schema.org/DesktopWebPlatform",
+            "http://schema.org/MobileWebPlatform",
+          ],
+        },
+        result: {
+          "@type": "Reservation",
+          name: "Free website demo",
+        },
+      },
     },
-    image: DEFAULT_IMAGE,
-    description:
-      "Midcoast Maine web design studio helping small businesses fix outdated websites, broken contact flows, and weak mobile experiences that cost them customers.",
-    address: {
-      "@type": "PostalAddress",
-      addressLocality: NAP.city,
-      addressRegion: NAP.region,
-      addressCountry: "US",
+    {
+      "@type": "WebSite",
+      "@id": WEBSITE_ID,
+      url: DOMAIN,
+      name: NAP.name,
+      publisher: { "@id": ORG_ID },
+      inLanguage: "en-US",
+      potentialAction: {
+        "@type": "SearchAction",
+        target: {
+          "@type": "EntryPoint",
+          urlTemplate: `${DOMAIN}/?q={search_term_string}`,
+        },
+        "query-input": "required name=search_term_string",
+      },
     },
-    areaServed: DEFAULT_AREAS.map((a) => ({ "@type": "City", name: a })),
-    knowsAbout: [
-      "Web design",
-      "Small business websites",
-      "Local SEO",
-      "Booking integrations",
-      "AI receptionist",
-      "Website redesign",
-    ],
-    sameAs: [],
-  },
-  {
-    "@type": "WebSite",
-    "@id": WEBSITE_ID,
-    url: DOMAIN,
-    name: NAP.name,
-    publisher: { "@id": ORG_ID },
-    inLanguage: "en-US",
-  },
-];
+  ];
+}
 
 export function SEOHead({
   title,
@@ -97,14 +160,21 @@ export function SEOHead({
   breadcrumbs,
   image,
   noindex = false,
+  socialLinks = [],
+  service,
+  datePublished,
+  dateModified,
 }: SEOHeadProps) {
   const canonicalUrl = `${DOMAIN}${path}`;
   const fullTitle = path === "/" ? title : `${title} — Pleasant Cove Design`;
   const ogImage = image ?? DEFAULT_IMAGE;
+  const modified = dateModified ?? BUILD_DATE;
 
-  const graph: Record<string, unknown>[] = [...baseGraph];
+  const graph: Record<string, unknown>[] = [...buildBaseGraph(socialLinks)];
 
-  // WebPage node — anchors this URL to the Organization
+  // WebPage / Article node — anchors this URL to the Organization and exposes
+  // a speakableSpecification telling AI assistants which DOM nodes are the
+  // canonical answer text to read aloud or quote.
   graph.push({
     "@type": type === "article" ? "Article" : "WebPage",
     "@id": `${canonicalUrl}#webpage`,
@@ -114,6 +184,12 @@ export function SEOHead({
     isPartOf: { "@id": WEBSITE_ID },
     about: { "@id": ORG_ID },
     inLanguage: "en-US",
+    ...(datePublished ? { datePublished } : {}),
+    dateModified: modified,
+    speakable: {
+      "@type": "SpeakableSpecification",
+      cssSelector: ["h1", "[data-speakable]"],
+    },
   });
 
   if (localBusiness) {
@@ -136,8 +212,36 @@ export function SEOHead({
         "@type": "City",
         name: a,
       })),
-      description,
+      openingHoursSpecification: [
+        {
+          "@type": "OpeningHoursSpecification",
+          dayOfWeek: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+          opens: "09:00",
+          closes: "17:00",
+        },
+      ],
+      // Free-text supplement so crawlers / LLMs see the appointment policy.
+      // schema.org has no first-class "by appointment" field on
+      // OpeningHoursSpecification, so we expose it via a description.
+      description: `${description} Also available by appointment.`,
       parentOrganization: { "@id": ORG_ID },
+    });
+  }
+
+  if (service) {
+    graph.push({
+      "@type": "Service",
+      "@id": `${DOMAIN}/websites-for/${service.slug}#service`,
+      name: service.name,
+      description: service.description,
+      serviceType: service.serviceType ?? "Web design",
+      provider: { "@id": ORG_ID },
+      areaServed: DEFAULT_AREAS.map((a) => ({ "@type": "City", name: a })),
+      audience: {
+        "@type": "BusinessAudience",
+        audienceType: "Small business owners",
+      },
+      url: canonicalUrl,
     });
   }
 
