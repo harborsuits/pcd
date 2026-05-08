@@ -92,6 +92,50 @@ const TownPage = () => {
         </div>
       </section>
 
+      {(TOWN_NEIGHBORS[town.slug] ?? []).length > 0 && (
+        <section className="py-10 border-t border-border">
+          <div className="container mx-auto px-6 max-w-3xl text-center">
+            <h2 className="font-serif text-xl font-semibold mb-4">
+              Nearby towns we also serve
+            </h2>
+            <div className="flex flex-wrap justify-center gap-3">
+              {TOWN_NEIGHBORS[town.slug].map((slug) => {
+                const n = TOWNS.find((t) => t.slug === slug);
+                if (!n) return null;
+                return (
+                  <Link
+                    key={slug}
+                    to={`/web-design/${slug}`}
+                    className="text-sm border border-border rounded-md py-2 px-4 bg-card/60 text-muted-foreground hover:text-accent hover:bg-card transition-colors"
+                  >
+                    {n.name}, ME
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+      )}
+
+      <section className="py-10 border-t border-border bg-card/30">
+        <div className="container mx-auto px-6 max-w-4xl">
+          <h2 className="font-serif text-base font-semibold text-center mb-3 text-muted-foreground">
+            Web design services in {town.name}
+          </h2>
+          <div className="flex flex-wrap justify-center gap-x-3 gap-y-2 text-sm">
+            {VERTICALS.map((v) => (
+              <Link
+                key={v.slug}
+                to={`/websites-for/${v.slug}`}
+                className="text-muted-foreground hover:text-accent underline-offset-4 hover:underline"
+              >
+                Websites for {v.name}
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
       <section className="py-12 border-t border-border text-center">
         <div className="container mx-auto px-6">
           <h2 className="font-serif text-2xl md:text-3xl font-bold mb-4">
