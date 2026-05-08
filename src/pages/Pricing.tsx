@@ -10,6 +10,32 @@ const Pricing = () => {
         title="Pricing & Services"
         description="Straightforward pricing for website refreshes, one-page builds, and booking flow fixes for small businesses. No retainers, no surprises."
         path="/pricing"
+        breadcrumbs={[
+          { name: "Home", path: "/" },
+          { name: "Pricing", path: "/pricing" },
+        ]}
+        faq={[
+          {
+            question: "How much does a small business website cost?",
+            answer:
+              "Pleasant Cove Design uses two-phase pricing: a one-time build fee to design and launch your site, then a small monthly care plan for hosting, updates, and small content changes. Exact pricing depends on scope — most owner-operated businesses fit a predictable range shown on the pricing page.",
+          },
+          {
+            question: "Are there long-term contracts?",
+            answer:
+              "No. The build is a one-time project fee. The monthly care plan is month-to-month — cancel anytime.",
+          },
+          {
+            question: "What's included in the monthly care plan?",
+            answer:
+              "Hosting, SSL, security updates, backups, uptime monitoring, and a set amount of small content changes each month so your site never goes stale.",
+          },
+          {
+            question: "Do you offer free quotes or reviews?",
+            answer:
+              "Yes — we offer a free website review where we walk through your current site and point out the specific things costing you customers, with no obligation.",
+          },
+        ]}
       />
       {/* Header */}
       <header className="border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-50">
