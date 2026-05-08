@@ -573,22 +573,22 @@ const WhatWeBuild = () => {
           {
             question: "What kinds of websites do you build?",
             answer:
-              "Marketing sites, service pages, landing pages, and full small-business websites — built fast, mobile-first, and tied into booking, intake forms, and an optional AI receptionist.",
+              "Pleasant Cove Design builds marketing sites, service pages, landing pages, and full small-business websites — mobile-first, fast-loading, and wired into booking, intake forms, and an optional AI receptionist so leads do not slip through.",
           },
           {
             question: "What is the AI Front Door?",
             answer:
-              "It's an AI-powered first point of contact for your business. It answers calls and chats, captures lead details, books appointments, and sends you a clean summary — so you stop losing customers when you can't pick up.",
+              "The AI Front Door is a 24/7 AI assistant that handles first contact for your business. It answers calls and chats, captures lead details, books appointments into your calendar, and emails you a clean summary so you stop losing customers when you cannot pick up.",
           },
           {
             question: "Can you redo my existing website?",
             answer:
-              "Yes. Most of our work is redesigning or rebuilding sites that look dated, don't convert on mobile, or have broken contact and booking flows.",
+              "Yes — most Pleasant Cove Design projects are full redesigns or rebuilds of sites that look dated, do not convert on mobile, or have broken contact and booking flows. We start with a free review and give you a fix plan before any work begins.",
           },
           {
             question: "Do you handle SEO?",
             answer:
-              "Every site ships with clean technical SEO, semantic structure, schema markup, fast performance, and local-business optimization for Midcoast Maine and surrounding service areas.",
+              "Yes. Every Pleasant Cove Design site ships with clean technical SEO, semantic HTML, schema markup, fast Core Web Vitals, and local-business optimization for Midcoast Maine towns and surrounding service areas — so you show up for the searches that matter.",
           },
         ]}
       />
@@ -617,11 +617,11 @@ const WhatWeBuild = () => {
       <section className="relative w-full min-h-[80vh] py-16 overflow-hidden">
         <div className="container mx-auto px-6 relative z-10">
           <div className="text-center mb-12">
-            <h2 className="font-serif text-3xl md:text-4xl lg:text-5xl font-bold mb-3 text-foreground">
+            <h2 data-speakable className="font-serif text-3xl md:text-4xl lg:text-5xl font-bold mb-3 text-foreground">
               Our Services
             </h2>
-            <p className="text-muted-foreground max-w-md mx-auto">
-              Everything we offer to help your business look sharp and convert.
+            <p data-speakable className="text-muted-foreground max-w-md mx-auto">
+              Everything Pleasant Cove Design offers to help your small business look sharp, stay reachable, and convert visitors into customers.
             </p>
           </div>
 
