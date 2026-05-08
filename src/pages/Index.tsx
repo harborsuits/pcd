@@ -111,27 +111,27 @@ const Index = () => {
           {
             question: "What does Pleasant Cove Design do?",
             answer:
-              "We're a Midcoast Maine web design studio that helps small businesses fix websites that are quietly losing them customers — outdated design, broken contact forms, weak mobile experience, and missing booking flows.",
+              "Pleasant Cove Design is a Midcoast Maine web design studio that fixes small-business websites which are quietly losing customers — outdated design, broken contact forms, weak mobile layouts, and missing booking flows. Most projects start with a free website review that names the specific issues to fix.",
           },
           {
             question: "Where are you based and who do you work with?",
             answer:
-              "We're based in Midcoast Maine and work with owner-operated small businesses across Newcastle, Damariscotta, Wiscasset, Boothbay Harbor, Camden, Rockland, Brunswick, and Bath — and remotely across the US.",
+              "Pleasant Cove Design is based in Midcoast Maine and works primarily with owner-operated small businesses in Newcastle, Damariscotta, Wiscasset, Boothbay Harbor, Camden, Rockland, Brunswick, and Bath. We also take on remote clients across the United States.",
           },
           {
             question: "How does pricing work?",
             answer:
-              "Two phases: a one-time build fee to design and launch your site, then a small monthly care plan for hosting, updates, and small changes. No long retainers. Most clients start with a free website review.",
+              "Pricing is two phases: a one-time build fee to design and launch the site, then a small month-to-month care plan for hosting, security, backups, and small content changes. There are no long retainers, and most clients begin with a free website review before committing.",
           },
           {
             question: "How long does a website take?",
             answer:
-              "Most small-business sites launch in two to four weeks once we have your content. Single-page sites and quick fixes can ship faster.",
+              "Most small-business websites launch in two to four weeks once content and photos are in hand. Single-page sites and targeted fixes — like a broken contact form or a mobile layout repair — can ship in a few days.",
           },
           {
-            question: "Do you offer an AI receptionist or booking?",
+            question: "Do you offer an AI receptionist or online booking?",
             answer:
-              "Yes. We can add a 24/7 AI receptionist that answers calls, captures leads, and texts you summaries — plus online booking that syncs with your calendar.",
+              "Yes. Pleasant Cove Design can add a 24/7 AI receptionist that answers calls and texts, captures lead details, and emails you a clean summary, plus online booking that syncs with Google Calendar, Calendly, or Acuity.",
           },
         ]}
       />
@@ -198,7 +198,7 @@ const Index = () => {
             <p className="text-xs uppercase tracking-wider text-accent font-semibold mb-4">
               Midcoast Maine
             </p>
-            <h1 className="font-serif text-4xl md:text-5xl lg:text-6xl font-bold leading-tight mb-2">
+            <h1 data-speakable className="font-serif text-4xl md:text-5xl lg:text-6xl font-bold leading-tight mb-2">
               Your website is losing you customers.
             </h1>
             <h2 className="font-serif text-2xl md:text-3xl lg:text-4xl font-semibold italic text-accent mb-6">
@@ -217,7 +217,7 @@ const Index = () => {
               />
             </h2>
 
-            <p className="text-lg md:text-xl text-muted-foreground leading-relaxed max-w-2xl mx-auto mb-3">
+            <p data-speakable className="text-lg md:text-xl text-muted-foreground leading-relaxed max-w-2xl mx-auto mb-3">
               We fix outdated websites, broken contact flows, and confusing customer journeys for small businesses — so you stop losing the customers you're already attracting.
             </p>
             <p className="text-sm text-muted-foreground/80">

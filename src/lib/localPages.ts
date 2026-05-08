@@ -143,6 +143,20 @@ export const VERTICALS: Vertical[] = [
   },
 ];
 
+// Hand-curated by actual Midcoast Maine geography (not list order).
+// Used by TownPage to render an honest "Nearby towns" strip — keeps internal
+// linking geographically truthful instead of spammy.
+export const TOWN_NEIGHBORS: Record<string, string[]> = {
+  "newcastle":       ["damariscotta", "wiscasset", "boothbay-harbor"],
+  "damariscotta":    ["newcastle", "wiscasset", "boothbay-harbor"],
+  "wiscasset":       ["newcastle", "damariscotta", "bath"],
+  "boothbay-harbor": ["damariscotta", "newcastle", "wiscasset"],
+  "bath":            ["brunswick", "wiscasset", "damariscotta"],
+  "brunswick":       ["bath", "wiscasset", "damariscotta"],
+  "camden":          ["rockland", "brunswick", "bath"],
+  "rockland":        ["camden", "brunswick", "bath"],
+};
+
 export const NAP = {
   name: "Pleasant Cove Design",
   city: "Midcoast Maine",

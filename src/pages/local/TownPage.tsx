@@ -2,7 +2,7 @@ import { Link, useParams, Navigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { LiquidButton } from "@/components/ui/liquid-glass-button";
 import { SEOHead } from "@/components/SEOHead";
-import { TOWNS, VERTICALS, NAP } from "@/lib/localPages";
+import { TOWNS, VERTICALS, NAP, TOWN_NEIGHBORS } from "@/lib/localPages";
 import { GlowCard } from "@/components/ui/spotlight-card";
 import { MapPin, CheckCircle } from "lucide-react";
 
@@ -39,13 +39,12 @@ const TownPage = () => {
           <p className="text-xs uppercase tracking-wider text-accent font-semibold mb-3 flex items-center justify-center gap-1">
             <MapPin className="h-4 w-4" /> Serving {town.name}, Maine
           </p>
-          <h1 className="font-serif text-4xl md:text-5xl font-bold mb-4">
+          <h1 data-speakable className="font-serif text-4xl md:text-5xl font-bold mb-4">
             Web design in {town.name}, Maine
           </h1>
-          <p className="text-lg text-muted-foreground mb-2">{town.blurb}</p>
+          <p data-speakable className="text-lg text-muted-foreground mb-2">{town.blurb}</p>
           <p className="text-base text-muted-foreground mb-8">
-            We help {town.name} small businesses fix outdated websites, broken contact forms, and
-            confusing customer journeys — so the visitors you already have actually become customers.
+            Pleasant Cove Design helps {town.name} small businesses fix outdated websites, broken contact forms, and confusing customer journeys — so the visitors you already have actually become customers.
           </p>
           <Link to={`/get-demo?service=review&town=${town.slug}`}>
             <LiquidButton size="lg">Get a Free Website Review</LiquidButton>
@@ -87,6 +86,50 @@ const TownPage = () => {
                   <p className="text-xs text-muted-foreground mt-1">{v.outcome}</p>
                   {v.demoPath && <p className="text-xs text-accent mt-2">View demo →</p>}
                 </GlowCard>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {(TOWN_NEIGHBORS[town.slug] ?? []).length > 0 && (
+        <section className="py-10 border-t border-border">
+          <div className="container mx-auto px-6 max-w-3xl text-center">
+            <h2 className="font-serif text-xl font-semibold mb-4">
+              Nearby towns we also serve
+            </h2>
+            <div className="flex flex-wrap justify-center gap-3">
+              {TOWN_NEIGHBORS[town.slug].map((slug) => {
+                const n = TOWNS.find((t) => t.slug === slug);
+                if (!n) return null;
+                return (
+                  <Link
+                    key={slug}
+                    to={`/web-design/${slug}`}
+                    className="text-sm border border-border rounded-md py-2 px-4 bg-card/60 text-muted-foreground hover:text-accent hover:bg-card transition-colors"
+                  >
+                    {n.name}, ME
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+      )}
+
+      <section className="py-10 border-t border-border bg-card/30">
+        <div className="container mx-auto px-6 max-w-4xl">
+          <h2 className="font-serif text-base font-semibold text-center mb-3 text-muted-foreground">
+            Web design services in {town.name}
+          </h2>
+          <div className="flex flex-wrap justify-center gap-x-3 gap-y-2 text-sm">
+            {VERTICALS.map((v) => (
+              <Link
+                key={v.slug}
+                to={`/websites-for/${v.slug}`}
+                className="text-muted-foreground hover:text-accent underline-offset-4 hover:underline"
+              >
+                Websites for {v.name}
               </Link>
             ))}
           </div>

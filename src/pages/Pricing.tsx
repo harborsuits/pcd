@@ -18,22 +18,22 @@ const Pricing = () => {
           {
             question: "How much does a small business website cost?",
             answer:
-              "Pleasant Cove Design uses two-phase pricing: a one-time build fee to design and launch your site, then a small monthly care plan for hosting, updates, and small content changes. Exact pricing depends on scope — most owner-operated businesses fit a predictable range shown on the pricing page.",
+              "Most small-business websites from Pleasant Cove Design land between roughly $1,500 and $4,500 for the one-time build, depending on page count and features. After launch, a month-to-month care plan covers hosting, updates, and small changes — typically under $100 a month for owner-operated businesses.",
           },
           {
             question: "Are there long-term contracts?",
             answer:
-              "No. The build is a one-time project fee. The monthly care plan is month-to-month — cancel anytime.",
+              "No. The build is a one-time project fee, and the monthly care plan is month-to-month with no minimum term — you can cancel any time and keep your site.",
           },
           {
             question: "What's included in the monthly care plan?",
             answer:
-              "Hosting, SSL, security updates, backups, uptime monitoring, and a set amount of small content changes each month so your site never goes stale.",
+              "The care plan covers hosting, SSL, security and software updates, daily backups, uptime monitoring, and a set amount of small content changes each month. It's how Pleasant Cove Design keeps client sites from going stale or breaking quietly in the background.",
           },
           {
-            question: "Do you offer free quotes or reviews?",
+            question: "Do you offer free quotes or website reviews?",
             answer:
-              "Yes — we offer a free website review where we walk through your current site and point out the specific things costing you customers, with no obligation.",
+              "Yes. Pleasant Cove Design offers a free website review that walks through your current site and names the specific issues costing you customers, with a clear fix plan and no obligation to hire us afterwards.",
           },
         ]}
       />
@@ -60,11 +60,11 @@ const Pricing = () => {
       {/* Hero */}
       <section className="pt-12 pb-6 md:pt-16 md:pb-8 relative overflow-hidden">
         <div className="relative container mx-auto px-6 text-center">
-          <h1 className="font-serif text-4xl md:text-5xl lg:text-6xl font-bold leading-tight mb-4">
+          <h1 data-speakable className="font-serif text-4xl md:text-5xl lg:text-6xl font-bold leading-tight mb-4">
             Simple pricing for small businesses
           </h1>
-          <p className="text-lg md:text-xl text-muted-foreground leading-relaxed max-w-2xl mx-auto mb-4">
-            Two phases, no surprises:
+          <p data-speakable className="text-lg md:text-xl text-muted-foreground leading-relaxed max-w-2xl mx-auto mb-4">
+            Two phases, no surprises: a one-time build fee, then a small monthly care plan for hosting, updates, and small changes.
           </p>
           <div className="max-w-2xl mx-auto grid sm:grid-cols-2 gap-4 mb-6 text-left">
             <div className="rounded-lg border border-border bg-card/60 p-4">

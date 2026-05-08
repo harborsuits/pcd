@@ -13,10 +13,22 @@ const VerticalPage = () => {
 
   const title = `Websites for ${v.name} in Midcoast Maine`;
   const description = `Web design and website fixes built for ${v.name.toLowerCase()} in Midcoast Maine. Designed to drive ${v.outcome}.`;
+  const serviceDescription = `Pleasant Cove Design builds and fixes websites for ${v.name.toLowerCase()} across Midcoast Maine — designed to drive ${v.outcome}, with mobile-first layouts, clear contact and quote flows, and local SEO included.`;
 
   return (
     <div className="min-h-screen flex flex-col bg-page-bg text-foreground">
-      <SEOHead title={title} description={description} path={`/websites-for/${v.slug}`} localBusiness />
+      <SEOHead
+        title={title}
+        description={description}
+        path={`/websites-for/${v.slug}`}
+        localBusiness
+        service={{
+          slug: v.slug,
+          name: `Web Design for ${v.name}`,
+          description: serviceDescription,
+          serviceType: `Web design for ${v.name.toLowerCase()}`,
+        }}
+      />
       <header className="border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-6 py-4 flex items-center justify-between">
           <Link to="/" className="font-serif text-xl font-bold tracking-tight">
@@ -33,11 +45,11 @@ const VerticalPage = () => {
           <p className="text-xs uppercase tracking-wider text-accent font-semibold mb-3">
             Midcoast Maine · {v.name}
           </p>
-          <h1 className="font-serif text-4xl md:text-5xl font-bold mb-4">
+          <h1 data-speakable className="font-serif text-4xl md:text-5xl font-bold mb-4">
             Websites for {v.name}
           </h1>
-          <p className="text-lg text-muted-foreground mb-8">
-            Built to drive {v.outcome} — not just look pretty.
+          <p data-speakable className="text-lg text-muted-foreground mb-8">
+            Pleasant Cove Design builds {v.name.toLowerCase()} websites in Midcoast Maine that drive {v.outcome} — not just look pretty.
           </p>
           <div className="flex flex-wrap justify-center gap-3">
             <Link to={`/get-demo?service=${v.service ?? "review"}`}>
