@@ -106,6 +106,34 @@ const Index = () => {
         title="Pleasant Cove Design — We Fix Websites That Cost You Customers"
         description="We help small businesses fix outdated websites, broken contact flows, and confusing customer journeys. Get a free website review."
         path="/"
+        localBusiness
+        faq={[
+          {
+            question: "What does Pleasant Cove Design do?",
+            answer:
+              "We're a Midcoast Maine web design studio that helps small businesses fix websites that are quietly losing them customers — outdated design, broken contact forms, weak mobile experience, and missing booking flows.",
+          },
+          {
+            question: "Where are you based and who do you work with?",
+            answer:
+              "We're based in Midcoast Maine and work with owner-operated small businesses across Newcastle, Damariscotta, Wiscasset, Boothbay Harbor, Camden, Rockland, Brunswick, and Bath — and remotely across the US.",
+          },
+          {
+            question: "How does pricing work?",
+            answer:
+              "Two phases: a one-time build fee to design and launch your site, then a small monthly care plan for hosting, updates, and small changes. No long retainers. Most clients start with a free website review.",
+          },
+          {
+            question: "How long does a website take?",
+            answer:
+              "Most small-business sites launch in two to four weeks once we have your content. Single-page sites and quick fixes can ship faster.",
+          },
+          {
+            question: "Do you offer an AI receptionist or booking?",
+            answer:
+              "Yes. We can add a 24/7 AI receptionist that answers calls, captures leads, and texts you summaries — plus online booking that syncs with your calendar.",
+          },
+        ]}
       />
       {/* Header */}
       <header className="border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-50">

@@ -565,6 +565,32 @@ const WhatWeBuild = () => {
         title="Our Services"
         description="Website refreshes, one-page builds, booking flow fixes, and more for small businesses. See how we help you stop losing customers."
         path="/what-we-build"
+        breadcrumbs={[
+          { name: "Home", path: "/" },
+          { name: "What We Build", path: "/what-we-build" },
+        ]}
+        faq={[
+          {
+            question: "What kinds of websites do you build?",
+            answer:
+              "Marketing sites, service pages, landing pages, and full small-business websites — built fast, mobile-first, and tied into booking, intake forms, and an optional AI receptionist.",
+          },
+          {
+            question: "What is the AI Front Door?",
+            answer:
+              "It's an AI-powered first point of contact for your business. It answers calls and chats, captures lead details, books appointments, and sends you a clean summary — so you stop losing customers when you can't pick up.",
+          },
+          {
+            question: "Can you redo my existing website?",
+            answer:
+              "Yes. Most of our work is redesigning or rebuilding sites that look dated, don't convert on mobile, or have broken contact and booking flows.",
+          },
+          {
+            question: "Do you handle SEO?",
+            answer:
+              "Every site ships with clean technical SEO, semantic structure, schema markup, fast performance, and local-business optimization for Midcoast Maine and surrounding service areas.",
+          },
+        ]}
       />
       {/* Header */}
       <header className="border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-50">

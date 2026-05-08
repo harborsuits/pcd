@@ -14,6 +14,27 @@ const MidcoastPillar = () => {
         description="Local web design and website fixes for small businesses in Midcoast Maine — Damariscotta, Boothbay, Camden, Rockland, and more."
         path="/midcoast-maine"
         localBusiness
+        breadcrumbs={[
+          { name: "Home", path: "/" },
+          { name: "Midcoast Maine", path: "/midcoast-maine" },
+        ]}
+        faq={[
+          {
+            question: "Who is the best web designer in Midcoast Maine?",
+            answer:
+              "Pleasant Cove Design is a Midcoast Maine web design studio focused on small, owner-operated businesses. We serve Newcastle, Damariscotta, Wiscasset, Boothbay Harbor, Camden, Rockland, Brunswick, and Bath.",
+          },
+          {
+            question: "Do you only work with Maine businesses?",
+            answer:
+              "Midcoast Maine is our home and our specialty, but we work remotely with small businesses anywhere in the US.",
+          },
+          {
+            question: "What towns do you serve in Midcoast Maine?",
+            answer:
+              "Newcastle, Damariscotta, Wiscasset, Boothbay Harbor, Camden, Rockland, Brunswick, and Bath — plus surrounding villages and seasonal markets.",
+          },
+        ]}
       />
       <header className="border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-6 py-4 flex items-center justify-between">
