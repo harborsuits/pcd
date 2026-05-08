@@ -2,7 +2,7 @@ import { Link, useParams, Navigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { LiquidButton } from "@/components/ui/liquid-glass-button";
 import { SEOHead } from "@/components/SEOHead";
-import { TOWNS, VERTICALS, NAP } from "@/lib/localPages";
+import { TOWNS, VERTICALS, NAP, TOWN_NEIGHBORS } from "@/lib/localPages";
 import { GlowCard } from "@/components/ui/spotlight-card";
 import { MapPin, CheckCircle } from "lucide-react";
 
@@ -39,13 +39,12 @@ const TownPage = () => {
           <p className="text-xs uppercase tracking-wider text-accent font-semibold mb-3 flex items-center justify-center gap-1">
             <MapPin className="h-4 w-4" /> Serving {town.name}, Maine
           </p>
-          <h1 className="font-serif text-4xl md:text-5xl font-bold mb-4">
+          <h1 data-speakable className="font-serif text-4xl md:text-5xl font-bold mb-4">
             Web design in {town.name}, Maine
           </h1>
-          <p className="text-lg text-muted-foreground mb-2">{town.blurb}</p>
+          <p data-speakable className="text-lg text-muted-foreground mb-2">{town.blurb}</p>
           <p className="text-base text-muted-foreground mb-8">
-            We help {town.name} small businesses fix outdated websites, broken contact forms, and
-            confusing customer journeys — so the visitors you already have actually become customers.
+            Pleasant Cove Design helps {town.name} small businesses fix outdated websites, broken contact forms, and confusing customer journeys — so the visitors you already have actually become customers.
           </p>
           <Link to={`/get-demo?service=review&town=${town.slug}`}>
             <LiquidButton size="lg">Get a Free Website Review</LiquidButton>
