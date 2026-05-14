@@ -45,6 +45,9 @@ const Pricing = () => {
           </Link>
           <nav className="flex items-center gap-4">
             <Button asChild variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
+              <Link to="/midcoast-maine">Midcoast Maine</Link>
+            </Button>
+            <Button asChild variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
               <Link to="/what-we-build">What We Build</Link>
             </Button>
             <Button asChild variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
@@ -95,6 +98,9 @@ const Pricing = () => {
           <div className="flex items-center gap-6 text-sm text-muted-foreground">
             <Link to="/" className="hover:text-foreground transition-colors">
               Home
+            </Link>
+            <Link to="/midcoast-maine" className="hover:text-foreground transition-colors">
+              Midcoast Maine
             </Link>
             <Link to="/privacy" className="hover:text-foreground transition-colors">
               Privacy

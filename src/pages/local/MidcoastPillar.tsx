@@ -121,9 +121,14 @@ const MidcoastPillar = () => {
       </section>
 
       <footer className="border-t border-border py-8 mt-8">
-        <div className="container mx-auto px-6 text-center text-sm text-muted-foreground">
-          <p className="mb-1">{NAP.name} · {NAP.city}, {NAP.region} · <a href={`tel:${NAP.phoneE164}`} className="hover:text-accent">{NAP.phone}</a> · {NAP.email}</p>
+        <div className="container mx-auto px-6 text-center text-sm text-muted-foreground space-y-2">
+          <p>{NAP.name} · {NAP.city}, {NAP.region} · <a href={`tel:${NAP.phoneE164}`} className="hover:text-accent">{NAP.phone}</a> · {NAP.email}</p>
           <p>{NAP.serviceArea}</p>
+          <nav className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 pt-2">
+            <Link to="/what-we-build" className="hover:text-foreground transition-colors">What We Build</Link>
+            <Link to="/pricing" className="hover:text-foreground transition-colors">Pricing</Link>
+            <Link to="/" className="hover:text-foreground transition-colors">Home</Link>
+          </nav>
         </div>
       </footer>
     </div>

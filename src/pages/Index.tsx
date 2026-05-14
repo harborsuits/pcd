@@ -145,6 +145,9 @@ const Index = () => {
           {/* Desktop nav */}
           <nav className="hidden sm:flex items-center gap-4">
             <Button asChild variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
+              <Link to="/midcoast-maine">Midcoast Maine</Link>
+            </Button>
+            <Button asChild variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
               <Link to="/what-we-build">Services</Link>
             </Button>
             <Button asChild variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
@@ -164,6 +167,13 @@ const Index = () => {
             </SheetTrigger>
             <SheetContent side="right" className="w-64">
               <nav className="flex flex-col gap-4 mt-8">
+                <Link
+                  to="/midcoast-maine"
+                  className="text-lg font-medium hover:text-accent transition-colors"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Midcoast Maine
+                </Link>
                 <Link 
                   to="/what-we-build" 
                   className="text-lg font-medium hover:text-accent transition-colors"
@@ -534,6 +544,10 @@ const Index = () => {
           { href: "/privacy", label: "Privacy" },
           { href: "/terms", label: "Terms" },
         ]}
+        locationLinks={{
+          label: "Service Area",
+          links: [{ href: "/midcoast-maine", label: "Midcoast Maine" }],
+        }}
         copyright={{
           text: `© ${new Date().getFullYear()} Pleasant Cove Design`,
           license: "All rights reserved",
