@@ -30,6 +30,8 @@ import MidcoastPillar from "./pages/local/MidcoastPillar";
 import TownPage from "./pages/local/TownPage";
 import VerticalPage from "./pages/local/VerticalPage";
 import AiReceptionist from "./pages/AiReceptionist";
+import Blog from "./pages/Blog";
+import BlogPost from "./pages/BlogPost";
 
 const queryClient = new QueryClient();
 
@@ -46,6 +48,8 @@ const App = () => (
           <Route path="/pricing" element={<Pricing />} />
           <Route path="/what-we-build" element={<WhatWeBuild />} />
           <Route path="/ai-receptionist" element={<AiReceptionist />} />
+          <Route path="/blog" element={<Blog />} />
+          <Route path="/blog/:slug" element={<BlogPost />} />
           <Route path="/get-demo" element={<IntakeWizard />} />
           <Route path="/privacy" element={<PrivacyPolicy />} />
           <Route path="/terms" element={<TermsOfService />} />
