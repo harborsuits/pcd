@@ -28,9 +28,6 @@ export function LocalProofStrip() {
     <section className="py-12 md:py-16 border-t border-border">
       <div className="container mx-auto px-6">
         <div className="text-center mb-8">
-          <p className="text-xs uppercase tracking-wider text-accent font-semibold mb-2">
-            Built for Midcoast Maine
-          </p>
           <h2 className="font-serif text-2xl md:text-3xl font-bold mb-2">
             Sample layouts by trade
           </h2>
