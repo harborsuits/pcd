@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
-import { useMemo, lazy, Suspense, useState } from "react";
-import { ArrowRight, MessageSquare, FolderOpen, Sparkles, Shield, Smartphone, CreditCard, LogIn, Globe, CalendarCheck, Zap, Bot, Clock, CheckCircle, Phone, Brain, Clock3, Calendar, Menu, X } from "lucide-react";
+import { useMemo, lazy, Suspense } from "react";
+import { ArrowRight, MessageSquare, FolderOpen, Sparkles, Shield, Smartphone, CreditCard, LogIn, Globe, CalendarCheck, Zap, Bot, Clock, CheckCircle, Phone, Brain, Clock3, Calendar, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LiquidButton } from "@/components/ui/liquid-glass-button";
 import { GlowCard } from "@/components/ui/spotlight-card";
@@ -12,7 +12,7 @@ import { Footer } from "@/components/ui/footer";
 import { Typewriter } from "@/components/ui/typewriter-text";
 import pcdLogo from "@/assets/pcd-logo.jpeg";
 import { SEOHead } from "@/components/SEOHead";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { MarketingHeader } from "@/components/layout/MarketingHeader";
 import { LocalProofStrip } from "@/components/LocalProofStrip";
 import { NAP } from "@/lib/localPages";
 
@@ -98,7 +98,7 @@ const Index = () => {
     );
   };
 
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  
 
   return (
     <div className="min-h-screen flex flex-col bg-page-bg text-foreground">
@@ -135,91 +135,7 @@ const Index = () => {
           },
         ]}
       />
-      {/* Header */}
-      <header className="border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-50">
-        <div className="container mx-auto px-6 py-4 flex items-center justify-between">
-          <Link to="/" className="font-serif text-lg md:text-xl font-bold tracking-tight text-foreground whitespace-nowrap">
-            Pleasant Cove Design
-          </Link>
-          
-          {/* Desktop nav */}
-          <nav className="hidden sm:flex items-center gap-4">
-            <Button asChild variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
-              <Link to="/midcoast-maine">Midcoast Maine</Link>
-            </Button>
-            <Button asChild variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
-              <Link to="/ai-receptionist">AI Receptionist</Link>
-            </Button>
-            <Button asChild variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
-              <Link to="/blog">Blog</Link>
-            </Button>
-            <Button asChild variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
-              <Link to="/what-we-build">Services</Link>
-            </Button>
-            <Button asChild variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
-              <Link to="/pricing">Pricing</Link>
-            </Button>
-            <Button asChild variant="outline" size="sm" className="whitespace-nowrap">
-              <Link to="/portal">Client Portal</Link>
-            </Button>
-          </nav>
-          
-          {/* Mobile nav */}
-          <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-            <SheetTrigger asChild className="sm:hidden">
-              <Button variant="ghost" size="icon">
-                <Menu className="h-5 w-5" />
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="right" className="w-64">
-              <nav className="flex flex-col gap-4 mt-8">
-                <Link
-                  to="/midcoast-maine"
-                  className="text-lg font-medium hover:text-accent transition-colors"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  Midcoast Maine
-                </Link>
-                <Link
-                  to="/ai-receptionist"
-                  className="text-lg font-medium hover:text-accent transition-colors"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  AI Receptionist
-                </Link>
-                <Link
-                  to="/blog"
-                  className="text-lg font-medium hover:text-accent transition-colors"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  Blog
-                </Link>
-                <Link 
-                  to="/what-we-build" 
-                  className="text-lg font-medium hover:text-accent transition-colors"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  Services
-                </Link>
-                <Link 
-                  to="/pricing" 
-                  className="text-lg font-medium hover:text-accent transition-colors"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  Pricing
-                </Link>
-                <Link 
-                  to="/portal" 
-                  className="text-lg font-medium hover:text-accent transition-colors"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  Client Portal
-                </Link>
-              </nav>
-            </SheetContent>
-          </Sheet>
-        </div>
-      </header>
+      <MarketingHeader activePage="home" />
 
       {/* 1️⃣ HERO - AI-forward, compact */}
       <section className="pt-12 md:pt-16 pb-10 md:pb-12 relative overflow-hidden">
