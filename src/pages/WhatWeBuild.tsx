@@ -720,9 +720,9 @@ const WhatWeBuild = () => {
           {/* Details header */}
           <div className="text-center mb-8">
             <p className="text-sm uppercase tracking-wider text-accent mb-2">Here's what that includes</p>
-            <h3 className="font-serif text-2xl md:text-3xl font-bold text-foreground">
+            <h2 className="font-serif text-2xl md:text-3xl font-bold text-foreground">
               {FEATURES.find(f => f.id === activeId)?.title || "Explore Features"}
-            </h3>
+            </h2>
           </div>
           
           <div className="relative h-[450px] sm:h-[500px] flex items-center justify-center">
