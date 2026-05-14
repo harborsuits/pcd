@@ -69,7 +69,7 @@ const OFFER_CATALOG = {
   })),
 };
 
-function buildBaseGraph(socialLinks: string[]) {
+function buildBaseGraph(sameAs: string[]) {
   return [
     {
       "@type": "Organization",
