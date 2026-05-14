@@ -1,9 +1,16 @@
 import { Link } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
+import { SEOHead } from "@/components/SEOHead";
 
 const PrivacyPolicy = () => {
   return (
     <div className="min-h-screen bg-background text-foreground">
+      <SEOHead
+        title="Privacy Policy"
+        description="Pleasant Cove Design privacy policy."
+        path="/privacy"
+        noindex
+      />
       <div className="container max-w-3xl mx-auto px-6 py-12">
         <Link
           to="/"

@@ -1,9 +1,16 @@
 import { Link } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
+import { SEOHead } from "@/components/SEOHead";
 
 const TermsOfService = () => {
   return (
     <div className="min-h-screen bg-background">
+      <SEOHead
+        title="Terms of Service"
+        description="Pleasant Cove Design terms of service."
+        path="/terms"
+        noindex
+      />
       <div className="max-w-4xl mx-auto px-4 py-12 sm:px-6 lg:px-8">
         <Link 
           to="/" 

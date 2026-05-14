@@ -420,7 +420,7 @@ const FeatureCardView: React.FC<FeatureCardViewProps> = ({ position, item, handl
         )}>
           <Icon className={cn("h-4 w-4", isCenter ? "text-primary-foreground" : "text-accent")} />
         </div>
-        <h3 className="font-bold text-lg leading-tight">{item.title}</h3>
+        <h2 className="font-bold text-lg leading-tight">{item.title}</h2>
       </div>
 
       <p className={cn(
@@ -617,9 +617,9 @@ const WhatWeBuild = () => {
       <section className="relative w-full min-h-[80vh] py-16 overflow-hidden">
         <div className="container mx-auto px-6 relative z-10">
           <div className="text-center mb-12">
-            <h2 data-speakable className="font-serif text-3xl md:text-4xl lg:text-5xl font-bold mb-3 text-foreground">
+            <h1 data-speakable className="font-serif text-3xl md:text-4xl lg:text-5xl font-bold mb-3 text-foreground">
               Our Services
-            </h2>
+            </h1>
             <p data-speakable className="text-muted-foreground max-w-md mx-auto">
               Everything Pleasant Cove Design offers to help your small business look sharp, stay reachable, and convert visitors into customers.
             </p>
@@ -690,9 +690,9 @@ const WhatWeBuild = () => {
                             <div className="w-6 h-6 rounded-md bg-accent/20 flex items-center justify-center">
                               <Icon className="h-3.5 w-3.5 text-accent" />
                             </div>
-                            <h3 className="text-foreground font-bold text-sm md:text-base">
+                            <h2 className="text-foreground font-bold text-sm md:text-base">
                               {item.title}
-                            </h3>
+                            </h2>
                           </div>
                           <p className="text-muted-foreground text-xs md:text-sm mb-2">
                             {item.shortDesc}
@@ -720,9 +720,9 @@ const WhatWeBuild = () => {
           {/* Details header */}
           <div className="text-center mb-8">
             <p className="text-sm uppercase tracking-wider text-accent mb-2">Here's what that includes</p>
-            <h3 className="font-serif text-2xl md:text-3xl font-bold text-foreground">
+            <h2 className="font-serif text-2xl md:text-3xl font-bold text-foreground">
               {FEATURES.find(f => f.id === activeId)?.title || "Explore Features"}
-            </h3>
+            </h2>
           </div>
           
           <div className="relative h-[450px] sm:h-[500px] flex items-center justify-center">
