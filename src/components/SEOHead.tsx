@@ -163,6 +163,7 @@ export function SEOHead({
   image,
   noindex = false,
   socialLinks = [],
+  googleBusinessUrl,
   service,
   datePublished,
   dateModified,
@@ -172,7 +173,14 @@ export function SEOHead({
   const ogImage = image ?? DEFAULT_IMAGE;
   const modified = dateModified ?? BUILD_DATE;
 
-  const graph: Record<string, unknown>[] = [...buildBaseGraph(socialLinks)];
+  const sameAs = [
+    "https://www.facebook.com/pleasantcovedesign",
+    "https://www.instagram.com/pleasantcovedesign",
+    ...(googleBusinessUrl ? [googleBusinessUrl] : []),
+    ...socialLinks,
+  ];
+
+  const graph: Record<string, unknown>[] = [...buildBaseGraph(sameAs)];
 
   // WebPage / Article node — anchors this URL to the Organization and exposes
   // a speakableSpecification telling AI assistants which DOM nodes are the
