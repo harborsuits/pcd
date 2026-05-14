@@ -690,9 +690,9 @@ const WhatWeBuild = () => {
                             <div className="w-6 h-6 rounded-md bg-accent/20 flex items-center justify-center">
                               <Icon className="h-3.5 w-3.5 text-accent" />
                             </div>
-                            <h3 className="text-foreground font-bold text-sm md:text-base">
+                            <h2 className="text-foreground font-bold text-sm md:text-base">
                               {item.title}
-                            </h3>
+                            </h2>
                           </div>
                           <p className="text-muted-foreground text-xs md:text-sm mb-2">
                             {item.shortDesc}
