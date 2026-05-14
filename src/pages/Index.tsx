@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { useMemo, lazy, Suspense, useState } from "react";
-import { ArrowRight, MessageSquare, FolderOpen, Sparkles, Shield, Smartphone, CreditCard, LogIn, Globe, CalendarCheck, Zap, Bot, Clock, CheckCircle, Phone, Brain, Clock3, Calendar, Menu, X } from "lucide-react";
+import { ArrowRight, MessageSquare, FolderOpen, Sparkles, Shield, Smartphone, CreditCard, LogIn, Globe, CalendarCheck, Zap, Bot, Clock, CheckCircle, Phone, Brain, Clock3, Calendar, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LiquidButton } from "@/components/ui/liquid-glass-button";
 import { GlowCard } from "@/components/ui/spotlight-card";
@@ -12,7 +12,7 @@ import { Footer } from "@/components/ui/footer";
 import { Typewriter } from "@/components/ui/typewriter-text";
 import pcdLogo from "@/assets/pcd-logo.jpeg";
 import { SEOHead } from "@/components/SEOHead";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { MarketingHeader } from "@/components/layout/MarketingHeader";
 import { LocalProofStrip } from "@/components/LocalProofStrip";
 import { NAP } from "@/lib/localPages";
 
@@ -98,7 +98,7 @@ const Index = () => {
     );
   };
 
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  
 
   return (
     <div className="min-h-screen flex flex-col bg-page-bg text-foreground">
