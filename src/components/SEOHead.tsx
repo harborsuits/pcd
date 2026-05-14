@@ -16,6 +16,7 @@ interface ServiceSchema {
   name: string;
   description: string;
   serviceType?: string;
+  areaServed?: string[];
 }
 
 interface SEOHeadProps {
@@ -229,6 +230,7 @@ export function SEOHead({
   }
 
   if (service) {
+    const serviceAreas = service.areaServed ?? DEFAULT_AREAS;
     graph.push({
       "@type": "Service",
       "@id": `${DOMAIN}/websites-for/${service.slug}#service`,
@@ -236,7 +238,7 @@ export function SEOHead({
       description: service.description,
       serviceType: service.serviceType ?? "Web design",
       provider: { "@id": ORG_ID },
-      areaServed: DEFAULT_AREAS.map((a) => ({ "@type": "City", name: a })),
+      areaServed: serviceAreas.map((a) => ({ "@type": "City", name: a })),
       audience: {
         "@type": "BusinessAudience",
         audienceType: "Small business owners",

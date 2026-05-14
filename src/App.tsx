@@ -29,6 +29,7 @@ import TermsOfService from "./pages/TermsOfService";
 import MidcoastPillar from "./pages/local/MidcoastPillar";
 import TownPage from "./pages/local/TownPage";
 import VerticalPage from "./pages/local/VerticalPage";
+import AiReceptionist from "./pages/AiReceptionist";
 
 const queryClient = new QueryClient();
 
@@ -44,6 +45,7 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/pricing" element={<Pricing />} />
           <Route path="/what-we-build" element={<WhatWeBuild />} />
+          <Route path="/ai-receptionist" element={<AiReceptionist />} />
           <Route path="/get-demo" element={<IntakeWizard />} />
           <Route path="/privacy" element={<PrivacyPolicy />} />
           <Route path="/terms" element={<TermsOfService />} />
