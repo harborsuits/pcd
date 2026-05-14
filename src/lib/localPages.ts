@@ -64,6 +64,7 @@ export const VERTICALS: Vertical[] = [
       "Service area is unclear",
       "Mobile site is hard to use",
     ],
+    demoPath: "/demos/landscaper",
     service: "landscaper",
   },
   {
