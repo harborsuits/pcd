@@ -89,6 +89,8 @@ const experienceOptions = [
 const RestaurantDemo = () => {
   return (
     <div className="min-h-screen bg-stone-950 text-stone-100 overflow-x-hidden relative">
+      {/* SEO: visually hidden h1 (visual title is rendered inside ScrollExpandMedia as styled text). */}
+      <h1 className="sr-only">The Golden Fork — Fine Dining Restaurant</h1>
       {/* Pleasant Cove Design badge - fixed top left */}
       <Link 
         to="/" 
