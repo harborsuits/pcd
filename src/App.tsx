@@ -29,6 +29,7 @@ import TermsOfService from "./pages/TermsOfService";
 import MidcoastPillar from "./pages/local/MidcoastPillar";
 import TownPage from "./pages/local/TownPage";
 import VerticalPage from "./pages/local/VerticalPage";
+import AiReceptionist from "./pages/AiReceptionist";
 
 const queryClient = new QueryClient();
 
