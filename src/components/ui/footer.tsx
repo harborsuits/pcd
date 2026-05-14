@@ -33,6 +33,7 @@ export function Footer({
   socialLinks,
   mainLinks,
   legalLinks,
+  locationLinks,
   copyright,
 }: FooterProps) {
   return (
