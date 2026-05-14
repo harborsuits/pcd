@@ -151,6 +151,9 @@ const Index = () => {
               <Link to="/ai-receptionist">AI Receptionist</Link>
             </Button>
             <Button asChild variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
+              <Link to="/blog">Blog</Link>
+            </Button>
+            <Button asChild variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
               <Link to="/what-we-build">Services</Link>
             </Button>
             <Button asChild variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
@@ -183,6 +186,13 @@ const Index = () => {
                   onClick={() => setMobileMenuOpen(false)}
                 >
                   AI Receptionist
+                </Link>
+                <Link
+                  to="/blog"
+                  className="text-lg font-medium hover:text-accent transition-colors"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Blog
                 </Link>
                 <Link 
                   to="/what-we-build" 

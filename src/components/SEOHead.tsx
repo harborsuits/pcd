@@ -185,22 +185,46 @@ export function SEOHead({
   // WebPage / Article node — anchors this URL to the Organization and exposes
   // a speakableSpecification telling AI assistants which DOM nodes are the
   // canonical answer text to read aloud or quote.
-  graph.push({
-    "@type": type === "article" ? "Article" : "WebPage",
-    "@id": `${canonicalUrl}#webpage`,
-    url: canonicalUrl,
-    name: fullTitle,
-    description,
-    isPartOf: { "@id": WEBSITE_ID },
-    about: { "@id": ORG_ID },
-    inLanguage: "en-US",
-    ...(datePublished ? { datePublished } : {}),
-    dateModified: modified,
-    speakable: {
-      "@type": "SpeakableSpecification",
-      cssSelector: ["h1", "[data-speakable]"],
-    },
-  });
+  if (type === "article") {
+    graph.push({
+      "@type": "Article",
+      "@id": `${canonicalUrl}#article`,
+      url: canonicalUrl,
+      headline: title,
+      name: fullTitle,
+      description,
+      image: ogImage,
+      isPartOf: { "@id": WEBSITE_ID },
+      mainEntityOfPage: { "@id": `${canonicalUrl}#article` },
+      about: { "@id": ORG_ID },
+      inLanguage: "en-US",
+      author: { "@id": ORG_ID },
+      publisher: { "@id": ORG_ID },
+      ...(datePublished ? { datePublished } : {}),
+      dateModified: modified,
+      speakable: {
+        "@type": "SpeakableSpecification",
+        cssSelector: ["h1", "[data-speakable]"],
+      },
+    });
+  } else {
+    graph.push({
+      "@type": "WebPage",
+      "@id": `${canonicalUrl}#webpage`,
+      url: canonicalUrl,
+      name: fullTitle,
+      description,
+      isPartOf: { "@id": WEBSITE_ID },
+      about: { "@id": ORG_ID },
+      inLanguage: "en-US",
+      ...(datePublished ? { datePublished } : {}),
+      dateModified: modified,
+      speakable: {
+        "@type": "SpeakableSpecification",
+        cssSelector: ["h1", "[data-speakable]"],
+      },
+    });
+  }
 
   if (localBusiness) {
     graph.push({
