@@ -148,6 +148,9 @@ const Index = () => {
               <Link to="/midcoast-maine">Midcoast Maine</Link>
             </Button>
             <Button asChild variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
+              <Link to="/ai-receptionist">AI Receptionist</Link>
+            </Button>
+            <Button asChild variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
               <Link to="/what-we-build">Services</Link>
             </Button>
             <Button asChild variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
@@ -173,6 +176,13 @@ const Index = () => {
                   onClick={() => setMobileMenuOpen(false)}
                 >
                   Midcoast Maine
+                </Link>
+                <Link
+                  to="/ai-receptionist"
+                  className="text-lg font-medium hover:text-accent transition-colors"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  AI Receptionist
                 </Link>
                 <Link 
                   to="/what-we-build" 

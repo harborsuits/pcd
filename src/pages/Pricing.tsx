@@ -48,6 +48,9 @@ const Pricing = () => {
               <Link to="/midcoast-maine">Midcoast Maine</Link>
             </Button>
             <Button asChild variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
+              <Link to="/ai-receptionist">AI Receptionist</Link>
+            </Button>
+            <Button asChild variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
               <Link to="/what-we-build">What We Build</Link>
             </Button>
             <Button asChild variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">

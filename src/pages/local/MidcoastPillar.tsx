@@ -41,9 +41,14 @@ const MidcoastPillar = () => {
           <Link to="/" className="font-serif text-xl font-bold tracking-tight">
             Pleasant Cove Design
           </Link>
-          <Button asChild variant="outline" size="sm">
-            <Link to="/get-demo?service=review">Free Review</Link>
-          </Button>
+          <nav className="flex items-center gap-4">
+            <Button asChild variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
+              <Link to="/ai-receptionist">AI Receptionist</Link>
+            </Button>
+            <Button asChild variant="outline" size="sm">
+              <Link to="/get-demo?service=review">Free Review</Link>
+            </Button>
+          </nav>
         </div>
       </header>
 
@@ -125,6 +130,7 @@ const MidcoastPillar = () => {
           <p>{NAP.name} · {NAP.city}, {NAP.region} · <a href={`tel:${NAP.phoneE164}`} className="hover:text-accent">{NAP.phone}</a> · {NAP.email}</p>
           <p>{NAP.serviceArea}</p>
           <nav className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 pt-2">
+            <Link to="/ai-receptionist" className="hover:text-foreground transition-colors">AI Receptionist</Link>
             <Link to="/what-we-build" className="hover:text-foreground transition-colors">What We Build</Link>
             <Link to="/pricing" className="hover:text-foreground transition-colors">Pricing</Link>
             <Link to="/" className="hover:text-foreground transition-colors">Home</Link>
