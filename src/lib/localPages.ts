@@ -103,6 +103,7 @@ export const VERTICALS: Vertical[] = [
       "No clear next step for serious leads",
       "Site doesn't match the quality of your work",
     ],
+    demoPath: "/demos/contractor",
     service: "contractor",
   },
   {
