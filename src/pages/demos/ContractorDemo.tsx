@@ -274,13 +274,13 @@ const ContractorDemo = () => {
                   src={contractorOwner}
                   alt="Tom Bishop, owner of Damariscotta Custom Builders"
                   loading="lazy"
-                  className="w-full aspect-[3/4] object-cover"
+                  className="w-full aspect-[4/3] object-cover"
                 />
                 <div
                   className="text-[#1a1612] text-2xl text-center mt-4"
                   style={{ fontFamily: "Caveat, 'Bradley Hand', cursive" }}
                 >
-                  Tom — on site, 2025
+                  Tom with a client — 2025
                 </div>
               </div>
             </div>
