@@ -617,9 +617,9 @@ const WhatWeBuild = () => {
       <section className="relative w-full min-h-[80vh] py-16 overflow-hidden">
         <div className="container mx-auto px-6 relative z-10">
           <div className="text-center mb-12">
-            <h2 data-speakable className="font-serif text-3xl md:text-4xl lg:text-5xl font-bold mb-3 text-foreground">
+            <h1 data-speakable className="font-serif text-3xl md:text-4xl lg:text-5xl font-bold mb-3 text-foreground">
               Our Services
-            </h2>
+            </h1>
             <p data-speakable className="text-muted-foreground max-w-md mx-auto">
               Everything Pleasant Cove Design offers to help your small business look sharp, stay reachable, and convert visitors into customers.
             </p>
