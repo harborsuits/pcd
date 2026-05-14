@@ -16,6 +16,7 @@ interface ServiceSchema {
   name: string;
   description: string;
   serviceType?: string;
+  areaServed?: string[];
 }
 
 interface SEOHeadProps {
