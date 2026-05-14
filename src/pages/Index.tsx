@@ -166,9 +166,6 @@ const Index = () => {
             <p data-speakable className="text-lg md:text-xl text-muted-foreground leading-relaxed max-w-2xl mx-auto mb-3">
               We fix outdated websites, broken contact flows, and confusing customer journeys for small businesses — so you stop losing the customers you're already attracting.
             </p>
-            <p className="text-sm text-muted-foreground/80">
-              Serving Damariscotta, Wiscasset, Boothbay, Camden, Rockland, Brunswick, Bath, and the rest of Midcoast Maine.
-            </p>
           </div>
         </div>
       </section>
