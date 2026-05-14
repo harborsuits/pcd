@@ -17,6 +17,10 @@ interface FooterProps {
     href: string;
     label: string;
   }>;
+  locationLinks?: {
+    label: string;
+    links: Array<{ href: string; label: string }>;
+  };
   copyright: {
     text: string;
     license?: string;
