@@ -2,6 +2,7 @@ import { Link, useParams, Navigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { LiquidButton } from "@/components/ui/liquid-glass-button";
 import { SEOHead } from "@/components/SEOHead";
+import { MarketingHeader } from "@/components/layout/MarketingHeader";
 import { TOWNS, VERTICALS, NAP, TOWN_NEIGHBORS } from "@/lib/localPages";
 import { GlowCard } from "@/components/ui/spotlight-card";
 import { MapPin, CheckCircle } from "lucide-react";

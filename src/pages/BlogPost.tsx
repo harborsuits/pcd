@@ -1,5 +1,6 @@
 import { Link, useParams, Navigate } from "react-router-dom";
 import { SEOHead } from "@/components/SEOHead";
+import { MarketingHeader } from "@/components/layout/MarketingHeader";
 import { Footer } from "@/components/ui/footer";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, ArrowLeft } from "lucide-react";

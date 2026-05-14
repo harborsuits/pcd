@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import PricingSection from "@/components/ui/pricing-section";
 import { SEOHead } from "@/components/SEOHead";
+import { MarketingHeader } from "@/components/layout/MarketingHeader";
 
 const Pricing = () => {
   return (

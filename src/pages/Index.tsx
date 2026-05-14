@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { useMemo, lazy, Suspense, useState } from "react";
+import { useMemo, lazy, Suspense } from "react";
 import { ArrowRight, MessageSquare, FolderOpen, Sparkles, Shield, Smartphone, CreditCard, LogIn, Globe, CalendarCheck, Zap, Bot, Clock, CheckCircle, Phone, Brain, Clock3, Calendar, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LiquidButton } from "@/components/ui/liquid-glass-button";

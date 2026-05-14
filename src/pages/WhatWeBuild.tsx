@@ -11,6 +11,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SEOHead } from "@/components/SEOHead";
+import { MarketingHeader } from "@/components/layout/MarketingHeader";
 
 // Unified feature data - single source of truth
 type FeatureItem = {

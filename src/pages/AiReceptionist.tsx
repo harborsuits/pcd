@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { SEOHead } from "@/components/SEOHead";
+import { MarketingHeader } from "@/components/layout/MarketingHeader";
 import { Footer } from "@/components/ui/footer";
 import { Phone, CalendarCheck, Bell, Wrench, Smile, Scissors, UtensilsCrossed, Home, Bed, ArrowRight, Clock, Voicemail, TrendingUp } from "lucide-react";
 
