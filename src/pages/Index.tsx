@@ -167,6 +167,13 @@ const Index = () => {
             </SheetTrigger>
             <SheetContent side="right" className="w-64">
               <nav className="flex flex-col gap-4 mt-8">
+                <Link
+                  to="/midcoast-maine"
+                  className="text-lg font-medium hover:text-accent transition-colors"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Midcoast Maine
+                </Link>
                 <Link 
                   to="/what-we-build" 
                   className="text-lg font-medium hover:text-accent transition-colors"
