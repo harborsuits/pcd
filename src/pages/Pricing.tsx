@@ -99,6 +99,9 @@ const Pricing = () => {
             <Link to="/" className="hover:text-foreground transition-colors">
               Home
             </Link>
+            <Link to="/midcoast-maine" className="hover:text-foreground transition-colors">
+              Midcoast Maine
+            </Link>
             <Link to="/privacy" className="hover:text-foreground transition-colors">
               Privacy
             </Link>
