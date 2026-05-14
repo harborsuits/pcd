@@ -113,7 +113,7 @@ function buildBaseGraph(sameAs: string[]) {
         "AI receptionist",
         "Website redesign",
       ],
-      sameAs: socialLinks,
+      sameAs: sameAs,
       hasOfferCatalog: OFFER_CATALOG,
       potentialAction: {
         "@type": "ReserveAction",
