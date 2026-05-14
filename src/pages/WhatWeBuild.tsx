@@ -420,7 +420,7 @@ const FeatureCardView: React.FC<FeatureCardViewProps> = ({ position, item, handl
         )}>
           <Icon className={cn("h-4 w-4", isCenter ? "text-primary-foreground" : "text-accent")} />
         </div>
-        <h3 className="font-bold text-lg leading-tight">{item.title}</h3>
+        <h2 className="font-bold text-lg leading-tight">{item.title}</h2>
       </div>
 
       <p className={cn(
