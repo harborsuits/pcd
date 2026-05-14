@@ -24,6 +24,7 @@ import SalonDemo from "./pages/demos/SalonDemo";
 import GalleryDemo from "./pages/demos/GalleryDemo";
 import BoutiqueDemo from "./pages/demos/BoutiqueDemo";
 import BoutiqueProductPage from "./pages/demos/BoutiqueProductPage";
+import PainterDemo from "./pages/demos/PainterDemo";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfService from "./pages/TermsOfService";
 import MidcoastPillar from "./pages/local/MidcoastPillar";
@@ -67,6 +68,7 @@ const App = () => (
           <Route path="/demos/gallery" element={<GalleryDemo />} />
           <Route path="/demos/boutique" element={<BoutiqueDemo />} />
           <Route path="/demos/boutique/product/:slug" element={<BoutiqueProductPage />} />
+          <Route path="/demos/painter" element={<PainterDemo />} />
 
           {/* Public Token Routes */}
           <Route path="/d/:token/:slug" element={<DemoPage />} />
