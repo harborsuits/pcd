@@ -91,6 +91,26 @@ export function Footer({
               })}
             </nav>
 
+            {/* Location Links */}
+            {locationLinks && locationLinks.links.length > 0 && (
+              <div className="flex flex-col items-center md:items-start gap-1">
+                <span className="text-xs uppercase tracking-wider text-muted-foreground/70">
+                  {locationLinks.label}
+                </span>
+                <nav className="flex flex-wrap justify-center gap-x-4 gap-y-1 md:justify-start">
+                  {locationLinks.links.map((link, i) => (
+                    <Link
+                      key={i}
+                      to={link.href}
+                      className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+                    >
+                      {link.label}
+                    </Link>
+                  ))}
+                </nav>
+              </div>
+            )}
+
             {/* Legal Links */}
             <nav className="flex flex-wrap justify-center gap-x-6 gap-y-2">
               {legalLinks.map((link, i) => {
