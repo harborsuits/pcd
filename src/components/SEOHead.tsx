@@ -31,6 +31,7 @@ interface SEOHeadProps {
   image?: string;
   noindex?: boolean;
   socialLinks?: string[];
+  googleBusinessUrl?: string;
   service?: ServiceSchema;
   datePublished?: string;
   dateModified?: string;
