@@ -36,24 +36,7 @@ const MidcoastPillar = () => {
           },
         ]}
       />
-      <header className="border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-50">
-        <div className="container mx-auto px-6 py-4 flex items-center justify-between">
-          <Link to="/" className="font-serif text-xl font-bold tracking-tight">
-            Pleasant Cove Design
-          </Link>
-          <nav className="flex items-center gap-4">
-            <Button asChild variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
-              <Link to="/ai-receptionist">AI Receptionist</Link>
-            </Button>
-            <Button asChild variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
-              <Link to="/blog">Blog</Link>
-            </Button>
-            <Button asChild variant="outline" size="sm">
-              <Link to="/get-demo?service=review">Free Review</Link>
-            </Button>
-          </nav>
-        </div>
-      </header>
+      <MarketingHeader activePage="midcoast-maine" />
 
       <section className="pt-16 pb-10">
         <div className="container mx-auto px-6 text-center max-w-3xl">

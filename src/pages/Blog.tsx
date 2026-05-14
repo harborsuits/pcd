@@ -27,33 +27,7 @@ const Blog = () => {
         ]}
       />
 
-      <header className="border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-50">
-        <div className="container mx-auto px-6 py-4 flex items-center justify-between">
-          <Link to="/" className="font-serif text-xl font-bold tracking-tight text-foreground">
-            Pleasant Cove Design
-          </Link>
-          <nav className="flex items-center gap-4">
-            <Button asChild variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
-              <Link to="/midcoast-maine">Midcoast Maine</Link>
-            </Button>
-            <Button asChild variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
-              <Link to="/ai-receptionist">AI Receptionist</Link>
-            </Button>
-            <Button asChild variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
-              <Link to="/blog">Blog</Link>
-            </Button>
-            <Button asChild variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
-              <Link to="/what-we-build">What We Build</Link>
-            </Button>
-            <Button asChild variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
-              <Link to="/pricing">Pricing</Link>
-            </Button>
-            <Button asChild variant="outline" size="sm">
-              <Link to="/portal">Client Portal</Link>
-            </Button>
-          </nav>
-        </div>
-      </header>
+      <MarketingHeader activePage="blog" />
 
       <section className="pt-12 pb-10 md:pt-20 md:pb-14">
         <div className="container mx-auto px-6 max-w-3xl text-center">
