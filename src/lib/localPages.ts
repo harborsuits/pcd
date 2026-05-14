@@ -51,6 +51,7 @@ export const VERTICALS: Vertical[] = [
       "Contact form is broken or buried",
       "Site looks dated — feels untrustworthy",
     ],
+    demoPath: "/demos/painter",
     service: "painter",
   },
   {

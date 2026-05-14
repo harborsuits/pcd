@@ -1,83 +1,58 @@
-# AEO/SEO Upgrade — v2 (with your three additions)
+# Build out the remaining trade demos
 
-Goal: top-tier AI citation surface — speakable text, entity-linked services, direct booking action, geographically honest internal links.
+## Scope
 
-## Pass 1 — `SEOHead` schema additions
+Five new bespoke demo pages, matching the quality bar of the existing Roofer / Restaurant / Salon / Gallery / Boutique demos (250–420 lines each, hand-crafted layout, trade-accurate AI imagery).
 
-Extend `src/components/SEOHead.tsx`:
+| # | Trade | Route | Source vertical |
+|---|-------|-------|-----------------|
+| 1 | Painter | `/demos/painter` | `painters` |
+| 2 | Landscaper | `/demos/landscaper` | `landscapers` |
+| 3 | Contractor | `/demos/contractor` | `contractors` |
+| 4 | Inn / B&B | `/demos/inn` | `inns` |
+| 5 | Real Estate | `/demos/real-estate` | new — added to `VERTICALS` |
 
-**1. `speakableSpecification` on every WebPage node**
-- Default selectors: `h1`, `[data-speakable]`
-- Pages opt extra blocks in by adding `data-speakable` to hero subhead / first paragraph
+## Approach: one demo at a time
 
-**2. Organization upgrades** (in `baseGraph`)
-- `contactPoint`: `{ telephone: NAP.phoneE164, contactType: "customer service", areaServed: "US", availableLanguage: "English" }`
-- **`logo` as `ImageObject`**: `{ "@type": "ImageObject", url: \`${DOMAIN}/apple-touch-icon.png\`, width: 512, height: 512, caption: NAP.name }`
-- **`potentialAction: ReserveAction`**: `{ "@type": "ReserveAction", name: "Book a Free Demo", target: { "@type": "EntryPoint", urlTemplate: \`${DOMAIN}/get-demo\`, actionPlatform: ["http://schema.org/DesktopWebPlatform", "http://schema.org/MobileWebPlatform"] } }`
-- `sameAs`: new optional `socialLinks?: string[]` prop merged in (Google Business Profile URL once supplied)
-- **`hasOfferCatalog`**: `OfferCatalog` whose `itemListElement` is an array of `{ "@type": "Offer", itemOffered: { "@id": \`${DOMAIN}/websites-for/${slug}#service\` } }` — one per vertical in `VERTICALS`. Statically generated from `localPages.ts`.
+Per your note, I'll build them sequentially so we can review trade-accuracy and tone before moving on. After each demo ships you eyeball it; if it's good we move to the next, if not we iterate. **Starting with Painter.**
 
-**3. `openingHoursSpecification` on `ProfessionalService`** (localBusiness pages)
-- Mon–Fri 09:00–17:00, plus a free-text `note: "Also by appointment"`
+## Per-demo deliverables
 
-**4. `Service` schema for `/websites-for/[vertical]` pages**
-- New optional `service?: { slug, name, description, serviceType }` prop
-- Emits node with **`"@id": \`${DOMAIN}/websites-for/${slug}#service\`"`** so it's cross-referenced by `hasOfferCatalog`
-- `provider: { "@id": ORG_ID }`, `areaServed: DEFAULT_AREAS`, `audience: { "@type": "BusinessAudience", audienceType: "Small business owners" }`
+For each demo:
 
-**5. `datePublished` / `dateModified` on WebPage node**
-- Optional props; default `dateModified` to today's build date
+1. **AI-generated imagery** (6–8 images per trade, AI-generated per the trade-accuracy rule in project memory). Stored in `src/assets/demos/<trade>/`. Trade-accurate only — no off-trade fallback ever. Saved as `.jpg` (no transparency needed).
+2. **Page component** at `src/pages/demos/<Trade>Demo.tsx` — bespoke layout: hero, trust strip, services/portfolio, testimonial, CTA. Same structural quality as the existing five.
+3. **Route** wired in `src/App.tsx`.
+4. **`demoPath` updated** in `src/lib/localPages.ts` for that vertical so the `VerticalPage` and `MidcoastPillar` "View demo" links activate.
+5. **Sitemap entry** added to `public/sitemap.xml`.
+6. **Shared marketing header** (`<MarketingHeader />`) at the top so nav stays consistent.
 
-## Pass 2 — Content / linking
+## Painter demo (first)
 
-**6. FAQ answer-quality rewrite** (Home, Pricing, WhatWeBuild, MidcoastPillar)
-- Self-contained, 2–3 sentences, lead with direct answer, include brand name once where natural
-- Specific rewrites: Pricing "How much does a small business website cost?" (give the actual range), WhatWeBuild "Do you handle SEO?" (lead with yes + concrete deliverables), Home "How does pricing work?" (lead with the model)
+- **Fictional brand**: "Coastal Coat Painters — Damariscotta, ME"
+- **Sections**: Hero with "Free Estimate" CTA → trust strip (licensed/insured/local) → services (interior, exterior, cabinet refinishing, deck staining) → before/after gallery (4 pairs) → 2 testimonials → service area → estimate form / phone CTA
+- **Imagery (AI)**: hero exterior repaint of a Maine coastal home, interior living room mid-paint, cabinet refinish close-up, deck staining shot, 4 before/after pairs (or 4 finished-job photos), painter at work in coveralls. All authentically Maine — clapboard, shingle, coastal palettes — never generic suburban.
+- **Length target**: ~280–340 lines, matching Roofer/Salon density.
 
-**7. Internal linking — geographically honest neighbors**
+## Real Estate vertical addition
 
-Hard-coded `TOWN_NEIGHBORS` map in `src/lib/localPages.ts`, based on actual Midcoast geography:
-
+Real Estate isn't in `VERTICALS` yet. I'll add it:
 ```ts
-export const TOWN_NEIGHBORS: Record<string, string[]> = {
-  "newcastle":       ["damariscotta", "wiscasset", "boothbay-harbor"],
-  "damariscotta":    ["newcastle", "wiscasset", "boothbay-harbor"],
-  "wiscasset":       ["newcastle", "damariscotta", "bath"],
-  "boothbay-harbor": ["damariscotta", "newcastle", "wiscasset"],
-  "bath":            ["brunswick", "wiscasset", "damariscotta"],
-  "brunswick":       ["bath", "wiscasset", "damariscotta"],
-  "camden":          ["rockland", "brunswick", "bath"],
-  "rockland":        ["camden", "brunswick", "bath"],
-};
+{ slug: "real-estate", name: "Real Estate Agents", singular: "Agent",
+  outcome: "more qualified buyer/seller leads",
+  pains: ["Listings buried behind MLS frames",
+          "No clear way to capture buyer leads",
+          "Agent bio reads like a resume, not a person"],
+  demoPath: "/demos/real-estate", service: "real-estate" }
 ```
+This will make it appear on `MidcoastPillar` and get its own `/midcoast-maine/real-estate-agents` vertical page automatically.
 
-`TownPage` renders a "Nearby towns" strip from this map (3 links per page).
+## After Painter ships
 
-**8. Vertical link footer on pillar + town pages**
-- Explicit `<Link>` list to all `/websites-for/[vertical]` slugs in a small footer block, so every vertical service page is always one hop from a local landing page (avoids orphaning if crawlers don't traverse the GlowCards).
-
-**9. Speakable opt-in markup**
-- Add `data-speakable` to: Home hero headline + typewriter subhead; Pricing H1 + two-phase blurb; WhatWeBuild H1 + intro; MidcoastPillar H1 + first paragraph; TownPage H1 + first paragraph; VerticalPage H1 + first paragraph.
+I'll pause for your visual approval before generating Landscaper. Same loop for Contractor → Inn → Real Estate. If at any point you want me to batch the rest without stopping, just say go.
 
 ## Out of scope
 
-Per-vertical FAQ pages, more social meta variants, hreflang, AggregateRating.
-
-## Files touched
-
-- `src/components/SEOHead.tsx` — schema additions, new props (`socialLinks`, `service`, `datePublished`, `dateModified`)
-- `src/lib/localPages.ts` — `TOWN_NEIGHBORS` map
-- `src/pages/Index.tsx` — FAQ rewrite, dates, speakable
-- `src/pages/Pricing.tsx` — FAQ rewrite, dates, speakable
-- `src/pages/WhatWeBuild.tsx` — FAQ rewrite, dates, speakable
-- `src/pages/local/MidcoastPillar.tsx` — speakable, vertical link footer, dates
-- `src/pages/local/TownPage.tsx` — Nearby Towns strip, vertical link footer, speakable, dates
-- `src/pages/local/VerticalPage.tsx` — `service` prop wiring, speakable, dates
-
-## Pending input (won't block — I'll use defaults)
-
-- Business hours: defaulting to Mon–Fri 9–5 + "by appointment" note
-- Google Business Profile URL: omitted from `sameAs` until provided
-- Phone `(207) 380-5680` — already in `NAP.phoneE164`, used as-is
-
-No backend or DB changes.
+- Dental Office demo (you said no)
+- Refactoring existing demos
+- Changes to `/get-demo` flow — `?service=painter` etc. already works since the verticals exist
