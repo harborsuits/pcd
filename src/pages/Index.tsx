@@ -544,6 +544,10 @@ const Index = () => {
           { href: "/privacy", label: "Privacy" },
           { href: "/terms", label: "Terms" },
         ]}
+        locationLinks={{
+          label: "Service Area",
+          links: [{ href: "/midcoast-maine", label: "Midcoast Maine" }],
+        }}
         copyright={{
           text: `© ${new Date().getFullYear()} Pleasant Cove Design`,
           license: "All rights reserved",
