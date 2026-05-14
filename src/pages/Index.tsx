@@ -145,6 +145,9 @@ const Index = () => {
           {/* Desktop nav */}
           <nav className="hidden sm:flex items-center gap-4">
             <Button asChild variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
+              <Link to="/midcoast-maine">Midcoast Maine</Link>
+            </Button>
+            <Button asChild variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
               <Link to="/what-we-build">Services</Link>
             </Button>
             <Button asChild variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
