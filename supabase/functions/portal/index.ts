@@ -450,6 +450,26 @@ Deno.serve(async (req) => {
       // Non-fatal: continue with empty review items
     }
 
+    // If the project is unclaimed (no owner), redact PII from intake_json before returning.
+    // Trust pages are still public, but contact email/phone shouldn't leak to anyone with the token.
+    const isUnclaimed = !project.owner_user_id;
+    let safeIntakeJson = intake?.intake_json ?? null;
+    if (isUnclaimed && safeIntakeJson && typeof safeIntakeJson === "object") {
+      const redactKeys = [
+        "email",
+        "contact_email",
+        "phone",
+        "contact_phone",
+        "business_phone",
+        "escalation_number",
+      ];
+      const clone: Record<string, unknown> = { ...(safeIntakeJson as Record<string, unknown>) };
+      for (const k of redactKeys) {
+        if (k in clone) clone[k] = null;
+      }
+      safeIntakeJson = clone;
+    }
+
     // Clean response - include id for deduplication
     const response = {
       business: {
@@ -467,9 +487,10 @@ Deno.serve(async (req) => {
         deposit_status: project.deposit_status || null,
         is_ai_trial: project.is_ai_trial || false,
         service_type: project.service_type || null,
+        is_unclaimed: isUnclaimed,
       },
       intake_status: intake?.intake_status || null,
-      intake_json: intake?.intake_json || null,
+      intake_json: safeIntakeJson,
       phase_b_status: intake?.phase_b_status || "pending",
       phase_b_data: intake?.phase_b_json || null,
       messages: (messages || []).map((m) => ({
