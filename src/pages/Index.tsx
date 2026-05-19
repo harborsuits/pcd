@@ -103,7 +103,7 @@ const Index = () => {
   return (
     <div className="min-h-screen flex flex-col bg-page-bg text-foreground">
       <SEOHead
-        title="Pleasant Cove Design — We Fix Websites That Cost You Customers"
+        title="Pleasant Cove Design — Websites That Win Customers"
         description="We help small businesses fix outdated websites, broken contact flows, and confusing customer journeys. Get a free website review."
         path="/"
         localBusiness

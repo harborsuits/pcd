@@ -688,6 +688,7 @@ export default function PortalHub() {
           title="Client Portal | Pleasant Cove Design"
           description="Start a demo, set up your project, or access your active work — all in one place."
           path="/portal"
+          noindex
         />
         <ClientLayout
           title="Sign In Failed"
@@ -717,6 +718,7 @@ export default function PortalHub() {
           title="Client Portal | Pleasant Cove Design"
           description="Start a demo, set up your project, or access your active work — all in one place."
           path="/portal"
+          noindex
         />
         <ClientLayout
           title="Verify Your Email"
@@ -811,6 +813,7 @@ export default function PortalHub() {
           title="Reset Password | Client Portal"
           description="Set a new password for your client portal account."
           path="/portal"
+          noindex
         />
         <ClientLayout
           title="Set New Password"
@@ -881,6 +884,7 @@ export default function PortalHub() {
           title="Client Portal"
           description="Log in to your client portal to track projects, send messages, and share files with Pleasant Cove Design."
           path="/portal"
+          noindex
         />
         <ClientLayout
           title="Your Projects"
@@ -1079,6 +1083,7 @@ export default function PortalHub() {
         title="Client Portal | Pleasant Cove Design"
         description="Start a demo, set up your project, or access your active work — all in one place."
         path="/portal"
+          noindex
       />
       <ClientLayout
         title="Client Portal"
