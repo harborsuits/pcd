@@ -461,6 +461,13 @@ const GetDemo = () => {
     return hasEnoughDigits && isMostlyNumbers;
   };
 
+  const isValidEmail = (email: string) => {
+    const trimmed = email.trim();
+    if (!trimmed) return false;
+    // RFC-ish simple check: local@domain.tld, no spaces, TLD >= 2 chars
+    return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(trimmed);
+  };
+
   const isValidBusinessHours = (hours: string) => {
     if (!hours.trim()) return true; // Empty is handled by required check
     // Should contain time-related words or patterns, not just random numbers
@@ -515,7 +522,11 @@ const GetDemo = () => {
       case "basics":
         // For demo, website, both - require serviceArea; for AI-only, it's optional (collected later as serviceAreaRules)
         const needsServiceArea = formData.serviceType === "demo" || formData.serviceType === "website" || formData.serviceType === "both";
-        const basicsValid = formData.businessName.trim() && formData.email.trim() && formData.phone.trim();
+        const basicsValid =
+          formData.businessName.trim() &&
+          isValidEmail(formData.email) &&
+          formData.phone.trim() &&
+          isValidPhone(formData.phone);
         return needsServiceArea ? basicsValid && formData.serviceArea.trim() : basicsValid;
       // Tier selection step (for "both" without pre-selected tier)
       case "tier":
@@ -1174,8 +1185,15 @@ const GetDemo = () => {
               placeholder="john@smithplumbing.com"
               value={formData.email}
               onChange={(e) => updateField("email", e.target.value)}
+              onBlur={() => markTouched("email")}
               disabled={isLoading}
+              aria-invalid={touched.email && !isValidEmail(formData.email)}
             />
+            {touched.email && formData.email.trim() && !isValidEmail(formData.email) && (
+              <p className="text-xs text-destructive">
+                Please enter a valid email (e.g. you@yourbusiness.com)
+              </p>
+            )}
           </div>
 
           <div className="space-y-2">
