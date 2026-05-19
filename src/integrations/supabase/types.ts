@@ -208,6 +208,7 @@ export type Database = {
       client_leads: {
         Row: {
           business_name: string
+          business_type: string | null
           claimed_at: string | null
           claimed_by_user_id: string | null
           created_at: string
@@ -215,14 +216,17 @@ export type Database = {
           email_normalized: string | null
           id: string
           name: string | null
+          notes: string | null
           phone: string | null
           source: string | null
           utm_campaign: string | null
           utm_medium: string | null
           utm_source: string | null
+          website_url: string | null
         }
         Insert: {
           business_name: string
+          business_type?: string | null
           claimed_at?: string | null
           claimed_by_user_id?: string | null
           created_at?: string
@@ -230,14 +234,17 @@ export type Database = {
           email_normalized?: string | null
           id?: string
           name?: string | null
+          notes?: string | null
           phone?: string | null
           source?: string | null
           utm_campaign?: string | null
           utm_medium?: string | null
           utm_source?: string | null
+          website_url?: string | null
         }
         Update: {
           business_name?: string
+          business_type?: string | null
           claimed_at?: string | null
           claimed_by_user_id?: string | null
           created_at?: string
@@ -245,11 +252,13 @@ export type Database = {
           email_normalized?: string | null
           id?: string
           name?: string | null
+          notes?: string | null
           phone?: string | null
           source?: string | null
           utm_campaign?: string | null
           utm_medium?: string | null
           utm_source?: string | null
+          website_url?: string | null
         }
         Relationships: []
       }
