@@ -169,7 +169,9 @@ export function SEOHead({
   dateModified,
 }: SEOHeadProps) {
   const canonicalUrl = `${DOMAIN}${path}`;
-  const fullTitle = path === "/" ? title : `${title} — Pleasant Cove Design`;
+  // Only append brand suffix if combined length stays under 60 chars (SERP truncation limit).
+  const withSuffix = `${title} — Pleasant Cove Design`;
+  const fullTitle = path === "/" || withSuffix.length > 60 ? title : withSuffix;
   const ogImage = image ?? DEFAULT_IMAGE;
   const modified = dateModified ?? BUILD_DATE;
 
