@@ -1,0 +1,43 @@
+# Pleasant Cove Design
+
+> Midcoast Maine web design studio helping small businesses fix outdated websites, broken contact flows, and weak mobile experiences that cost them customers.
+
+Pleasant Cove Design builds modern, conversion-focused websites and AI receptionist tools for owner-operated businesses across Maine. Based in Newcastle, ME, with focused service across Midcoast, Greater Portland, Southern Maine, Central Maine, and Down East.
+
+## Pages
+
+- [Home](/): Overview of services and the studio's approach to fixing websites that lose customers.
+- [What We Build](/what-we-build): Examples of websites, demos, and capabilities by industry.
+- [Pricing](/pricing): Transparent pricing for websites, AI receptionist, and ongoing care.
+- [AI Receptionist](/ai-receptionist): 24/7 automated phone answering for small businesses.
+- [Get a Free Demo](/get-demo): Intake form for a custom demo or free website review.
+- [Blog](/blog): Articles on small business web design, AI, and local SEO in Maine.
+- [Privacy Policy](/privacy): How we handle data.
+- [Terms of Service](/terms): Service terms.
+
+## Service Areas
+
+- [Midcoast Maine](/midcoast-maine): Primary service region pillar page.
+- [Newcastle](/web-design/newcastle): Local web design for Newcastle, ME.
+- [Damariscotta](/web-design/damariscotta): Local web design for Damariscotta, ME.
+- [Portland](/web-design/portland): Web design for Greater Portland.
+- [Camden](/web-design/camden): Web design for Camden, ME.
+- [Bar Harbor](/web-design/bar-harbor): Web design for Bar Harbor and Down East.
+
+## Industries
+
+- [Roofers](/websites-for/roofers): Websites for roofing contractors.
+- [Painters](/websites-for/painters): Websites for painters.
+- [Landscapers](/websites-for/landscapers): Websites for landscapers.
+- [Restaurants](/websites-for/restaurants): Websites for restaurants.
+- [Salons](/websites-for/salons): Websites for salons and barbershops.
+- [Contractors](/websites-for/contractors): Websites for general contractors.
+- [Galleries](/websites-for/galleries): Websites for art galleries.
+- [Boutiques](/websites-for/boutiques): Websites for boutiques and retail.
+- [Inns](/websites-for/inns): Websites for inns and small lodging.
+
+## Optional
+
+- [Blog: Why Maine sites lose customers](/blog/why-maine-small-business-websites-lose-customers)
+- [Blog: AI receptionist for Maine small business](/blog/ai-receptionist-for-small-business-maine)
+- [Blog: Web design Midcoast Maine — what to look for](/blog/web-design-midcoast-maine-what-to-look-for)
