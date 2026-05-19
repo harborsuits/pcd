@@ -129,9 +129,10 @@ export default function WorkspacePage() {
   // Get session from single source of truth
   const { hydrated, session: authSession } = useAuthReady();
   
-  // Determine service type and what tabs to show
-  // Treat 'demo' the same as 'website' so demo viewers see the standard progress cards.
-  const rawServiceType = (projectInfo?.intakeData?.service_type as string | undefined) || 'website';
+  // Determine service type and what tabs to show.
+  // NOTE: 'demo' is normalized to 'website' for tab visibility, but UpdatesTab receives
+  // the raw value so it can still recognize it as a free demo (no deposit CTA).
+  const rawServiceType = (projectInfo?.intakeData?.service_type as 'website' | 'ai_receptionist' | 'both' | 'demo' | undefined) || 'website';
   const serviceType = (rawServiceType === 'demo' ? 'website' : rawServiceType) as 'website' | 'ai_receptionist' | 'both';
   const includesWebsite = serviceType === 'website' || serviceType === 'both';
   const includesAI = serviceType === 'ai_receptionist' || serviceType === 'both';
