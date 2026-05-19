@@ -1092,6 +1092,29 @@ const GetDemo = () => {
           description="Website + AI Receptionist working together for maximum impact."
         />
       </div>
+
+      {/* Lightweight alt path: free written/Loom review */}
+      <div className="pt-2">
+        <button
+          type="button"
+          onClick={() => navigate("/get-demo?service=review")}
+          className="w-full p-5 rounded-xl border-2 border-dashed border-border bg-card text-left transition-all duration-200 hover:border-primary/50 hover:shadow-sm flex items-start gap-4"
+        >
+          <div className="w-11 h-11 rounded-lg bg-secondary/50 flex items-center justify-center shrink-0">
+            <Search className="w-5 h-5 text-primary" />
+          </div>
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-1">
+              <h3 className="font-semibold">Not ready yet? Get a free review of your current site</h3>
+              <span className="px-2 py-0.5 text-[10px] font-medium rounded-full bg-primary/10 text-primary">Free</span>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Drop your URL — we'll send honest, specific feedback on what's costing you conversions. No sales pressure.
+            </p>
+          </div>
+          <ArrowRight className="w-5 h-5 text-muted-foreground shrink-0 mt-2" />
+        </button>
+      </div>
     </div>
   );
 
