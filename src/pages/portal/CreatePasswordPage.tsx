@@ -263,6 +263,7 @@ export default function CreatePasswordPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
+      <Helmet><meta name="robots" content="noindex, nofollow" /></Helmet>
       {/* Header */}
       <header className="border-b border-border px-6 py-4">
         <div className="max-w-md mx-auto flex items-center gap-3">
