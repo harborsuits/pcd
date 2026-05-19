@@ -461,6 +461,7 @@ const Index = () => {
           </p>
         </div>
       </section>
+      </main>
 
       {/* Footer */}
       <Footer
