@@ -15,6 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { SEOHead } from "@/components/SEOHead";
 import { cn } from "@/lib/utils";
+import { ReviewRequestForm } from "@/components/intake/ReviewRequestForm";
 
 type ServiceType = "demo" | "ai" | "website" | "both" | "other" | "";
 type WebsiteGoal = "calls" | "quotes" | "bookings" | "info" | "";
