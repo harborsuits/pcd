@@ -279,9 +279,14 @@ export default function WorkspacePage() {
           depositStatus: data.business.deposit_status || null,
           isAITrial: data.business.is_ai_trial || false,
         });
+      } else if (res.status === 404) {
+        setError("Project not found");
+      } else if (!res.ok) {
+        setError(data?.error || "Unable to load this project");
       }
     } catch (err) {
       console.error("Fetch project info error:", err);
+      setError("Unable to load this project");
     }
   }, [token, authSession, setShowAuthModal, navigate]);
 
