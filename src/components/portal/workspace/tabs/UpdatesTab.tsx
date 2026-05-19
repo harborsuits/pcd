@@ -151,7 +151,9 @@ export function UpdatesTab({
 }: UpdatesTabProps) {
   const [isLoadingDeposit, setIsLoadingDeposit] = useState(false);
   
-  const includesWebsite = serviceType === 'website' || serviceType === 'both';
+  // Treat 'demo' the same as 'website' for the progress card,
+  // but still recognize it as a free demo so we never show the deposit CTA.
+  const includesWebsite = serviceType === 'website' || serviceType === 'both' || serviceType === 'demo';
   const includesAI = serviceType === 'ai_receptionist' || serviceType === 'both';
   
   // Don't show deposit CTA for free demos/trials

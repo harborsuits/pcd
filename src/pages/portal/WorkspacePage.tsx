@@ -17,6 +17,7 @@ import type { Version } from "@/components/portal/workspace/VersionsList";
 import { useAuthReady } from "@/hooks/useAuthReady";
 import { NotificationBell } from "@/components/portal/NotificationBell";
 import { useUnreadCounts } from "@/hooks/useUnreadCounts";
+import { ClaimAuthModal } from "@/components/demo/ClaimAuthModal";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -97,6 +98,7 @@ interface ProjectInfo {
   aiStatus: 'intake_received' | 'review' | 'setup' | 'testing' | 'live' | 'paused' | null;
   depositStatus: 'pending' | 'paid' | 'skipped' | null;
   isAITrial: boolean;
+  isUnclaimed: boolean;
 }
 
 export default function WorkspacePage() {
@@ -127,8 +129,11 @@ export default function WorkspacePage() {
   // Get session from single source of truth
   const { hydrated, session: authSession } = useAuthReady();
   
-  // Determine service type and what tabs to show
-  const serviceType = projectInfo?.intakeData?.service_type || 'website';
+  // Determine service type and what tabs to show.
+  // NOTE: 'demo' is normalized to 'website' for tab visibility, but UpdatesTab receives
+  // the raw value so it can still recognize it as a free demo (no deposit CTA).
+  const rawServiceType = (projectInfo?.intakeData?.service_type as 'website' | 'ai_receptionist' | 'both' | 'demo' | undefined) || 'website';
+  const serviceType = (rawServiceType === 'demo' ? 'website' : rawServiceType) as 'website' | 'ai_receptionist' | 'both';
   const includesWebsite = serviceType === 'website' || serviceType === 'both';
   const includesAI = serviceType === 'ai_receptionist' || serviceType === 'both';
   const hasVersions = versions.length > 0;
@@ -278,6 +283,7 @@ export default function WorkspacePage() {
           aiStatus: data.business.ai_trial_status || null,
           depositStatus: data.business.deposit_status || null,
           isAITrial: data.business.is_ai_trial || false,
+          isUnclaimed: data.business.is_unclaimed === true,
         });
       } else if (res.status === 404) {
         setError("Project not found");
@@ -536,7 +542,7 @@ export default function WorkspacePage() {
               projectStatus={projectInfo?.status || null}
               intakeStatus={projectInfo?.intakeStatus || null}
               portalStage={projectInfo?.portalStage || 'intake'}
-              serviceType={serviceType}
+              serviceType={rawServiceType}
               aiStatus={projectInfo?.aiStatus || null}
               hasVersions={hasVersions}
               businessName={projectInfo?.businessName || ''}
@@ -619,6 +625,16 @@ export default function WorkspacePage() {
         onOpenChange={setShowAuthModal}
       />
       
+      {/* Claim modal — unauthenticated visitor on an unclaimed project */}
+      {projectInfo?.isUnclaimed && !authSession && token && (
+        <ClaimAuthModal
+          open={true}
+          onOpenChange={() => { /* gated until claimed/auth */ }}
+          businessName={projectInfo.businessName || "your project"}
+          projectToken={token}
+        />
+      )}
+
       {/* Trust Footer - only show to clients, not operators */}
       {!isOperator && <TrustFooter />}
     </div>
