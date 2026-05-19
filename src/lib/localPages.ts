@@ -16,7 +16,15 @@ export interface Vertical {
   service?: string; // ?service= param for /get-demo
 }
 
+export interface Region {
+  slug: string;
+  name: string;
+  blurb: string;
+  towns: string[]; // town slugs
+}
+
 export const TOWNS: Town[] = [
+  // Midcoast (home base)
   { slug: "newcastle", name: "Newcastle", blurb: "Historic river town with a tight-knit business community." },
   { slug: "damariscotta", name: "Damariscotta", blurb: "Main Street businesses, restaurants, and shops." },
   { slug: "wiscasset", name: "Wiscasset", blurb: "Working waterfront, antique shops, and seasonal traffic." },
@@ -25,6 +33,57 @@ export const TOWNS: Town[] = [
   { slug: "rockland", name: "Rockland", blurb: "Galleries, restaurants, and the working harbor." },
   { slug: "brunswick", name: "Brunswick", blurb: "College town with a strong year-round local economy." },
   { slug: "bath", name: "Bath", blurb: "Shipbuilding heritage and downtown small businesses." },
+  { slug: "belfast", name: "Belfast", blurb: "Creative hub with independent shops, restaurants, and makers." },
+  // Greater Portland
+  { slug: "portland", name: "Portland", blurb: "Maine's largest city — restaurants, retail, and professional services." },
+  { slug: "freeport", name: "Freeport", blurb: "Destination retail, inns, and outdoor brands." },
+  { slug: "yarmouth", name: "Yarmouth", blurb: "Coastal community with strong locally-owned businesses." },
+  { slug: "falmouth", name: "Falmouth", blurb: "Established town with professional and home-service trades." },
+  { slug: "cumberland", name: "Cumberland", blurb: "Residential community supporting local trades and services." },
+  // Southern Maine
+  { slug: "saco", name: "Saco", blurb: "Growing downtown with shops, services, and contractors." },
+  { slug: "biddeford", name: "Biddeford", blurb: "Mill city revival — restaurants, makers, and new ventures." },
+  { slug: "kennebunk", name: "Kennebunk", blurb: "Inns, boutiques, and high-end seasonal businesses." },
+  { slug: "wells", name: "Wells", blurb: "Year-round and seasonal businesses along Route 1." },
+  // Central / Down East
+  { slug: "augusta", name: "Augusta", blurb: "Capital region small businesses and trades." },
+  { slug: "waterville", name: "Waterville", blurb: "Revitalized downtown with shops and services." },
+  { slug: "bangor", name: "Bangor", blurb: "Northern hub for small businesses across eastern Maine." },
+  { slug: "ellsworth", name: "Ellsworth", blurb: "Gateway to Down East with year-round local business." },
+  { slug: "bar-harbor", name: "Bar Harbor", blurb: "Inns, restaurants, and seasonal retail near Acadia." },
+];
+
+export const REGIONS: Region[] = [
+  {
+    slug: "midcoast",
+    name: "Midcoast Maine",
+    blurb: "Our home base — Newcastle, Damariscotta, Boothbay, Camden, Rockland, Brunswick, Bath, Belfast.",
+    towns: ["newcastle", "damariscotta", "wiscasset", "boothbay-harbor", "camden", "rockland", "brunswick", "bath", "belfast"],
+  },
+  {
+    slug: "greater-portland",
+    name: "Greater Portland",
+    blurb: "Portland, Freeport, Yarmouth, Falmouth, Cumberland, and surrounding towns.",
+    towns: ["portland", "freeport", "yarmouth", "falmouth", "cumberland"],
+  },
+  {
+    slug: "southern-maine",
+    name: "Southern Maine",
+    blurb: "Saco, Biddeford, Kennebunk, Wells, and the York County coast.",
+    towns: ["saco", "biddeford", "kennebunk", "wells"],
+  },
+  {
+    slug: "central-maine",
+    name: "Central Maine",
+    blurb: "Augusta, Waterville, and the Kennebec Valley.",
+    towns: ["augusta", "waterville"],
+  },
+  {
+    slug: "down-east",
+    name: "Down East & Bangor",
+    blurb: "Bangor, Ellsworth, Bar Harbor, and the Acadia region.",
+    towns: ["bangor", "ellsworth", "bar-harbor"],
+  },
 ];
 
 export const VERTICALS: Vertical[] = [
