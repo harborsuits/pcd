@@ -97,6 +97,7 @@ interface ProjectInfo {
   aiStatus: 'intake_received' | 'review' | 'setup' | 'testing' | 'live' | 'paused' | null;
   depositStatus: 'pending' | 'paid' | 'skipped' | null;
   isAITrial: boolean;
+  isUnclaimed: boolean;
 }
 
 export default function WorkspacePage() {
