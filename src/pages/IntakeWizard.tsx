@@ -200,6 +200,9 @@ const GetDemo = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [accessToken, setAccessToken] = useState<string | null>(null);
 
+  // ?service=review → render the lightweight free-review form instead of the wizard
+  const isReviewMode = searchParams.get("service") === "review";
+
   // Check if user is logged in
   useEffect(() => {
     const checkAuth = async () => {
