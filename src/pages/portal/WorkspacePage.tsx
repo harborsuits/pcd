@@ -281,6 +281,7 @@ export default function WorkspacePage() {
           aiStatus: data.business.ai_trial_status || null,
           depositStatus: data.business.deposit_status || null,
           isAITrial: data.business.is_ai_trial || false,
+          isUnclaimed: data.business.is_unclaimed === true,
         });
       } else if (res.status === 404) {
         setError("Project not found");
