@@ -293,9 +293,14 @@ Deno.serve(async (req) => {
         }
 
         const to = project.contact_email;
-        if (!to) {
-          console.log(`Skipping event ${ev.id} - no contact_email on project`);
-          // Mark as sent to avoid retrying (no email = nothing to do)
+        const isValidEmailFormat = (e: string | null | undefined): boolean =>
+          !!e && /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(e.trim());
+
+        if (!to || !isValidEmailFormat(to)) {
+          console.log(
+            `Skipping event ${ev.id} - missing/invalid contact_email (${to ?? "null"})`
+          );
+          // Mark as sent to avoid retrying forever (cannot be delivered)
           await supabase
             .from("notification_events")
             .update({ sent_at: new Date().toISOString() })
@@ -306,7 +311,23 @@ Deno.serve(async (req) => {
         const { subject, html } = renderEmail(ev, appUrl, project.business_name);
 
         console.log(`Sending email to ${to}: ${subject}`);
-        await sendResendEmail({ to, subject, html });
+        try {
+          await sendResendEmail({ to, subject, html });
+        } catch (sendErr) {
+          const msg = String((sendErr as Error)?.message ?? sendErr);
+          // Permanent failures (4xx from Resend) — don't retry forever
+          const isPermanent = /(\b4\d{2}\b|validation_error|invalid)/i.test(msg);
+          if (isPermanent) {
+            console.error(`Permanent failure for event ${ev.id}, marking sent:`, msg);
+            await supabase
+              .from("notification_events")
+              .update({ sent_at: new Date().toISOString() })
+              .eq("id", ev.id);
+            failed.push({ id: ev.id, error: `permanent: ${msg}` });
+            continue;
+          }
+          throw sendErr;
+        }
 
         await supabase
           .from("notification_events")
