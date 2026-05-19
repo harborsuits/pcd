@@ -3,16 +3,16 @@ import { Button } from "@/components/ui/button";
 import { LiquidButton } from "@/components/ui/liquid-glass-button";
 import { SEOHead } from "@/components/SEOHead";
 import { MarketingHeader } from "@/components/layout/MarketingHeader";
-import { TOWNS, VERTICALS, NAP } from "@/lib/localPages";
+import { TOWNS, VERTICALS, REGIONS, NAP } from "@/lib/localPages";
 import { GlowCard } from "@/components/ui/spotlight-card";
-import { MapPin, Briefcase } from "lucide-react";
+import { MapPin, Briefcase, Map } from "lucide-react";
 
 const MidcoastPillar = () => {
   return (
     <div className="min-h-screen flex flex-col bg-page-bg text-foreground">
       <SEOHead
-        title="Web Design in Midcoast Maine"
-        description="Local web design and website fixes for small businesses in Midcoast Maine — Damariscotta, Boothbay, Camden, Rockland, and more."
+        title="Web Design for Small Businesses Across Maine"
+        description="Websites and digital systems for small businesses across Maine. Based in Midcoast — serving Portland, Freeport, Yarmouth, Saco, Bangor, and everywhere in between."
         path="/midcoast-maine"
         localBusiness
         breadcrumbs={[
@@ -42,13 +42,13 @@ const MidcoastPillar = () => {
       <section className="pt-16 pb-10">
         <div className="container mx-auto px-6 text-center max-w-3xl">
           <p className="text-xs uppercase tracking-wider text-accent font-semibold mb-3">
-            Based in Midcoast Maine
+            Based in Midcoast Maine · Serving the whole state
           </p>
           <h1 data-speakable className="font-serif text-4xl md:text-5xl lg:text-6xl font-bold mb-4">
-            Web design for Midcoast Maine
+            Websites for small businesses across Maine
           </h1>
           <p data-speakable className="text-lg text-muted-foreground mb-8">
-            Pleasant Cove Design helps small businesses across Midcoast Maine fix outdated websites, broken contact forms, and mobile experiences that quietly cost them customers every day.
+            Based in Midcoast Maine — serving contractors, shops, restaurants, and local businesses from Portland to Bangor and everywhere in between.
           </p>
           <Link to="/get-demo?service=review">
             <LiquidButton size="lg">Get a Free Website Review</LiquidButton>
@@ -58,10 +58,32 @@ const MidcoastPillar = () => {
 
       <section className="py-12 border-t border-border">
         <div className="container mx-auto px-6">
-          <h2 className="font-serif text-2xl md:text-3xl font-bold text-center mb-8 flex items-center justify-center gap-2">
-            <MapPin className="h-6 w-6 text-accent" /> Towns we serve
+          <h2 className="font-serif text-2xl md:text-3xl font-bold text-center mb-2 flex items-center justify-center gap-2">
+            <Map className="h-6 w-6 text-accent" /> Where we work
           </h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 max-w-4xl mx-auto">
+          <p className="text-center text-muted-foreground mb-8 max-w-2xl mx-auto">
+            We work with small businesses anywhere in Maine. These are the regions we serve most often.
+          </p>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 max-w-5xl mx-auto">
+            {REGIONS.map((r) => (
+              <GlowCard key={r.slug} customSize glowColor="emerald" className="bg-card/80 p-5 h-full">
+                <h3 className="font-semibold text-foreground mb-1">{r.name}</h3>
+                <p className="text-sm text-muted-foreground">{r.blurb}</p>
+              </GlowCard>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="py-12 border-t border-border">
+        <div className="container mx-auto px-6">
+          <h2 className="font-serif text-2xl md:text-3xl font-bold text-center mb-2 flex items-center justify-center gap-2">
+            <MapPin className="h-6 w-6 text-accent" /> Featured towns
+          </h2>
+          <p className="text-center text-muted-foreground mb-8 max-w-2xl mx-auto">
+            Examples of where we already work — not a boundary. If your town isn't listed, we still want to hear from you.
+          </p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 max-w-5xl mx-auto">
             {TOWNS.map((t) => (
               <Link key={t.slug} to={`/web-design/${t.slug}`}>
                 <GlowCard customSize glowColor="emerald" className="bg-card/80 p-4 hover:bg-card transition-all h-full">
