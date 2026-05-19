@@ -201,6 +201,7 @@ export default function CreatePasswordPage() {
   if (existingAccount) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background px-4">
+        <Helmet><meta name="robots" content="noindex, nofollow" /></Helmet>
         <div className="w-full max-w-md text-center space-y-6">
           <div className="w-16 h-16 mx-auto rounded-full bg-primary/10 flex items-center justify-center">
             <Lock className="h-8 w-8 text-primary" />
