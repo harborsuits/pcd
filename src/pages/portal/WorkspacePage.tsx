@@ -542,7 +542,7 @@ export default function WorkspacePage() {
               projectStatus={projectInfo?.status || null}
               intakeStatus={projectInfo?.intakeStatus || null}
               portalStage={projectInfo?.portalStage || 'intake'}
-              serviceType={serviceType}
+              serviceType={rawServiceType}
               aiStatus={projectInfo?.aiStatus || null}
               hasVersions={hasVersions}
               businessName={projectInfo?.businessName || ''}
