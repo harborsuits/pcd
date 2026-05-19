@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { portalSupabase } from "@/integrations/supabase/portalClient";
 import pcdLogo from "@/assets/pcd-logo.jpeg";
+import { Helmet } from "react-helmet-async";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -190,6 +191,7 @@ export default function CreatePasswordPage() {
   if (checkingExisting) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
+        <Helmet><meta name="robots" content="noindex, nofollow" /></Helmet>
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
       </div>
     );
