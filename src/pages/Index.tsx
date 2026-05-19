@@ -137,6 +137,7 @@ const Index = () => {
       />
       <MarketingHeader activePage="home" />
 
+      <main className="flex-1">
       {/* 1️⃣ HERO - AI-forward, compact */}
       <section className="pt-12 md:pt-16 pb-10 md:pb-12 relative overflow-hidden">
         <div className="relative container mx-auto px-6">
@@ -460,6 +461,7 @@ const Index = () => {
           </p>
         </div>
       </section>
+      </main>
 
       {/* Footer */}
       <Footer
