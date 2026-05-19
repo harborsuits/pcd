@@ -1,58 +1,72 @@
-# Build out the remaining trade demos
+## Free Website Review Flow (Option C, refined)
 
-## Scope
+Add a dedicated lightweight review intake at `/get-demo?service=review`, with an optional "want a full plan?" upsell on the thank-you screen.
 
-Five new bespoke demo pages, matching the quality bar of the existing Roofer / Restaurant / Salon / Gallery / Boutique demos (250–420 lines each, hand-crafted layout, trade-accurate AI imagery).
+### 1. New component: `ReviewRequestForm`
 
-| # | Trade | Route | Source vertical |
-|---|-------|-------|-----------------|
-| 1 | Painter | `/demos/painter` | `painters` |
-| 2 | Landscaper | `/demos/landscaper` | `landscapers` |
-| 3 | Contractor | `/demos/contractor` | `contractors` |
-| 4 | Inn / B&B | `/demos/inn` | `inns` |
-| 5 | Real Estate | `/demos/real-estate` | new — added to `VERTICALS` |
+File: `src/components/intake/ReviewRequestForm.tsx`
 
-## Approach: one demo at a time
+Single-screen card with these fields:
 
-Per your note, I'll build them sequentially so we can review trade-accuracy and tone before moving on. After each demo ships you eyeball it; if it's good we move to the next, if not we iterate. **Starting with Painter.**
+- **Name** (required)
+- **Email** (required, validated)
+- **Current website URL** (required, accepts with or without `https://`)
+- **What kind of business is this?** (optional dropdown — Contractor, Dentist/Medical, Restaurant, Retail, Service Business, Other)
+- **What feels off? (optional)** — textarea, max 500 chars
 
-## Per-demo deliverables
+Submit button: **"Send me my free review"**
+Microcopy directly under the button: *"No spam. No sales pressure. Just honest feedback."*
 
-For each demo:
+Validation via zod.
 
-1. **AI-generated imagery** (6–8 images per trade, AI-generated per the trade-accuracy rule in project memory). Stored in `src/assets/demos/<trade>/`. Trade-accurate only — no off-trade fallback ever. Saved as `.jpg` (no transparency needed).
-2. **Page component** at `src/pages/demos/<Trade>Demo.tsx` — bespoke layout: hero, trust strip, services/portfolio, testimonial, CTA. Same structural quality as the existing five.
-3. **Route** wired in `src/App.tsx`.
-4. **`demoPath` updated** in `src/lib/localPages.ts` for that vertical so the `VerticalPage` and `MidcoastPillar` "View demo" links activate.
-5. **Sitemap entry** added to `public/sitemap.xml`.
-6. **Shared marketing header** (`<MarketingHeader />`) at the top so nav stays consistent.
+### 2. Thank-you screen with upsell
 
-## Painter demo (first)
+After successful submit, swap the form for a confirmation panel:
 
-- **Fictional brand**: "Coastal Coat Painters — Damariscotta, ME"
-- **Sections**: Hero with "Free Estimate" CTA → trust strip (licensed/insured/local) → services (interior, exterior, cabinet refinishing, deck staining) → before/after gallery (4 pairs) → 2 testimonials → service area → estimate form / phone CTA
-- **Imagery (AI)**: hero exterior repaint of a Maine coastal home, interior living room mid-paint, cabinet refinish close-up, deck staining shot, 4 before/after pairs (or 4 finished-job photos), painter at work in coveralls. All authentically Maine — clapboard, shingle, coastal palettes — never generic suburban.
-- **Length target**: ~280–340 lines, matching Roofer/Salon density.
+- ✓ "Thanks {name} — we'll send your review within 2 business days."
+- Sub-line: *"We'll email you a short Loom walkthrough and written notes showing what may be hurting trust, clarity, or conversions — plus the highest-impact fixes first."*
+- **Upsell card** (subtle):
+  - Heading: "Want a full rebuild plan + live demo?"
+  - Body: "Tell us a bit more about your business and we'll build a working demo you can click through — free, no deposit."
+  - Primary: "Continue to full intake →" → `/get-demo?service=website`
+  - Secondary link: "No thanks, just the review is fine"
 
-## Real Estate vertical addition
+### 3. Wire into IntakeWizard routing
 
-Real Estate isn't in `VERTICALS` yet. I'll add it:
-```ts
-{ slug: "real-estate", name: "Real Estate Agents", singular: "Agent",
-  outcome: "more qualified buyer/seller leads",
-  pains: ["Listings buried behind MLS frames",
-          "No clear way to capture buyer leads",
-          "Agent bio reads like a resume, not a person"],
-  demoPath: "/demos/real-estate", service: "real-estate" }
-```
-This will make it appear on `MidcoastPillar` and get its own `/midcoast-maine/real-estate-agents` vertical page automatically.
+File: `src/pages/IntakeWizard.tsx`
 
-## After Painter ships
+When `?service=review`, render `<ReviewRequestForm />` instead of the wizard steps. Do **not** add `review` to `SERVICE_PARAM_MAP` — it's a separate acquisition surface, not a service template.
 
-I'll pause for your visual approval before generating Landscaper. Same loop for Contractor → Inn → Real Estate. If at any point you want me to batch the rest without stopping, just say go.
+SEO: title "Free Website Review — Pleasant Cove Design", description matches the form's promise.
 
-## Out of scope
+### 4. Visual style
 
-- Dental Office demo (you said no)
-- Refactoring existing demos
-- Changes to `/get-demo` flow — `?service=painter` etc. already works since the verticals exist
+Match `/get-demo` (emerald base, GlowCard container, same typography). Single centered card, no progress bar, keeps the existing trust footer.
+
+---
+
+### Technical notes
+
+**Data storage — keep operator columns clean:**
+
+Reuse `client_leads`. Mapping:
+- `name` → user's name
+- `email` → user's email
+- `business_name` → derived from URL hostname (e.g. `acme.com` → "Acme") — readable, keeps rate-limit trigger working, keeps inbox views clean
+- `source` → `'website_review'`
+- `utm_source` / `utm_medium` / `utm_campaign` → reused as lightweight structured slots for the extra fields:
+  - `utm_source` = `'website_review'`
+  - `utm_medium` = the submitted website URL
+  - `utm_campaign` = the business-type dropdown value (or empty)
+- The "what feels off" note → **does not fit cleanly** in any existing column without overloading. Recommend a tiny schema migration to add a nullable `notes text` column to `client_leads` (one column, indexed-free, optional). This keeps `business_name` clean and gives operators a real field to read.
+
+If the user prefers zero schema change, fall back to packing the note into `utm_campaign` with a delimiter — flagged as a tradeoff.
+
+**Telegram notification:** Fail-silent operator alert on submit, matching the existing claim-flow pattern. Verify the exact call path during implementation (either an edge function call or piggyback on an existing lead-notification path).
+
+**Operator visibility:** Reviews appear in existing leads view filterable by `source = 'website_review'`. Operator replies manually with the Loom + notes.
+
+**Files touched:**
+- new: `src/components/intake/ReviewRequestForm.tsx`
+- edited: `src/pages/IntakeWizard.tsx` (add `?service=review` branch)
+- migration (recommended): add `notes text` column to `client_leads`
