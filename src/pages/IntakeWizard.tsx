@@ -3528,6 +3528,36 @@ const GetDemo = () => {
 
   const isLastStep = currentStep === steps.length - 1;
 
+  if (isReviewMode) {
+    return (
+      <div className="min-h-screen flex flex-col bg-page-bg text-foreground">
+        <SEOHead
+          title="Free Website Review — Pleasant Cove Design"
+          description="Drop your website URL and we'll send back honest, specific feedback on what may be costing you conversions — free, no sales pressure."
+          path="/get-demo"
+        />
+        <header className="border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-50">
+          <div className="container mx-auto px-6 py-4 flex items-center justify-between">
+            <Link to="/" className="font-serif text-xl font-bold tracking-tight text-foreground">
+              Pleasant Cove Design
+            </Link>
+            <Button asChild variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
+              <Link to="/">
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Back
+              </Link>
+            </Button>
+          </div>
+        </header>
+        <main className="flex-1 container mx-auto px-6 py-10 md:py-14">
+          <div className="max-w-xl mx-auto bg-card border border-border rounded-2xl shadow-sm p-6 md:p-8">
+            <ReviewRequestForm />
+          </div>
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex flex-col bg-page-bg text-foreground">
       <SEOHead
