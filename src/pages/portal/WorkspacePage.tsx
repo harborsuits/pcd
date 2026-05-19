@@ -130,8 +130,8 @@ export default function WorkspacePage() {
   
   // Determine service type and what tabs to show
   // Treat 'demo' the same as 'website' so demo viewers see the standard progress cards.
-  const rawServiceType = projectInfo?.intakeData?.service_type || 'website';
-  const serviceType = rawServiceType === 'demo' ? 'website' : rawServiceType;
+  const rawServiceType = (projectInfo?.intakeData?.service_type as string | undefined) || 'website';
+  const serviceType = (rawServiceType === 'demo' ? 'website' : rawServiceType) as 'website' | 'ai_receptionist' | 'both';
   const includesWebsite = serviceType === 'website' || serviceType === 'both';
   const includesAI = serviceType === 'ai_receptionist' || serviceType === 'both';
   const hasVersions = versions.length > 0;
