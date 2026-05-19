@@ -1489,6 +1489,29 @@ async function handleGetPrototypes(
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    // Verify the project exists before returning prototypes (avoid 200 for unknown tokens)
+    const { data: projectRow, error: projectErr } = await supabase
+      .from("projects")
+      .select("id")
+      .eq("project_token", token)
+      .is("deleted_at", null)
+      .maybeSingle();
+
+    if (projectErr) {
+      console.error("Project lookup error:", projectErr);
+      return new Response(
+        JSON.stringify({ error: "Database error" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (!projectRow) {
+      return new Response(
+        JSON.stringify({ error: "Portal not found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // Fetch prototypes for this project
     const { data: prototypes, error } = await supabase
       .from("prototypes")
