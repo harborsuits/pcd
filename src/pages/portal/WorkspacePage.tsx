@@ -624,6 +624,16 @@ export default function WorkspacePage() {
         onOpenChange={setShowAuthModal}
       />
       
+      {/* Claim modal — unauthenticated visitor on an unclaimed project */}
+      {projectInfo?.isUnclaimed && !authSession && token && (
+        <ClaimAuthModal
+          open={true}
+          onOpenChange={() => { /* gated until claimed/auth */ }}
+          businessName={projectInfo.businessName || "your project"}
+          projectToken={token}
+        />
+      )}
+
       {/* Trust Footer - only show to clients, not operators */}
       {!isOperator && <TrustFooter />}
     </div>
