@@ -129,7 +129,9 @@ export default function WorkspacePage() {
   const { hydrated, session: authSession } = useAuthReady();
   
   // Determine service type and what tabs to show
-  const serviceType = projectInfo?.intakeData?.service_type || 'website';
+  // Treat 'demo' the same as 'website' so demo viewers see the standard progress cards.
+  const rawServiceType = projectInfo?.intakeData?.service_type || 'website';
+  const serviceType = rawServiceType === 'demo' ? 'website' : rawServiceType;
   const includesWebsite = serviceType === 'website' || serviceType === 'both';
   const includesAI = serviceType === 'ai_receptionist' || serviceType === 'both';
   const hasVersions = versions.length > 0;
