@@ -267,7 +267,7 @@ const PrivacyPolicy = () => {
             This Privacy Policy is provided for transparency and trust and is intended to align with modern web, software, and AI-enabled service practices.
           </p>
         </article>
-      </div>
+      </main>
     </div>
   );
 };

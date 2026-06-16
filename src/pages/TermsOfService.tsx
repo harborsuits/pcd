@@ -211,7 +211,7 @@ const TermsOfService = () => {
             </p>
           </div>
         </article>
-      </div>
+      </main>
     </div>
   );
 };
