@@ -19,63 +19,62 @@ const plans = [
   {
     name: "PCD Starter System",
     description:
-      "A clean website plus the basics to answer calls and capture leads. Built for owner-operators who need a solid foundation.",
+      "A clean, mobile-friendly website plus 24/7 AI call answering — so you stop missing leads when you're on the job.",
     monthlyPrice: 395,
     yearlyPrice: 4266, // ~10% prepay discount
     buildRange: "$1,500–$2,500",
-    badge: "Most common",
+    badge: "Best for solo owners",
     cta: "Start with Starter",
     popular: false,
     includes: [
-      "Essential website build (1–5 pages)",
-      "Mobile-friendly, fast loading",
-      "Click-to-call + contact forms",
-      "Google Maps embed + basic SEO setup",
-      "Hosting + maintenance (backups, uptime, minor updates)",
-      "AI Front Door (answers calls, captures info, FAQs, after-hours)",
-      "Call summaries + emergency routing",
+      "Essential website (1–5 pages), mobile-friendly and fast",
+      "Click-to-call buttons + simple contact forms",
+      "Google Maps embed + basic local SEO setup",
+      "Hosting, backups, uptime monitoring, and minor updates",
+      "AI Front Door — answers calls, captures details, handles FAQs and after-hours",
+      "Call summaries emailed to you + emergency routing rules",
     ],
   },
   {
     name: "PCD Growth System",
     description:
-      "Booking, stronger lead capture, and CRM basics. For businesses that live on appointments.",
+      "Everything in Starter plus online booking and lead tracking. Built for businesses that live on appointments.",
     monthlyPrice: 650,
     yearlyPrice: 7020,
     buildRange: "$2,500–$4,000",
-    badge: "Best value",
-    cta: "Upgrade to Growth",
+    badge: "Most popular",
+    cta: "Choose Growth",
     popular: true,
     includes: [
       "Everything in Starter, plus:",
-      "Conversion-focused layout",
-      "Booking or intake integration",
-      "Lead capture flows + light animations",
+      "Conversion-focused layout that turns visitors into calls and bookings",
+      "Online booking or intake form integrated with your calendar",
+      "Lead capture flows with light animations to guide visitors",
       "AI Front Door + Booking (single or multi-staff scheduling)",
-      "Confirmation texts/emails",
-      "CRM basics (lead tracking + tagging)",
+      "Automatic confirmation texts and emails",
+      "CRM basics — lead tracking, tagging, and follow-up reminders",
     ],
   },
   {
     name: "PCD Full Operations",
     description:
-      "Premium site, AI, booking, CRM context, and managed updates. The full system, actively tuned for you.",
+      "A premium site with AI, booking, CRM, and hands-on monthly tuning. The full system, actively managed so it keeps improving.",
     monthlyPrice: 895,
     yearlyPrice: 9666,
     buildRange: "$4,000–$6,500",
-    badge: "Highest impact",
-    cta: "Go Full Ops",
+    badge: "Most hands-on",
+    cta: "Go Full Operations",
     popular: false,
     includes: [
       "Everything in Growth, plus:",
-      "Advanced interactions + custom user flows",
-      "CRM pipelines + dashboards",
-      "AI + Booking + CRM Context (logging, tagging, follow-ups)",
-      "Priority routing + reporting",
-      "Managed updates & tuning (pricing, seasonal messaging)",
-      "Priority support for digital operations",
+      "Advanced interactions and custom user flows",
+      "CRM pipelines and simple dashboards for your team",
+      "AI + Booking + CRM context (logging, tagging, automated follow-ups)",
+      "Priority call routing and monthly reporting",
+      "Managed updates and tuning — pricing changes, seasonal messaging, new offers",
+      "Priority support for anything digital in your operation",
     ],
-    note: "CRM context focuses on intake, tagging, routing, and follow-ups — not enterprise CRM replacement.",
+    note: "CRM context covers intake, tagging, routing, and follow-ups — not a replacement for enterprise CRM software.",
   },
 ];
 
@@ -180,10 +179,10 @@ export default function PricingSection() {
           <TimelineContent animationNum={0} timelineRef={pricingRef}>
             <PricingSwitch onSwitch={setPeriod} />
             <p className="text-xs text-muted-foreground/70 -mt-6 mb-4">
-              Yearly pricing is an optional prepaid discount (available on request).
+              Yearly pricing is an optional prepaid discount — just ask.
             </p>
             <p className="text-sm text-muted-foreground max-w-2xl mx-auto">
-              Each bundle pairs a one-time website or system build with an ongoing monthly plan — so your site keeps working for you instead of going stale.
+              Every bundle pairs a one-time build with a monthly plan, so your website keeps earning instead of slowly going stale.
             </p>
 
           </TimelineContent>
@@ -279,7 +278,7 @@ export default function PricingSection() {
             <div className="text-center mb-10">
               <h3 className="font-serif text-2xl font-bold mb-2">Website Care Plans</h3>
               <p className="text-muted-foreground">
-                Already have a website? Pick a care plan to keep it healthy — no bundle required.
+                Already have a website you like? Pick a care plan and we'll keep it healthy, secure, and up to date — no bundle required.
               </p>
             </div>
 
@@ -332,10 +331,10 @@ export default function PricingSection() {
             <div className="text-center mb-10">
               <h3 className="font-serif text-2xl font-bold mb-2">À La Carte Services</h3>
               <p className="text-muted-foreground">
-                Not ready for a bundle? Pick individual services that fit what you need right now.
+                Not ready for a full bundle? Pick the one or two pieces you actually need right now — we'll handle the rest later.
               </p>
               <p className="text-xs text-muted-foreground/70 mt-2">
-                We work with the tools you already use — Toast, Square, Shopify, ChowNow, Calendly, Google, and others. Most services are built & managed; we don't just build and disappear.
+                We work with the tools you already use — Toast, Square, Shopify, ChowNow, Calendly, Google, and more. Most services are built and managed, not just delivered and forgotten.
               </p>
             </div>
 
@@ -372,7 +371,7 @@ export default function PricingSection() {
           <div className="text-center mt-16 max-w-xl mx-auto p-8 rounded-xl bg-card/50 border border-border/50 backdrop-blur-sm">
             <h3 className="font-serif text-2xl font-bold mb-3">7-Day Pilot</h3>
             <p className="text-muted-foreground mb-2">
-              Full functionality on real call traffic. Clear conversion expectations discussed upfront.
+              Try the full system on your real call traffic for a week. We agree on what "working" looks like up front, so you can judge it on results — not promises.
             </p>
             <p className="text-sm text-muted-foreground/70 italic mb-6">
               Limited availability — select businesses only.
@@ -389,11 +388,10 @@ export default function PricingSection() {
         <TimelineContent animationNum={10} timelineRef={pricingRef}>
           <div className="text-center mt-8 max-w-2xl mx-auto space-y-4">
             <p className="text-sm text-muted-foreground/80 italic">
-              Projects typically begin with a deposit. Final payment is due upon completion, before launch.
+              Projects start with a deposit to lock in your build slot. The remainder is due when your site is ready to launch.
             </p>
             <p className="text-sm text-muted-foreground">
-              <span className="font-medium">Important Boundaries:</span> PCD provides coverage, responsiveness, and operational relief — 
-              not a replacement for employees, medical records handling, or enterprise compliance.
+              <span className="font-medium">What we don't do:</span> we add coverage, responsiveness, and ongoing care — we're not a replacement for staff, medical records handling, or enterprise compliance work.
             </p>
           </div>
         </TimelineContent>

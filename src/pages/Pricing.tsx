@@ -8,8 +8,8 @@ const Pricing = () => {
   return (
     <div className="min-h-screen flex flex-col bg-page-bg text-foreground">
       <SEOHead
-        title="Pricing & Services"
-        description="Straightforward pricing for website refreshes, one-page builds, and booking flow fixes for small businesses. No retainers, no surprises."
+        title="Small Business Website Pricing | Pleasant Cove Design"
+        description="Clear pricing for small business websites and ongoing care. Bundles from $395/mo with a one-time build fee. Care-only plans from $125/mo. No long contracts."
         path="/pricing"
         breadcrumbs={[
           { name: "Home", path: "/" },
@@ -46,23 +46,23 @@ const Pricing = () => {
       <section className="pt-12 pb-6 md:pt-16 md:pb-8 relative overflow-hidden">
         <div className="relative container mx-auto px-6 text-center">
           <h1 data-speakable className="font-serif text-4xl md:text-5xl lg:text-6xl font-bold leading-tight mb-4">
-            Simple pricing for small businesses
+            Honest pricing for small business websites
           </h1>
           <p data-speakable className="text-lg md:text-xl text-muted-foreground leading-relaxed max-w-2xl mx-auto mb-4">
-            Two parts: a one-time build to launch your site or system, and a small monthly plan that keeps it running and improving.
+            Two simple parts: a one-time fee to design and launch your site, then a small monthly plan that keeps it running, updated, and bringing in customers.
           </p>
           <div className="max-w-2xl mx-auto grid sm:grid-cols-2 gap-4 mb-6 text-left">
             <div className="rounded-lg border border-border bg-card/60 p-4">
               <p className="text-sm font-semibold text-accent mb-1">One-time build</p>
-              <p className="text-sm text-muted-foreground">Designing, building, and launching your website or system. Paid once.</p>
+              <p className="text-sm text-muted-foreground">Design, copy, and launch — the website or system itself. Paid once, you own it.</p>
             </div>
             <div className="rounded-lg border border-border bg-card/60 p-4">
               <p className="text-sm font-semibold text-accent mb-1">Monthly plan</p>
-              <p className="text-sm text-muted-foreground">Hosting, updates, small changes, and — on bundles — AI, booking, and ongoing tuning. Cancel anytime.</p>
+              <p className="text-sm text-muted-foreground">Hosting, security, backups, and small changes. Bundles also include AI call answering, booking, and ongoing improvements. Cancel anytime.</p>
             </div>
           </div>
           <p className="text-sm text-muted-foreground/70">
-            Care plans from $125/mo · Full bundles from $395/mo · À la carte services available
+            Care-only plans from $125/mo · Full bundles from $395/mo · À la carte services available
           </p>
 
         </div>
