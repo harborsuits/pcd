@@ -103,8 +103,8 @@ const Index = () => {
   return (
     <div className="min-h-screen flex flex-col bg-page-bg text-foreground">
       <SEOHead
-        title="Pleasant Cove Design — Websites That Win Customers"
-        description="We help small businesses fix outdated websites, broken contact flows, and confusing customer journeys. Get a free website review."
+        title="Small Business Web Design & Website Fixes | Pleasant Cove Design"
+        description="We fix outdated websites, broken contact forms, and weak mobile layouts so small businesses stop losing customers. Free website review. Midcoast Maine."
         path="/"
         localBusiness
         faq={[
