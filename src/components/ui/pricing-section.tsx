@@ -278,7 +278,7 @@ export default function PricingSection() {
             <div className="text-center mb-10">
               <h3 className="font-serif text-2xl font-bold mb-2">Website Care Plans</h3>
               <p className="text-muted-foreground">
-                Already have a website? Pick a care plan to keep it healthy — no bundle required.
+                Already have a website you like? Pick a care plan and we'll keep it healthy, secure, and up to date — no bundle required.
               </p>
             </div>
 
