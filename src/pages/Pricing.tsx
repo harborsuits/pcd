@@ -19,17 +19,17 @@ const Pricing = () => {
           {
             question: "How much does a small business website cost?",
             answer:
-              "Most small-business websites from Pleasant Cove Design land between roughly $1,500 and $4,500 for the one-time build, depending on page count and features. After launch, a month-to-month care plan covers hosting, updates, and small changes — typically under $100 a month for owner-operated businesses.",
+              "Most small-business websites from Pleasant Cove Design land between $1,500 and $6,500 for the one-time build, depending on page count, features, and whether AI or booking is included. After launch, you choose either a month-to-month care plan ($125–$175/mo) to keep the site healthy, or a full bundle ($395–$895/mo) that adds AI, booking, and ongoing improvements.",
           },
           {
             question: "Are there long-term contracts?",
             answer:
-              "No. The build is a one-time project fee, and the monthly care plan is month-to-month with no minimum term — you can cancel any time and keep your site.",
+              "No. The build is a one-time project fee, and every monthly plan — care or bundle — is month-to-month with no minimum term. You can cancel any time and keep your site.",
           },
           {
             question: "What's included in the monthly care plan?",
             answer:
-              "The care plan covers hosting, SSL, security and software updates, daily backups, uptime monitoring, and a set amount of small content changes each month. It's how Pleasant Cove Design keeps client sites from going stale or breaking quietly in the background.",
+              "Care plans start at $125/mo and cover hosting, SSL, security and software updates, daily backups, uptime monitoring, and a set amount of small content changes each month. The $175/mo Growth tier adds priority change requests and a monthly performance review.",
           },
           {
             question: "Do you offer free quotes or website reviews?",
@@ -37,6 +37,7 @@ const Pricing = () => {
               "Yes. Pleasant Cove Design offers a free website review that walks through your current site and names the specific issues costing you customers, with a clear fix plan and no obligation to hire us afterwards.",
           },
         ]}
+
       />
       <MarketingHeader activePage="pricing" />
 
@@ -47,21 +48,22 @@ const Pricing = () => {
             Simple pricing for small businesses
           </h1>
           <p data-speakable className="text-lg md:text-xl text-muted-foreground leading-relaxed max-w-2xl mx-auto mb-4">
-            Two phases, no surprises: a one-time build fee, then a small monthly care plan for hosting, updates, and small changes.
+            Two parts: a one-time build to launch your site or system, and a small monthly plan that keeps it running and improving.
           </p>
           <div className="max-w-2xl mx-auto grid sm:grid-cols-2 gap-4 mb-6 text-left">
             <div className="rounded-lg border border-border bg-card/60 p-4">
-              <p className="text-sm font-semibold text-accent mb-1">Phase 1 — Build</p>
-              <p className="text-sm text-muted-foreground">A one-time fee to design, build, and launch your site.</p>
+              <p className="text-sm font-semibold text-accent mb-1">One-time build</p>
+              <p className="text-sm text-muted-foreground">Designing, building, and launching your website or system. Paid once.</p>
             </div>
             <div className="rounded-lg border border-border bg-card/60 p-4">
-              <p className="text-sm font-semibold text-accent mb-1">Phase 2 — Keep it running</p>
-              <p className="text-sm text-muted-foreground">A small monthly care plan for hosting, updates, and small changes.</p>
+              <p className="text-sm font-semibold text-accent mb-1">Monthly plan</p>
+              <p className="text-sm text-muted-foreground">Hosting, updates, small changes, and — on bundles — AI, booking, and ongoing tuning. Cancel anytime.</p>
             </div>
           </div>
           <p className="text-sm text-muted-foreground/70">
-            Optional add-ons: booking, local SEO, AI receptionist. Most clients start with a free website review.
+            Care plans from $125/mo · Full bundles from $395/mo · À la carte services available
           </p>
+
         </div>
       </section>
 
