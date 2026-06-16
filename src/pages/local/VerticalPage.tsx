@@ -29,9 +29,28 @@ const VerticalPage = () => {
           description: serviceDescription,
           serviceType: `Web design for ${v.name.toLowerCase()}`,
         }}
+        faq={[
+          {
+            question: `Do you build websites specifically for ${v.name.toLowerCase()}?`,
+            answer: `Yes. Pleasant Cove Design builds and rebuilds websites for ${v.name.toLowerCase()} across Midcoast Maine — mobile-first layouts, clear quote and contact flows, photo galleries, and local SEO, all wired to drive ${v.outcome}.`,
+          },
+          {
+            question: `What does a ${v.singular.toLowerCase()} website usually cost?`,
+            answer: `Most ${v.singular.toLowerCase()} sites we build land between $1,500 and $6,500 one-time for the build, plus a month-to-month plan: care from $125/mo, or a full bundle from $395/mo that adds AI receptionist, booking, and ongoing improvements.`,
+          },
+          {
+            question: `Can you fix problems on my existing ${v.singular.toLowerCase()} website?`,
+            answer: `Yes — most projects start with a free website review where we name the specific issues costing you customers (mobile problems, broken forms, slow load, weak SEO) and give you a clear fix plan before any work begins.`,
+          },
+          {
+            question: `Do you serve ${v.name.toLowerCase()} outside Midcoast Maine?`,
+            answer: `Yes. We work with ${v.name.toLowerCase()} across the entire state of Maine — from Portland and Brunswick to Bangor and Bar Harbor — and remotely with small businesses anywhere in the US.`,
+          },
+        ]}
       />
       <MarketingHeader />
 
+      <main className="flex-1">
       <section className="pt-16 pb-10">
         <div className="container mx-auto px-6 text-center max-w-3xl">
           <p className="text-xs uppercase tracking-wider text-accent font-semibold mb-3">
@@ -105,6 +124,7 @@ const VerticalPage = () => {
           </Link>
         </div>
       </section>
+      </main>
 
       <footer className="border-t border-border py-8">
         <div className="container mx-auto px-6 text-center text-sm text-muted-foreground">

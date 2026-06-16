@@ -39,6 +39,7 @@ const MidcoastPillar = () => {
       />
       <MarketingHeader activePage="midcoast-maine" />
 
+      <main className="flex-1">
       <section className="pt-16 pb-10">
         <div className="container mx-auto px-6 text-center max-w-3xl">
           <p className="text-xs uppercase tracking-wider text-accent font-semibold mb-3">
@@ -133,6 +134,7 @@ const MidcoastPillar = () => {
           </div>
         </div>
       </section>
+      </main>
 
       <footer className="border-t border-border py-8 mt-8">
         <div className="container mx-auto px-6 text-center text-sm text-muted-foreground space-y-2">

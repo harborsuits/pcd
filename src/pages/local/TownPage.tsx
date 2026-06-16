@@ -23,9 +23,28 @@ const TownPage = () => {
         path={`/web-design/${town.slug}`}
         localBusiness
         areaServed={[`${town.name}, ME`]}
+        faq={[
+          {
+            question: `Do you work with small businesses in ${town.name}, Maine?`,
+            answer: `Yes. Pleasant Cove Design is a Midcoast Maine web studio that works directly with small, owner-operated businesses in ${town.name} — building new sites, fixing outdated ones, and adding clear booking and contact flows. Most projects start with a free website review.`,
+          },
+          {
+            question: `How much does a small business website cost in ${town.name}?`,
+            answer: `Most builds for ${town.name} small businesses land between $1,500 and $6,500 one-time, depending on page count and features. After launch you choose a care plan ($125–$175/mo) or a full bundle ($395–$895/mo) that adds AI, booking, and ongoing improvements — all month-to-month.`,
+          },
+          {
+            question: `Do you handle local SEO for ${town.name}?`,
+            answer: `Yes. Every site we build ships with semantic HTML, schema markup, fast Core Web Vitals, and local-business signals tuned for ${town.name} and the surrounding Midcoast Maine area — so you show up when nearby customers search.`,
+          },
+          {
+            question: "Do I have to be in this town to work with you?",
+            answer: `No. Pleasant Cove Design is based in Newcastle, Maine and works on-site or remotely with businesses across ${town.name} and the rest of Maine — and remotely with small businesses anywhere in the US.`,
+          },
+        ]}
       />
       <MarketingHeader />
 
+      <main className="flex-1">
       <section className="pt-16 pb-10">
         <div className="container mx-auto px-6 text-center max-w-3xl">
           <p className="text-xs uppercase tracking-wider text-accent font-semibold mb-3 flex items-center justify-center gap-1">
@@ -138,6 +157,7 @@ const TownPage = () => {
           </Link>
         </div>
       </section>
+      </main>
 
       <footer className="border-t border-border py-8">
         <div className="container mx-auto px-6 text-center text-sm text-muted-foreground">

@@ -11,7 +11,7 @@ const TermsOfService = () => {
         path="/terms"
         noindex
       />
-      <div className="max-w-4xl mx-auto px-4 py-12 sm:px-6 lg:px-8">
+      <main className="max-w-4xl mx-auto px-4 py-12 sm:px-6 lg:px-8">
         <Link 
           to="/" 
           className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors mb-8"
