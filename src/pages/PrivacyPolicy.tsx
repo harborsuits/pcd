@@ -7,11 +7,11 @@ const PrivacyPolicy = () => {
     <div className="min-h-screen bg-background text-foreground">
       <SEOHead
         title="Privacy Policy"
-        description="Pleasant Cove Design privacy policy."
+        description="How Pleasant Cove Design collects, uses, and protects information from visitors, clients, and portal users — including cookies, analytics, and third-party services."
         path="/privacy"
         noindex
       />
-      <div className="container max-w-3xl mx-auto px-6 py-12">
+      <main className="container max-w-3xl mx-auto px-6 py-12">
         <Link
           to="/"
           className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors mb-8"
@@ -267,7 +267,7 @@ const PrivacyPolicy = () => {
             This Privacy Policy is provided for transparency and trust and is intended to align with modern web, software, and AI-enabled service practices.
           </p>
         </article>
-      </div>
+      </main>
     </div>
   );
 };

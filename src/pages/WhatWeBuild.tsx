@@ -299,10 +299,12 @@ const GalleryModal = ({
         </div>
 
         <button
+          type="button"
           onClick={onClose}
+          aria-label="Close gallery"
           className="absolute top-6 right-6 md:top-12 md:right-12 z-50 p-2 rounded-full bg-card/80 border border-border/50 text-foreground hover:bg-card transition-colors"
         >
-          <X className="w-5 h-5" />
+          <X className="w-5 h-5" aria-hidden="true" />
         </button>
       </motion.div>
 
@@ -596,7 +598,7 @@ const WhatWeBuild = () => {
       {/* Header */}
       <MarketingHeader activePage="what-we-build" />
 
-
+      <main className="flex-1">
       {/* Bento Gallery */}
       <section className="relative w-full min-h-[80vh] py-16 overflow-hidden">
         <div className="container mx-auto px-6 relative z-10">
@@ -772,6 +774,7 @@ const WhatWeBuild = () => {
           </Button>
         </div>
       </section>
+      </main>
 
       {/* Footer */}
       <footer className="border-t border-border py-8 mt-auto">

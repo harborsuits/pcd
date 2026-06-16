@@ -41,6 +41,7 @@ const Pricing = () => {
       />
       <MarketingHeader activePage="pricing" />
 
+      <main className="flex-1">
       {/* Hero */}
       <section className="pt-12 pb-6 md:pt-16 md:pb-8 relative overflow-hidden">
         <div className="relative container mx-auto px-6 text-center">
@@ -69,7 +70,7 @@ const Pricing = () => {
 
       {/* Main Pricing Section */}
       <PricingSection />
-
+      </main>
 
       {/* Footer */}
       <footer className="border-t border-border/50 py-8">

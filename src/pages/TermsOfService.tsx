@@ -7,11 +7,11 @@ const TermsOfService = () => {
     <div className="min-h-screen bg-background">
       <SEOHead
         title="Terms of Service"
-        description="Pleasant Cove Design terms of service."
+        description="Terms governing the use of Pleasant Cove Design websites, client portal, messaging, AI receptionist, and related services — payment terms, ownership, warranties, and liability."
         path="/terms"
         noindex
       />
-      <div className="max-w-4xl mx-auto px-4 py-12 sm:px-6 lg:px-8">
+      <main className="max-w-4xl mx-auto px-4 py-12 sm:px-6 lg:px-8">
         <Link 
           to="/" 
           className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors mb-8"
@@ -211,7 +211,7 @@ const TermsOfService = () => {
             </p>
           </div>
         </article>
-      </div>
+      </main>
     </div>
   );
 };

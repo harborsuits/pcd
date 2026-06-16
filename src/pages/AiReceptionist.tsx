@@ -48,6 +48,7 @@ const AiReceptionist = () => {
 
       <MarketingHeader activePage="ai-receptionist" />
 
+      <main className="flex-1">
       {/* Hero */}
       <section className="pt-12 pb-16 md:pt-20 md:pb-24 relative overflow-hidden">
         <div className="relative container mx-auto px-6 text-center max-w-4xl">
@@ -178,6 +179,7 @@ const AiReceptionist = () => {
           </Button>
         </div>
       </section>
+      </main>
 
       {/* Footer */}
       <div className="mt-auto">

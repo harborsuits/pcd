@@ -39,6 +39,7 @@ const BlogPost = () => {
 
       <MarketingHeader activePage="blog" />
 
+      <main className="flex-1">
       <article className="pt-10 pb-12 md:pt-16">
         <div className="container mx-auto px-6 max-w-3xl">
           <Link
@@ -86,6 +87,7 @@ const BlogPost = () => {
           </aside>
         </div>
       </article>
+      </main>
 
       <div className="mt-auto">
         <Footer

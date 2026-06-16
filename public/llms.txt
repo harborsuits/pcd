@@ -2,39 +2,79 @@
 
 > Midcoast Maine web design studio helping small businesses fix outdated websites, broken contact flows, and weak mobile experiences that cost them customers.
 
-Pleasant Cove Design builds modern, conversion-focused websites and AI receptionist tools for owner-operated businesses across Maine. Based in Newcastle, ME, with focused service across Midcoast, Greater Portland, Southern Maine, Central Maine, and Down East.
+Pleasant Cove Design builds modern, conversion-focused websites and AI receptionist tools for owner-operated businesses across Maine. Based in Newcastle, ME, with focused service across Midcoast Maine, Greater Portland, Southern Maine, Central Maine, and Down East / Bangor.
+
+## Facts
+
+- Name: Pleasant Cove Design
+- Based in: Newcastle, Maine (Midcoast Maine)
+- Phone: (207) 380-5680
+- Email: hello@pleasantcove.design
+- Service area: All of Maine, plus remote clients across the United States
+- What we do: Small-business website design, redesigns, local SEO, AI phone receptionist, online booking and intake flows, and ongoing care/maintenance plans
+- What we don't do: Enterprise applications, large e-commerce catalogs, app development, marketing retainers, or paid-ads management
+- Pricing model: One-time build fee ($1,500–$6,500) plus a month-to-month plan — care plans from $125/mo, or full bundles from $395/mo that include AI, booking, and ongoing improvements. No long-term contracts.
+- Typical timeline: Most small-business sites launch in 2–4 weeks once content is in hand; targeted fixes can ship in days.
+- How most engagements start: A free website review that names the specific issues costing the business customers, with a clear fix plan and no obligation.
 
 ## Pages
 
 - [Home](/): Overview of services and the studio's approach to fixing websites that lose customers.
-- [What We Build](/what-we-build): Examples of websites, demos, and capabilities by industry.
-- [Pricing](/pricing): Transparent pricing for websites, AI receptionist, and ongoing care.
-- [AI Receptionist](/ai-receptionist): 24/7 automated phone answering for small businesses.
-- [Get a Free Demo](/get-demo): Intake form for a custom demo or free website review.
+- [What We Build](/what-we-build): Services, capabilities, and examples by category.
+- [Pricing](/pricing): Transparent one-time build fees plus month-to-month care plans and full bundles.
+- [AI Receptionist](/ai-receptionist): 24/7 AI phone receptionist for small businesses — answers calls, books appointments, qualifies leads.
+- [Get a Free Demo](/get-demo): Intake form for a custom demo or free website review. Also reachable at [/start](/start).
+- [Midcoast Maine](/midcoast-maine): Primary service region pillar — Newcastle, Damariscotta, Camden, Rockland, Brunswick, Bath, and surrounding towns.
 - [Blog](/blog): Articles on small business web design, AI, and local SEO in Maine.
 - [Privacy Policy](/privacy): How we handle data.
 - [Terms of Service](/terms): Service terms.
 
-## Service Areas
+## Service Areas (town pages)
 
-- [Midcoast Maine](/midcoast-maine): Primary service region pillar page.
-- [Newcastle](/web-design/newcastle): Local web design for Newcastle, ME.
-- [Damariscotta](/web-design/damariscotta): Local web design for Damariscotta, ME.
-- [Portland](/web-design/portland): Web design for Greater Portland.
+### Midcoast Maine (home base)
+- [Newcastle](/web-design/newcastle): Web design for Newcastle, ME small businesses.
+- [Damariscotta](/web-design/damariscotta): Web design for Damariscotta, ME.
+- [Wiscasset](/web-design/wiscasset): Web design for Wiscasset, ME.
+- [Boothbay Harbor](/web-design/boothbay-harbor): Web design for Boothbay Harbor, ME.
 - [Camden](/web-design/camden): Web design for Camden, ME.
-- [Bar Harbor](/web-design/bar-harbor): Web design for Bar Harbor and Down East.
+- [Rockland](/web-design/rockland): Web design for Rockland, ME.
+- [Brunswick](/web-design/brunswick): Web design for Brunswick, ME.
+- [Bath](/web-design/bath): Web design for Bath, ME.
+- [Belfast](/web-design/belfast): Web design for Belfast, ME.
 
-## Industries
+### Greater Portland
+- [Portland](/web-design/portland): Web design for Portland, ME.
+- [Freeport](/web-design/freeport): Web design for Freeport, ME.
+- [Yarmouth](/web-design/yarmouth): Web design for Yarmouth, ME.
+- [Falmouth](/web-design/falmouth): Web design for Falmouth, ME.
+- [Cumberland](/web-design/cumberland): Web design for Cumberland, ME.
 
-- [Roofers](/websites-for/roofers): Websites for roofing contractors.
-- [Painters](/websites-for/painters): Websites for painters.
-- [Landscapers](/websites-for/landscapers): Websites for landscapers.
-- [Restaurants](/websites-for/restaurants): Websites for restaurants.
-- [Salons](/websites-for/salons): Websites for salons and barbershops.
-- [Contractors](/websites-for/contractors): Websites for general contractors.
-- [Galleries](/websites-for/galleries): Websites for art galleries.
-- [Boutiques](/websites-for/boutiques): Websites for boutiques and retail.
-- [Inns](/websites-for/inns): Websites for inns and small lodging.
+### Southern Maine
+- [Saco](/web-design/saco): Web design for Saco, ME.
+- [Biddeford](/web-design/biddeford): Web design for Biddeford, ME.
+- [Kennebunk](/web-design/kennebunk): Web design for Kennebunk, ME.
+- [Wells](/web-design/wells): Web design for Wells, ME.
+
+### Central Maine
+- [Augusta](/web-design/augusta): Web design for Augusta, ME.
+- [Waterville](/web-design/waterville): Web design for Waterville, ME.
+
+### Down East & Bangor
+- [Bangor](/web-design/bangor): Web design for Bangor, ME.
+- [Ellsworth](/web-design/ellsworth): Web design for Ellsworth, ME.
+- [Bar Harbor](/web-design/bar-harbor): Web design for Bar Harbor, ME (Acadia region).
+
+## Industries (vertical pages)
+
+- [Roofers](/websites-for/roofers): Websites for roofing contractors — built for more quote calls.
+- [Painters](/websites-for/painters): Websites for painters — built for more booked estimates.
+- [Landscapers](/websites-for/landscapers): Websites for landscapers — built to reduce missed in-season leads.
+- [Restaurants](/websites-for/restaurants): Websites for restaurants — built for more reservations and orders.
+- [Salons & Barbers](/websites-for/salons): Websites for salons and barbershops — built for more online bookings.
+- [Contractors](/websites-for/contractors): Websites for general contractors — built for qualified project inquiries.
+- [Galleries](/websites-for/galleries): Websites for art galleries — built for more visitors and sales.
+- [Boutiques](/websites-for/boutiques): Websites for boutiques and retail — built for foot traffic and online orders.
+- [Inns & B&Bs](/websites-for/inns): Websites for inns and small lodging — built for more direct bookings.
 
 ## Optional
 

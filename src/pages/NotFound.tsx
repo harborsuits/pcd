@@ -13,17 +13,17 @@ const NotFound = () => {
     <div className="flex min-h-screen items-center justify-center bg-muted">
       <SEOHead
         title="Page Not Found"
-        description="The page you're looking for doesn't exist."
+        description="The page you're looking for doesn't exist on Pleasant Cove Design. Head back to the homepage or browse our services, demos, and Midcoast Maine web design pages."
         path={location.pathname || "/404"}
         noindex
       />
-      <div className="text-center">
+      <main className="text-center">
         <h1 className="mb-4 text-4xl font-bold">404</h1>
         <p className="mb-4 text-xl text-muted-foreground">Oops! Page not found</p>
         <a href="/" className="text-primary underline hover:text-primary/90">
           Return to Home
         </a>
-      </div>
+      </main>
     </div>
   );
 };
