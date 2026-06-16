@@ -1,72 +1,70 @@
-# Pricing Page Refresh — Public Page Only
+# SEO + AEO Audit — Targeted Fixes (no aesthetic changes)
 
-Update the public pricing page to reflect the new bundle, care plan, and à la carte structure. No Stripe, checkout, or backend billing changes.
+**Hard constraint:** technical/content-structure only. No changes to colors, fonts, spacing, layout, button styles, animations, hero, section styling, or overall feel. New FAQ copy and `[data-speakable]` paragraphs reuse existing typography and slot into existing sections. No redesigns.
 
-## New pricing structure
+The foundation is already strong: rich JSON-LD `@graph` (Organization, WebSite, WebPage/Article, LocalBusiness, Service, FAQPage, Breadcrumbs, Speakable), per-route `react-helmet-async`, 22 town pages + 9 vertical pages + Midcoast pillar, `llms.txt`, full AI-bot allowlist, 60+ sitemap entries. This plan closes the remaining gaps.
 
-**Bundles** (monthly subscription + one-time build)
+## 1. Scanner-flagged fixes
 
-| Bundle | Monthly | One-time build |
-|---|---|---|
-| PCD Starter System | $395/mo | $1,500–$2,500 |
-| PCD Growth System | $650/mo | $2,500–$4,000 |
-| PCD Full Operations | $895/mo | $4,000–$6,500 |
+**Sitemap** (`public/sitemap.xml`)
+- Add `/start` (public route, currently missing).
+- Skip `/create-password`, `/login`, `/d/:token/:slug` (correctly auth/per-token).
+- Skip `/demos` index — verify it exists as a public route; if not, leave out.
 
-**Care Plans** (maintenance only, no bundle required)
+**Meta descriptions <50 chars** — expand to 50–160 char useful summaries:
+- `src/pages/NotFound.tsx`
+- `src/pages/PrivacyPolicy.tsx`
+- `src/pages/TermsOfService.tsx`
 
-| Plan | Price |
-|---|---|
-| Monthly Care – Starter | $125/mo |
-| Monthly Care – Growth | $175/mo |
+**Descriptive link text** — `src/pages/Blog.tsx:66`: replace "Read more" with `Read: {post.title}`. Visual style unchanged (same component, same icon, same classes — only the inner text changes).
 
-**À La Carte Services** (keep existing 9, add 1 new)
+**Icon-only button name** — `src/pages/WhatWeBuild.tsx` GalleryModal close button: add `aria-label="Close gallery"`. No visual change.
 
-- SEO Audit & Optimization — from $350
-- Landing Page — from $500
-- Content Refresh — from $250
-- Booking Integration — from $300
-- Google Business Profile Setup — from $150
-- Call Routing Setup — from $200
-- Conversion Tracking Setup — from $200
-- Forms & Lead Routing — from $200
-- Website Cleanup / Fixes — from $300
-- **Online Ordering Integration — from $500** (NEW) — scope copy: "Integrate or clean up an existing ordering platform (Toast, Square, Shopify, ChowNow, or similar). Does not include building a custom ordering system from scratch."
+**`<main>` landmark** — wrap existing primary content in `<main className="flex-1">` (or equivalent) on routes that lack it: `Pricing`, `Blog`, `BlogPost`, `WhatWeBuild`, `AiReceptionist`, `PrivacyPolicy`, `TermsOfService`, `NotFound`, `PortalHub`, `local/MidcoastPillar`, `local/TownPage`, `local/VerticalPage`. Just a wrapping semantic element around existing markup — zero visual impact.
 
-## Files to change
+**LCP / performance** (published-build finding)
+- Audit `Index.tsx` / `Hero3DModel` / `HeroStatic` for the LCP element. If it's an `<img>`: add explicit `width`/`height`, remove `loading="lazy"` on the hero image only, add `fetchpriority="high"`. If LCP is the H1 text: add `font-display: swap` to every `@font-face` in `src/index.css`. **No design changes** — only image attributes / font-display directive. Will not touch the 3D hero behavior.
 
-1. **`src/lib/pricingMenu.ts`** — single source of truth used by pricing page, intake summary, and demo flows.
-   - `BUNDLE_TIERS`: update `price` strings (monthly + build range) and keep feature lists.
-   - `CARE_PLANS`: update `monthlyPrice` to 125 / 175. Recompute `yearlyPrice` at a clean ~10% prepay discount (Starter ≈ 1,350; Growth ≈ 1,890) — keeps the existing yearly toggle working without a code change.
-   - `ALACARTE_SERVICES`: append `online_ordering_integration` entry with the scope copy above.
+## 2. AEO sharpening
 
-2. **`src/components/ui/pricing-section.tsx`** — the rendered page.
-   - Update the local `plans` array: `monthlyPrice` (395 / 650 / 895), `yearlyPrice` (10% prepay: 4,266 / 7,020 / 9,666), `buildRange` ($1,500–$2,500 / $2,500–$4,000 / $4,000–$6,500).
-   - Rewrite intro/section copy (see "Copy" below).
-   - No structural/layout changes. Monthly/Yearly toggle stays. À la carte modal flow stays.
+All additions reuse existing page sections, design tokens, and typography. No new visual styles.
 
-3. **`src/pages/Pricing.tsx`** — refresh hero copy and the FAQ `answer` strings to match new ranges; update the "$1,500 and $4,500" line and care-plan line. Keep SEO scaffolding intact.
+**`[data-speakable]` coverage** — add the attribute to 1–2 existing short answer paragraphs already on each of: homepage, `/pricing`, `/ai-receptionist`, `/midcoast-maine`, vertical pages, town pages. This is just a DOM attribute — invisible. Where a quotable summary sentence isn't present, add a single sentence inside an existing intro paragraph using existing typography classes.
 
-## Copy direction (professional, simple, local, trustworthy)
+**FAQPage schema** — audit `TownPage`, `VerticalPage`, `MidcoastPillar`, `AiReceptionist`, `WhatWeBuild` and confirm each passes a `faq=[…]` array to `SEOHead`. For any missing it, add 3–5 plain-English Q&A (answers 1–3 sentences — AEO snippet length). FAQ content surfaces in the existing FAQ accordion section where one exists, or schema-only where it doesn't (no new UI section added without confirmation).
 
-- **Hero subhead:** "Two parts: a one-time build to launch your site or system, and a small monthly plan that keeps it running and improving."
-- **Bundles intro:** "Each bundle pairs a one-time website or system build with an ongoing monthly plan. The monthly covers hosting, maintenance, AI/booking features where included, and steady improvements — so your site keeps working for you instead of going stale."
-- **Build vs monthly explainer band** (new small block above the bundle cards):
-  - *Build fee* — designing, building, and launching your website or system. Paid once.
-  - *Monthly plan* — hosting, updates, small changes, AI/booking features, and ongoing tuning. Cancel anytime.
-- **Care Plans intro:** "Already have a website? Pick a care plan to keep it healthy — no bundle required."
-- **À la carte intro:** unchanged framing; add note that we work with what you already use (Toast, Square, Shopify, ChowNow, etc.) for the new ordering item.
-- **FAQ rewrite** on `Pricing.tsx`:
-  - "How much does a website cost?" → range now "$1,500–$6,500 for the one-time build, depending on scope," monthly "$125–$895 depending on whether you just want care or a full system."
-  - "What's included in the care plan?" → reflect new $125 / $175 tiers.
-  - Keep "no long-term contracts" and "free review" FAQs.
+**`llms.txt` refresh** — expand to include all 22 town pages, all 9 vertical pages, `/start`, the existing 3 blog posts. Add a short `## Facts` block (NAP, founded year, areas served, what we don't do) — LLMs cite this verbatim. Text-only file; no UI impact.
 
-## Explicitly NOT in scope
+**Blog post Article schema** — verify `BlogPost.tsx` passes `type="article"` + `datePublished` + `dateModified` to `SEOHead` from post frontmatter. Add if missing.
 
-- No changes to Stripe products, prices, payment links, webhooks, deposit logic, or any `supabase/functions/**` billing code.
-- No changes to intake wizard logic, demo claim flow, or operator billing.
-- Pricing IDs (`bundle_starter`, `care_starter`, etc.) stay the same so downstream references don't break.
+**OG image** — generate a single branded 1200×630 PNG to replace the externally-hosted GIF reference in `SEOHead.tsx` `DEFAULT_IMAGE`. **Affects external previews only** (LinkedIn, Slack, iMessage, ChatGPT citations) — never appears in the live site UI. Ship at `src/assets/og-image.png` and reference via import.
 
-## Verification
+## 3. Mark findings fixed
 
-- Visit `/pricing` — confirm three bundles show new monthly + build ranges, toggle switches yearly correctly, two care plans show $125 / $175, ten à la carte cards render including Online Ordering Integration with the correct scope copy in its modal description.
-- Confirm `IntakeSummary` / `PricingSummary` still render selected tier labels correctly (they read from `findTierById`, which is unaffected by price-string changes).
+After changes land, call `seo_chat--update_findings` for:
+- `http:sitemap`
+- `agent_content:content`
+- `agent_metadata:metadata_quality`
+- `lighthouse:lighthouse_accessibility` (main landmark portion; contrast portion verified against current code)
+
+Leave `lighthouse:lighthouse_performance` open until republish (it scores the live build).
+
+## Out of scope
+
+- No keyword/backlink strategy work (separate Semrush session).
+- No new pages, copy rewrites, or design changes beyond items above.
+- No Search Console verification flow (already verified).
+- No Stripe / billing / portal logic changes.
+
+## Files touched
+
+- `public/sitemap.xml`, `public/robots.txt` (unchanged — already good), `public/llms.txt`
+- `src/components/SEOHead.tsx` (DEFAULT_IMAGE swap only)
+- `src/pages/NotFound.tsx`, `PrivacyPolicy.tsx`, `TermsOfService.tsx` (meta description text)
+- `src/pages/Blog.tsx` (link text + `<main>`)
+- `src/pages/WhatWeBuild.tsx` (close-button aria-label + `<main>`)
+- `src/pages/Pricing.tsx`, `BlogPost.tsx`, `AiReceptionist.tsx`, `PortalHub.tsx` (`<main>` wrap)
+- `src/pages/local/MidcoastPillar.tsx`, `TownPage.tsx`, `VerticalPage.tsx` (`<main>` + speakable attrs + FAQ if missing)
+- `src/pages/Index.tsx` and/or `src/components/Hero3DModel.tsx` / `HeroStatic.tsx` (LCP image attributes only)
+- `src/index.css` (font-display: swap, if needed)
+- `src/assets/og-image.png` (new file)
