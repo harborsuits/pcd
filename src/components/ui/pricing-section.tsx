@@ -179,10 +179,10 @@ export default function PricingSection() {
           <TimelineContent animationNum={0} timelineRef={pricingRef}>
             <PricingSwitch onSwitch={setPeriod} />
             <p className="text-xs text-muted-foreground/70 -mt-6 mb-4">
-              Yearly pricing is an optional prepaid discount (available on request).
+              Yearly pricing is an optional prepaid discount — just ask.
             </p>
             <p className="text-sm text-muted-foreground max-w-2xl mx-auto">
-              Each bundle pairs a one-time website or system build with an ongoing monthly plan — so your site keeps working for you instead of going stale.
+              Every bundle pairs a one-time build with a monthly plan, so your website keeps earning instead of slowly going stale.
             </p>
 
           </TimelineContent>
