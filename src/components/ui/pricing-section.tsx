@@ -331,10 +331,10 @@ export default function PricingSection() {
             <div className="text-center mb-10">
               <h3 className="font-serif text-2xl font-bold mb-2">À La Carte Services</h3>
               <p className="text-muted-foreground">
-                Not ready for a bundle? Pick individual services that fit what you need right now.
+                Not ready for a full bundle? Pick the one or two pieces you actually need right now — we'll handle the rest later.
               </p>
               <p className="text-xs text-muted-foreground/70 mt-2">
-                We work with the tools you already use — Toast, Square, Shopify, ChowNow, Calendly, Google, and others. Most services are built & managed; we don't just build and disappear.
+                We work with the tools you already use — Toast, Square, Shopify, ChowNow, Calendly, Google, and more. Most services are built and managed, not just delivered and forgotten.
               </p>
             </div>
 
