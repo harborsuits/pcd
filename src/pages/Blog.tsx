@@ -30,6 +30,7 @@ const Blog = () => {
 
       <MarketingHeader activePage="blog" />
 
+      <main className="flex-1">
       <section className="pt-12 pb-10 md:pt-20 md:pb-14">
         <div className="container mx-auto px-6 max-w-3xl text-center">
           <h1 data-speakable className="font-serif text-4xl md:text-5xl lg:text-6xl font-bold leading-tight mb-4">
@@ -61,9 +62,10 @@ const Blog = () => {
                   <p className="text-muted-foreground mb-4">{post.excerpt}</p>
                   <Link
                     to={`/blog/${post.slug}`}
+                    aria-label={`Read: ${post.title}`}
                     className="inline-flex items-center text-accent font-medium hover:underline underline-offset-4"
                   >
-                    Read more <ArrowRight className="ml-1 h-4 w-4" />
+                    Read article <ArrowRight className="ml-1 h-4 w-4" />
                   </Link>
                 </article>
               </li>
@@ -71,6 +73,7 @@ const Blog = () => {
           </ul>
         </div>
       </section>
+      </main>
 
       <div className="mt-auto">
         <Footer

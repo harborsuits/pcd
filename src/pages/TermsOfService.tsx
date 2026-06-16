@@ -7,7 +7,7 @@ const TermsOfService = () => {
     <div className="min-h-screen bg-background">
       <SEOHead
         title="Terms of Service"
-        description="Pleasant Cove Design terms of service."
+        description="Terms governing the use of Pleasant Cove Design websites, client portal, messaging, AI receptionist, and related services — payment terms, ownership, warranties, and liability."
         path="/terms"
         noindex
       />
