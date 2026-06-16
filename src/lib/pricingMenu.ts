@@ -89,10 +89,10 @@ export interface CarePlan {
 export const CARE_PLANS: CarePlan[] = [
   {
     id: "care_starter",
-    label: "Care Plan – Starter",
-    monthlyPrice: 95,
-    yearlyPrice: 1010, // ~$84/mo, saves ~$130
-    description: "Ongoing maintenance so your site doesn't rot.",
+    label: "Monthly Care – Starter",
+    monthlyPrice: 125,
+    yearlyPrice: 1350, // ~$112.50/mo, saves $150/yr
+    description: "Ongoing maintenance so your site doesn't go stale or break quietly.",
     features: [
       "Monthly content or copy updates (small changes)",
       "Plugin / dependency updates",
@@ -103,10 +103,10 @@ export const CARE_PLANS: CarePlan[] = [
   },
   {
     id: "care_growth",
-    label: "Care Plan – Growth",
-    monthlyPrice: 145,
-    yearlyPrice: 1550, // ~$129/mo, saves ~$190
-    description: "Everything in Starter, plus priority support.",
+    label: "Monthly Care – Growth",
+    monthlyPrice: 175,
+    yearlyPrice: 1890, // ~$157.50/mo, saves $210/yr
+    description: "Everything in Starter, plus priority support and a monthly review.",
     features: [
       "Everything in Starter, plus:",
       "Priority change requests",
@@ -116,6 +116,7 @@ export const CARE_PLANS: CarePlan[] = [
     ],
   },
 ];
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // À LA CARTE SERVICES (Built & Managed — Individual services outside bundles)
@@ -183,7 +184,15 @@ export const ALACARTE_SERVICES: AlaCarteService[] = [
     price: "Starting at $300",
     description: "Broken links, speed improvements, mobile fixes, outdated content",
   },
+  {
+    id: "online_ordering_integration",
+    label: "Online Ordering Integration",
+    price: "Starting at $500",
+    description:
+      "Integrate or clean up an existing ordering platform (Toast, Square, Shopify, ChowNow, or similar). Does not include building a custom ordering system from scratch.",
+  },
 ];
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // AI RECEPTIONIST TIERS (Monthly)
@@ -218,7 +227,7 @@ export const BUNDLE_TIERS: PricingTier[] = [
   {
     id: "bundle_starter",
     label: "PCD Starter System",
-    price: "$575/mo + one-time build: $750–$1,250",
+    price: "$395/mo + one-time build: $1,500–$2,500",
     description: "Essential website + hosting + AI Front Door. The clean baseline for owner-operators.",
     features: [
       "Essential website build (1–5 pages)",
@@ -233,7 +242,7 @@ export const BUNDLE_TIERS: PricingTier[] = [
   {
     id: "bundle_growth",
     label: "PCD Growth System",
-    price: "$875/mo + one-time build: $1,500–$2,500",
+    price: "$650/mo + one-time build: $2,500–$4,000",
     description: "Booking + stronger lead capture + CRM basics. Built for businesses that live on appointments.",
     features: [
       "Everything in Starter, plus:",
@@ -248,7 +257,7 @@ export const BUNDLE_TIERS: PricingTier[] = [
   {
     id: "bundle_full_ops",
     label: "PCD Full Operations",
-    price: "$1,100/mo + one-time build: $2,500–$4,000+",
+    price: "$895/mo + one-time build: $4,000–$6,500",
     description: "Premium site + AI + booking + CRM context + managed updates. The full system.",
     features: [
       "Everything in Growth, plus:",
@@ -261,6 +270,7 @@ export const BUNDLE_TIERS: PricingTier[] = [
     ],
   },
 ];
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // RETAINER ADD-ONS (Monthly)

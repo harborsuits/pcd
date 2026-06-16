@@ -19,10 +19,10 @@ const plans = [
   {
     name: "PCD Starter System",
     description:
-      "Essential website + hosting + AI Front Door. The clean baseline for owner-operators.",
-    monthlyPrice: 575,
-    yearlyPrice: 6100,
-    buildRange: "$750–$1,250",
+      "A clean website plus the basics to answer calls and capture leads. Built for owner-operators who need a solid foundation.",
+    monthlyPrice: 395,
+    yearlyPrice: 4266, // ~10% prepay discount
+    buildRange: "$1,500–$2,500",
     badge: "Most common",
     cta: "Start with Starter",
     popular: false,
@@ -32,17 +32,17 @@ const plans = [
       "Click-to-call + contact forms",
       "Google Maps embed + basic SEO setup",
       "Hosting + maintenance (backups, uptime, minor updates)",
-      "AI Receptionist (answers calls, qualifies leads, FAQs, after-hours)",
+      "AI Front Door (answers calls, captures info, FAQs, after-hours)",
       "Call summaries + emergency routing",
     ],
   },
   {
     name: "PCD Growth System",
     description:
-      "Booking + stronger lead capture + CRM basics. Built for businesses that live on appointments.",
-    monthlyPrice: 875,
-    yearlyPrice: 9300,
-    buildRange: "$1,500–$2,500",
+      "Booking, stronger lead capture, and CRM basics. For businesses that live on appointments.",
+    monthlyPrice: 650,
+    yearlyPrice: 7020,
+    buildRange: "$2,500–$4,000",
     badge: "Best value",
     cta: "Upgrade to Growth",
     popular: true,
@@ -51,7 +51,7 @@ const plans = [
       "Conversion-focused layout",
       "Booking or intake integration",
       "Lead capture flows + light animations",
-      "AI Receptionist + Direct Booking (books into Calendly, Acuity, or Google Calendar)",
+      "AI Front Door + Booking (single or multi-staff scheduling)",
       "Confirmation texts/emails",
       "CRM basics (lead tracking + tagging)",
     ],
@@ -59,10 +59,10 @@ const plans = [
   {
     name: "PCD Full Operations",
     description:
-      "Premium site + AI + booking + CRM context + managed updates. The full system.",
-    monthlyPrice: 1100,
-    yearlyPrice: 11800,
-    buildRange: "$2,500–$4,000+",
+      "Premium site, AI, booking, CRM context, and managed updates. The full system, actively tuned for you.",
+    monthlyPrice: 895,
+    yearlyPrice: 9666,
+    buildRange: "$4,000–$6,500",
     badge: "Highest impact",
     cta: "Go Full Ops",
     popular: false,
@@ -78,6 +78,7 @@ const plans = [
     note: "CRM context focuses on intake, tagging, routing, and follow-ups — not enterprise CRM replacement.",
   },
 ];
+
 
 function PricingSwitch({
   onSwitch,
@@ -181,9 +182,10 @@ export default function PricingSection() {
             <p className="text-xs text-muted-foreground/70 -mt-6 mb-4">
               Yearly pricing is an optional prepaid discount (available on request).
             </p>
-            <p className="text-sm text-muted-foreground">
-              Bundles include a one-time website build plus ongoing monthly services.
+            <p className="text-sm text-muted-foreground max-w-2xl mx-auto">
+              Each bundle pairs a one-time website or system build with an ongoing monthly plan — so your site keeps working for you instead of going stale.
             </p>
+
           </TimelineContent>
         </div>
 
@@ -277,9 +279,10 @@ export default function PricingSection() {
             <div className="text-center mb-10">
               <h3 className="font-serif text-2xl font-bold mb-2">Website Care Plans</h3>
               <p className="text-muted-foreground">
-                Ongoing maintenance, updates, and oversight — so your site doesn't rot.
+                Already have a website? Pick a care plan to keep it healthy — no bundle required.
               </p>
             </div>
+
             
             <div className="grid sm:grid-cols-2 gap-6">
               {CARE_PLANS.map((plan, index) => (
@@ -329,12 +332,13 @@ export default function PricingSection() {
             <div className="text-center mb-10">
               <h3 className="font-serif text-2xl font-bold mb-2">À La Carte Services</h3>
               <p className="text-muted-foreground">
-                Not ready for a bundle? Pick individual services that fit your needs.
+                Not ready for a bundle? Pick individual services that fit what you need right now.
               </p>
               <p className="text-xs text-muted-foreground/70 mt-2">
-                Most services are built & managed — we don't just build and disappear.
+                We work with the tools you already use — Toast, Square, Shopify, ChowNow, Calendly, Google, and others. Most services are built & managed; we don't just build and disappear.
               </p>
             </div>
+
             
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {ALACARTE_SERVICES.map((service) => (
