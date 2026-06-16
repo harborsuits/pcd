@@ -82,7 +82,7 @@ const MidcoastPillar = () => {
             <MapPin className="h-6 w-6 text-accent" /> Featured towns
           </h2>
           <p className="text-center text-muted-foreground mb-8 max-w-2xl mx-auto">
-            Examples of where we already work — not a boundary. If your town isn't listed, we still want to hear from you.
+            Examples of where we can work — not a boundary. If your town isn't listed, we still want to hear from you.
           </p>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 max-w-5xl mx-auto">
             {TOWNS.map((t) => (
