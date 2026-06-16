@@ -1,5 +1,6 @@
 import { Helmet } from "react-helmet-async";
 import { NAP, VERTICALS } from "@/lib/localPages";
+import ogImageDefault from "@/assets/og-image.jpg";
 
 interface FAQItem {
   question: string;
@@ -38,8 +39,9 @@ interface SEOHeadProps {
 }
 
 const DOMAIN = "https://pleasantcovedesign.com";
-const DEFAULT_IMAGE =
-  "https://storage.googleapis.com/gpt-engineer-file-uploads/JRU3mJ9aOVX2WWatAjuiWVtkfwN2/social-images/social-1766970128439-Sailboat_Logo_Looping_Animation.gif";
+// Static branded social preview (1216x640, ~16:8.4). Hosted on the project domain
+// after build so external crawlers (LinkedIn, Slack, iMessage, ChatGPT) can always reach it.
+const DEFAULT_IMAGE = `${DOMAIN}${ogImageDefault}`;
 
 const DEFAULT_AREAS = [
   "Newcastle, ME",
