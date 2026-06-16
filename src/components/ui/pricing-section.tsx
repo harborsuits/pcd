@@ -371,7 +371,7 @@ export default function PricingSection() {
           <div className="text-center mt-16 max-w-xl mx-auto p-8 rounded-xl bg-card/50 border border-border/50 backdrop-blur-sm">
             <h3 className="font-serif text-2xl font-bold mb-3">7-Day Pilot</h3>
             <p className="text-muted-foreground mb-2">
-              Full functionality on real call traffic. Clear conversion expectations discussed upfront.
+              Try the full system on your real call traffic for a week. We agree on what "working" looks like up front, so you can judge it on results — not promises.
             </p>
             <p className="text-sm text-muted-foreground/70 italic mb-6">
               Limited availability — select businesses only.
@@ -388,11 +388,10 @@ export default function PricingSection() {
         <TimelineContent animationNum={10} timelineRef={pricingRef}>
           <div className="text-center mt-8 max-w-2xl mx-auto space-y-4">
             <p className="text-sm text-muted-foreground/80 italic">
-              Projects typically begin with a deposit. Final payment is due upon completion, before launch.
+              Projects start with a deposit to lock in your build slot. The remainder is due when your site is ready to launch.
             </p>
             <p className="text-sm text-muted-foreground">
-              <span className="font-medium">Important Boundaries:</span> PCD provides coverage, responsiveness, and operational relief — 
-              not a replacement for employees, medical records handling, or enterprise compliance.
+              <span className="font-medium">What we don't do:</span> we add coverage, responsiveness, and ongoing care — we're not a replacement for staff, medical records handling, or enterprise compliance work.
             </p>
           </div>
         </TimelineContent>
