@@ -7,7 +7,7 @@ const PrivacyPolicy = () => {
     <div className="min-h-screen bg-background text-foreground">
       <SEOHead
         title="Privacy Policy"
-        description="How Pleasant Cove Design collects, uses, and protects information from visitors, clients, and portal users — including cookies, analytics, and third-party services."
+        description="How Pleasant Cove Design collects, uses, and protects information from visitors, clients, and portal users — including cookies and analytics."
         path="/privacy"
         noindex
       />

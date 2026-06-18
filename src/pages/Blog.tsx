@@ -65,7 +65,7 @@ const Blog = () => {
                     aria-label={`Read: ${post.title}`}
                     className="inline-flex items-center text-accent font-medium hover:underline underline-offset-4"
                   >
-                    Read article <ArrowRight className="ml-1 h-4 w-4" />
+                    Read: {post.title} <ArrowRight className="ml-1 h-4 w-4" />
                   </Link>
                 </article>
               </li>
