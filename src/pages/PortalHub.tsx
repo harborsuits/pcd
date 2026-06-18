@@ -659,9 +659,9 @@ export default function PortalHub() {
   // Show loading while checking auth state - prevents flash of login form
   if (!hydrated) {
     return (
-      <div className="h-screen flex items-center justify-center bg-background">
+      <main className="h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
+      </main>
     );
   }
 
