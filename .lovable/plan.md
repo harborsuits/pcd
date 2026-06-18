@@ -1,70 +1,28 @@
-# SEO + AEO Audit — Targeted Fixes (no aesthetic changes)
+## Scanner-flagged SEO/AEO Fixes
 
-**Hard constraint:** technical/content-structure only. No changes to colors, fonts, spacing, layout, button styles, animations, hero, section styling, or overall feel. New FAQ copy and `[data-speakable]` paragraphs reuse existing typography and slot into existing sections. No redesigns.
+Constraint: no aesthetic changes. Only semantic wrappers, invisible attributes, and text inside existing elements.
 
-The foundation is already strong: rich JSON-LD `@graph` (Organization, WebSite, WebPage/Article, LocalBusiness, Service, FAQPage, Breadcrumbs, Speakable), per-route `react-helmet-async`, 22 town pages + 9 vertical pages + Midcoast pillar, `llms.txt`, full AI-bot allowlist, 60+ sitemap entries. This plan closes the remaining gaps.
+### Already correct (verified, no changes needed)
+- `/start` already in `public/sitemap.xml` (line 7).
+- `GalleryModal` close button in `WhatWeBuild.tsx` already has `aria-label="Close gallery"`.
+- `BlogPost.tsx` already passes `type="article"`, `datePublished`, `dateModified` to `SEOHead`.
+- `Blog`, `BlogPost`, `NotFound`, `Pricing`, `WhatWeBuild`, `AiReceptionist`, `PrivacyPolicy`, `TermsOfService`, `MidcoastPillar`, `TownPage`, `VerticalPage` already wrap content in `<main>`.
+- Font `display=swap` already set in the Google Fonts URL in `index.html`. LCP is the H1 text; the 700-weight woff2 preload is already in place. No safe attribute-only LCP change remains.
 
-## 1. Scanner-flagged fixes
+### Changes to make
 
-**Sitemap** (`public/sitemap.xml`)
-- Add `/start` (public route, currently missing).
-- Skip `/create-password`, `/login`, `/d/:token/:slug` (correctly auth/per-token).
-- Skip `/demos` index — verify it exists as a public route; if not, leave out.
+1. **Meta descriptions** — trim to ≤160 chars (currently 164/176):
+   - `src/pages/PrivacyPolicy.tsx` — shorten description.
+   - `src/pages/TermsOfService.tsx` — shorten description.
+   - `src/pages/NotFound.tsx` — currently exactly 160; leave as-is (within range).
 
-**Meta descriptions <50 chars** — expand to 50–160 char useful summaries:
-- `src/pages/NotFound.tsx`
-- `src/pages/PrivacyPolicy.tsx`
-- `src/pages/TermsOfService.tsx`
+2. **Blog link text** — `src/pages/Blog.tsx` line 68: change visible text from `Read article` to `Read: {post.title}`. Keep the existing classes, icon, and `aria-label`.
 
-**Descriptive link text** — `src/pages/Blog.tsx:66`: replace "Read more" with `Read: {post.title}`. Visual style unchanged (same component, same icon, same classes — only the inner text changes).
+3. **PortalHub `<main>` landmark** — `src/pages/PortalHub.tsx` has multiple return branches (loading, error, intake-pending, intake-submitted, no-projects, has-projects, create-password, auth). Wrap the primary content container in each branch with `<main>` using existing wrapper classes — no new layout.
 
-**Icon-only button name** — `src/pages/WhatWeBuild.tsx` GalleryModal close button: add `aria-label="Close gallery"`. No visual change.
+### Out of scope this turn
+- No GEO changes.
+- No hero/3D changes, no font/file changes, no CSS/Tailwind/theme edits.
 
-**`<main>` landmark** — wrap existing primary content in `<main className="flex-1">` (or equivalent) on routes that lack it: `Pricing`, `Blog`, `BlogPost`, `WhatWeBuild`, `AiReceptionist`, `PrivacyPolicy`, `TermsOfService`, `NotFound`, `PortalHub`, `local/MidcoastPillar`, `local/TownPage`, `local/VerticalPage`. Just a wrapping semantic element around existing markup — zero visual impact.
-
-**LCP / performance** (published-build finding)
-- Audit `Index.tsx` / `Hero3DModel` / `HeroStatic` for the LCP element. If it's an `<img>`: add explicit `width`/`height`, remove `loading="lazy"` on the hero image only, add `fetchpriority="high"`. If LCP is the H1 text: add `font-display: swap` to every `@font-face` in `src/index.css`. **No design changes** — only image attributes / font-display directive. Will not touch the 3D hero behavior.
-
-## 2. AEO sharpening
-
-All additions reuse existing page sections, design tokens, and typography. No new visual styles.
-
-**`[data-speakable]` coverage** — add the attribute to 1–2 existing short answer paragraphs already on each of: homepage, `/pricing`, `/ai-receptionist`, `/midcoast-maine`, vertical pages, town pages. This is just a DOM attribute — invisible. Where a quotable summary sentence isn't present, add a single sentence inside an existing intro paragraph using existing typography classes.
-
-**FAQPage schema** — audit `TownPage`, `VerticalPage`, `MidcoastPillar`, `AiReceptionist`, `WhatWeBuild` and confirm each passes a `faq=[…]` array to `SEOHead`. For any missing it, add 3–5 plain-English Q&A (answers 1–3 sentences — AEO snippet length). FAQ content surfaces in the existing FAQ accordion section where one exists, or schema-only where it doesn't (no new UI section added without confirmation).
-
-**`llms.txt` refresh** — expand to include all 22 town pages, all 9 vertical pages, `/start`, the existing 3 blog posts. Add a short `## Facts` block (NAP, founded year, areas served, what we don't do) — LLMs cite this verbatim. Text-only file; no UI impact.
-
-**Blog post Article schema** — verify `BlogPost.tsx` passes `type="article"` + `datePublished` + `dateModified` to `SEOHead` from post frontmatter. Add if missing.
-
-**OG image** — generate a single branded 1200×630 PNG to replace the externally-hosted GIF reference in `SEOHead.tsx` `DEFAULT_IMAGE`. **Affects external previews only** (LinkedIn, Slack, iMessage, ChatGPT citations) — never appears in the live site UI. Ship at `src/assets/og-image.png` and reference via import.
-
-## 3. Mark findings fixed
-
-After changes land, call `seo_chat--update_findings` for:
-- `http:sitemap`
-- `agent_content:content`
-- `agent_metadata:metadata_quality`
-- `lighthouse:lighthouse_accessibility` (main landmark portion; contrast portion verified against current code)
-
-Leave `lighthouse:lighthouse_performance` open until republish (it scores the live build).
-
-## Out of scope
-
-- No keyword/backlink strategy work (separate Semrush session).
-- No new pages, copy rewrites, or design changes beyond items above.
-- No Search Console verification flow (already verified).
-- No Stripe / billing / portal logic changes.
-
-## Files touched
-
-- `public/sitemap.xml`, `public/robots.txt` (unchanged — already good), `public/llms.txt`
-- `src/components/SEOHead.tsx` (DEFAULT_IMAGE swap only)
-- `src/pages/NotFound.tsx`, `PrivacyPolicy.tsx`, `TermsOfService.tsx` (meta description text)
-- `src/pages/Blog.tsx` (link text + `<main>`)
-- `src/pages/WhatWeBuild.tsx` (close-button aria-label + `<main>`)
-- `src/pages/Pricing.tsx`, `BlogPost.tsx`, `AiReceptionist.tsx`, `PortalHub.tsx` (`<main>` wrap)
-- `src/pages/local/MidcoastPillar.tsx`, `TownPage.tsx`, `VerticalPage.tsx` (`<main>` + speakable attrs + FAQ if missing)
-- `src/pages/Index.tsx` and/or `src/components/Hero3DModel.tsx` / `HeroStatic.tsx` (LCP image attributes only)
-- `src/index.css` (font-display: swap, if needed)
-- `src/assets/og-image.png` (new file)
+### Report
+After edits, list touched files and confirm only semantic wrappers and meta-text were changed.
