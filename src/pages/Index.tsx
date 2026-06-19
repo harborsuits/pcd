@@ -14,6 +14,7 @@ import pcdLogo from "@/assets/pcd-logo.jpeg";
 import { SEOHead } from "@/components/SEOHead";
 import { MarketingHeader } from "@/components/layout/MarketingHeader";
 import { LocalProofStrip } from "@/components/LocalProofStrip";
+import { ReviewsStrip } from "@/components/marketing/ReviewsStrip";
 import { NAP } from "@/lib/localPages";
 
 // Lazy load 3D component to isolate React Three Fiber from crashing the whole app
@@ -172,6 +173,7 @@ const Index = () => {
       </section>
 
       <LocalProofStrip />
+      <ReviewsStrip />
 
       {/* 2️⃣ SERVICE CHOOSER - What do you need? */}
       <section className="py-12 md:py-16 border-t border-border bg-card/30">

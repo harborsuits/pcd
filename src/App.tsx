@@ -35,6 +35,8 @@ import VerticalPage from "./pages/local/VerticalPage";
 import AiReceptionist from "./pages/AiReceptionist";
 import Blog from "./pages/Blog";
 import BlogPost from "./pages/BlogPost";
+import Review from "./pages/Review";
+import SayThanks from "./pages/SayThanks";
 
 const queryClient = new QueryClient();
 
@@ -56,6 +58,8 @@ const App = () => (
           <Route path="/get-demo" element={<IntakeWizard />} />
           <Route path="/privacy" element={<PrivacyPolicy />} />
           <Route path="/terms" element={<TermsOfService />} />
+          <Route path="/review" element={<Review />} />
+          <Route path="/say-thanks" element={<SayThanks />} />
           <Route path="/portal" element={<PortalHub />} />
           {/* /portal/new removed - all new projects go through /get-demo */}
           <Route path="/start" element={<Navigate to="/get-demo" replace />} />
