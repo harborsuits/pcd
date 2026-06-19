@@ -55,5 +55,6 @@ Disallow: /_ops-x7k9
 Disallow: /portal/
 Disallow: /p/
 Disallow: /api/
+Disallow: /say-thanks
 
 Sitemap: https://pleasantcovedesign.com/sitemap.xml

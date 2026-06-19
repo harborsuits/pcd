@@ -5,6 +5,7 @@ import { SEOHead } from "@/components/SEOHead";
 import { MarketingHeader } from "@/components/layout/MarketingHeader";
 import { TOWNS, VERTICALS, REGIONS, NAP } from "@/lib/localPages";
 import { GlowCard } from "@/components/ui/spotlight-card";
+import { ReviewsStrip } from "@/components/marketing/ReviewsStrip";
 import { MapPin, Briefcase, Map } from "lucide-react";
 
 const MidcoastPillar = () => {
@@ -115,6 +116,8 @@ const MidcoastPillar = () => {
           </div>
         </div>
       </section>
+
+      <ReviewsStrip />
 
       <section className="py-10 border-t border-border bg-card/30">
         <div className="container mx-auto px-6 max-w-4xl">

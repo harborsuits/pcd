@@ -5,6 +5,7 @@ import { SEOHead } from "@/components/SEOHead";
 import { MarketingHeader } from "@/components/layout/MarketingHeader";
 import { TOWNS, VERTICALS, NAP, TOWN_NEIGHBORS } from "@/lib/localPages";
 import { GlowCard } from "@/components/ui/spotlight-card";
+import { ReviewsStrip } from "@/components/marketing/ReviewsStrip";
 import { MapPin, CheckCircle } from "lucide-react";
 
 const TownPage = () => {
@@ -102,6 +103,8 @@ const TownPage = () => {
           </div>
         </div>
       </section>
+
+      <ReviewsStrip />
 
       {(TOWN_NEIGHBORS[town.slug] ?? []).length > 0 && (
         <section className="py-10 border-t border-border">
