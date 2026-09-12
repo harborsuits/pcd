@@ -67,6 +67,3 @@ Beyond the type check:
 4. **No computed totals** — confirm nowhere renders a summed total from starting prices, "Custom proposal" never shows as $0, and AI never shows a single flat monthly number.
 5. **Copy checks** — Managed care reads "up to 90 minutes total per month"; brochure scope reads visibly limited; no "1–5 pages" at $1,500–$2,500; no capped build ranges; no ceiling on larger projects; one-time vs recurring clearly separated.
 6. **Layout** — desktop and 390px mobile pass, price formatting and links correct, service-selection behaviour intact.
-
-
-Run through desktop and mobile (390px) previews: brochure scope reads as visibly limited, no remaining "1–5 pages at $1,500–$2,500", no capped build ranges, no advertised ceiling on larger projects, one-time vs recurring clearly separated, AI pricing always split into setup / management / usage, service prices and care allowances match spec, every CTA reaches its existing flow, and the type check passes.
