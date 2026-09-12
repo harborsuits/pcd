@@ -719,6 +719,7 @@ const GetDemo = () => {
           service_type: mapServiceType(formData.serviceType),
           is_trial: isTrial, // 7-day AI trial flag
           tier: formData.tier || null,
+          budget_range: formData.budgetRange || null,
           product_type: formData.productType || null,
           hero_line: formData.heroLine.trim() || null,
           about_blurb: formData.aboutBlurb.trim() || null,
@@ -840,6 +841,7 @@ const GetDemo = () => {
           service_type: mapServiceType(formData.serviceType),
           // Tier and product type (NEW)
           tier: formData.tier || null,
+          budget_range: formData.budgetRange || null,
           product_type: formData.productType || null,
           // Track routing
           intake_track: formData.intakeTrack || null,
