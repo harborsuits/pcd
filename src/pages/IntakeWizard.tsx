@@ -1221,106 +1221,70 @@ const GetDemo = () => {
     );
   };
 
-  // Tier options per service type
-  const WEBSITE_TIER_OPTIONS = [
-    { 
-      value: "website_essential", 
-      label: "Essential", 
-      price: "Starting at $750",
+  // Current public offerings (see src/lib/pricingMenu.ts)
+  const PROJECT_TIER_OPTIONS = [
+    {
+      value: "project_brochure",
+      label: "Online Brochure",
+      price: "From $1,500",
       priceType: "one-time" as const,
-      description: "Get online professionally with a clean, fast site.",
+      description: "One straightforward page so customers can learn what you do and contact you.",
     },
-    { 
-      value: "website_growth", 
-      label: "Growth", 
-      price: "Starting at $1,500",
+    {
+      value: "project_custom_website",
+      label: "Custom Business Website",
+      price: "From $3,500",
       priceType: "one-time" as const,
-      description: "Turn visitors into leads with booking + forms.",
+      description: "A tailored site that presents your business and showcases your work.",
       popular: true,
     },
-    { 
-      value: "website_premium", 
-      label: "Premium", 
-      price: "Starting at $2,500",
+    {
+      value: "project_expanded",
+      label: "Expanded Website or Online Store",
+      price: "From $6,000",
       priceType: "one-time" as const,
-      description: "Custom design with advanced features + integrations.",
+      description: "Bigger portfolios, more content, online selling, or richer customer journeys.",
+    },
+    {
+      value: "project_business_systems",
+      label: "Custom Business System",
+      price: "Custom proposal",
+      priceType: "one-time" as const,
+      description: "Portals, advanced booking, CRM connections, AI call answering, automation.",
     },
   ];
 
   const AI_TIER_OPTIONS = [
-    { 
-      value: "ai_front_door", 
-      label: "Front Door", 
-      price: "Starting at $450/mo",
+    {
+      value: "ai_services",
+      label: "AI Receptionist & Automation",
+      price: "Setup + management + usage",
       priceType: "monthly" as const,
-      description: "Never miss a call — AI answers 24/7.",
-    },
-    { 
-      value: "ai_booking", 
-      label: "Front Door + Booking", 
-      price: "Starting at $700/mo",
-      priceType: "monthly" as const,
-      description: "Fill your calendar automatically.",
-      popular: true,
-    },
-    { 
-      value: "ai_full", 
-      label: "Full AI Suite", 
-      price: "Starting at $950/mo",
-      priceType: "monthly" as const,
-      description: "AI + booking + CRM — the complete system.",
-    },
-  ];
-
-  const BUNDLE_TIER_OPTIONS = [
-    { 
-      value: "starter", 
-      label: "Starter", 
-      price: "Starting at $575/mo",
-      priceType: "monthly" as const,
-      description: "Get online professionally with AI handling your calls.",
-    },
-    { 
-      value: "growth", 
-      label: "Growth", 
-      price: "Starting at $875/mo",
-      priceType: "monthly" as const,
-      description: "Turn visitors into booked appointments automatically.",
-      popular: true,
-    },
-    { 
-      value: "full_ops", 
-      label: "Full Operations", 
-      price: "Starting at $1,100/mo",
-      priceType: "monthly" as const,
-      description: "We run your digital front desk end-to-end.",
+      description:
+        "A one-time setup fee, monthly management based on scope, and usage billed at the rates agreed in your proposal.",
     },
   ];
 
   // Get tier options based on service type
   const getTierOptionsForService = () => {
     switch (formData.serviceType) {
-      case "website":
-        return { 
-          options: WEBSITE_TIER_OPTIONS, 
-          title: "Pick a starting point", 
-          subtitle: "These are ballpark ranges — we'll fine-tune together." 
-        };
       case "ai":
-        return { 
-          options: AI_TIER_OPTIONS, 
-          title: "Pick a starting point", 
-          subtitle: "These are ballpark ranges — we'll fine-tune together." 
+        return {
+          options: AI_TIER_OPTIONS,
+          title: "AI services",
+          subtitle: "No flat monthly fee includes unlimited AI activity — we quote setup, management, and usage separately.",
         };
+      case "website":
       case "both":
       default:
-        return { 
-          options: BUNDLE_TIER_OPTIONS, 
-          title: "Pick a starting point", 
-          subtitle: "Website + AI included in all tiers. We'll fine-tune together." 
+        return {
+          options: PROJECT_TIER_OPTIONS,
+          title: "Pick a starting point",
+          subtitle: "Starting prices for the scope described — your proposal sets the final price.",
         };
     }
   };
+
 
   const renderTierStep = () => {
     const { options, title, subtitle } = getTierOptionsForService();
