@@ -9,7 +9,7 @@ const Pricing = () => {
     <div className="min-h-screen flex flex-col bg-page-bg text-foreground">
       <SEOHead
         title="Small Business Website Pricing | Pleasant Cove Design"
-        description="Clear pricing for small business websites and ongoing care. Bundles from $395/mo with a one-time build fee. Care-only plans from $125/mo. No long contracts."
+        description="Clear starting prices for small business websites: online brochures from $1,500, custom sites from $3,500. Website care from $150/mo. AI billed by setup, management, and usage."
         path="/pricing"
         breadcrumbs={[
           { name: "Home", path: "/" },
@@ -19,22 +19,32 @@ const Pricing = () => {
           {
             question: "How much does a small business website cost?",
             answer:
-              "Most small-business websites from Pleasant Cove Design land between $1,500 and $6,500 for the one-time build, depending on page count, features, and whether AI or booking is included. After launch, you choose either a month-to-month care plan ($125–$175/mo) to keep the site healthy, or a full bundle ($395–$895/mo) that adds AI, booking, and ongoing improvements.",
+              "Pleasant Cove Design starts at $1,500 for a simple one-page online brochure, $3,500 for a custom business website, and $6,000 for expanded sites and online stores. Larger projects and custom business systems are quoted individually. Your final price depends on design, content, functionality, integrations, and support, and you receive a fixed proposal with clear deliverables before work begins.",
+          },
+          {
+            question: "What is included in the $1,500 online brochure?",
+            answer:
+              "One straightforward page using your supplied business information, logo, and photos: a brief introduction, a service overview, a small selection of images, phone, email and location details, a mobile-friendly layout, and basic technical SEO. Extra pages, booking systems, custom forms, integrations, and extensive copywriting are quoted separately.",
+          },
+          {
+            question: "What does the monthly care plan cover?",
+            answer:
+              "Website Care starts at $150/mo and covers standard hosting within your proposal allowance, uptime monitoring, recoverable backups, routine maintenance, scheduled checks of key contact features, up to 30 minutes of minor content edits per month, and business-hours support. Managed Website Care starts at $275/mo with up to 90 minutes total of minor edits per month, priority scheduling, and a quarterly performance review.",
+          },
+          {
+            question: "How is the AI receptionist billed?",
+            answer:
+              "AI services are billed in three parts: a one-time setup and implementation fee, a monthly management fee based on scope, and usage billed at the rates agreed in your proposal — call minutes for the receptionist, messages for messaging, or defined workflow runs for automations. There is no flat monthly fee that includes unlimited AI activity.",
+          },
+          {
+            question: "What happens if my business uses more than expected?",
+            answer:
+              "Additional usage is billed at the rates agreed before your service starts. Your proposal explains any included allowance, additional usage charges, and available spending controls, so you can choose an arrangement that fits your business.",
           },
           {
             question: "Are there long-term contracts?",
             answer:
-              "No. The build is a one-time project fee, and every monthly plan — care or bundle — is month-to-month with no minimum term. You can cancel any time and keep your site.",
-          },
-          {
-            question: "What's included in the monthly care plan?",
-            answer:
-              "Care plans start at $125/mo and cover hosting, SSL, security and software updates, daily backups, uptime monitoring, and a set amount of small content changes each month. The $175/mo Growth tier adds priority change requests and a monthly performance review.",
-          },
-          {
-            question: "Do you offer free quotes or website reviews?",
-            answer:
-              "Yes. Pleasant Cove Design offers a free website review that walks through your current site and names the specific issues costing you customers, with a clear fix plan and no obligation to hire us afterwards.",
+              "No. The build is a one-time project fee and care plans are month-to-month with no minimum term. You can cancel any time and keep your site.",
           },
         ]}
 
@@ -46,27 +56,28 @@ const Pricing = () => {
       <section className="pt-12 pb-6 md:pt-16 md:pb-8 relative overflow-hidden">
         <div className="relative container mx-auto px-6 text-center">
           <h1 data-speakable className="font-serif text-4xl md:text-5xl lg:text-6xl font-bold leading-tight mb-4">
-            Honest pricing for small business websites
+            Practical starting points. Pricing built around your project.
           </h1>
           <p data-speakable className="text-lg md:text-xl text-muted-foreground leading-relaxed max-w-2xl mx-auto mb-4">
-            Two simple parts: a one-time fee to design and launch your site, then a small monthly plan that keeps it running, updated, and bringing in customers.
+            From a simple online brochure to a complete website or connected business system, we scope the work around what your business needs.
           </p>
           <div className="max-w-2xl mx-auto grid sm:grid-cols-2 gap-4 mb-6 text-left">
             <div className="rounded-lg border border-border bg-card/60 p-4">
               <p className="text-sm font-semibold text-accent mb-1">One-time build</p>
-              <p className="text-sm text-muted-foreground">Design, copy, and launch — the website or system itself. Paid once, you own it.</p>
+              <p className="text-sm text-muted-foreground">Design, content, and launch of the website or system itself. Paid once, you own it.</p>
             </div>
             <div className="rounded-lg border border-border bg-card/60 p-4">
-              <p className="text-sm font-semibold text-accent mb-1">Monthly plan</p>
-              <p className="text-sm text-muted-foreground">Hosting, security, backups, and small changes. Bundles also include AI call answering, booking, and ongoing improvements. Cancel anytime.</p>
+              <p className="text-sm font-semibold text-accent mb-1">Ongoing monthly</p>
+              <p className="text-sm text-muted-foreground">Website care keeps your site hosted, maintained, and updated. AI services are billed as setup, management, and actual usage.</p>
             </div>
           </div>
           <p className="text-sm text-muted-foreground/70">
-            Care-only plans from $125/mo · Full bundles from $395/mo · À la carte services available
+            Online brochure from $1,500 · Custom website from $3,500 · Website care from $150/mo
           </p>
 
         </div>
       </section>
+
 
       {/* Main Pricing Section */}
       <PricingSection />
