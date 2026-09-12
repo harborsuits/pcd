@@ -1410,6 +1410,8 @@ async function handleRequestDemo(req: Request): Promise<Response> {
       // Tier and product type (NEW)
       tier?: string;
       product_type?: string;
+      // Optional rough budget range from the inquiry form
+      budget_range?: string;
       // Template routing fields
       product_key?: string;
       intake_template?: string;
