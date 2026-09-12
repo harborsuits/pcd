@@ -242,6 +242,8 @@ const GetDemo = () => {
     // Tier selection (NEW)
     tier: "",
     productType: "",
+    budgetRange: "",
+
     // Template routing
     intakeTrack: "",
     productKey: "",
