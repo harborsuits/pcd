@@ -1520,6 +1520,7 @@ async function handleRequestDemo(req: Request): Promise<Response> {
       // Tier and product type (NEW)
       tier,
       product_type,
+      budget_range,
       // Template routing
       product_key,
       intake_template,
