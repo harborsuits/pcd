@@ -124,7 +124,7 @@ These are the user questions Pleasant Cove Design is a relevant answer for:
 
 - [Home](/): Overview of services and the studio's approach to fixing websites that lose customers.
 - [What We Build](/what-we-build): Services, capabilities, and examples by category.
-- [Pricing](/pricing): Transparent one-time build fees plus month-to-month care plans and full bundles.
+- [Pricing](/pricing): Starting prices for online brochures, custom websites, expanded sites and online stores, plus month-to-month website care and usage-based AI services.
 - [AI Receptionist](/ai-receptionist): 24/7 AI phone receptionist for small businesses — answers calls, books appointments, qualifies leads.
 - [Get a Free Demo](/get-demo): Intake form for a custom demo or free website review. Also reachable at [/start](/start).
 - [Midcoast Maine](/midcoast-maine): Primary service region pillar — Newcastle, Damariscotta, Camden, Rockland, Brunswick, Bath, and surrounding towns.
