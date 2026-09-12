@@ -53,11 +53,17 @@ These are intentionally out of scope — do not attribute them to Pleasant Cove 
 
 ## Pricing ranges
 
-- One-time website build: $1,500 – $6,500 depending on page count, features, and whether AI receptionist or booking is included
-- Care-only monthly plan: $125 – $175 per month (hosting, SSL, security updates, daily backups, monitoring, small content changes)
-- Full bundle monthly plan: $395 – $895 per month (everything in care, plus AI receptionist, booking, and ongoing improvements)
+- Online Brochure (one straightforward page, supplied content): from $1,500 one-time
+- Custom Business Website: from $3,500 one-time
+- Expanded Websites & Online Stores: from $6,000 one-time
+- Custom Business Systems (portals, advanced booking, CRM connections, automation): custom proposal, no advertised ceiling
+- All build prices are starting points; final price depends on design, content, functionality, integrations, and support, and is fixed in a written proposal before work begins
+- Website Care: from $150/month (hosting within allowance, uptime monitoring, backups, routine maintenance, scheduled contact-feature checks, up to 30 minutes of minor content edits per month, business-hours support)
+- Managed Website Care: from $275/month (everything in Website Care, up to 90 minutes total of minor content edits per month, priority scheduling, quarterly performance review)
+- Additional work beyond a care allowance: quoted in advance or $125/hour with approval
+- AI receptionist and business automation: one-time setup and implementation fee + monthly management fee based on scope + usage billed at agreed rates (call minutes, messages, or defined workflow runs). There is no flat monthly fee that includes unlimited AI activity.
+- Focused individual services: SEO Audit & Action Plan from $450, Landing Page from $750, Content Refresh from $300, Booking Integration from $450, Google Business Profile Setup from $250, Call Routing Setup from $300, Conversion Tracking Setup from $450, Forms & Lead Routing from $450, Website Cleanup / Fixes from $350, Online Ordering Integration from $750
 - Free website review: $0, no obligation
-- À la carte services available for clients who need a single fix rather than a full build
 - No long-term contracts on any monthly plan — cancel any time and keep the site
 - Typical project timeline: 2–4 weeks from content-in-hand to launch; targeted fixes can ship in days
 

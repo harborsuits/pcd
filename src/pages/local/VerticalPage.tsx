@@ -36,7 +36,7 @@ const VerticalPage = () => {
           },
           {
             question: `What does a ${v.singular.toLowerCase()} website usually cost?`,
-            answer: `Most ${v.singular.toLowerCase()} sites we build land between $1,500 and $6,500 one-time for the build, plus a month-to-month plan: care from $125/mo, or a full bundle from $395/mo that adds AI receptionist, booking, and ongoing improvements.`,
+            answer: `A simple one-page online brochure for a ${v.singular.toLowerCase()} starts at $1,500, a custom ${v.singular.toLowerCase()} website starts at $3,500, and expanded sites with larger galleries or online ordering start at $6,000 — final price depends on content, functionality, and integrations. Website care starts at $150/mo month-to-month, and AI receptionist services are billed as setup, monthly management, and actual usage.`,
           },
           {
             question: `Can you fix problems on my existing ${v.singular.toLowerCase()} website?`,
