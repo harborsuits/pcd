@@ -1365,7 +1365,31 @@ const GetDemo = () => {
             </div>
           </button>
         </div>
+
+        {/* Optional budget range — website/project paths only */}
+        {(formData.serviceType === "website" || formData.serviceType === "both") && (
+          <div className="space-y-2">
+            <Label htmlFor="budgetRange">Rough budget (optional)</Label>
+            <select
+              id="budgetRange"
+              value={formData.budgetRange}
+              onChange={(e) => updateField("budgetRange", e.target.value)}
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+            >
+              <option value="">Prefer not to say</option>
+              {BUDGET_RANGES.map((range) => (
+                <option key={range.value} value={range.value}>
+                  {range.label}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-muted-foreground">
+              Helps us scope a realistic first phase. Skip it if you'd rather talk first.
+            </p>
+          </div>
+        )}
       </div>
+
     );
   };
 
