@@ -40,32 +40,38 @@ const SERVICE_PARAM_MAP: Record<string, ServiceType> = {
   other: "other",
 };
 
-// Map tier query param values - includes all service types
-type TierType = 
-  | "starter" | "growth" | "full_ops"  // Bundle tiers
-  | "website_essential" | "website_growth" | "website_premium"  // Website-only tiers
-  | "ai_front_door" | "ai_booking" | "ai_full"  // AI-only tiers
-  | "care_starter" | "care_growth"  // Care plan tiers
-  | "custom"  // "Not sure" option
-  | "";
+// Map tier query param values - includes current offerings, care plans, and
+// retired offers (old links must keep resolving to the offer they always meant)
+type TierType = string;
 
 const TIER_PARAM_MAP: Record<string, TierType> = {
-  // Bundle tiers
-  starter: "starter",
-  growth: "growth",
-  full_ops: "full_ops",
-  // Website tiers
+  // Current project offerings
+  project_brochure: "project_brochure",
+  project_custom_website: "project_custom_website",
+  project_expanded: "project_expanded",
+  project_business_systems: "project_business_systems",
+  // Current AI offering (setup + management + usage)
+  ai_services: "ai_services",
+  // Current care plans
+  care_website: "care_website",
+  care_managed: "care_managed",
+  // Retired offers — preserved so existing links/records are never remapped
+  starter: "bundle_starter",
+  growth: "bundle_growth",
+  full_ops: "bundle_full_ops",
+  bundle_starter: "bundle_starter",
+  bundle_growth: "bundle_growth",
+  bundle_full_ops: "bundle_full_ops",
   website_essential: "website_essential",
   website_growth: "website_growth",
   website_premium: "website_premium",
-  // AI tiers
   ai_front_door: "ai_front_door",
   ai_booking: "ai_booking",
   ai_full: "ai_full",
-  // Care plan tiers
   care_starter: "care_starter",
   care_growth: "care_growth",
 };
+
 
 // Product types from pricing page
 type ProductType = "bundle" | "care_plan" | "pilot" | "";
