@@ -49,13 +49,24 @@ Reordered to: intro and project offerings → what determines project pricing �
 - `public/llms.txt`: pricing facts block updated to the new starting prices, care plans, and usage-based AI model.
 - `src/pages/AiReceptionist.tsx`: add a short pricing-model paragraph (setup + management + usage) in existing styling, and route its CTAs to the quote flow.
 - `src/pages/WhatWeBuild.tsx` and homepage: adjust any pricing phrasing that implies flat monthly bundles. No visual edits.
-- `src/pages/IntakeWizard.tsx`: tier options re-labelled to the four project offerings and the AI setup/management/usage framing; a website budget select is added on the website path with the six ranges (under $1,500 through $12,000+, plus "Not sure yet"). Existing form state keys and submission payloads are preserved so no lead handling breaks.
-- `src/pages/portal/OnboardingWizard.tsx` and `src/components/intake/IntakeForm.tsx` inherit the new labels through `pricingMenu.ts`; only mapping fixes if a removed ID is referenced.
+- `src/pages/IntakeWizard.tsx`: tier options become the four project offerings (new IDs) plus the AI setup/management/usage framing. The `?tier=` param map keeps every old value working and resolves it to its legacy offer. An **optional** website budget select is added on the website path: Under $1,500 / $1,500–$3,000 / $3,000–$6,000 / $6,000–$12,000 / $12,000+ / Not sure yet — skippable, never blocking.
+- **The budget answer is actually stored.** It is added as a `budget_range` field on the `leads/request-demo` payload, and `supabase/functions/leads/index.ts` appends it to the operator-visible `notesLines` block (the same mechanism already used for timeline, website goal, and selected services) so it lands on the project record. This is inquiry metadata only — no billing tables involved. Verified end to end before the work is called done.
+- `src/pages/portal/OnboardingWizard.tsx`, `src/components/intake/IntakeForm.tsx`, and operator summaries inherit labels through `pricingMenu.ts`; existing stored selections resolve through the legacy lookup and display unchanged.
 
 ## 4. What is not touched
 
-No Stripe products, checkout, payment links, subscriptions, invoices, billing tables, or edge functions. No claims that metering, usage dashboards, or spending controls are live — those are described as agreed in the proposal. Existing client-specific prices and agreements are untouched.
+No Stripe products, checkout, payment links, subscriptions, invoices, billing tables, deposit logic, or automated metering. The only edge-function change is appending the optional budget answer to inquiry notes. No claims that metering, usage dashboards, or spending controls are operational — they are described as agreed in the proposal. Existing client agreements, negotiated prices, and historical selections stay exactly as recorded.
 
 ## 5. Verification
+
+Beyond the type check:
+
+1. **Existing customer regression** — open a project whose `selected_tier` is a legacy ID and confirm the operator view, onboarding summary, and intake summary still show the original offering label and price, unmodified.
+2. **All four offerings** — click each offering CTA and confirm the resulting inquiry records that specific offering ID, and that an old `?tier=growth` link still resolves to the legacy Growth System rather than a new package.
+3. **Budget persistence** — submit an inquiry with a budget selected and one with it skipped; confirm the answer reaches the stored project notes and the skipped case submits cleanly.
+4. **No computed totals** — confirm nowhere renders a summed total from starting prices, "Custom proposal" never shows as $0, and AI never shows a single flat monthly number.
+5. **Copy checks** — Managed care reads "up to 90 minutes total per month"; brochure scope reads visibly limited; no "1–5 pages" at $1,500–$2,500; no capped build ranges; no ceiling on larger projects; one-time vs recurring clearly separated.
+6. **Layout** — desktop and 390px mobile pass, price formatting and links correct, service-selection behaviour intact.
+
 
 Run through desktop and mobile (390px) previews: brochure scope reads as visibly limited, no remaining "1–5 pages at $1,500–$2,500", no capped build ranges, no advertised ceiling on larger projects, one-time vs recurring clearly separated, AI pricing always split into setup / management / usage, service prices and care allowances match spec, every CTA reaches its existing flow, and the type check passes.
