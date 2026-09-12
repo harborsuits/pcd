@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowLeft, ArrowRight, Loader2, Sparkles, Check, Bot, Globe, Package, Palette, Image, Search, Phone, Clock, AlertTriangle, Users, MessageSquare, FileText, CheckCircle2, Upload, CreditCard } from "lucide-react";
-import { findTierById } from "@/lib/pricingMenu";
+import { findTierById, BUDGET_RANGES } from "@/lib/pricingMenu";
 import { categoryServicesMap, generateTagline, getServicesForTemplate } from "@/lib/categoryServices";
 import { FileDropZone, UploadedFile, uploadIntakeFiles } from "@/components/intake/FileDropZone";
 import pcdLogo from "@/assets/pcd-logo.jpeg";
@@ -92,6 +92,9 @@ interface FormData {
   // Tier selection (NEW)
   tier: TierType;
   productType: ProductType;
+  /** Optional rough budget range for website/project inquiries */
+  budgetRange: string;
+
   
   // Template routing
   intakeTrack: IntakeTrack;
