@@ -122,7 +122,7 @@ const Index = () => {
           {
             question: "How does pricing work?",
             answer:
-              "Pricing is two phases: a one-time build fee to design and launch the site, then a small month-to-month care plan for hosting, security, backups, and small content changes. There are no long retainers, and most clients begin with a free website review before committing.",
+              "Pricing is two parts: a one-time build fee to design and launch the site, then a month-to-month website care plan from $150 for hosting, maintenance, backups, and small content changes. A simple one-page online brochure starts at $1,500 and a custom business website starts at $3,500, with the final price set in a written proposal. AI receptionist services are billed as setup, monthly management, and actual usage. Most clients begin with a free website review before committing.",
           },
           {
             question: "How long does a website take?",

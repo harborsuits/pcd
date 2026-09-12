@@ -31,7 +31,7 @@ const TownPage = () => {
           },
           {
             question: `How much does a small business website cost in ${town.name}?`,
-            answer: `Most builds for ${town.name} small businesses land between $1,500 and $6,500 one-time, depending on page count and features. After launch you choose a care plan ($125–$175/mo) or a full bundle ($395–$895/mo) that adds AI, booking, and ongoing improvements — all month-to-month.`,
+            answer: `For ${town.name} small businesses, a simple one-page online brochure starts at $1,500, a custom business website starts at $3,500, and expanded sites or online stores start at $6,000. Larger projects are quoted individually. After launch, website care starts at $150/mo month-to-month, and AI services are billed as setup, monthly management, and actual usage.`,
           },
           {
             question: `Do you handle local SEO for ${town.name}?`,

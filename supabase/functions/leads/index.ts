@@ -1410,6 +1410,8 @@ async function handleRequestDemo(req: Request): Promise<Response> {
       // Tier and product type (NEW)
       tier?: string;
       product_type?: string;
+      // Optional rough budget range from the inquiry form
+      budget_range?: string;
       // Template routing fields
       product_key?: string;
       intake_template?: string;
@@ -1518,6 +1520,7 @@ async function handleRequestDemo(req: Request): Promise<Response> {
       // Tier and product type (NEW)
       tier,
       product_type,
+      budget_range,
       // Template routing
       product_key,
       intake_template,
@@ -1926,6 +1929,7 @@ async function handleRequestDemo(req: Request): Promise<Response> {
     if (email) notesLines.push(`Email: ${email}`);
     if (service_type) notesLines.push(`Service: ${service_type}`);
     if (timeline) notesLines.push(`Timeline: ${timeline}`);
+    if (budget_range) notesLines.push(`Budget range: ${budget_range}`);
     if (website_goal) notesLines.push(`Website goal: ${website_goal}`);
     if (logo_status) notesLines.push(`Logo: ${logo_status}`);
     if (photo_readiness) notesLines.push(`Photos: ${photo_readiness}`);
@@ -2019,6 +2023,7 @@ async function handleRequestDemo(req: Request): Promise<Response> {
       // Tier and pricing (NEW)
       tier: tier || null,
       product_type: product_type || null,
+      budget_range: budget_range || null,
       // Template routing
       product_key: product_key || null,
       intake_template: intake_template || null,

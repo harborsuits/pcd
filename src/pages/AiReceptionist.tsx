@@ -40,10 +40,21 @@ const AiReceptionist = () => {
               "Contractors, dental offices, salons, restaurants, and any Maine small business that misses calls during busy hours or after hours.",
           },
           {
+            question: "How is the AI receptionist priced?",
+            answer:
+              "In three parts: a one-time setup and implementation fee, a monthly management fee based on scope, and usage billed at the call-minute rate agreed in your proposal. There is no flat monthly fee that includes unlimited calls.",
+          },
+          {
+            question: "What happens if my business uses more than expected?",
+            answer:
+              "Additional usage is billed at the rates agreed before your service starts. Your proposal explains any included allowance, additional usage charges, and available spending controls, so you can choose an arrangement that fits your business.",
+          },
+          {
             question: "Do I need to change my phone number?",
             answer: "No. We forward calls from your existing number.",
           },
         ]}
+
       />
 
       <MarketingHeader activePage="ai-receptionist" />
@@ -169,17 +180,21 @@ const AiReceptionist = () => {
           <h2 data-speakable className="font-serif text-3xl md:text-4xl font-bold mb-6">
             Ready to stop missing calls?
           </h2>
-          <p className="text-lg text-muted-foreground mb-8">
+          <p className="text-lg text-muted-foreground mb-4">
             Get your AI receptionist live this week. Book a free demo and see how it works for your business.
           </p>
+          <p data-speakable className="text-base text-muted-foreground mb-8">
+            Pricing has three parts: a one-time setup and implementation fee, a monthly management fee based on scope, and usage billed at the call-minute rate agreed in your proposal. No flat monthly fee includes unlimited calls — we explain the rates and estimated costs before activation.
+          </p>
           <Button asChild size="lg" className="text-base px-8 py-6">
-            <Link to="/get-demo">
-              Book a Free Demo <ArrowRight className="ml-2 h-5 w-5" />
+            <Link to="/get-demo?service=ai">
+              Request a Quote <ArrowRight className="ml-2 h-5 w-5" />
             </Link>
           </Button>
         </div>
       </section>
       </main>
+
 
       {/* Footer */}
       <div className="mt-auto">

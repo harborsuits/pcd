@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowLeft, ArrowRight, Loader2, Sparkles, Check, Bot, Globe, Package, Palette, Image, Search, Phone, Clock, AlertTriangle, Users, MessageSquare, FileText, CheckCircle2, Upload, CreditCard } from "lucide-react";
-import { findTierById } from "@/lib/pricingMenu";
+import { findTierById, BUDGET_RANGES } from "@/lib/pricingMenu";
 import { categoryServicesMap, generateTagline, getServicesForTemplate } from "@/lib/categoryServices";
 import { FileDropZone, UploadedFile, uploadIntakeFiles } from "@/components/intake/FileDropZone";
 import pcdLogo from "@/assets/pcd-logo.jpeg";
@@ -40,32 +40,38 @@ const SERVICE_PARAM_MAP: Record<string, ServiceType> = {
   other: "other",
 };
 
-// Map tier query param values - includes all service types
-type TierType = 
-  | "starter" | "growth" | "full_ops"  // Bundle tiers
-  | "website_essential" | "website_growth" | "website_premium"  // Website-only tiers
-  | "ai_front_door" | "ai_booking" | "ai_full"  // AI-only tiers
-  | "care_starter" | "care_growth"  // Care plan tiers
-  | "custom"  // "Not sure" option
-  | "";
+// Map tier query param values - includes current offerings, care plans, and
+// retired offers (old links must keep resolving to the offer they always meant)
+type TierType = string;
 
 const TIER_PARAM_MAP: Record<string, TierType> = {
-  // Bundle tiers
-  starter: "starter",
-  growth: "growth",
-  full_ops: "full_ops",
-  // Website tiers
+  // Current project offerings
+  project_brochure: "project_brochure",
+  project_custom_website: "project_custom_website",
+  project_expanded: "project_expanded",
+  project_business_systems: "project_business_systems",
+  // Current AI offering (setup + management + usage)
+  ai_services: "ai_services",
+  // Current care plans
+  care_website: "care_website",
+  care_managed: "care_managed",
+  // Retired offers — preserved so existing links/records are never remapped
+  starter: "bundle_starter",
+  growth: "bundle_growth",
+  full_ops: "bundle_full_ops",
+  bundle_starter: "bundle_starter",
+  bundle_growth: "bundle_growth",
+  bundle_full_ops: "bundle_full_ops",
   website_essential: "website_essential",
   website_growth: "website_growth",
   website_premium: "website_premium",
-  // AI tiers
   ai_front_door: "ai_front_door",
   ai_booking: "ai_booking",
   ai_full: "ai_full",
-  // Care plan tiers
   care_starter: "care_starter",
   care_growth: "care_growth",
 };
+
 
 // Product types from pricing page
 type ProductType = "bundle" | "care_plan" | "pilot" | "";
@@ -86,6 +92,9 @@ interface FormData {
   // Tier selection (NEW)
   tier: TierType;
   productType: ProductType;
+  /** Optional rough budget range for website/project inquiries */
+  budgetRange: string;
+
   
   // Template routing
   intakeTrack: IntakeTrack;
@@ -233,6 +242,8 @@ const GetDemo = () => {
     // Tier selection (NEW)
     tier: "",
     productType: "",
+    budgetRange: "",
+
     // Template routing
     intakeTrack: "",
     productKey: "",
@@ -708,6 +719,7 @@ const GetDemo = () => {
           service_type: mapServiceType(formData.serviceType),
           is_trial: isTrial, // 7-day AI trial flag
           tier: formData.tier || null,
+          budget_range: formData.budgetRange || null,
           product_type: formData.productType || null,
           hero_line: formData.heroLine.trim() || null,
           about_blurb: formData.aboutBlurb.trim() || null,
@@ -829,6 +841,7 @@ const GetDemo = () => {
           service_type: mapServiceType(formData.serviceType),
           // Tier and product type (NEW)
           tier: formData.tier || null,
+          budget_range: formData.budgetRange || null,
           product_type: formData.productType || null,
           // Track routing
           intake_track: formData.intakeTrack || null,
@@ -1215,106 +1228,70 @@ const GetDemo = () => {
     );
   };
 
-  // Tier options per service type
-  const WEBSITE_TIER_OPTIONS = [
-    { 
-      value: "website_essential", 
-      label: "Essential", 
-      price: "Starting at $750",
+  // Current public offerings (see src/lib/pricingMenu.ts)
+  const PROJECT_TIER_OPTIONS = [
+    {
+      value: "project_brochure",
+      label: "Online Brochure",
+      price: "From $1,500",
       priceType: "one-time" as const,
-      description: "Get online professionally with a clean, fast site.",
+      description: "One straightforward page so customers can learn what you do and contact you.",
     },
-    { 
-      value: "website_growth", 
-      label: "Growth", 
-      price: "Starting at $1,500",
+    {
+      value: "project_custom_website",
+      label: "Custom Business Website",
+      price: "From $3,500",
       priceType: "one-time" as const,
-      description: "Turn visitors into leads with booking + forms.",
+      description: "A tailored site that presents your business and showcases your work.",
       popular: true,
     },
-    { 
-      value: "website_premium", 
-      label: "Premium", 
-      price: "Starting at $2,500",
+    {
+      value: "project_expanded",
+      label: "Expanded Website or Online Store",
+      price: "From $6,000",
       priceType: "one-time" as const,
-      description: "Custom design with advanced features + integrations.",
+      description: "Bigger portfolios, more content, online selling, or richer customer journeys.",
+    },
+    {
+      value: "project_business_systems",
+      label: "Custom Business System",
+      price: "Custom proposal",
+      priceType: "one-time" as const,
+      description: "Portals, advanced booking, CRM connections, AI call answering, automation.",
     },
   ];
 
   const AI_TIER_OPTIONS = [
-    { 
-      value: "ai_front_door", 
-      label: "Front Door", 
-      price: "Starting at $450/mo",
+    {
+      value: "ai_services",
+      label: "AI Receptionist & Automation",
+      price: "Setup + management + usage",
       priceType: "monthly" as const,
-      description: "Never miss a call — AI answers 24/7.",
-    },
-    { 
-      value: "ai_booking", 
-      label: "Front Door + Booking", 
-      price: "Starting at $700/mo",
-      priceType: "monthly" as const,
-      description: "Fill your calendar automatically.",
-      popular: true,
-    },
-    { 
-      value: "ai_full", 
-      label: "Full AI Suite", 
-      price: "Starting at $950/mo",
-      priceType: "monthly" as const,
-      description: "AI + booking + CRM — the complete system.",
-    },
-  ];
-
-  const BUNDLE_TIER_OPTIONS = [
-    { 
-      value: "starter", 
-      label: "Starter", 
-      price: "Starting at $575/mo",
-      priceType: "monthly" as const,
-      description: "Get online professionally with AI handling your calls.",
-    },
-    { 
-      value: "growth", 
-      label: "Growth", 
-      price: "Starting at $875/mo",
-      priceType: "monthly" as const,
-      description: "Turn visitors into booked appointments automatically.",
-      popular: true,
-    },
-    { 
-      value: "full_ops", 
-      label: "Full Operations", 
-      price: "Starting at $1,100/mo",
-      priceType: "monthly" as const,
-      description: "We run your digital front desk end-to-end.",
+      description:
+        "A one-time setup fee, monthly management based on scope, and usage billed at the rates agreed in your proposal.",
     },
   ];
 
   // Get tier options based on service type
   const getTierOptionsForService = () => {
     switch (formData.serviceType) {
-      case "website":
-        return { 
-          options: WEBSITE_TIER_OPTIONS, 
-          title: "Pick a starting point", 
-          subtitle: "These are ballpark ranges — we'll fine-tune together." 
-        };
       case "ai":
-        return { 
-          options: AI_TIER_OPTIONS, 
-          title: "Pick a starting point", 
-          subtitle: "These are ballpark ranges — we'll fine-tune together." 
+        return {
+          options: AI_TIER_OPTIONS,
+          title: "AI services",
+          subtitle: "No flat monthly fee includes unlimited AI activity — we quote setup, management, and usage separately.",
         };
+      case "website":
       case "both":
       default:
-        return { 
-          options: BUNDLE_TIER_OPTIONS, 
-          title: "Pick a starting point", 
-          subtitle: "Website + AI included in all tiers. We'll fine-tune together." 
+        return {
+          options: PROJECT_TIER_OPTIONS,
+          title: "Pick a starting point",
+          subtitle: "Starting prices for the scope described — your proposal sets the final price.",
         };
     }
   };
+
 
   const renderTierStep = () => {
     const { options, title, subtitle } = getTierOptionsForService();
@@ -1395,7 +1372,31 @@ const GetDemo = () => {
             </div>
           </button>
         </div>
+
+        {/* Optional budget range — website/project paths only */}
+        {(formData.serviceType === "website" || formData.serviceType === "both") && (
+          <div className="space-y-2">
+            <Label htmlFor="budgetRange">Rough budget (optional)</Label>
+            <select
+              id="budgetRange"
+              value={formData.budgetRange}
+              onChange={(e) => updateField("budgetRange", e.target.value)}
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+            >
+              <option value="">Prefer not to say</option>
+              {BUDGET_RANGES.map((range) => (
+                <option key={range.value} value={range.value}>
+                  {range.label}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-muted-foreground">
+              Helps us scope a realistic first phase. Skip it if you'd rather talk first.
+            </p>
+          </div>
+        )}
       </div>
+
     );
   };
 
