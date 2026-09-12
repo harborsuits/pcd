@@ -2,9 +2,20 @@
 
 Replace the current bundle model ($395/$650/$895 with capped build ranges) with four scope-based project offerings, revised care plans, updated individual services, and a setup + management + usage AI model. Visual identity, components, and layout system stay exactly as they are — only content, data, and section ordering change.
 
+## 0. Existing customers are insulated from the new catalog
+
+The new catalog is a **public offer catalog for new inquiries and proposals only**.
+
+- Legacy IDs (`bundle_starter`, `bundle_growth`, `bundle_full_ops`, `website_essential/growth/premium`, `ai_front_door/booking/full`, `care_starter`, `care_growth`) and their original labels and prices are kept in a `LEGACY_OFFERS` record, never deleted. Anything already stored in `projects.selected_tier` or an intake record keeps resolving to the exact label, scope and price the customer agreed to.
+- Lookup helpers resolve against current offers first, then `LEGACY_OFFERS`, so operator summaries, onboarding, and project detail views for existing customers display unchanged.
+- Legacy offers are excluded from every public selector (pricing page, intake tier step) — visible only where a stored selection is being displayed.
+- No silent remapping: an old "Growth System" selection is never rewritten into a new website package. Old `?tier=` deep links keep working via an explicit param map that resolves to the legacy offer they always meant, and new CTAs use new IDs so each inquiry records the offering the customer actually clicked.
+- `create-deposit-checkout` and its `TIER_DEPOSITS` map are left untouched. New offerings are not added to that map; deposits for new proposals continue to come from the operator-set `deposit_amount_cents`, which already overrides tier lookup. No billing behaviour changes.
+
 ## 1. Shared pricing data (`src/lib/pricingMenu.ts`)
 
 This file is the single source used by the pricing page, the intake wizard, the onboarding wizard, and operator summaries. All new copy lives here so displays can't drift.
+
 
 - **New `PROJECT_OFFERINGS`** (replaces `BUNDLE_TIERS`):
   - Online Brochure — From $1,500 (one straightforward page, supplied info/logo/photos, short intro + service overview, small image selection, contact + location, mobile-friendly, basic technical SEO). Explicit note that extra pages, booking, custom forms, integrations, and substantial copywriting are quoted separately. No "1–5 pages" language.
