@@ -40,10 +40,21 @@ const AiReceptionist = () => {
               "Contractors, dental offices, salons, restaurants, and any Maine small business that misses calls during busy hours or after hours.",
           },
           {
+            question: "How is the AI receptionist priced?",
+            answer:
+              "In three parts: a one-time setup and implementation fee, a monthly management fee based on scope, and usage billed at the call-minute rate agreed in your proposal. There is no flat monthly fee that includes unlimited calls.",
+          },
+          {
+            question: "What happens if my business uses more than expected?",
+            answer:
+              "Additional usage is billed at the rates agreed before your service starts. Your proposal explains any included allowance, additional usage charges, and available spending controls, so you can choose an arrangement that fits your business.",
+          },
+          {
             question: "Do I need to change my phone number?",
             answer: "No. We forward calls from your existing number.",
           },
         ]}
+
       />
 
       <MarketingHeader activePage="ai-receptionist" />
