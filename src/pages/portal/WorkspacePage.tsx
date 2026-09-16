@@ -488,6 +488,18 @@ export default function WorkspacePage() {
               <Activity className="h-4 w-4" />
               <span className="hidden sm:inline">Updates</span>
             </TabsTrigger>
+            {includesWebsite && (
+              <TabsTrigger
+                value="details"
+                className="data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-b-none border-b-2 border-transparent data-[state=active]:border-primary gap-2"
+              >
+                <HelpCircle className="h-4 w-4" />
+                <span className="hidden sm:inline">Project details</span>
+                {projectInfo?.phaseBStatus !== 'complete' && (
+                  <span className="ml-1 h-2 w-2 rounded-full bg-primary" aria-hidden="true" />
+                )}
+              </TabsTrigger>
+            )}
             <TabsTrigger 
               value="messages" 
               className="data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-b-none border-b-2 border-transparent data-[state=active]:border-primary gap-2 relative"
