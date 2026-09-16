@@ -18,6 +18,7 @@ import { useAuthReady } from "@/hooks/useAuthReady";
 import { NotificationBell } from "@/components/portal/NotificationBell";
 import { useUnreadCounts } from "@/hooks/useUnreadCounts";
 import { ClaimAuthModal } from "@/components/demo/ClaimAuthModal";
+import { PhaseBIntake, type PhaseBData } from "@/components/portal/PhaseBIntake";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
