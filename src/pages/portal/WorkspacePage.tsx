@@ -287,6 +287,8 @@ export default function WorkspacePage() {
           depositStatus: data.business.deposit_status || null,
           isAITrial: data.business.is_ai_trial || false,
           isUnclaimed: data.business.is_unclaimed === true,
+          phaseBStatus: data.phase_b_status || null,
+          phaseBData: (data.phase_b_data as PhaseBData) || null,
         });
       } else if (res.status === 404) {
         setError("Project not found");
