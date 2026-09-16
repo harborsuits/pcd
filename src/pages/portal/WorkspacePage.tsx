@@ -100,6 +100,8 @@ interface ProjectInfo {
   depositStatus: 'pending' | 'paid' | 'skipped' | null;
   isAITrial: boolean;
   isUnclaimed: boolean;
+  phaseBStatus: 'pending' | 'in_progress' | 'complete' | null;
+  phaseBData: PhaseBData | null;
 }
 
 export default function WorkspacePage() {
