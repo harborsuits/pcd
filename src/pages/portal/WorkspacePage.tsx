@@ -18,12 +18,13 @@ import { useAuthReady } from "@/hooks/useAuthReady";
 import { NotificationBell } from "@/components/portal/NotificationBell";
 import { useUnreadCounts } from "@/hooks/useUnreadCounts";
 import { ClaimAuthModal } from "@/components/demo/ClaimAuthModal";
+import { PhaseBIntake, type PhaseBData } from "@/components/portal/PhaseBIntake";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
 // Valid tab keys for URL persistence
-const VALID_TABS = ["updates", "messages", "files", "website", "ai"] as const;
+const VALID_TABS = ["updates", "details", "messages", "files", "website", "ai"] as const;
 type TabKey = typeof VALID_TABS[number];
 
 function isValidTab(tab: string | null): tab is TabKey {
@@ -99,6 +100,8 @@ interface ProjectInfo {
   depositStatus: 'pending' | 'paid' | 'skipped' | null;
   isAITrial: boolean;
   isUnclaimed: boolean;
+  phaseBStatus: 'pending' | 'in_progress' | 'complete' | null;
+  phaseBData: PhaseBData | null;
 }
 
 export default function WorkspacePage() {
@@ -284,6 +287,8 @@ export default function WorkspacePage() {
           depositStatus: data.business.deposit_status || null,
           isAITrial: data.business.is_ai_trial || false,
           isUnclaimed: data.business.is_unclaimed === true,
+          phaseBStatus: data.phase_b_status || null,
+          phaseBData: (data.phase_b_data as PhaseBData) || null,
         });
       } else if (res.status === 404) {
         setError("Project not found");
@@ -483,6 +488,18 @@ export default function WorkspacePage() {
               <Activity className="h-4 w-4" />
               <span className="hidden sm:inline">Updates</span>
             </TabsTrigger>
+            {includesWebsite && (
+              <TabsTrigger
+                value="details"
+                className="data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-b-none border-b-2 border-transparent data-[state=active]:border-primary gap-2"
+              >
+                <HelpCircle className="h-4 w-4" />
+                <span className="hidden sm:inline">Project details</span>
+                {projectInfo?.phaseBStatus !== 'complete' && (
+                  <span className="ml-1 h-2 w-2 rounded-full bg-primary" aria-hidden="true" />
+                )}
+              </TabsTrigger>
+            )}
             <TabsTrigger 
               value="messages" 
               className="data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-b-none border-b-2 border-transparent data-[state=active]:border-primary gap-2 relative"
@@ -556,6 +573,30 @@ export default function WorkspacePage() {
               onUploadFiles={() => setActiveTab('files')}
             />
           </TabsContent>
+
+          {includesWebsite && (
+            <TabsContent value="details" className="h-full m-0 overflow-y-auto">
+              <div className="max-w-3xl mx-auto p-4 sm:p-6">
+                <div className="mb-6">
+                  <h2 className="text-lg font-semibold text-foreground">Project details</h2>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    These questions help us build your site. Answer what you can now — everything saves
+                    automatically and you can come back any time.
+                  </p>
+                </div>
+                <PhaseBIntake
+                  token={token!}
+                  initialData={projectInfo?.phaseBData || null}
+                  filesCount={0}
+                  onComplete={() => {
+                    toast({ title: "Thanks!", description: "We've got your project details." });
+                    fetchProjectInfo();
+                  }}
+                />
+              </div>
+            </TabsContent>
+          )}
+          
           
           <TabsContent value="messages" className="h-full m-0">
             <MessagesTab 
