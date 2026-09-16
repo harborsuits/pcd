@@ -573,6 +573,30 @@ export default function WorkspacePage() {
               onUploadFiles={() => setActiveTab('files')}
             />
           </TabsContent>
+
+          {includesWebsite && (
+            <TabsContent value="details" className="h-full m-0 overflow-y-auto">
+              <div className="max-w-3xl mx-auto p-4 sm:p-6">
+                <div className="mb-6">
+                  <h2 className="text-lg font-semibold text-foreground">Project details</h2>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    These questions help us build your site. Answer what you can now — everything saves
+                    automatically and you can come back any time.
+                  </p>
+                </div>
+                <PhaseBIntake
+                  token={token!}
+                  initialData={projectInfo?.phaseBData || null}
+                  filesCount={0}
+                  onComplete={() => {
+                    toast({ title: "Thanks!", description: "We've got your project details." });
+                    fetchProjectInfo();
+                  }}
+                />
+              </div>
+            </TabsContent>
+          )}
+          
           
           <TabsContent value="messages" className="h-full m-0">
             <MessagesTab 
