@@ -23,7 +23,7 @@ const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
 // Valid tab keys for URL persistence
-const VALID_TABS = ["updates", "messages", "files", "website", "ai"] as const;
+const VALID_TABS = ["updates", "details", "messages", "files", "website", "ai"] as const;
 type TabKey = typeof VALID_TABS[number];
 
 function isValidTab(tab: string | null): tab is TabKey {
