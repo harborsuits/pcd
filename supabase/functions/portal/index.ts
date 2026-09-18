@@ -1571,6 +1571,11 @@ async function handleGetPrototypes(
       );
     }
 
+    const access = await authorizeProjectAccess(req, supabase, projectRow, corsHeaders);
+    if (!access.ok) return access.response;
+
+
+
     // Fetch prototypes for this project
     const { data: prototypes, error } = await supabase
       .from("prototypes")
