@@ -3829,6 +3829,7 @@ async function handlePhaseB(
 
 // GET /portal/:token/phase-b - Get Phase B intake data
 async function handleGetPhaseB(
+  req: Request,
   token: string,
   corsHeaders: Record<string, string>
 ): Promise<Response> {
@@ -3847,7 +3848,7 @@ async function handleGetPhaseB(
     // Fetch project
     const { data: project, error: projectError } = await supabase
       .from("projects")
-      .select("id")
+      .select("id, owner_user_id")
       .eq("project_token", token)
       .is("deleted_at", null)
       .maybeSingle();
@@ -3858,6 +3859,10 @@ async function handleGetPhaseB(
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    const access = await authorizeProjectAccess(req, supabase, project, corsHeaders);
+    if (!access.ok) return access.response;
+
 
     // Get intake
     const { data: intake, error: intakeError } = await supabase
