@@ -298,15 +298,20 @@ export function PhaseBIntake({
   const saveData = useCallback(async (newData: PhaseBData) => {
     setSaving(true);
     try {
-      await fetch(`${SUPABASE_URL}/functions/v1/portal/${token}/phase-b`, {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/portal/${token}/phase-b`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "apikey": SUPABASE_ANON_KEY,
-          "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
-        },
+        headers: await getAuthHeaders(),
         body: JSON.stringify({ data: newData, action: "save" }),
       });
+      if (!res.ok) {
+        toast({
+          title: "Not saved yet",
+          description: res.status === 401
+            ? "Please sign in again to keep your answers."
+            : "We couldn't save your last answer. It will retry as you keep typing.",
+          variant: "destructive",
+        });
+      }
     } catch (err) {
       console.error("Save error:", err);
     } finally {
