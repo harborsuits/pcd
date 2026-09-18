@@ -3684,6 +3684,11 @@ async function handlePhaseB(
       );
     }
 
+    const access = await authorizeProjectAccess(req, supabase, project, corsHeaders);
+    if (!access.ok) return access.response;
+
+
+
     // Get or create intake record
     const { data: existingIntake } = await supabase
       .from("project_intakes")
