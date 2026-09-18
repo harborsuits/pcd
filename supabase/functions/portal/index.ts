@@ -3914,7 +3914,7 @@ async function handleHelpRequest(
     const body = await req.json();
     const { type, message } = body; // "call" or "chat", optional message
 
-    if (!type || !["call", "chat"].includes(type)) {
+    if (!type || !["call", "chat", "change_request"].includes(type)) {
       return new Response(
         JSON.stringify({ error: "Invalid request type" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -3954,7 +3954,9 @@ async function handleHelpRequest(
     // Post system message based on type
     const messageContent = type === "call"
       ? `📞 Client requested a quick call. Contact: ${project.contact_name || "—"} | ${project.contact_phone || project.contact_email || "—"}`
-      : `💬 Client needs help with project setup and wants to chat.`;
+      : type === "change_request"
+        ? `✏️ Client requested a change${message ? `: ${message}` : "."}`
+        : `💬 Client needs help with project setup and wants to chat.`;
 
     await supabase.from("messages").insert({
       project_id: project.id,
@@ -3967,7 +3969,11 @@ async function handleHelpRequest(
     await supabase.from("notification_events").insert({
       project_id: project.id,
       project_token: token,
-      event_type: type === "call" ? "help_call_requested" : "help_chat_requested",
+      event_type: type === "call"
+        ? "help_call_requested"
+        : type === "change_request"
+          ? "change_requested"
+          : "help_chat_requested",
       payload: { business_name: project.business_name, type },
     });
 
