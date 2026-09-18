@@ -3986,8 +3986,12 @@ async function handleHelpRequest(
       const t = encodeURIComponent(token);
       const operatorUrl = `${baseUrl}/operator?project=${t}`;
 
-      const emoji = type === "call" ? "📞" : "💬";
-      const action = type === "call" ? "requested a quick call" : "needs help (chat)";
+      const emoji = type === "call" ? "📞" : type === "change_request" ? "✏️" : "💬";
+      const action = type === "call"
+        ? "requested a quick call"
+        : type === "change_request"
+          ? "requested a change"
+          : "needs help (chat)";
 
       try {
         const res = await fetch(`https://api.telegram.org/bot${telegramBotToken}/sendMessage`, {
