@@ -1532,6 +1532,7 @@ async function handleCreateProject(
   }
 }
 async function handleGetPrototypes(
+  req: Request,
   token: string,
   corsHeaders: Record<string, string>
 ): Promise<Response> {
@@ -1550,7 +1551,7 @@ async function handleGetPrototypes(
     // Verify the project exists before returning prototypes (avoid 200 for unknown tokens)
     const { data: projectRow, error: projectErr } = await supabase
       .from("projects")
-      .select("id")
+      .select("id, owner_user_id")
       .eq("project_token", token)
       .is("deleted_at", null)
       .maybeSingle();
