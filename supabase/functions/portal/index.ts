@@ -30,6 +30,76 @@ function isValidToken(token: string): boolean {
   return /^[a-zA-Z0-9\-_]{12,128}$/.test(token);
 }
 
+type ProjectAccess =
+  | { ok: true; userId: string | null; isOperator: boolean }
+  | { ok: false; response: Response };
+
+/**
+ * Shared access rule for project-scoped portal endpoints.
+ * - Claimed project + no/anon auth  -> 401 requires_auth
+ * - Claimed project + invalid JWT   -> 401 requires_auth
+ * - Claimed project + operator/admin-> allowed
+ * - Claimed project + non-owner     -> 403
+ * - Unclaimed project               -> allowed (public/redacted payloads)
+ */
+async function authorizeProjectAccess(
+  req: Request,
+  // deno-lint-ignore no-explicit-any
+  supabase: any,
+  project: { owner_user_id?: string | null },
+  corsHeaders: Record<string, string>
+): Promise<ProjectAccess> {
+  const authHeader = req.headers.get("Authorization") || "";
+  const anonKey = Deno.env.get("SUPABASE_ANON_KEY") || "";
+  const jwt = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
+  const hasUserJwt = !!jwt && jwt !== anonKey;
+
+  if (!hasUserJwt) {
+    if (project.owner_user_id) {
+      return {
+        ok: false,
+        response: new Response(
+          JSON.stringify({ error: "Authentication required", requires_auth: true }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        ),
+      };
+    }
+    return { ok: true, userId: null, isOperator: false };
+  }
+
+  const { data: { user }, error: authError } = await supabase.auth.getUser(jwt);
+  if (authError || !user) {
+    return {
+      ok: false,
+      response: new Response(
+        JSON.stringify({ error: "Invalid or expired token", requires_auth: true }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      ),
+    };
+  }
+
+  const { data: roleRow } = await supabase
+    .from("user_roles")
+    .select("role")
+    .eq("user_id", user.id)
+    .in("role", ["operator", "admin"])
+    .maybeSingle();
+
+  const isOperator = !!roleRow;
+
+  if (!isOperator && project.owner_user_id && project.owner_user_id !== user.id) {
+    return {
+      ok: false,
+      response: new Response(
+        JSON.stringify({ error: "You don't have access to this portal" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      ),
+    };
+  }
+
+  return { ok: true, userId: user.id, isOperator };
+}
+
 Deno.serve(async (req) => {
   const origin = req.headers.get("origin");
 
