@@ -23,9 +23,20 @@ import {
   MessageSquare,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { portalSupabase } from "@/integrations/supabase/portalClient";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
+// Always send the signed-in user's token so the server can verify ownership
+const getAuthHeaders = async (): Promise<Record<string, string>> => {
+  const { data: { session } } = await portalSupabase.auth.getSession();
+  return {
+    "Content-Type": "application/json",
+    apikey: SUPABASE_ANON_KEY,
+    Authorization: `Bearer ${session?.access_token || SUPABASE_ANON_KEY}`,
+  };
+};
 
 // Phase B Data Structure - Updated for content-focused intake
 export interface PhaseBData {
