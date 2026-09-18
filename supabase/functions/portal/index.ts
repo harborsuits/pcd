@@ -192,7 +192,7 @@ Deno.serve(async (req) => {
   // GET /portal/:token/prototypes - Get prototypes for project
   if (prototypesIdx > portalIdx && req.method === "GET") {
     const token = pathParts[portalIdx + 1];
-    return handleGetPrototypes(token, corsHeaders);
+    return handleGetPrototypes(req, token, corsHeaders);
   }
 
   // Comment attachments: /portal/:token/comments/:commentId/attachments
@@ -283,7 +283,7 @@ Deno.serve(async (req) => {
   // GET /portal/:token/phase-b - Get Phase B intake data
   if (phaseBIdx > portalIdx && req.method === "GET") {
     const token = pathParts[portalIdx + 1];
-    return handleGetPhaseB(token, corsHeaders);
+    return handleGetPhaseB(req, token, corsHeaders);
   }
 
   // POST /portal/:token/help-request - Client requests help (call or chat)
