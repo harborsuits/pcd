@@ -372,11 +372,7 @@ export function PhaseBIntake({
     try {
       const res = await fetch(`${SUPABASE_URL}/functions/v1/portal/${token}/help-request`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "apikey": SUPABASE_ANON_KEY,
-          "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
-        },
+        headers: await getAuthHeaders(),
         body: JSON.stringify({ type }),
       });
 
