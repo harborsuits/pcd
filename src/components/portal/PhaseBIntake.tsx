@@ -23,9 +23,20 @@ import {
   MessageSquare,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { portalSupabase } from "@/integrations/supabase/portalClient";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
+// Always send the signed-in user's token so the server can verify ownership
+const getAuthHeaders = async (): Promise<Record<string, string>> => {
+  const { data: { session } } = await portalSupabase.auth.getSession();
+  return {
+    "Content-Type": "application/json",
+    apikey: SUPABASE_ANON_KEY,
+    Authorization: `Bearer ${session?.access_token || SUPABASE_ANON_KEY}`,
+  };
+};
 
 // Phase B Data Structure - Updated for content-focused intake
 export interface PhaseBData {
@@ -287,15 +298,20 @@ export function PhaseBIntake({
   const saveData = useCallback(async (newData: PhaseBData) => {
     setSaving(true);
     try {
-      await fetch(`${SUPABASE_URL}/functions/v1/portal/${token}/phase-b`, {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/portal/${token}/phase-b`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "apikey": SUPABASE_ANON_KEY,
-          "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
-        },
+        headers: await getAuthHeaders(),
         body: JSON.stringify({ data: newData, action: "save" }),
       });
+      if (!res.ok) {
+        toast({
+          title: "Not saved yet",
+          description: res.status === 401
+            ? "Please sign in again to keep your answers."
+            : "We couldn't save your last answer. It will retry as you keep typing.",
+          variant: "destructive",
+        });
+      }
     } catch (err) {
       console.error("Save error:", err);
     } finally {
@@ -321,11 +337,7 @@ export function PhaseBIntake({
     try {
       const res = await fetch(`${SUPABASE_URL}/functions/v1/portal/${token}/phase-b`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "apikey": SUPABASE_ANON_KEY,
-          "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
-        },
+        headers: await getAuthHeaders(),
         body: JSON.stringify({ data, action: "complete" }),
       });
 
@@ -360,11 +372,7 @@ export function PhaseBIntake({
     try {
       const res = await fetch(`${SUPABASE_URL}/functions/v1/portal/${token}/help-request`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "apikey": SUPABASE_ANON_KEY,
-          "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
-        },
+        headers: await getAuthHeaders(),
         body: JSON.stringify({ type }),
       });
 

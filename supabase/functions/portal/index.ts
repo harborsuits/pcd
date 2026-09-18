@@ -30,6 +30,76 @@ function isValidToken(token: string): boolean {
   return /^[a-zA-Z0-9\-_]{12,128}$/.test(token);
 }
 
+type ProjectAccess =
+  | { ok: true; userId: string | null; isOperator: boolean }
+  | { ok: false; response: Response };
+
+/**
+ * Shared access rule for project-scoped portal endpoints.
+ * - Claimed project + no/anon auth  -> 401 requires_auth
+ * - Claimed project + invalid JWT   -> 401 requires_auth
+ * - Claimed project + operator/admin-> allowed
+ * - Claimed project + non-owner     -> 403
+ * - Unclaimed project               -> allowed (public/redacted payloads)
+ */
+async function authorizeProjectAccess(
+  req: Request,
+  // deno-lint-ignore no-explicit-any
+  supabase: any,
+  project: { owner_user_id?: string | null },
+  corsHeaders: Record<string, string>
+): Promise<ProjectAccess> {
+  const authHeader = req.headers.get("Authorization") || "";
+  const anonKey = Deno.env.get("SUPABASE_ANON_KEY") || "";
+  const jwt = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
+  const hasUserJwt = !!jwt && jwt !== anonKey;
+
+  if (!hasUserJwt) {
+    if (project.owner_user_id) {
+      return {
+        ok: false,
+        response: new Response(
+          JSON.stringify({ error: "Authentication required", requires_auth: true }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        ),
+      };
+    }
+    return { ok: true, userId: null, isOperator: false };
+  }
+
+  const { data: { user }, error: authError } = await supabase.auth.getUser(jwt);
+  if (authError || !user) {
+    return {
+      ok: false,
+      response: new Response(
+        JSON.stringify({ error: "Invalid or expired token", requires_auth: true }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      ),
+    };
+  }
+
+  const { data: roleRow } = await supabase
+    .from("user_roles")
+    .select("role")
+    .eq("user_id", user.id)
+    .in("role", ["operator", "admin"])
+    .maybeSingle();
+
+  const isOperator = !!roleRow;
+
+  if (!isOperator && project.owner_user_id && project.owner_user_id !== user.id) {
+    return {
+      ok: false,
+      response: new Response(
+        JSON.stringify({ error: "You don't have access to this portal" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      ),
+    };
+  }
+
+  return { ok: true, userId: user.id, isOperator };
+}
+
 Deno.serve(async (req) => {
   const origin = req.headers.get("origin");
 
@@ -122,7 +192,7 @@ Deno.serve(async (req) => {
   // GET /portal/:token/prototypes - Get prototypes for project
   if (prototypesIdx > portalIdx && req.method === "GET") {
     const token = pathParts[portalIdx + 1];
-    return handleGetPrototypes(token, corsHeaders);
+    return handleGetPrototypes(req, token, corsHeaders);
   }
 
   // Comment attachments: /portal/:token/comments/:commentId/attachments
@@ -213,7 +283,7 @@ Deno.serve(async (req) => {
   // GET /portal/:token/phase-b - Get Phase B intake data
   if (phaseBIdx > portalIdx && req.method === "GET") {
     const token = pathParts[portalIdx + 1];
-    return handleGetPhaseB(token, corsHeaders);
+    return handleGetPhaseB(req, token, corsHeaders);
   }
 
   // POST /portal/:token/help-request - Client requests help (call or chat)
@@ -341,43 +411,10 @@ Deno.serve(async (req) => {
       );
     }
 
-    // SECURITY: If project has an owner, verify the requesting user is the owner
-    // But allow access with anon key for initial page load (auth check happens in frontend)
-    if (project.owner_user_id) {
-      const authHeader = req.headers.get("Authorization");
-      const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") || "";
-      
-      // Check if this is a user JWT (not anon key) and validate ownership
-      if (authHeader?.startsWith("Bearer ")) {
-        const jwt = authHeader.replace("Bearer ", "");
-        
-        // If it's NOT the anon key, it should be a user JWT - validate it
-        if (jwt !== supabaseAnonKey) {
-          const { data: { user }, error: authError } = await supabase.auth.getUser(jwt);
-
-          if (authError || !user) {
-            console.log("Invalid user JWT for owned project");
-            return new Response(
-              JSON.stringify({ error: "Invalid or expired token", requires_auth: true }),
-              { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-            );
-          }
-
-          // Check if user is the owner
-          if (project.owner_user_id !== user.id) {
-            console.log(`Access denied: user ${user.id} tried to access project owned by ${project.owner_user_id}`);
-            return new Response(
-              JSON.stringify({ error: "You don't have access to this portal" }),
-              { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-            );
-          }
-
-          console.log(`Auth verified: user ${user.id} owns project ${token.slice(0, 8)}...`);
-        }
-      }
-      // If using anon key or no auth, mark that auth is required (frontend handles redirect)
-      // We still return data so the frontend can show the auth page with business name
-    }
+    // SECURITY: claimed projects require the owner (or an operator/admin) JWT.
+    // Unclaimed projects stay readable with the anon key so the claim flow can run.
+    const access = await authorizeProjectAccess(req, supabase, project, corsHeaders);
+    if (!access.ok) return access.response;
 
     // Fetch intake status for roadmap, Phase A data, and Phase B data
     const { data: intake, error: intakeError } = await supabase
@@ -1495,6 +1532,7 @@ async function handleCreateProject(
   }
 }
 async function handleGetPrototypes(
+  req: Request,
   token: string,
   corsHeaders: Record<string, string>
 ): Promise<Response> {
@@ -1513,7 +1551,7 @@ async function handleGetPrototypes(
     // Verify the project exists before returning prototypes (avoid 200 for unknown tokens)
     const { data: projectRow, error: projectErr } = await supabase
       .from("projects")
-      .select("id")
+      .select("id, owner_user_id")
       .eq("project_token", token)
       .is("deleted_at", null)
       .maybeSingle();
@@ -1532,6 +1570,11 @@ async function handleGetPrototypes(
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    const access = await authorizeProjectAccess(req, supabase, projectRow, corsHeaders);
+    if (!access.ok) return access.response;
+
+
 
     // Fetch prototypes for this project
     const { data: prototypes, error } = await supabase
@@ -3628,7 +3671,7 @@ async function handlePhaseB(
     // Fetch project
     const { data: project, error: projectError } = await supabase
       .from("projects")
-      .select("id, business_name, pipeline_stage")
+      .select("id, business_name, pipeline_stage, owner_user_id")
       .eq("project_token", token)
       .is("deleted_at", null)
       .maybeSingle();
@@ -3640,6 +3683,11 @@ async function handlePhaseB(
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    const access = await authorizeProjectAccess(req, supabase, project, corsHeaders);
+    if (!access.ok) return access.response;
+
+
 
     // Get or create intake record
     const { data: existingIntake } = await supabase
@@ -3781,6 +3829,7 @@ async function handlePhaseB(
 
 // GET /portal/:token/phase-b - Get Phase B intake data
 async function handleGetPhaseB(
+  req: Request,
   token: string,
   corsHeaders: Record<string, string>
 ): Promise<Response> {
@@ -3799,7 +3848,7 @@ async function handleGetPhaseB(
     // Fetch project
     const { data: project, error: projectError } = await supabase
       .from("projects")
-      .select("id")
+      .select("id, owner_user_id")
       .eq("project_token", token)
       .is("deleted_at", null)
       .maybeSingle();
@@ -3810,6 +3859,10 @@ async function handleGetPhaseB(
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    const access = await authorizeProjectAccess(req, supabase, project, corsHeaders);
+    if (!access.ok) return access.response;
+
 
     // Get intake
     const { data: intake, error: intakeError } = await supabase
@@ -3861,7 +3914,7 @@ async function handleHelpRequest(
     const body = await req.json();
     const { type, message } = body; // "call" or "chat", optional message
 
-    if (!type || !["call", "chat"].includes(type)) {
+    if (!type || !["call", "chat", "change_request"].includes(type)) {
       return new Response(
         JSON.stringify({ error: "Invalid request type" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -3885,7 +3938,7 @@ async function handleHelpRequest(
     // Fetch project
     const { data: project, error: projectError } = await supabase
       .from("projects")
-      .select("id, business_name, contact_name, contact_phone, contact_email")
+      .select("id, business_name, contact_name, contact_phone, contact_email, owner_user_id")
       .eq("project_token", token)
       .is("deleted_at", null)
       .maybeSingle();
@@ -3898,10 +3951,17 @@ async function handleHelpRequest(
       );
     }
 
+    const access = await authorizeProjectAccess(req, supabase, project, corsHeaders);
+    if (!access.ok) return access.response;
+
+
+
     // Post system message based on type
     const messageContent = type === "call"
       ? `📞 Client requested a quick call. Contact: ${project.contact_name || "—"} | ${project.contact_phone || project.contact_email || "—"}`
-      : `💬 Client needs help with project setup and wants to chat.`;
+      : type === "change_request"
+        ? `✏️ Client requested a change${message ? `: ${message}` : "."}`
+        : `💬 Client needs help with project setup and wants to chat.`;
 
     await supabase.from("messages").insert({
       project_id: project.id,
@@ -3914,7 +3974,11 @@ async function handleHelpRequest(
     await supabase.from("notification_events").insert({
       project_id: project.id,
       project_token: token,
-      event_type: type === "call" ? "help_call_requested" : "help_chat_requested",
+      event_type: type === "call"
+        ? "help_call_requested"
+        : type === "change_request"
+          ? "change_requested"
+          : "help_chat_requested",
       payload: { business_name: project.business_name, type },
     });
 
@@ -3927,8 +3991,12 @@ async function handleHelpRequest(
       const t = encodeURIComponent(token);
       const operatorUrl = `${baseUrl}/operator?project=${t}`;
 
-      const emoji = type === "call" ? "📞" : "💬";
-      const action = type === "call" ? "requested a quick call" : "needs help (chat)";
+      const emoji = type === "call" ? "📞" : type === "change_request" ? "✏️" : "💬";
+      const action = type === "call"
+        ? "requested a quick call"
+        : type === "change_request"
+          ? "requested a change"
+          : "needs help (chat)";
 
       try {
         const res = await fetch(`https://api.telegram.org/bot${telegramBotToken}/sendMessage`, {

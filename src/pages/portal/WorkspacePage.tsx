@@ -406,8 +406,26 @@ export default function WorkspacePage() {
           <AlertCircle className="h-12 w-12 mx-auto mb-4 text-destructive" />
           <h2 className="text-xl font-bold mb-2">{error}</h2>
           <p className="text-muted-foreground">
-            Please check your link and try again.
+            You may be signed in with a different email than the one this project belongs to.
           </p>
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
+            <Button asChild variant="default" size="sm">
+              <Link to="/portal">My projects</Link>
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={async () => {
+                await portalSupabase.auth.signOut();
+                navigate("/portal");
+              }}
+            >
+              Sign in as someone else
+            </Button>
+            <Button asChild variant="ghost" size="sm">
+              <a href="tel:+12073805680">Call (207) 380-5680</a>
+            </Button>
+          </div>
         </div>
       </div>
     );
