@@ -3671,7 +3671,7 @@ async function handlePhaseB(
     // Fetch project
     const { data: project, error: projectError } = await supabase
       .from("projects")
-      .select("id, business_name, pipeline_stage")
+      .select("id, business_name, pipeline_stage, owner_user_id")
       .eq("project_token", token)
       .is("deleted_at", null)
       .maybeSingle();
