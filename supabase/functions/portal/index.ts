@@ -3938,7 +3938,7 @@ async function handleHelpRequest(
     // Fetch project
     const { data: project, error: projectError } = await supabase
       .from("projects")
-      .select("id, business_name, contact_name, contact_phone, contact_email")
+      .select("id, business_name, contact_name, contact_phone, contact_email, owner_user_id")
       .eq("project_token", token)
       .is("deleted_at", null)
       .maybeSingle();
@@ -3950,6 +3950,11 @@ async function handleHelpRequest(
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    const access = await authorizeProjectAccess(req, supabase, project, corsHeaders);
+    if (!access.ok) return access.response;
+
+
 
     // Post system message based on type
     const messageContent = type === "call"
