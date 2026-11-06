@@ -136,6 +136,34 @@ All colors MUST be HSL.
   color: hsl(var(--homepage-muted-foreground));
 }
 
+/* PCD public shells only: business samples and private workspace contents retain their themes. */
+.pcd-shell {
+  --muted-foreground: 208.235 17% 39.216%;
+  --pcd-text-accent: 175 35% 30%;
+}
+.dark .pcd-shell {
+  --muted-foreground: 210 15% 72%;
+  --pcd-text-accent: 175 40% 65%;
+}
+.pcd-shell .text-accent:not(svg) { color: hsl(var(--pcd-text-accent)); }
+.pcd-shell a:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 4px;
+  border-radius: 2px;
+}
+.pcd-shell [aria-current="page"] { text-decoration: underline; text-underline-offset: 4px; }
+.pcd-editorial { font-size: 1rem; line-height: 1.75; }
+.pcd-editorial p { margin-bottom: 1.25rem; }
+.pcd-editorial h1 { font-family: 'Libre Baskerville', serif; font-size: 2rem; font-weight: 700; margin-bottom: 1rem; }
+.pcd-editorial h2 { font-family: 'Libre Baskerville', serif; font-size: 1.5rem; font-weight: 700; margin: 2rem 0 1rem; }
+.pcd-editorial h3 { font-size: 1.125rem; font-weight: 600; margin: 1.5rem 0 .75rem; }
+.pcd-editorial ul, .pcd-editorial ol { padding-left: 1.5rem; margin-bottom: 1.25rem; }
+.pcd-editorial ul { list-style-type: disc; }
+.pcd-editorial li { margin-bottom: .5rem; }
+.pcd-editorial hr { margin: 2rem 0; }
+.pcd-editorial a { overflow-wrap: anywhere; text-decoration: underline; text-underline-offset: 4px; }
+@media (min-width: 768px) { .pcd-editorial { font-size: 1.125rem; } }
+
 /* Read receipt animation */
 @keyframes receiptPop {
   0% { opacity: 0; transform: translateY(2px); }

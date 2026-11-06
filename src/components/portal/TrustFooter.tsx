@@ -14,10 +14,10 @@ export function TrustFooter({ className = "" }: TrustFooterProps) {
           <span>Your information is only used to build and support your project.</span>
         </div>
         <div className="flex items-center gap-4">
-          <Link to="/privacy-policy" className="hover:text-foreground transition-colors">
+          <Link to="/privacy" className="hover:text-foreground transition-colors">
             Privacy Policy
           </Link>
-          <Link to="/terms-of-service" className="hover:text-foreground transition-colors">
+          <Link to="/terms" className="hover:text-foreground transition-colors">
             Terms of Service
           </Link>
         </div>

@@ -1,5 +1,5 @@
 import { ReactNode } from "react";
-import { Link } from "react-router-dom";
+import { MarketingFooter } from "@/components/layout/MarketingFooter";
 import { PortalHeader } from "@/components/portal/PortalHeader";
 
 interface ClientLayoutProps {
@@ -38,10 +38,10 @@ export function ClientLayout({
 
       {/* Hero band - like homepage/pricing */}
       {(title || subtitle) && (
-        <div className="bg-gradient-to-b from-accent/15 to-accent/5 border-b border-border py-12">
+        <div className="bg-page-bg border-b border-border py-10 md:py-12">
           <div className={`container mx-auto px-6 ${maxWidthClass} text-center`}>
             {title && (
-              <h1 className="font-serif text-3xl md:text-4xl font-bold tracking-tight text-foreground">
+              <h1 className="font-serif text-3xl md:text-4xl font-bold text-foreground">
                 {title}
               </h1>
             )}
@@ -62,26 +62,7 @@ export function ClientLayout({
       </main>
 
       {/* Footer - shared across all portal screens */}
-      <footer className="border-t border-border bg-card/50 py-8 mt-auto">
-        <div className="container mx-auto px-6">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
-            <div className="flex items-center gap-2">
-              <span>© {new Date().getFullYear()} Pleasant Cove Design</span>
-              <span className="hidden sm:inline">•</span>
-              <span className="hidden sm:inline">Built for local businesses</span>
-            </div>
-
-            <div className="flex items-center gap-4">
-              <Link to="/privacy" className="hover:text-foreground transition-colors">
-                Privacy
-              </Link>
-              <Link to="/terms" className="hover:text-foreground transition-colors">
-                Terms
-              </Link>
-            </div>
-          </div>
-        </div>
-      </footer>
+      <MarketingFooter compact />
     </div>
   );
 }
