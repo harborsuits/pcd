@@ -51,10 +51,10 @@ function TemplateCard({ title, description, value }: TemplateCardProps) {
     }
   };
   return (
-    <article className="bg-card p-6">
+    <article className="min-w-0 rounded-lg border border-border bg-card p-6">
       <h2 className="font-serif text-xl font-bold mb-1">{title}</h2>
       <p className="text-sm text-muted-foreground mb-4">{description}</p>
-      <pre className="bg-card border border-border rounded-md p-3 text-xs whitespace-pre-wrap font-mono text-muted-foreground mb-3 overflow-x-auto">
+      <pre className="bg-card border border-border rounded-md p-3 text-xs whitespace-pre-wrap break-words font-mono text-muted-foreground mb-3 overflow-x-auto">
 {value}
       </pre>
       <Button onClick={handleCopy} variant="secondary" className="w-full">

@@ -12,8 +12,8 @@ const VerticalPage = () => {
   if (!v) return <Navigate to="/midcoast-maine" replace />;
 
   const title = `Websites for ${v.name} in Midcoast Maine`;
-  const description = `Web design and website fixes built for ${v.name.toLowerCase()} in Midcoast Maine. Designed to drive ${v.outcome}.`;
-  const serviceDescription = `Pleasant Cove Design builds and fixes websites for ${v.name.toLowerCase()} across Midcoast Maine — designed to drive ${v.outcome}, with mobile-first layouts, clear contact and quote flows, and local SEO included.`;
+  const description = `Website design and focused fixes for ${v.name.toLowerCase()} in Midcoast Maine. Clear services, mobile layouts, and straightforward contact options.`;
+  const serviceDescription = `Pleasant Cove Design builds and improves websites for ${v.name.toLowerCase()} across Midcoast Maine, with mobile layouts, clear service information, contact paths, and basic technical SEO in the agreed scope.`;
 
   return (
     <div className="pcd-shell min-h-screen flex flex-col bg-page-bg text-foreground">
@@ -46,7 +46,7 @@ const VerticalPage = () => {
           <div className="flex flex-wrap justify-center gap-3">
             <Button asChild size="lg"><Link to={`/get-demo?service=${v.service ?? "review"}`}>Get a Free Review</Link></Button>
             {v.demoPath && (
-              <Button asChild variant="outline" size="lg"><Link to={v.demoPath}>
+              <Button asChild variant="outline" size="lg" className="h-auto min-h-11 whitespace-normal text-center"><Link to={v.demoPath}>
                   See a sample {v.singular.toLowerCase()} site <ArrowRight className="ml-2 h-4 w-4" />
                 </Link></Button>
             )}
