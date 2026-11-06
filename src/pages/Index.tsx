@@ -1,6 +1,7 @@
 import { MarketingFooter } from "@/components/layout/MarketingFooter";
 import { Link } from "react-router-dom";
-import { ArrowRight, ArrowUpRight, Globe, Wrench, ShieldCheck, Phone, Mail } from "lucide-react";
+import { useEffect, useState } from "react";
+import { ArrowRight, ArrowUpRight, Globe, Wrench, ShieldCheck, Phone, Mail, Pause, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 import { SEOHead } from "@/components/SEOHead";
@@ -29,6 +30,59 @@ const concepts = [
   { name: "Boutique", image: boutique, path: "/demos/boutique" },
 ];
 
+function useReducedMotion() {
+  const [reduced, setReduced] = useState(() => typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches);
+  useEffect(() => {
+    const mq = window.matchMedia?.("(prefers-reduced-motion: reduce)");
+    if (!mq) return;
+    const update = () => setReduced(mq.matches);
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, []);
+  return reduced;
+}
+
+function HomeHero() {
+  const reduced = useReducedMotion();
+  const [paused, setPaused] = useState(false);
+  const moving = !reduced && !paused;
+  return (
+    <section className="pcd-home-hero" aria-labelledby="home-hero-title">
+      <div className="pcd-home-hero__inner">
+        <div className="pcd-home-hero__copy">
+          <p className="pcd-home-hero__eyebrow">Websites for Midcoast Maine small businesses</p>
+          <h1 id="home-hero-title" data-speakable className="font-serif text-4xl md:text-5xl lg:text-6xl font-bold leading-tight">
+            A better website.<br className="hidden sm:block" /> One less thing to manage.
+          </h1>
+          <p data-speakable className="pcd-home-hero__lede text-lg md:text-xl leading-relaxed mt-6">
+            I build, improve, and maintain websites for Maine small businesses. A new site, a focused fix, or someone to keep it running.
+          </p>
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mt-8">
+            <a href="#work" className="pcd-home-hero__btn pcd-home-hero__btn--primary">See Our Work <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" /></a>
+            <Link to="/get-demo?service=review" className="pcd-home-hero__btn pcd-home-hero__btn--secondary">Get a Free Website Review</Link>
+          </div>
+          <p className="pcd-home-hero__note text-sm mt-5">Have a quick question? <a className="underline underline-offset-4" href={`tel:${NAP.phoneE164}`}>{NAP.phone}</a></p>
+        </div>
+        <div className="pcd-home-hero__art">
+          <div className="pcd-home-hero__frame">
+            <img src={pcdLogo} alt="Pleasant Cove Design sailboat mark" width={320} height={320} className={`pcd-home-hero__boat${moving ? "" : " is-paused"}`} />
+          </div>
+          <button
+            type="button"
+            className="pcd-home-hero__toggle"
+            onClick={() => setPaused(p => !p)}
+            disabled={reduced}
+            aria-pressed={reduced ? undefined : paused}
+          >
+            {reduced ? "Motion off (reduced motion setting)" : paused ? <><Play className="h-3.5 w-3.5" aria-hidden="true" /> Resume boat motion</> : <><Pause className="h-3.5 w-3.5" aria-hidden="true" /> Pause boat motion</>}
+          </button>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 const Index = () => (
   <div className="homepage pcd-shell min-h-screen flex flex-col bg-page-bg text-foreground">
       <SEOHead
@@ -39,24 +93,7 @@ const Index = () => (
       />
     <MarketingHeader activePage="home" />
     <main className="flex-1">
-      <section className="relative px-6 pt-12 pb-14 md:pt-20 md:pb-20 overflow-hidden">
-        <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-accent/40 to-transparent" />
-        <div aria-hidden="true" className="pointer-events-none absolute -top-24 left-1/2 h-64 w-[42rem] -translate-x-1/2 rounded-full bg-accent/10 blur-3xl" />
-        <div className="relative max-w-4xl mx-auto text-center">
-          <p className="inline-flex items-center gap-2 text-sm font-semibold text-accent mb-5 border border-accent/30 rounded-full px-4 py-1.5 bg-accent/5">Websites for Midcoast Maine small businesses</p>
-          <h1 data-speakable className="font-serif text-4xl md:text-5xl lg:text-6xl font-bold leading-tight">
-            A better website.<br className="hidden sm:block" /> One less thing to manage.
-          </h1>
-          <p data-speakable className="text-lg md:text-xl text-muted-foreground leading-relaxed max-w-2xl mx-auto mt-6">
-            I build, improve, and maintain websites for Maine small businesses. A new site, a focused fix, or someone to keep it running.
-          </p>
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3 mt-8">
-            <Button asChild size="lg"><a href="#work">See Our Work <ArrowRight className="ml-2 h-4 w-4" /></a></Button>
-            <Button asChild size="lg" variant="outline"><Link to="/get-demo?service=review">Get a Free Website Review</Link></Button>
-          </div>
-          <p className="text-sm text-muted-foreground mt-5">Have a quick question? <a className="underline underline-offset-4 hover:text-foreground" href={`tel:${NAP.phoneE164}`}>{NAP.phone}</a></p>
-        </div>
-      </section>
+      <HomeHero />
 
       <section className="py-12 md:py-16 border-t border-border">
         <div className="max-w-6xl mx-auto px-6">
