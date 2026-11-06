@@ -119,6 +119,15 @@ const Index = () => (
         </div>
       </section>
 
+      <section id="demos" className="border-t border-border py-10 scroll-mt-28">
+        <div className="max-w-6xl mx-auto px-6">
+          <details className="group"><summary className="cursor-pointer py-3 text-xl font-serif font-bold focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring">Sample industry concepts</summary>
+            <p className="text-sm text-muted-foreground mt-2 mb-6">Sample designs, not completed client projects. Explore an example for your industry.</p>
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">{concepts.map(concept => <article key={concept.name} className="rounded-lg overflow-hidden border border-border bg-card"><img src={concept.image} alt={`${concept.name} sample concept imagery`} loading="lazy" width="400" height="300" className="aspect-[4/3] w-full object-cover" /><div className="p-3"><h3 className="font-semibold">{concept.name}</h3><Button asChild variant="link" className="p-0 h-auto mt-2 text-sm"><Link to={concept.path}>Explore sample <ArrowUpRight className="ml-1 h-3 w-3" /></Link></Button></div></article>)}</div>
+          </details>
+        </div>
+      </section>
+
       <section className="py-12 md:py-16 border-t border-border">
         <div className="max-w-6xl mx-auto px-6"><h2 className="font-serif text-3xl md:text-4xl font-bold mb-9">A straightforward way forward.</h2>
           <ol className="grid md:grid-cols-3 gap-8">{[
@@ -143,15 +152,6 @@ const Index = () => (
             <p>My approach is straightforward: understand your business, explain the options in plain language, and agree on the work and price before we begin. Whether you need a new website or a focused improvement, you’ll know what’s included and what comes next.</p>
           </div>
           <Link to="/get-demo" className="mt-5 inline-flex items-center gap-1 font-semibold text-accent underline-offset-4 hover:underline">Tell me about your website <ArrowRight className="h-4 w-4" aria-hidden="true" /></Link>
-        </div>
-      </section>
-
-      <section id="demos" className="border-t border-border py-10 scroll-mt-28">
-        <div className="max-w-6xl mx-auto px-6">
-          <details className="group"><summary className="cursor-pointer py-3 text-xl font-serif font-bold focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring">Sample industry concepts</summary>
-            <p className="text-sm text-muted-foreground mt-2 mb-6">Sample designs, not completed client projects. Explore an example for your industry.</p>
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">{concepts.map(concept => <article key={concept.name} className="rounded-lg overflow-hidden border border-border bg-card"><img src={concept.image} alt={`${concept.name} sample concept imagery`} loading="lazy" width="400" height="300" className="aspect-[4/3] w-full object-cover" /><div className="p-3"><h3 className="font-semibold">{concept.name}</h3><Button asChild variant="link" className="p-0 h-auto mt-2 text-sm"><Link to={concept.path}>Explore sample <ArrowUpRight className="ml-1 h-3 w-3" /></Link></Button></div></article>)}</div>
-          </details>
         </div>
       </section>
 
