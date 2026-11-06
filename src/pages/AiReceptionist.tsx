@@ -1,13 +1,14 @@
+import { MarketingFooter } from "@/components/layout/MarketingFooter";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { SEOHead } from "@/components/SEOHead";
 import { MarketingHeader } from "@/components/layout/MarketingHeader";
-import { Footer } from "@/components/ui/footer";
+
 import { Phone, CalendarCheck, Bell, Wrench, Smile, Scissors, UtensilsCrossed, Home, Bed, ArrowRight, Clock, Voicemail, TrendingUp } from "lucide-react";
 
 const AiReceptionist = () => {
   return (
-    <div className="min-h-screen flex flex-col bg-page-bg text-foreground">
+    <div className="pcd-shell min-h-screen flex flex-col bg-page-bg text-foreground">
       <SEOHead
         title="AI Receptionist for Maine Businesses"
         description="Never miss a customer call again. Pleasant Cove Design installs a 24/7 AI phone receptionist that answers calls, books appointments, and qualifies leads — starting the same week."
@@ -23,36 +24,6 @@ const AiReceptionist = () => {
         breadcrumbs={[
           { name: "Home", path: "/" },
           { name: "AI Receptionist", path: "/ai-receptionist" },
-        ]}
-        faq={[
-          {
-            question: "What is an AI phone receptionist?",
-            answer:
-              "An AI receptionist answers your business calls 24/7, handles common questions, books appointments, and routes urgent calls — all without a human on staff.",
-          },
-          {
-            question: "How quickly can it be set up?",
-            answer: "Most businesses are live within the same week.",
-          },
-          {
-            question: "What kinds of businesses use this?",
-            answer:
-              "Contractors, dental offices, salons, restaurants, and any Maine small business that misses calls during busy hours or after hours.",
-          },
-          {
-            question: "How is the AI receptionist priced?",
-            answer:
-              "In three parts: a one-time setup and implementation fee, a monthly management fee based on scope, and usage billed at the call-minute rate agreed in your proposal. There is no flat monthly fee that includes unlimited calls.",
-          },
-          {
-            question: "What happens if my business uses more than expected?",
-            answer:
-              "Additional usage is billed at the rates agreed before your service starts. Your proposal explains any included allowance, additional usage charges, and available spending controls, so you can choose an arrangement that fits your business.",
-          },
-          {
-            question: "Do I need to change my phone number?",
-            answer: "No. We forward calls from your existing number.",
-          },
         ]}
 
       />
@@ -84,23 +55,23 @@ const AiReceptionist = () => {
       </section>
 
       {/* Problem Section */}
-      <section className="py-16 md:py-20 bg-card/40 border-y border-border">
+      <section className="py-16 md:py-20 bg-background border-y border-border">
         <div className="container mx-auto px-6 max-w-5xl">
           <h2 data-speakable className="font-serif text-3xl md:text-4xl font-bold text-center mb-12">
             Every missed call is a missed customer.
           </h2>
           <div className="grid md:grid-cols-3 gap-8">
-            <div className="text-center p-6 rounded-lg border border-border bg-card/60">
+            <div className="text-center p-6 rounded-lg border border-border bg-card">
               <Voicemail className="mx-auto h-10 w-10 text-accent mb-4" />
               <p className="text-4xl font-bold font-serif mb-2">62%</p>
               <p className="text-muted-foreground">of small-business calls go to voicemail during busy hours</p>
             </div>
-            <div className="text-center p-6 rounded-lg border border-border bg-card/60">
+            <div className="text-center p-6 rounded-lg border border-border bg-card">
               <Phone className="mx-auto h-10 w-10 text-accent mb-4" />
               <p className="text-4xl font-bold font-serif mb-2">85%</p>
               <p className="text-muted-foreground">of people who reach voicemail will not call back</p>
             </div>
-            <div className="text-center p-6 rounded-lg border border-border bg-card/60">
+            <div className="text-center p-6 rounded-lg border border-border bg-card">
               <TrendingUp className="mx-auto h-10 w-10 text-accent mb-4" />
               <p className="text-4xl font-bold font-serif mb-2">After hours</p>
               <p className="text-muted-foreground">calls are often your most motivated leads — and they go unanswered</p>
@@ -116,7 +87,7 @@ const AiReceptionist = () => {
             How it works
           </h2>
           <div className="grid md:grid-cols-3 gap-8">
-            <div className="relative p-6 rounded-lg border border-border bg-card/40">
+            <div className="relative p-6 rounded-lg border border-border bg-background">
               <div className="absolute -top-4 left-6 inline-flex items-center justify-center w-8 h-8 rounded-full bg-primary text-primary-foreground font-bold text-sm">
                 1
               </div>
@@ -125,7 +96,7 @@ const AiReceptionist = () => {
                 We configure your AI phone assistant, connect it to your existing number, and tailor it to your business hours and services.
               </p>
             </div>
-            <div className="relative p-6 rounded-lg border border-border bg-card/40">
+            <div className="relative p-6 rounded-lg border border-border bg-background">
               <div className="absolute -top-4 left-6 inline-flex items-center justify-center w-8 h-8 rounded-full bg-primary text-primary-foreground font-bold text-sm">
                 2
               </div>
@@ -134,7 +105,7 @@ const AiReceptionist = () => {
                 We train it on your services, pricing, scheduling policies, and common questions so every caller gets accurate, helpful answers.
               </p>
             </div>
-            <div className="relative p-6 rounded-lg border border-border bg-card/40">
+            <div className="relative p-6 rounded-lg border border-border bg-background">
               <div className="absolute -top-4 left-6 inline-flex items-center justify-center w-8 h-8 rounded-full bg-primary text-primary-foreground font-bold text-sm">
                 3
               </div>
@@ -148,7 +119,7 @@ const AiReceptionist = () => {
       </section>
 
       {/* Who It's For */}
-      <section className="py-16 md:py-20 bg-card/40 border-y border-border">
+      <section className="py-16 md:py-20 bg-background border-y border-border">
         <div className="container mx-auto px-6 max-w-5xl">
           <h2 data-speakable className="font-serif text-3xl md:text-4xl font-bold text-center mb-12">
             Who it's for
@@ -164,7 +135,7 @@ const AiReceptionist = () => {
             ].map((item) => (
               <div
                 key={item.label}
-                className="flex flex-col items-center justify-center p-6 rounded-lg border border-border bg-card/60 hover:bg-card transition-colors"
+                className="flex flex-col items-center justify-center p-6 rounded-lg border border-border bg-card hover:bg-card transition-colors"
               >
                 <item.icon className="h-10 w-10 text-accent mb-3" />
                 <span className="font-medium text-foreground">{item.label}</span>
@@ -197,31 +168,7 @@ const AiReceptionist = () => {
 
 
       {/* Footer */}
-      <div className="mt-auto">
-        <Footer
-          logo={<span className="font-serif text-lg font-bold">PCD</span>}
-          brandName="Pleasant Cove Design"
-          socialLinks={[]}
-          mainLinks={[
-            { href: "/what-we-build", label: "What We Build" },
-            { href: "/pricing", label: "Pricing" },
-            { href: "/midcoast-maine", label: "Midcoast Maine" },
-            { href: "/get-demo", label: "Get a Demo" },
-          ]}
-          legalLinks={[
-            { href: "/privacy", label: "Privacy" },
-            { href: "/terms", label: "Terms" },
-            { href: "mailto:pleasantcovedesign@gmail.com", label: "Contact" },
-          ]}
-          locationLinks={{
-            label: "Service Area",
-            links: [{ href: "/midcoast-maine", label: "Midcoast Maine" }],
-          }}
-          copyright={{
-            text: `© ${new Date().getFullYear()} Pleasant Cove Design. Based in Newcastle, Maine.`,
-          }}
-        />
-      </div>
+      <MarketingFooter />
     </div>
   );
 };

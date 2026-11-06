@@ -1,7 +1,8 @@
+import { MarketingFooter } from "@/components/layout/MarketingFooter";
 import { Link, useParams, Navigate } from "react-router-dom";
 import { SEOHead } from "@/components/SEOHead";
 import { MarketingHeader } from "@/components/layout/MarketingHeader";
-import { Footer } from "@/components/ui/footer";
+
 import { Button } from "@/components/ui/button";
 import { ArrowRight, ArrowLeft } from "lucide-react";
 import { BLOG_POSTS } from "@/data/blogPosts";
@@ -22,7 +23,7 @@ const BlogPost = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-page-bg text-foreground">
+    <div className="pcd-shell min-h-screen flex flex-col bg-page-bg text-foreground">
       <SEOHead
         title={post.metaTitle}
         description={post.metaDescription}
@@ -89,32 +90,7 @@ const BlogPost = () => {
       </article>
       </main>
 
-      <div className="mt-auto">
-        <Footer
-          logo={<span className="font-serif text-lg font-bold">PCD</span>}
-          brandName="Pleasant Cove Design"
-          socialLinks={[]}
-          mainLinks={[
-            { href: "/what-we-build", label: "What We Build" },
-            { href: "/pricing", label: "Pricing" },
-            { href: "/midcoast-maine", label: "Midcoast Maine" },
-            { href: "/blog", label: "Blog" },
-            { href: "/get-demo", label: "Get a Demo" },
-          ]}
-          legalLinks={[
-            { href: "/privacy", label: "Privacy" },
-            { href: "/terms", label: "Terms" },
-            { href: "mailto:pleasantcovedesign@gmail.com", label: "Contact" },
-          ]}
-          locationLinks={{
-            label: "Service Area",
-            links: [{ href: "/midcoast-maine", label: "Midcoast Maine" }],
-          }}
-          copyright={{
-            text: `© ${new Date().getFullYear()} Pleasant Cove Design. Based in Newcastle, Maine.`,
-          }}
-        />
-      </div>
+      <MarketingFooter />
     </div>
   );
 };

@@ -1,17 +1,20 @@
+import { MarketingHeader } from "@/components/layout/MarketingHeader";
+import { MarketingFooter } from "@/components/layout/MarketingFooter";
 import { Link } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { SEOHead } from "@/components/SEOHead";
 
 const PrivacyPolicy = () => {
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="pcd-shell min-h-screen flex flex-col bg-page-bg text-foreground">
       <SEOHead
         title="Privacy Policy"
         description="How Pleasant Cove Design collects, uses, and protects information from visitors, clients, and portal users — including cookies and analytics."
         path="/privacy"
         noindex
       />
-      <main className="container max-w-3xl mx-auto px-6 py-12">
+      <MarketingHeader />
+      <main className="max-w-3xl mx-auto px-5 sm:px-6 py-10 md:py-12 w-full flex-1">
         <Link
           to="/"
           className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors mb-8"
@@ -20,7 +23,7 @@ const PrivacyPolicy = () => {
           Back to Home
         </Link>
 
-        <article className="prose prose-neutral dark:prose-invert max-w-none">
+        <article className="pcd-editorial">
           <h1 className="text-3xl font-bold mb-2">Privacy Policy</h1>
           <p className="text-lg text-muted-foreground mb-8">
             <strong>Pleasant Cove Design</strong>
@@ -246,10 +249,10 @@ const PrivacyPolicy = () => {
             <br />
             📧 Email:{" "}
             <a
-              href="mailto:privacy@pleasantcovedesign.com"
+              href="mailto:pleasantcovedesign@gmail.com"
               className="text-primary hover:underline"
             >
-              privacy@pleasantcovedesign.com
+              pleasantcovedesign@gmail.com
             </a>
             <br />
             🌐 Website:{" "}
@@ -268,6 +271,7 @@ const PrivacyPolicy = () => {
           </p>
         </article>
       </main>
+      <MarketingFooter />
     </div>
   );
 };

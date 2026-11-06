@@ -1,3 +1,5 @@
+import { BrandMark } from "@/components/layout/BrandMark";
+import { MarketingFooter } from "@/components/layout/MarketingFooter";
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowLeft, ArrowRight, Loader2, MessageSquare, Mail, UserPlus, LogIn, CheckCircle2 } from "lucide-react";
@@ -44,11 +46,11 @@ const mapServiceType = (type: ServiceType): string => {
 
 // Keep this component outside GetDemo so field updates never remount its children.
 const Shell = ({ children }: { children: React.ReactNode }) => (
-  <div className="min-h-screen flex flex-col bg-page-bg text-foreground">
+  <div className="pcd-shell min-h-screen flex flex-col bg-page-bg text-foreground">
     <header className="border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-50">
-      <div className="container mx-auto px-6 py-4 flex items-center justify-between">
+      <div className="max-w-6xl mx-auto px-5 sm:px-6 py-2 flex items-center justify-between gap-3">
         <Link to="/" className="font-serif text-xl font-bold tracking-tight text-foreground">
-          Pleasant Cove Design
+          <BrandMark compact />
         </Link>
         <Button asChild variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
           <Link to="/">
@@ -59,15 +61,7 @@ const Shell = ({ children }: { children: React.ReactNode }) => (
       </div>
     </header>
     {children}
-    <footer className="border-t border-border py-6">
-      <div className="container mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4">
-        <p className="text-sm text-muted-foreground">© {new Date().getFullYear()} Pleasant Cove Design</p>
-        <div className="flex items-center gap-4 text-sm text-muted-foreground">
-          <Link to="/privacy" className="hover:text-foreground transition-colors">Privacy</Link>
-          <Link to="/terms" className="hover:text-foreground transition-colors">Terms</Link>
-        </div>
-      </div>
-    </footer>
+    <MarketingFooter compact />
   </div>
 );
 

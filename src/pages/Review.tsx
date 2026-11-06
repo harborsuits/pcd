@@ -1,9 +1,8 @@
+import { MarketingFooter } from "@/components/layout/MarketingFooter";
 import { Link } from "react-router-dom";
 import { Copy, QrCode, Star, AlertTriangle } from "lucide-react";
 import { useState } from "react";
-import { LiquidButton } from "@/components/ui/liquid-glass-button";
 import { Button } from "@/components/ui/button";
-import { GlowCard } from "@/components/ui/spotlight-card";
 import { SEOHead } from "@/components/SEOHead";
 import { MarketingHeader } from "@/components/layout/MarketingHeader";
 import { NAP } from "@/lib/localPages";
@@ -31,7 +30,7 @@ const Review = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-page-bg text-foreground">
+    <div className="pcd-shell min-h-screen flex flex-col bg-page-bg text-foreground">
       <SEOHead
         title="Leave a Google Review"
         description={`Help other Maine small businesses find ${NAP.name} — leave a quick Google review. One tap on mobile.`}
@@ -57,7 +56,7 @@ const Review = () => {
 
             {REVIEW_URL_IS_LIVE ? (
               <a href={REVIEW_URL} target="_blank" rel="noopener noreferrer">
-                <LiquidButton size="lg">Open Google review form</LiquidButton>
+                <Button size="lg">Open Google review form</Button>
               </a>
             ) : (
               <div className="space-y-3">
@@ -78,7 +77,7 @@ const Review = () => {
         <section className="py-12 border-t border-border">
           <div className="container mx-auto px-6 max-w-3xl">
             <div className="grid md:grid-cols-2 gap-4">
-              <GlowCard customSize glowColor="emerald" className="bg-card/80 p-6">
+              <article className="bg-card p-6">
                 <h2 className="font-serif text-xl font-bold mb-3 flex items-center gap-2">
                   <Copy className="h-5 w-5 text-accent" /> Share the link
                 </h2>
@@ -91,9 +90,9 @@ const Review = () => {
                 <Button onClick={handleCopy} disabled={!REVIEW_URL_IS_LIVE} variant="secondary" className="w-full">
                   {copied ? "Copied" : "Copy link"}
                 </Button>
-              </GlowCard>
+              </article>
 
-              <GlowCard customSize glowColor="teal" className="bg-card/80 p-6">
+              <article className="bg-card p-6">
                 <h2 className="font-serif text-xl font-bold mb-3 flex items-center gap-2">
                   <QrCode className="h-5 w-5 text-accent" /> Scan in person
                 </h2>
@@ -115,7 +114,7 @@ const Review = () => {
                     </p>
                   )}
                 </div>
-              </GlowCard>
+              </article>
             </div>
           </div>
         </section>
@@ -143,17 +142,7 @@ const Review = () => {
         </section>
       </main>
 
-      <footer className="border-t border-border py-8 mt-auto">
-        <div className="container mx-auto px-6 text-center text-sm text-muted-foreground">
-          <p className="mb-1">
-            {NAP.name} · {NAP.city}, {NAP.region} ·{" "}
-            <a href={`tel:${NAP.phoneE164}`} className="hover:text-accent">
-              {NAP.phone}
-            </a>{" "}
-            · {NAP.email}
-          </p>
-        </div>
-      </footer>
+      <MarketingFooter />
     </div>
   );
 };

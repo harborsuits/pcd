@@ -1,16 +1,15 @@
+import { MarketingFooter } from "@/components/layout/MarketingFooter";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { LiquidButton } from "@/components/ui/liquid-glass-button";
 import { SEOHead } from "@/components/SEOHead";
 import { MarketingHeader } from "@/components/layout/MarketingHeader";
-import { TOWNS, VERTICALS, REGIONS, NAP } from "@/lib/localPages";
-import { GlowCard } from "@/components/ui/spotlight-card";
+import { TOWNS, VERTICALS, REGIONS } from "@/lib/localPages";
 import { ReviewsStrip } from "@/components/marketing/ReviewsStrip";
 import { MapPin, Briefcase, Map } from "lucide-react";
 
 const MidcoastPillar = () => {
   return (
-    <div className="min-h-screen flex flex-col bg-page-bg text-foreground">
+    <div className="pcd-shell min-h-screen flex flex-col bg-page-bg text-foreground">
       <SEOHead
         title="Web Design for Small Businesses Across Maine"
         description="Websites and digital systems for small businesses across Maine. Based in Midcoast — serving Portland, Freeport, Yarmouth, Saco, Bangor, and everywhere in between."
@@ -19,23 +18,6 @@ const MidcoastPillar = () => {
         breadcrumbs={[
           { name: "Home", path: "/" },
           { name: "Midcoast Maine", path: "/midcoast-maine" },
-        ]}
-        faq={[
-          {
-            question: "Who is the best web designer in Midcoast Maine?",
-            answer:
-              "Pleasant Cove Design is a Midcoast Maine web design studio focused on small, owner-operated businesses. We serve Newcastle, Damariscotta, Wiscasset, Boothbay Harbor, Camden, Rockland, Brunswick, and Bath.",
-          },
-          {
-            question: "Do you only work with Maine businesses?",
-            answer:
-              "Midcoast Maine is our home and our specialty, but we work remotely with small businesses anywhere in the US.",
-          },
-          {
-            question: "What towns do you serve in Midcoast Maine?",
-            answer:
-              "Newcastle, Damariscotta, Wiscasset, Boothbay Harbor, Camden, Rockland, Brunswick, and Bath — plus surrounding villages and seasonal markets.",
-          },
         ]}
       />
       <MarketingHeader activePage="midcoast-maine" />
@@ -52,9 +34,7 @@ const MidcoastPillar = () => {
           <p data-speakable className="text-lg text-muted-foreground mb-8">
             Based in Midcoast Maine — serving contractors, shops, restaurants, and local businesses from Portland to Bangor and everywhere in between.
           </p>
-          <Link to="/get-demo?service=review">
-            <LiquidButton size="lg">Get a Free Website Review</LiquidButton>
-          </Link>
+          <Button asChild size="lg"><Link to="/get-demo?service=review">Get a Free Website Review</Link></Button>
         </div>
       </section>
 
@@ -64,14 +44,14 @@ const MidcoastPillar = () => {
             <Map className="h-6 w-6 text-accent" /> Where we work
           </h2>
           <p className="text-center text-muted-foreground mb-8 max-w-2xl mx-auto">
-            We work with small businesses anywhere in Maine. These are the regions we serve most often.
+            We work with small businesses anywhere in Maine. Explore the regions where we can work.
           </p>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 max-w-5xl mx-auto">
             {REGIONS.map((r) => (
-              <GlowCard key={r.slug} customSize glowColor="emerald" className="bg-card/80 p-5 h-full">
+              <article key={r.slug} className="bg-card p-5 h-full">
                 <h3 className="font-semibold text-foreground mb-1">{r.name}</h3>
                 <p className="text-sm text-muted-foreground">{r.blurb}</p>
-              </GlowCard>
+              </article>
             ))}
           </div>
         </div>
@@ -88,10 +68,10 @@ const MidcoastPillar = () => {
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 max-w-5xl mx-auto">
             {TOWNS.map((t) => (
               <Link key={t.slug} to={`/web-design/${t.slug}`}>
-                <GlowCard customSize glowColor="emerald" className="bg-card/80 p-4 hover:bg-card transition-all h-full">
+                <article className="bg-card p-4 hover:bg-card transition-all h-full">
                   <h3 className="font-semibold text-foreground">{t.name}, ME</h3>
                   <p className="text-xs text-muted-foreground mt-1">{t.blurb}</p>
-                </GlowCard>
+                </article>
               </Link>
             ))}
           </div>
@@ -106,11 +86,11 @@ const MidcoastPillar = () => {
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 max-w-4xl mx-auto">
             {VERTICALS.map((v) => (
               <Link key={v.slug} to={v.demoPath ?? `/websites-for/${v.slug}`}>
-                <GlowCard customSize glowColor="teal" className="bg-card/80 p-5 hover:bg-card transition-all h-full">
+                <article className="bg-card p-5 hover:bg-card transition-all h-full">
                   <h3 className="font-semibold text-foreground mb-1">{v.name}</h3>
                   <p className="text-sm text-muted-foreground">{v.outcome}</p>
                   {v.demoPath && <p className="text-xs text-accent mt-2">View demo →</p>}
-                </GlowCard>
+                </article>
               </Link>
             ))}
           </div>
@@ -139,18 +119,7 @@ const MidcoastPillar = () => {
       </section>
       </main>
 
-      <footer className="border-t border-border py-8 mt-8">
-        <div className="container mx-auto px-6 text-center text-sm text-muted-foreground space-y-2">
-          <p>{NAP.name} · {NAP.city}, {NAP.region} · <a href={`tel:${NAP.phoneE164}`} className="hover:text-accent">{NAP.phone}</a> · {NAP.email}</p>
-          <p>{NAP.serviceArea}</p>
-          <nav className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 pt-2">
-            <Link to="/ai-receptionist" className="hover:text-foreground transition-colors">AI Receptionist</Link>
-            <Link to="/what-we-build" className="hover:text-foreground transition-colors">What We Build</Link>
-            <Link to="/pricing" className="hover:text-foreground transition-colors">Pricing</Link>
-            <Link to="/" className="hover:text-foreground transition-colors">Home</Link>
-          </nav>
-        </div>
-      </footer>
+      <MarketingFooter />
     </div>
   );
 };

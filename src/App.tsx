@@ -1,3 +1,6 @@
+import { lazy, Suspense } from "react";
+import { RouteLoading } from "@/components/layout/RouteLoading";
+import { SampleConceptLayout } from "@/components/layout/SampleConceptLayout";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -13,20 +16,20 @@ import DemoPage from "./pages/demo/DemoPage";
 import PortalPage from "./pages/portal/PortalPage";
 import PortalHub from "./pages/PortalHub";
 // OnboardingWizard removed - all new projects go through /get-demo
-import OperatorLayout from "./pages/operator/OperatorLayout";
+const OperatorLayout = lazy(() => import("./pages/operator/OperatorLayout"));
 import WorkspacePage from "./pages/portal/WorkspacePage";
 import ClientWorkspacePage from "./pages/portal/ClientWorkspacePage";
 import CreatePasswordPage from "./pages/portal/CreatePasswordPage";
 // GetStartedPage removed - /start now redirects to /get-demo
-import RooferDemo from "./pages/demos/RooferDemo";
-import RestaurantDemo from "./pages/demos/RestaurantDemo";
-import SalonDemo from "./pages/demos/SalonDemo";
-import GalleryDemo from "./pages/demos/GalleryDemo";
-import BoutiqueDemo from "./pages/demos/BoutiqueDemo";
-import BoutiqueProductPage from "./pages/demos/BoutiqueProductPage";
-import PainterDemo from "./pages/demos/PainterDemo";
-import LandscaperDemo from "./pages/demos/LandscaperDemo";
-import ContractorDemo from "./pages/demos/ContractorDemo";
+const RooferDemo = lazy(() => import("./pages/demos/RooferDemo"));
+const RestaurantDemo = lazy(() => import("./pages/demos/RestaurantDemo"));
+const SalonDemo = lazy(() => import("./pages/demos/SalonDemo"));
+const GalleryDemo = lazy(() => import("./pages/demos/GalleryDemo"));
+const BoutiqueDemo = lazy(() => import("./pages/demos/BoutiqueDemo"));
+const BoutiqueProductPage = lazy(() => import("./pages/demos/BoutiqueProductPage"));
+const PainterDemo = lazy(() => import("./pages/demos/PainterDemo"));
+const LandscaperDemo = lazy(() => import("./pages/demos/LandscaperDemo"));
+const ContractorDemo = lazy(() => import("./pages/demos/ContractorDemo"));
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfService from "./pages/TermsOfService";
 import MidcoastPillar from "./pages/local/MidcoastPillar";
@@ -47,6 +50,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <ScrollToTop />
+        <Suspense fallback={<RouteLoading />}>
         <Routes>
           {/* Marketing / Landing */}
           <Route path="/" element={<Index />} />
@@ -68,6 +72,7 @@ const App = () => (
 
           {/* Demo Mockup Pages */}
           <Route path="/demos" element={<Navigate to="/what-we-build" replace />} />
+          <Route element={<SampleConceptLayout />}>
           <Route path="/demos/roofer" element={<RooferDemo />} />
           <Route path="/demos/restaurant" element={<RestaurantDemo />} />
           <Route path="/demos/salon" element={<SalonDemo />} />
@@ -77,6 +82,8 @@ const App = () => (
           <Route path="/demos/painter" element={<PainterDemo />} />
           <Route path="/demos/landscaper" element={<LandscaperDemo />} />
           <Route path="/demos/contractor" element={<ContractorDemo />} />
+
+          </Route>
 
           {/* Public Token Routes */}
           <Route path="/d/:token/:slug" element={<DemoPage />} />
@@ -107,6 +114,7 @@ const App = () => (
           {/* Catch-all */}
           <Route path="*" element={<NotFound />} />
         </Routes>
+        </Suspense>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>

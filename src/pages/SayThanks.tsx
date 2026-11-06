@@ -1,8 +1,8 @@
+import { MarketingFooter } from "@/components/layout/MarketingFooter";
 import { Link } from "react-router-dom";
 import { useState } from "react";
 import { Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { GlowCard } from "@/components/ui/spotlight-card";
 import { SEOHead } from "@/components/SEOHead";
 import { MarketingHeader } from "@/components/layout/MarketingHeader";
 import { REVIEW_URL, REVIEW_URL_IS_LIVE } from "@/lib/reviewLink";
@@ -44,7 +44,7 @@ function TemplateCard({ title, description, value }: TemplateCardProps) {
     }
   };
   return (
-    <GlowCard customSize glowColor="emerald" className="bg-card/80 p-6">
+    <article className="bg-card p-6">
       <h2 className="font-serif text-xl font-bold mb-1">{title}</h2>
       <p className="text-sm text-muted-foreground mb-4">{description}</p>
       <pre className="bg-card border border-border rounded-md p-3 text-xs whitespace-pre-wrap font-mono text-muted-foreground mb-3 overflow-x-auto">
@@ -54,13 +54,13 @@ function TemplateCard({ title, description, value }: TemplateCardProps) {
         <Copy className="h-4 w-4 mr-2" />
         {copied ? "Copied" : "Copy"}
       </Button>
-    </GlowCard>
+    </article>
   );
 }
 
 const SayThanks = () => {
   return (
-    <div className="min-h-screen flex flex-col bg-page-bg text-foreground">
+    <div className="pcd-shell min-h-screen flex flex-col bg-page-bg text-foreground">
       <SEOHead
         title="Review request templates"
         description="Internal templates for asking clients to leave a Google review."
@@ -107,6 +107,7 @@ const SayThanks = () => {
           </div>
         </section>
       </main>
+      <MarketingFooter />
     </div>
   );
 };

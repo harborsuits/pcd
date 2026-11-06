@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { ArrowLeft, Phone, Mail, MapPin, ArrowUpRight, Hammer, Ruler, ClipboardCheck, KeyRound, Shield, Award, Calendar } from "lucide-react";
+import { Phone, Mail, MapPin, ArrowUpRight, Hammer, Ruler, ClipboardCheck, KeyRound, Shield, Award, Calendar } from "lucide-react";
 import { motion } from "framer-motion";
 import contractorHero from "@/assets/demos/contractor-hero.jpg";
 import contractorKitchen from "@/assets/demos/contractor-kitchen.jpg";
@@ -69,13 +69,6 @@ const phases = [
 const ContractorDemo = () => {
   return (
     <div className="min-h-screen bg-[#1a1612] text-[#ece6dc] font-sans">
-      {/* Demo banner */}
-      <div className="bg-[#d96a3a] text-[#1a1612] text-center py-2 px-4 text-sm font-medium">
-        <Link to="/" className="inline-flex items-center gap-2 hover:underline">
-          <ArrowLeft className="w-4 h-4" /> Demo by Pleasant Cove Design — see what your site could look like
-        </Link>
-      </div>
-
       {/* Top nav */}
       <header className="border-b border-white/10">
         <div className="max-w-7xl mx-auto px-6 py-5 flex items-center justify-between">
