@@ -44,6 +44,7 @@ const DOMAIN = "https://pleasantcovedesign.com";
 const DEFAULT_IMAGE = `${DOMAIN}${ogImageDefault}`;
 
 const DEFAULT_AREAS = [
+  "Cushing, ME",
   "Newcastle, ME",
   "Damariscotta, ME",
   "Wiscasset, ME",
@@ -123,10 +124,7 @@ function buildBaseGraph(sameAs: string[]) {
         target: {
           "@type": "EntryPoint",
           urlTemplate: `${DOMAIN}/get-demo`,
-          actionPlatform: [
-            "http://schema.org/DesktopWebPlatform",
-            "http://schema.org/MobileWebPlatform",
-          ],
+          actionPlatform: ["http://schema.org/DesktopWebPlatform", "http://schema.org/MobileWebPlatform"],
         },
         result: {
           "@type": "Reservation",
@@ -253,15 +251,12 @@ export function SEOHead({
       openingHoursSpecification: [
         {
           "@type": "OpeningHoursSpecification",
-          dayOfWeek: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
-          opens: "09:00",
-          closes: "17:00",
+          dayOfWeek: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
+          opens: "00:00",
+          closes: "23:59",
         },
       ],
-      // Free-text supplement so crawlers / LLMs see the appointment policy.
-      // schema.org has no first-class "by appointment" field on
-      // OpeningHoursSpecification, so we expose it via a description.
-      description: `${description} Also available by appointment.`,
+      description,
       parentOrganization: { "@id": ORG_ID },
     });
   }
