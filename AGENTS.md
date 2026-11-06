@@ -1,5 +1,5 @@
 # Homepage presentation
 - Homepage prices and service scopes come from the shared pricing menu, never from a separate display catalog, so inquiries and public pricing stay aligned.
-- Homepage brand-wordmark presentation is conditional in the shared marketing header; other pages retain their existing header presentation to keep homepage edits scoped.
+- PCD public and compact entry shells share the authentic wave wordmark and marketing footer; sample wrappers remain separate from business-specific and tokenized workspaces to preserve their identity.
 - Uploaded brand media and captured public-client screenshots use CDN asset pointers; preserve original logo geometry rather than redrawing it.
 - Keep contact-form wrapper components at module scope so state updates preserve DOM identity, focus, and disclosure state.

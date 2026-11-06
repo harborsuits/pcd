@@ -1,3 +1,9 @@
+# Site-wide consistency pass
+- [ ] Consolidate public and compact brand shells, stable accessible navigation, legal/contact conventions, and sample-only wrapper.
+- [ ] Ground AI/article copy, preserve shared pricing, remove hidden FAQ claims, and retain route schema/indexability.
+- [ ] Lazy-load heavy operator/static samples, minimally repair existing dependency lock metadata.
+- [ ] Verify desktop/390/320/intermediate layout, navigation, metadata, local links, contact regressions and lint; no external effects or publish.
+
 # Narrow homepage revision
 - [x] Recapture Raven Rock after its reveal and visually verify the saved thumbnail and desktop/phone cards.
 - [x] Put services and the existing four smaller jobs before compact equal Pier 1 + Raven Rock work cards.
