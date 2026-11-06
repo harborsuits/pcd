@@ -123,12 +123,17 @@ All colors MUST be HSL.
 /* Accessible text accents scoped to the homepage; other routes keep their palette. */
 .homepage {
   --homepage-text-accent: 175 35% 30%;
+  --homepage-muted-foreground: 208.235 17% 39.216%;
 }
 .dark .homepage {
   --homepage-text-accent: 175 40% 65%;
+  --homepage-muted-foreground: var(--muted-foreground);
 }
 .homepage .text-accent:not(svg) {
   color: hsl(var(--homepage-text-accent));
+}
+.homepage .text-muted-foreground {
+  color: hsl(var(--homepage-muted-foreground));
 }
 
 /* Read receipt animation */
