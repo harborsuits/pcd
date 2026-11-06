@@ -1,805 +1,125 @@
 import { Link } from "react-router-dom";
-import { ArrowRight, ArrowLeft, ChevronLeft, ChevronRight, Globe, FolderOpen, CalendarCheck, Zap, Bot, Puzzle, LucideIcon } from "lucide-react";
+import { ArrowRight, CalendarCheck, FolderOpen, Phone, Workflow, Globe, ShieldCheck, Wrench, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { AnimatedTestimonials } from "@/components/ui/animated-testimonials";
-import websitesConvertVideo from "@/assets/videos/websites-convert.mp4";
-import officeVideo from "@/assets/videos/office-video.mp4";
-import aiFrontDoorVideo from "@/assets/videos/ai-front-door.mp4";
-import clientPortalsVideo from "@/assets/videos/client-portals.mp4";
-import React, { useEffect, useRef, useState, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { X } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { SEOHead } from "@/components/SEOHead";
 import { MarketingHeader } from "@/components/layout/MarketingHeader";
+import { NAP } from "@/lib/localPages";
+import { PROJECT_OFFERINGS, CARE_PLANS, CARE_TERMS, ALACARTE_SERVICES, ALACARTE_NOTE, AI_TIERS } from "@/lib/pricingMenu";
+import pcdLogo from "@/assets/pcd-logo.jpeg";
 
-// Unified feature data - single source of truth
-type FeatureItem = {
-  id: string;
-  type: "video" | "image";
-  title: string;
-  shortDesc: string;
-  subtitle: string;
-  bullets: string[];
-  url: string;
-  span: string;
-  icon: LucideIcon;
-};
-
-const FEATURES: FeatureItem[] = [
-  {
-    id: "websites",
-    type: "video",
-    title: "Websites that convert",
-    shortDesc: "Your public-facing site — fast, modern, and built around how real customers find and contact you.",
-    subtitle: "Designed to explain what you do clearly, guide visitors to the right next step, and work seamlessly with your AI receptionist.",
-    bullets: [
-      "Marketing sites that explain what you do in seconds, not paragraphs",
-      "Service pages that answer questions before the phone rings",
-      "Landing pages for specific offers, locations, or campaigns",
-      "Clean, SEO-ready foundations without bloated plugins",
-      "Built to work with your booking and intake flow",
-    ],
-    url: websitesConvertVideo,
-    span: "md:col-span-2 md:row-span-2 col-span-2 row-span-2",
-    icon: Globe,
-  },
-  {
-    id: "ai",
-    type: "video",
-    title: "AI Front Door",
-    shortDesc: "An AI-powered front door for your business that handles first contact automatically.",
-    subtitle: "Answers questions, captures leads, and routes requests — when you're unavailable or focused on work.",
-    bullets: [
-      "Answers common questions instantly (services, hours, pricing ranges, next steps)",
-      "Responds to calls, texts, and messages when you're unavailable",
-      "Books appointments directly into your calendar (Calendly, Acuity, Google Calendar)",
-      "Qualifies leads and routes high-intent requests appropriately",
-      "CRM integrations available — designed to reduce manual data entry",
-    ],
-    url: aiFrontDoorVideo,
-    span: "md:col-span-2 md:row-span-1 col-span-1 row-span-1",
-    icon: Bot,
-  },
-  {
-    id: "booking",
-    type: "image",
-    title: "Booking + Intake",
-    shortDesc: "Smart booking and intake flows that replace back-and-forth emails and missed details.",
-    subtitle: "You start projects with context — not confusion.",
-    bullets: [
-      "Online booking connected to your existing calendar",
-      "Intake forms that gather the right information upfront",
-      "Automated confirmations and next steps for clients",
-      "Routing based on service type or request",
-      "Seamless handoff into your workflow",
-    ],
-    url: "https://images.unsplash.com/photo-1556761175-4b46a572b786?auto=format&fit=crop&w=1400&q=80",
-    span: "md:col-span-1 md:row-span-1 col-span-1 row-span-1",
-    icon: CalendarCheck,
-  },
-  {
-    id: "portals",
-    type: "video",
-    title: "Client Portal",
-    shortDesc: "A private workspace where clients can message you, share files, view progress, and make payments — all in one place.",
-    subtitle: "One shared thread instead of scattered emails.",
-    bullets: [
-      "Messages, files, approvals, and updates in one place",
-      "Clear visibility into what's done and what's next",
-      "Fewer follow-ups, fewer misunderstandings",
-      "Built to scale from one project to many",
-      "Reduces friction on both sides",
-    ],
-    url: clientPortalsVideo,
-    span: "md:col-span-1 md:row-span-1 col-span-1 row-span-1",
-    icon: FolderOpen,
-  },
-  {
-    id: "automations",
-    type: "video",
-    title: "Automations",
-    shortDesc: "Quiet systems that remove friction — not control.",
-    subtitle: "Built to support your work, not replace it.",
-    bullets: [
-      "Automatic confirmations and status updates",
-      "File upload reminders when something is missing",
-      "Internal notifications so nothing slips through cracks",
-      "Fewer manual steps, fewer mistakes",
-      "You stay in control of what matters",
-    ],
-    url: officeVideo,
-    span: "md:col-span-2 md:row-span-1 col-span-1 row-span-1",
-    icon: Zap,
-  },
-  {
-    id: "custom",
-    type: "image",
-    title: "Custom & Integrations",
-    shortDesc: "Built around how you actually work.",
-    subtitle: "The system adapts to your business — not the other way around.",
-    bullets: [
-      "Integrations with tools you already use",
-      "Custom workflows for unique processes",
-      "Flexible enough to evolve as your business grows",
-      "No rigid platforms forcing bad habits",
-      "Modular — use what you need, skip what you don't",
-    ],
-    url: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=1400&q=80",
-    span: "md:col-span-2 md:row-span-1 col-span-1 row-span-1",
-    icon: Puzzle,
-  },
+const smallerJobs = ["content_refresh", "website_cleanup", "booking_integration", "forms_routing"].flatMap(id => {
+  const service = ALACARTE_SERVICES.find(item => item.id === id);
+  return service ? [service] : [];
+});
+const tools = [
+  { icon: CalendarCheck, title: "Booking & intake", from: "Choose a time", to: "Share the details", description: "Connect an existing scheduler and collect the information you need before an appointment." },
+  { icon: Phone, title: "AI call answering", from: "Incoming call", to: "Agreed next step", description: "Define answers to common questions and how calls or requests should be handed to you." },
+  { icon: FolderOpen, title: "Client portals", from: "Share a file", to: "Review together", description: "A private place for clients to exchange messages, files, and project approvals." },
+  { icon: Workflow, title: "Automation & connections", from: "New inquiry", to: "Your existing tools", description: "Connect a defined customer action to your calendar, records, or an internal notification." },
 ];
+const focusLink = "inline-flex items-center gap-2 underline underline-offset-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-4";
 
-// Media item component for gallery
-const MediaItem = ({
-  item,
-  className,
-  onClick,
-}: {
-  item: FeatureItem;
-  className?: string;
-  onClick?: () => void;
-}) => {
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const [isInView, setIsInView] = useState(false);
-  const [isBuffering, setIsBuffering] = useState(true);
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => setIsInView(entry.isIntersecting));
-      },
-      { root: null, rootMargin: "50px", threshold: 0.1 }
-    );
-
-    if (videoRef.current) observer.observe(videoRef.current);
-
-    return () => {
-      if (videoRef.current) observer.unobserve(videoRef.current);
-    };
-  }, []);
-
-  useEffect(() => {
-    let mounted = true;
-
-    const handleVideoPlay = async () => {
-      if (!videoRef.current || !isInView || !mounted) return;
-
-      try {
-        if (videoRef.current.readyState >= 3) {
-          setIsBuffering(false);
-          await videoRef.current.play();
-        } else {
-          setIsBuffering(true);
-          await new Promise((resolve) => {
-            if (videoRef.current) videoRef.current.oncanplay = resolve as any;
-          });
-          if (mounted) {
-            setIsBuffering(false);
-            await videoRef.current.play();
-          }
-        }
-      } catch (error) {
-        console.warn("Video playback failed:", error);
-      }
-    };
-
-    if (isInView) handleVideoPlay();
-    else if (videoRef.current) videoRef.current.pause();
-
-    return () => {
-      mounted = false;
-      if (videoRef.current) {
-        videoRef.current.pause();
-      }
-    };
-  }, [isInView]);
-
-  if (item.type === "video") {
-    return (
-      <div
-        onClick={onClick}
-        className={`relative overflow-hidden rounded-xl cursor-pointer ${className}`}
-      >
-        <video
-          ref={videoRef}
-          src={item.url}
-          muted
-          loop
-          playsInline
-          className="absolute inset-0 w-full h-full object-cover"
-        />
-
-        {isBuffering && (
-          <div className="absolute inset-0 flex items-center justify-center bg-card/80">
-            <div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin" />
-          </div>
-        )}
-      </div>
-    );
-  }
-
+function WorkflowIllustration() {
   return (
-    <img
-      src={item.url}
-      alt={item.title}
-      onClick={onClick}
-      className={`object-cover rounded-xl cursor-pointer ${className}`}
-    />
-  );
-};
-
-// Gallery modal with dock
-const GalleryModal = ({
-  selectedItem,
-  isOpen,
-  onClose,
-  setSelectedItem,
-  features,
-}: {
-  selectedItem: FeatureItem;
-  isOpen: boolean;
-  onClose: () => void;
-  setSelectedItem: (item: FeatureItem | null) => void;
-  features: FeatureItem[];
-}) => {
-  const [dockPosition, setDockPosition] = useState({ x: 0, y: 0 });
-
-  if (!isOpen) return null;
-
-  return (
-    <>
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        onClick={onClose}
-        className="fixed inset-0 z-50 bg-background/90 backdrop-blur-xl"
-      />
-
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95, y: 20 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95, y: 20 }}
-        transition={{ type: "spring", stiffness: 300, damping: 30 }}
-        className="fixed inset-4 md:inset-10 z-50 flex items-center justify-center"
-        onClick={onClose}
-      >
-        <div
-          className="relative w-full h-full max-w-6xl max-h-[85vh] overflow-hidden rounded-2xl bg-card/50 border border-border/50 backdrop-blur-md shadow-2xl"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div className="w-full h-full flex flex-col">
-            <div className="flex-1 relative overflow-hidden">
-              <MediaItem
-                item={selectedItem}
-                className="w-full h-full object-contain"
-              />
-
-              <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-background/90 via-background/60 to-transparent">
-                <motion.h3
-                  initial={{ y: 20, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  className="text-2xl font-serif font-bold text-foreground mb-2"
-                >
-                  {selectedItem.title}
-                </motion.h3>
-                <motion.p
-                  initial={{ y: 20, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  transition={{ delay: 0.1 }}
-                  className="text-muted-foreground"
-                >
-                  {selectedItem.shortDesc}
-                </motion.p>
-              </div>
-            </div>
-          </div>
+    <figure className="min-w-0 w-full max-w-md mx-auto lg:ml-auto lg:mr-0" aria-labelledby="workflow-caption">
+      <figcaption id="workflow-caption" className="text-xs font-semibold uppercase mb-4 text-foreground">Illustrative workflow</figcaption>
+      <div className="rounded-lg border-2 border-primary bg-card overflow-hidden">
+        <div className="flex items-center gap-1.5 border-b border-border bg-secondary px-4 py-3" aria-hidden="true">
+          <span className="h-1.5 w-1.5 rounded-full bg-primary" /><span className="h-1.5 w-1.5 rounded-full bg-primary" /><span className="h-1.5 w-1.5 rounded-full bg-primary" />
+          <Globe className="h-3.5 w-3.5 ml-auto text-primary" />
         </div>
-
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="Close gallery"
-          className="absolute top-6 right-6 md:top-12 md:right-12 z-50 p-2 rounded-full bg-card/80 border border-border/50 text-foreground hover:bg-card transition-colors"
-        >
-          <X className="w-5 h-5" aria-hidden="true" />
-        </button>
-      </motion.div>
-
-      <motion.div
-        drag
-        dragMomentum={false}
-        onDragEnd={(_, info) => {
-          setDockPosition((prev) => ({
-            x: prev.x + info.offset.x,
-            y: prev.y + info.offset.y,
-          }));
-        }}
-        className="fixed z-[60] left-1/2 bottom-4 -translate-x-1/2 touch-none"
-        style={{ x: dockPosition.x, y: dockPosition.y }}
-      >
-        <motion.div
-          initial={{ y: 100, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          exit={{ y: 100, opacity: 0 }}
-          className="p-2 rounded-2xl bg-card/80 border border-border/50 backdrop-blur-xl shadow-2xl"
-        >
-          <div className="flex items-center gap-2">
-            {features.map((item, index) => (
-              <motion.div
-                key={item.id}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setSelectedItem(item);
-                }}
-                style={{
-                  zIndex:
-                    selectedItem.id === item.id ? 30 : features.length - index,
-                }}
-                className={`relative group w-9 h-9 sm:w-10 sm:h-10 flex-shrink-0 rounded-xl overflow-hidden cursor-pointer
-                            ${selectedItem.id === item.id
-                              ? "ring-2 ring-accent shadow-[0_0_25px_hsl(var(--accent)/0.25)]"
-                              : "hover:ring-2 hover:ring-border"}`}
-                initial={{ rotate: index % 2 === 0 ? -12 : 12 }}
-                animate={{
-                  scale: selectedItem.id === item.id ? 1.18 : 1,
-                  rotate:
-                    selectedItem.id === item.id ? 0 : index % 2 === 0 ? -12 : 12,
-                  y: selectedItem.id === item.id ? -8 : 0,
-                }}
-                whileHover={{
-                  scale: 1.28,
-                  rotate: 0,
-                  y: -10,
-                  transition: { type: "spring", stiffness: 400, damping: 25 },
-                }}
-              >
-                <img
-                  src={item.type === "video" ? item.url.replace(".mp4", ".jpg") : item.url}
-                  alt={item.title}
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    if (item.type === "video") {
-                      (e.target as HTMLImageElement).src = item.url;
-                    }
-                  }}
-                />
-                <div className="absolute inset-0 bg-background/20 group-hover:bg-transparent transition-colors" />
-              </motion.div>
-            ))}
-          </div>
-        </motion.div>
-      </motion.div>
-    </>
+        <div className="p-5 sm:p-7 flex items-center gap-4">
+          <img src={pcdLogo} width={48} height={48} alt="Pleasant Cove Design sailboat mark" className="w-12 h-12 shrink-0 rounded" />
+          <div className="min-w-0"><p className="font-serif text-xl font-bold">Your website</p><p className="text-sm mt-1">Services · Work · Contact</p></div>
+        </div>
+      </div>
+      <svg viewBox="0 0 400 64" className="w-full h-12 text-accent" fill="none" aria-hidden="true" preserveAspectRatio="none">
+        <path d="M200 0 V12 C200 40 70 10 70 48 V64 M200 12 C200 40 330 10 330 48 V64" stroke="currentColor" strokeWidth="2" />
+      </svg>
+      <div className="grid grid-cols-2 gap-3">
+        <div className="border border-primary rounded-lg bg-background p-4"><CalendarCheck className="h-5 w-5 text-primary mb-3" aria-hidden="true" /><p className="font-semibold text-sm">Inquiry / booking</p><p className="text-sm mt-2">A clear next step</p></div>
+        <div className="border border-primary rounded-lg bg-background p-4"><FolderOpen className="h-5 w-5 text-primary mb-3" aria-hidden="true" /><p className="font-semibold text-sm">Client workspace</p><p className="text-sm mt-2">A place to collaborate</p></div>
+      </div>
+      <p className="mt-4 text-xs leading-relaxed">An example of possible connections, not a client result or a configured system.</p>
+    </figure>
   );
-};
-
-// Feature card component for carousel
-interface FeatureCardViewProps {
-  position: number;
-  item: FeatureItem;
-  handleMove: (steps: number) => void;
-  cardSize: number;
 }
 
-const FeatureCardView: React.FC<FeatureCardViewProps> = ({ position, item, handleMove, cardSize }) => {
-  const isCenter = position === 0;
-  const Icon = item.icon;
-
-  return (
-    <div
-      onClick={() => handleMove(position)}
-      className={cn(
-        "absolute left-1/2 top-1/2 cursor-pointer border-2 p-6 transition-all duration-500 ease-in-out select-none overflow-hidden",
-        "rounded-2xl",
-        isCenter
-          ? "z-10 bg-primary text-primary-foreground border-primary shadow-lg"
-          : "z-0 bg-card text-card-foreground border-border hover:border-primary/50"
-      )}
-      style={{
-        width: cardSize,
-        height: cardSize,
-        clipPath:
-          "polygon(40px 0%, calc(100% - 40px) 0%, 100% 40px, 100% 100%, calc(100% - 40px) 100%, 40px 100%, 0 100%, 0 0)",
-        transform: `
-          translate(-50%, -50%)
-          translateX(${(cardSize / 1.5) * position}px)
-          translateY(${isCenter ? -50 : position % 2 ? 12 : -12}px)
-          rotate(${isCenter ? 0 : position % 2 ? 2 : -2}deg)
-        `,
-        boxShadow: isCenter
-          ? "0px 8px 0px 4px hsl(var(--border))"
-          : "0px 0px 0px 0px transparent",
-      }}
-    >
-      <div className="absolute top-0 right-0 w-[40px] h-[40px] bg-gradient-to-bl from-primary/20 to-transparent" />
-
-      <div className="flex items-center gap-2 mb-3">
-        <div className={cn(
-          "w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0",
-          isCenter ? "bg-primary-foreground/20" : "bg-accent/10"
-        )}>
-          <Icon className={cn("h-4 w-4", isCenter ? "text-primary-foreground" : "text-accent")} />
+const WhatWeBuild = () => (
+  <div className="min-h-screen flex flex-col bg-page-bg text-foreground">
+    <SEOHead
+      title="Website Services | Pleasant Cove Design"
+      description="Website builds, focused improvements, ongoing care, and optional connected tools for small businesses in Midcoast Maine. Explore scope and starting prices."
+      path="/what-we-build"
+      breadcrumbs={[{ name: "Home", path: "/" }, { name: "What We Build", path: "/what-we-build" }]}
+    />
+    <MarketingHeader activePage="what-we-build" />
+    <main className="flex-1">
+      <section className="px-5 sm:px-6 py-10 md:py-16">
+        <div className="max-w-6xl mx-auto grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
+          <div className="min-w-0">
+            <p className="text-sm font-semibold mb-4">Pleasant Cove Design / Services</p>
+            <h1 data-speakable className="font-serif font-bold text-3xl md:text-5xl leading-tight">A website that fits your business.</h1>
+            <p data-speakable className="text-base md:text-lg leading-relaxed mt-6 max-w-lg">New websites, focused improvements, and ongoing care for small businesses in Midcoast Maine. Start with what you need; agree on the work and price before we begin.</p>
+            <Button asChild size="lg" className="mt-7"><Link to="/get-demo">Discuss your project <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" /></Link></Button>
+            <p className="mt-5 text-sm"><Link to="/#work" className={focusLink}>See recent client work <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" /></Link></p>
+          </div>
+          <WorkflowIllustration />
         </div>
-        <h2 className="font-bold text-lg leading-tight">{item.title}</h2>
+      </section>
+
+      <section className="border-t border-border bg-background py-10 md:py-12">
+        <div className="max-w-6xl mx-auto px-5 sm:px-6">
+          <p className="text-sm font-semibold mb-3">Three ways to start</p>
+          <h2 className="font-serif text-2xl md:text-3xl font-bold mb-8">Build. Improve. Keep it cared for.</h2>
+          <article className="grid md:grid-cols-[3rem_1fr_20rem] gap-4 md:gap-7 py-7 border-t border-border">
+            <span className="font-serif text-2xl text-primary" aria-hidden="true">01</span>
+            <div><Globe className="h-5 w-5 text-primary mb-3" aria-hidden="true" /><h3 className="font-serif text-2xl font-bold mb-3">Build a website</h3><p className="leading-relaxed max-w-xl">A straightforward first website or a tailored home for your services, work, and customer inquiries.</p></div>
+            <div className="space-y-5">{PROJECT_OFFERINGS.slice(0, 2).map(offer => <div key={offer.id}><p className="font-semibold">{offer.label}</p><p className="font-serif text-xl font-bold mt-1">{offer.price}</p><p className="text-sm leading-relaxed mt-2">{offer.scopeNote}</p></div>)}<Button asChild variant="outline" className="w-full justify-between"><Link to="/get-demo?service=website">Discuss a website <ArrowRight className="h-4 w-4" aria-hidden="true" /></Link></Button></div>
+          </article>
+          <article className="grid md:grid-cols-[3rem_1fr_20rem] gap-4 md:gap-7 py-7 border-t border-border">
+            <span className="font-serif text-2xl text-primary" aria-hidden="true">02</span>
+            <div><Wrench className="h-5 w-5 text-primary mb-3" aria-hidden="true" /><h3 className="font-serif text-2xl font-bold mb-3">Improve an existing site</h3><p className="leading-relaxed max-w-xl">Keep what works and address what needs attention: content, mobile layouts, broken links, contact forms, or booking connections.</p></div>
+            <div><p className="font-semibold mb-3">Focused work, agreed scope</p><p className="text-sm leading-relaxed mb-5">Start with the issue you want solved. I’ll review your website and confirm the work and price before you commit.</p><Button asChild variant="outline" className="w-full justify-between"><Link to="/get-demo?service=existing">Discuss an improvement <ArrowRight className="h-4 w-4" aria-hidden="true" /></Link></Button></div>
+          </article>
+          <article className="grid md:grid-cols-[3rem_1fr_20rem] gap-4 md:gap-7 py-7 border-t border-border">
+            <span className="font-serif text-2xl text-primary" aria-hidden="true">03</span>
+            <div><ShieldCheck className="h-5 w-5 text-primary mb-3" aria-hidden="true" /><h3 className="font-serif text-2xl font-bold mb-3">Ongoing website care</h3><p className="leading-relaxed max-w-xl">Keep your website maintained, checked, and up to date. Hosting allowances and the maintenance covered are defined in your proposal.</p><p className="text-sm leading-relaxed mt-4">{CARE_TERMS[0]} {CARE_TERMS[2]}</p></div>
+            <div className="space-y-5">{CARE_PLANS.map(plan => <div key={plan.id}><p className="font-semibold">{plan.label}</p><p className="font-serif text-xl font-bold mt-1">{plan.price}</p><p className="text-sm leading-relaxed mt-2">{plan.features.find(feature => feature.startsWith("Up to"))}</p></div>)}<Button asChild variant="outline" className="w-full justify-between"><Link to="/get-demo?product=care_plan&tier=care_website">Discuss website care <ArrowRight className="h-4 w-4" aria-hidden="true" /></Link></Button></div>
+          </article>
+          <Link to="/pricing" className={`${focusLink} mt-4 font-semibold`}>All options, pricing & care terms <ArrowRight className="h-4 w-4" aria-hidden="true" /></Link>
+        </div>
+      </section>
+
+      <section className="py-10 md:py-12 border-t border-border">
+        <div className="max-w-6xl mx-auto px-5 sm:px-6">
+          <div className="max-w-2xl mb-7"><p className="text-sm font-semibold mb-3">Smaller jobs welcome</p><h2 className="font-serif text-2xl md:text-3xl font-bold">Not every change needs a new website.</h2></div>
+          <div className="grid md:grid-cols-2 gap-x-10">{smallerJobs.map(service => <article key={service.id} className="py-5 border-t border-border"><div className="flex flex-col sm:flex-row sm:justify-between gap-2 mb-3"><h3 className="font-semibold text-lg">{service.label}</h3><p className="font-semibold shrink-0">{service.price}</p></div><p className="text-sm leading-relaxed">{service.description}</p></article>)}</div>
+          <p className="text-sm leading-relaxed max-w-3xl mt-5">{ALACARTE_NOTE}</p>
+          <Link to="/pricing" className={`${focusLink} mt-5 font-semibold`}>See full pricing & scope <ArrowRight className="h-4 w-4" aria-hidden="true" /></Link>
+        </div>
+      </section>
+
+      <section className="bg-background border-t border-border py-10 md:py-12">
+        <div className="max-w-6xl mx-auto px-5 sm:px-6">
+          <div className="max-w-2xl mb-8"><p className="text-sm font-semibold mb-3">Optional connected tools</p><h2 className="font-serif text-2xl md:text-3xl font-bold mb-4">Beyond the website, only where it helps.</h2><p className="leading-relaxed">These features are scoped for your business, not universally bundled into a website build. Implementation and ongoing management are quoted separately.</p></div>
+          <div className="grid md:grid-cols-2 gap-x-12 gap-y-8">{tools.map(tool => <article key={tool.title} className="border-t border-border pt-5"><tool.icon className="h-6 w-6 text-primary mb-4" aria-hidden="true" /><h3 className="font-serif text-xl font-bold mb-3">{tool.title}</h3><p className="text-sm leading-relaxed">{tool.description}</p><div className="flex items-center gap-3 mt-4 text-xs font-semibold"><span className="border-l-2 border-accent pl-2">{tool.from}</span><ArrowRight className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" /><span>{tool.to}</span></div></article>)}</div>
+          <div className="border-l-2 border-accent pl-5 mt-9 max-w-3xl"><p className="font-semibold mb-2 flex items-center gap-2"><Check className="h-4 w-4 text-primary shrink-0" aria-hidden="true" />AI: setup + management + measured usage</p><p className="text-sm leading-relaxed">{AI_TIERS[0]?.description} {AI_TIERS[0]?.scopeNote}</p></div>
+        </div>
+      </section>
+
+      <section className="bg-primary text-primary-foreground py-10 md:py-12">
+        <div className="max-w-6xl mx-auto px-5 sm:px-6"><h2 className="font-serif text-2xl md:text-3xl font-bold mb-4">Start with a conversation.</h2><p className="text-base md:text-lg mb-7 max-w-xl">Tell me what your business needs, or ask for a free review of your existing website.</p><div className="flex flex-col sm:flex-row gap-3"><Button asChild size="lg" variant="secondary"><Link to="/get-demo">Discuss your project <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" /></Link></Button><Button asChild size="lg" variant="secondary"><Link to="/get-demo?service=review">Get a free website review</Link></Button></div></div>
+      </section>
+    </main>
+    <footer className="border-t border-border py-8 mt-auto">
+      <div className="container mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4">
+        <p className="font-serif text-sm">© {new Date().getFullYear()} Pleasant Cove Design</p>
+        <div className="flex flex-wrap justify-center items-center gap-x-6 gap-y-3 text-sm">
+          <Link to="/midcoast-maine" className={focusLink}>Midcoast Maine</Link><Link to="/privacy" className={focusLink}>Privacy</Link><Link to="/terms" className={focusLink}>Terms</Link><a href={`mailto:${NAP.email}`} className={focusLink}>Contact</a>
+        </div>
       </div>
-
-      <p className={cn(
-        "text-sm mb-4 leading-relaxed",
-        isCenter ? "text-primary-foreground/90" : "text-muted-foreground"
-      )}>
-        {item.subtitle}
-      </p>
-
-      <ul className="space-y-2">
-        {item.bullets.slice(0, 3).map((b, idx) => (
-          <li key={idx} className="flex items-start gap-2 text-sm">
-            <div className={cn(
-              "w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0",
-              isCenter ? "bg-primary-foreground/60" : "bg-accent"
-            )} />
-            <span className={cn(
-              "leading-tight",
-              isCenter ? "text-primary-foreground/85" : "text-foreground/80"
-            )}>
-              {b}
-            </span>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-};
-
-// Calculate which index is the visual "center" for the stagger effect
-// For 6 items with position = index - length/2, the center (position 0) is at index 3
-const getCenterIndex = (length: number) => Math.floor(length / 2);
-
-// Create initial carousel order with "Websites" (index 0) centered
-const getInitialCarouselOrder = () => {
-  const centerPos = getCenterIndex(FEATURES.length);
-  // We need index 0 to appear at centerPos (index 3 for 6 items)
-  // So we rotate by -(centerPos) positions, which means moving last items to front
-  const rotations = centerPos; // Move 3 items from end to start
-  let items = [...FEATURES];
-  for (let i = 0; i < rotations; i++) {
-    const last = items.pop();
-    if (last) items.unshift({ ...last });
-  }
-  return items;
-};
-
-const WhatWeBuild = () => {
-  // Shared state
-  const [activeId, setActiveId] = useState<string>(FEATURES[0].id);
-  const [selectedItem, setSelectedItem] = useState<FeatureItem | null>(null);
-  const [isDragging, setIsDragging] = useState(false);
-  const [cardSize, setCardSize] = useState(340);
-  const [carouselItems, setCarouselItems] = useState(getInitialCarouselOrder);
-  const carouselRef = useRef<HTMLDivElement>(null);
-
-  // Find the active index
-  const activeIndex = React.useMemo(
-    () => FEATURES.findIndex((f) => f.id === activeId),
-    [activeId]
-  );
-
-  // Handle gallery card click - scroll to carousel and set active
-  const handleGalleryCardClick = useCallback((item: FeatureItem) => {
-    if (isDragging) return;
-    
-    // Update active state
-    setActiveId(item.id);
-    
-    // Find where this item needs to be in the array for it to appear centered
-    const targetFeatureIndex = FEATURES.findIndex(f => f.id === item.id);
-    const centerPos = getCenterIndex(FEATURES.length);
-    
-    // Calculate how many positions to rotate
-    // We need targetFeatureIndex to end up at centerPos
-    const rotations = targetFeatureIndex - centerPos;
-    
-    // Rotate the array
-    let newItems = [...FEATURES];
-    if (rotations > 0) {
-      // Move items from start to end
-      for (let i = 0; i < rotations; i++) {
-        const first = newItems.shift();
-        if (first) newItems.push({ ...first });
-      }
-    } else if (rotations < 0) {
-      // Move items from end to start
-      for (let i = 0; i < Math.abs(rotations); i++) {
-        const last = newItems.pop();
-        if (last) newItems.unshift({ ...last });
-      }
-    }
-    
-    setCarouselItems(newItems);
-    
-    // Scroll to carousel section
-    if (carouselRef.current) {
-      carouselRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
-    }
-  }, [isDragging]);
-
-  // Handle carousel navigation
-  const handleCarouselMove = useCallback((steps: number) => {
-    const newList = [...carouselItems];
-    if (steps > 0) {
-      for (let i = steps; i > 0; i--) {
-        const item = newList.shift();
-        if (!item) return;
-        newList.push({ ...item });
-      }
-    } else {
-      for (let i = steps; i < 0; i++) {
-        const item = newList.pop();
-        if (!item) return;
-        newList.unshift({ ...item });
-      }
-    }
-    setCarouselItems(newList);
-    
-    // Update active ID based on new center item
-    const centerIndex = getCenterIndex(newList.length);
-    const centerItem = newList[centerIndex];
-    if (centerItem) {
-      setActiveId(centerItem.id);
-    }
-  }, [carouselItems]);
-
-  // Resize handler for carousel cards
-  useEffect(() => {
-    const updateSize = () => {
-      const { matches } = window.matchMedia("(min-width: 640px)");
-      setCardSize(matches ? 340 : 280);
-    };
-    updateSize();
-    window.addEventListener("resize", updateSize);
-    return () => window.removeEventListener("resize", updateSize);
-  }, []);
-
-  return (
-    <div className="min-h-screen flex flex-col bg-page-bg text-foreground">
-      <SEOHead
-        title="Our Services"
-        description="Website refreshes, one-page builds, booking flow fixes, and more for small businesses. See how we help you stop losing customers."
-        path="/what-we-build"
-        breadcrumbs={[
-          { name: "Home", path: "/" },
-          { name: "What We Build", path: "/what-we-build" },
-        ]}
-        faq={[
-          {
-            question: "What kinds of websites do you build?",
-            answer:
-              "Pleasant Cove Design builds marketing sites, service pages, landing pages, and full small-business websites — mobile-first, fast-loading, and wired into booking, intake forms, and an optional AI receptionist so leads do not slip through.",
-          },
-          {
-            question: "What is the AI Front Door?",
-            answer:
-              "The AI Front Door is a 24/7 AI assistant that handles first contact for your business. It answers calls and chats, captures lead details, books appointments into your calendar, and emails you a clean summary so you stop losing customers when you cannot pick up.",
-          },
-          {
-            question: "Can you redo my existing website?",
-            answer:
-              "Yes — most Pleasant Cove Design projects are full redesigns or rebuilds of sites that look dated, do not convert on mobile, or have broken contact and booking flows. We start with a free review and give you a fix plan before any work begins.",
-          },
-          {
-            question: "Do you handle SEO?",
-            answer:
-              "Yes. Every Pleasant Cove Design site ships with clean technical SEO, semantic HTML, schema markup, fast Core Web Vitals, and local-business optimization for Midcoast Maine towns and surrounding service areas — so you show up for the searches that matter.",
-          },
-        ]}
-      />
-      {/* Header */}
-      <MarketingHeader activePage="what-we-build" />
-
-      <main className="flex-1">
-      {/* Bento Gallery */}
-      <section className="relative w-full min-h-[80vh] py-16 overflow-hidden">
-        <div className="container mx-auto px-6 relative z-10">
-          <div className="text-center mb-12">
-            <h1 data-speakable className="font-serif text-3xl md:text-4xl lg:text-5xl font-bold mb-3 text-foreground">
-              Our Services
-            </h1>
-            <p data-speakable className="text-muted-foreground max-w-md mx-auto">
-              Everything Pleasant Cove Design offers to help your small business look sharp, stay reachable, and convert visitors into customers.
-            </p>
-          </div>
-
-          <div className="max-w-6xl mx-auto">
-            <AnimatePresence mode="wait">
-              {selectedItem ? (
-                <GalleryModal
-                  selectedItem={selectedItem}
-                  isOpen={!!selectedItem}
-                  onClose={() => setSelectedItem(null)}
-                  setSelectedItem={setSelectedItem}
-                  features={FEATURES}
-                />
-              ) : (
-                <motion.div
-                  initial="hidden"
-                  animate="visible"
-                  className="grid grid-cols-2 md:grid-cols-4 gap-4 auto-rows-[180px] md:auto-rows-[200px]"
-                >
-                  {FEATURES.map((item, index) => {
-                    const Icon = item.icon;
-                    return (
-                      <motion.div
-                        key={item.id}
-                        className={cn(
-                          "group relative overflow-hidden rounded-xl bg-card/50 border backdrop-blur-sm cursor-pointer",
-                          item.span,
-                          activeId === item.id 
-                            ? "border-accent ring-2 ring-accent/30" 
-                            : "border-border/30 hover:border-accent/50"
-                        )}
-                        onClick={() => handleGalleryCardClick(item)}
-                        variants={{
-                          hidden: { y: 30, scale: 0.92, opacity: 0 },
-                          visible: {
-                            y: 0,
-                            scale: 1,
-                            opacity: 1,
-                            transition: {
-                              type: "spring",
-                              stiffness: 350,
-                              damping: 25,
-                              delay: index * 0.03,
-                            },
-                          },
-                        }}
-                        whileHover={{
-                          scale: 1.02,
-                          y: -4,
-                          transition: { type: "spring", stiffness: 400, damping: 25 }
-                        }}
-                      >
-                        {/* Media with consistent overlay */}
-                        <MediaItem
-                          item={item}
-                          className="absolute inset-0 w-full h-full"
-                        />
-                        
-                        {/* Consistent dark overlay for all cards */}
-                        <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/30 to-background/10 group-hover:from-background/95 group-hover:via-background/40 transition-all duration-300" />
-
-                        {/* Content overlay */}
-                        <div className="absolute inset-0 flex flex-col justify-end p-4">
-                          {/* Icon badge */}
-                          <div className="flex items-center gap-2 mb-1">
-                            <div className="w-6 h-6 rounded-md bg-accent/20 flex items-center justify-center">
-                              <Icon className="h-3.5 w-3.5 text-accent" />
-                            </div>
-                            <h2 className="text-foreground font-bold text-sm md:text-base">
-                              {item.title}
-                            </h2>
-                          </div>
-                          <p className="text-muted-foreground text-xs md:text-sm mb-2">
-                            {item.shortDesc}
-                          </p>
-                          
-                          {/* View details micro-cue */}
-                          <div className="flex items-center gap-1 text-xs text-accent opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                            <span>View details</span>
-                            <ArrowRight className="h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
-                          </div>
-                        </div>
-                      </motion.div>
-                    );
-                  })}
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-        </div>
-      </section>
-
-      {/* Feature Carousel - synced with gallery */}
-      <section ref={carouselRef} className="relative w-full py-16 overflow-hidden">
-        <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          {/* Details header */}
-          <div className="text-center mb-8">
-            <p className="text-sm uppercase tracking-wider text-accent mb-2">Here's what that includes</p>
-            <h2 className="font-serif text-2xl md:text-3xl font-bold text-foreground">
-              {FEATURES.find(f => f.id === activeId)?.title || "Explore Features"}
-            </h2>
-          </div>
-          
-          <div className="relative h-[450px] sm:h-[500px] flex items-center justify-center">
-            {carouselItems.map((item, index) => {
-              const position =
-                carouselItems.length % 2
-                  ? index - (carouselItems.length + 1) / 2
-                  : index - carouselItems.length / 2;
-
-              return (
-                <FeatureCardView
-                  key={`${item.id}-${index}`}
-                  position={position}
-                  item={item}
-                  handleMove={handleCarouselMove}
-                  cardSize={cardSize}
-                />
-              );
-            })}
-
-            {/* Navigation */}
-            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 flex gap-4">
-              <button
-                onClick={() => handleCarouselMove(-1)}
-                className={cn(
-                  "flex h-14 w-14 items-center justify-center transition-colors rounded-lg",
-                  "bg-background border-2 border-border hover:bg-primary hover:text-primary-foreground",
-                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                )}
-                aria-label="Previous feature"
-              >
-                <ChevronLeft className="h-5 w-5" />
-              </button>
-              <button
-                onClick={() => handleCarouselMove(1)}
-                className={cn(
-                  "flex h-14 w-14 items-center justify-center transition-colors rounded-lg",
-                  "bg-background border-2 border-border hover:bg-primary hover:text-primary-foreground",
-                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                )}
-                aria-label="Next feature"
-              >
-                <ChevronRight className="h-5 w-5" />
-              </button>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Testimonials section - uncomment when real testimonials are available */}
-
-      {/* CTA */}
-      <section className="py-20 border-t border-border">
-        <div className="container mx-auto px-6 text-center">
-          <h2 className="font-serif text-2xl md:text-3xl font-bold mb-6">
-            Ready to fix your website?
-          </h2>
-          <Button asChild size="lg" className="group">
-            <Link to="/get-demo?service=review">
-              Get Your Free Review
-              <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
-            </Link>
-          </Button>
-        </div>
-      </section>
-      </main>
-
-      {/* Footer */}
-      <footer className="border-t border-border py-8 mt-auto">
-        <div className="container mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4">
-          <p className="font-serif text-sm text-muted-foreground">
-            © {new Date().getFullYear()} Pleasant Cove Design
-          </p>
-          <div className="flex items-center gap-6 text-sm text-muted-foreground">
-            <Link to="/midcoast-maine" className="hover:text-foreground transition-colors">
-              Midcoast Maine
-            </Link>
-            <Link to="/privacy" className="hover:text-foreground transition-colors">
-              Privacy
-            </Link>
-            <Link to="/terms" className="hover:text-foreground transition-colors">
-              Terms
-            </Link>
-            <a href="mailto:pleasantcovedesign@gmail.com" className="hover:text-foreground transition-colors">
-              Contact
-            </a>
-          </div>
-        </div>
-      </footer>
-    </div>
-  );
-};
-
+    </footer>
+  </div>
+);
 export default WhatWeBuild;
