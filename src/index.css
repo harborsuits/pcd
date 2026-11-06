@@ -780,9 +780,11 @@ All colors MUST be HSL.
   position: absolute;
   left: -12%;
   width: 124%;
-  bottom: 2%;
-  height: 22%;
+  bottom: 10%;
+  height: 20%;
   overflow: hidden;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 18%, #000 82%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 18%, #000 82%, transparent);
   pointer-events: none;
 }
 .pcd-home-hero__waves { animation: pcd-hh-waves 7s linear infinite; }
