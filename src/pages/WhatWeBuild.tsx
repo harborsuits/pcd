@@ -5,7 +5,6 @@ import { SEOHead } from "@/components/SEOHead";
 import { MarketingHeader } from "@/components/layout/MarketingHeader";
 import { NAP } from "@/lib/localPages";
 import { PROJECT_OFFERINGS, CARE_PLANS, CARE_TERMS, ALACARTE_SERVICES, ALACARTE_NOTE, AI_TIERS } from "@/lib/pricingMenu";
-import pcdLogo from "@/assets/pcd-logo.jpeg";
 
 const smallerJobs = ["content_refresh", "website_cleanup", "booking_integration", "forms_routing"].flatMap(id => {
   const service = ALACARTE_SERVICES.find(item => item.id === id);
@@ -19,32 +18,6 @@ const tools = [
 ];
 const focusLink = "inline-flex items-center gap-2 underline underline-offset-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-4";
 
-function WorkflowIllustration() {
-  return (
-    <figure className="min-w-0 w-full max-w-md mx-auto lg:ml-auto lg:mr-0" aria-labelledby="workflow-caption">
-      <figcaption id="workflow-caption" className="text-xs font-semibold uppercase mb-4 text-foreground">Illustrative workflow</figcaption>
-      <div className="rounded-lg border-2 border-primary bg-card overflow-hidden">
-        <div className="flex items-center gap-1.5 border-b border-border bg-secondary px-4 py-3" aria-hidden="true">
-          <span className="h-1.5 w-1.5 rounded-full bg-primary" /><span className="h-1.5 w-1.5 rounded-full bg-primary" /><span className="h-1.5 w-1.5 rounded-full bg-primary" />
-          <Globe className="h-3.5 w-3.5 ml-auto text-primary" />
-        </div>
-        <div className="p-5 sm:p-7 flex items-center gap-4">
-          <img src={pcdLogo} width={48} height={48} alt="Pleasant Cove Design sailboat mark" className="w-12 h-12 shrink-0 rounded" />
-          <div className="min-w-0"><p className="font-serif text-xl font-bold">Your website</p><p className="text-sm mt-1">Services · Work · Contact</p></div>
-        </div>
-      </div>
-      <svg viewBox="0 0 400 64" className="w-full h-12 text-accent" fill="none" aria-hidden="true" preserveAspectRatio="none">
-        <path d="M200 0 V12 C200 40 70 10 70 48 V64 M200 12 C200 40 330 10 330 48 V64" stroke="currentColor" strokeWidth="2" />
-      </svg>
-      <div className="grid grid-cols-2 gap-3">
-        <div className="border border-primary rounded-lg bg-background p-4"><CalendarCheck className="h-5 w-5 text-primary mb-3" aria-hidden="true" /><p className="font-semibold text-sm">Inquiry / booking</p><p className="text-sm mt-2">A clear next step</p></div>
-        <div className="border border-primary rounded-lg bg-background p-4"><FolderOpen className="h-5 w-5 text-primary mb-3" aria-hidden="true" /><p className="font-semibold text-sm">Client workspace</p><p className="text-sm mt-2">A place to collaborate</p></div>
-      </div>
-      <p className="mt-4 text-xs leading-relaxed">An example of how your website and business tools can work together.</p>
-    </figure>
-  );
-}
-
 const WhatWeBuild = () => (
   <div className="min-h-screen flex flex-col bg-page-bg text-foreground">
     <SEOHead
@@ -56,15 +29,12 @@ const WhatWeBuild = () => (
     <MarketingHeader activePage="what-we-build" />
     <main className="flex-1">
       <section className="px-5 sm:px-6 py-10 md:py-16">
-        <div className="max-w-6xl mx-auto grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
-          <div className="min-w-0">
-            <p className="text-sm font-semibold mb-4">Pleasant Cove Design / Services</p>
-            <h1 data-speakable className="font-serif font-bold text-3xl md:text-5xl leading-tight">A website that fits your business.</h1>
-            <p data-speakable className="text-base md:text-lg leading-relaxed mt-6 max-w-lg">New websites, focused improvements, and ongoing care for small businesses in Midcoast Maine. Start with what you need; agree on the work and price before we begin.</p>
-            <Button asChild size="lg" className="mt-7"><Link to="/get-demo">Discuss your project <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" /></Link></Button>
-            <p className="mt-5 text-sm"><Link to="/#work" className={focusLink}>See recent client work <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" /></Link></p>
-          </div>
-          <WorkflowIllustration />
+        <div className="max-w-3xl mx-auto text-center">
+          <p className="text-sm font-semibold mb-4">Pleasant Cove Design / Services</p>
+          <h1 data-speakable className="font-serif font-bold text-3xl md:text-5xl leading-tight">A website that fits your business.</h1>
+          <p data-speakable className="text-base md:text-lg leading-relaxed mt-6 max-w-xl mx-auto">New websites, focused improvements, and ongoing care for small businesses in Midcoast Maine. Start with what you need; agree on the work and price before we begin.</p>
+          <Button asChild size="lg" className="mt-7"><Link to="/get-demo">Discuss your project <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" /></Link></Button>
+          <p className="mt-5 text-sm"><Link to="/#work" className={focusLink}>See recent client work <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" /></Link></p>
         </div>
       </section>
 
