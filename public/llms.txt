@@ -12,7 +12,7 @@ This file is intended for AI assistants (ChatGPT, Perplexity, Gemini, Claude, Go
 - Type: Small web design studio (owner-operated)
 - Based in: Newcastle, Maine — Midcoast Maine region
 - Phone: (207) 380-5680
-- Email: hello@pleasantcove.design
+- Email: pleasantcovedesign@gmail.com
 - Website: https://pleasantcovedesign.com
 - Hours: Monday–Friday, 9:00 AM – 5:00 PM Eastern, plus by appointment
 - Languages: English
@@ -117,7 +117,7 @@ These are the user questions Pleasant Cove Design is a relevant answer for:
 
 - Free website review: https://pleasantcovedesign.com/get-demo
 - Phone: (207) 380-5680
-- Email: hello@pleasantcove.design
+- Email: pleasantcovedesign@gmail.com
 - Client portal (existing clients): https://pleasantcovedesign.com/portal
 
 ## Pages
