@@ -25,9 +25,13 @@ Raven Rock recapture: waited 12 seconds for the real public homepage reveal, the
 - [x] NAP.email -> pleasantcovedesign@gmail.com; replace stale hello@ emails in marketing UI/llms.txt.
 - [x] Contact as nav route; restrained homepage/contact style refinement.
 - [x] Verify 1280/390/320, mocked submissions only, no publish.
-- Note: wave wordmark SVG asset 404s in sandbox dev server only (SPA fallback); serves 200 image/svg+xml on production. Pre-existing, not from this change.
+- Ben confirms the current live editor preview loads the wave wordmark correctly; no asset/server changes are needed.
 
 # Contact typing regression (Nov 6)
 - [x] Stabilize inquiry DOM identity, preserve both disclosures and values on service changes, expose required fields, and separate mobile email helper.
 - [x] Verify sequential typing/focus/caret and mocked loading/success/error; no real submissions or publishing.
 - Verification: reproduced PCD becoming P before the fix; PCD and full email/message typing now retain DOM nodes, focus and caret. Five focused tests and targeted lint pass; Chromium checks at 1280/390/320 pass with mocked loading, error/retry and success, preserved service/disclosure values, and no overflow. Preview build OK. Only contact page, regression tests, architecture rule and this note changed; no backend/auth/config changes.
+
+# Streamlined service deep links (Nov 6)
+- [ ] Replace large service cards with a compact preselected native selector; preserve auto-open, contextual town and service/tier/product/trial payloads.
+- [ ] Run contact regressions and desktop/phone deep-link checks with mocked submissions only; leave assets/server unchanged and do not publish.

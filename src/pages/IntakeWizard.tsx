@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, ArrowRight, Loader2, Globe, Bot, Package, Wrench, MessageSquare, Mail, UserPlus, LogIn, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Loader2, MessageSquare, Mail, UserPlus, LogIn, CheckCircle2 } from "lucide-react";
 import pcdLogo from "@/assets/pcd-logo.jpeg";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,7 +9,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { portalSupabase } from "@/integrations/supabase/portalClient";
 import { SEOHead } from "@/components/SEOHead";
-import { cn } from "@/lib/utils";
 import { NAP } from "@/lib/localPages";
 import { ReviewRequestForm } from "@/components/intake/ReviewRequestForm";
 
@@ -26,12 +25,12 @@ const SERVICE_PARAM_MAP: Record<string, ServiceType> = {
   other: "other",
 };
 
-const SERVICE_OPTIONS: { value: ServiceType; icon: typeof Globe; title: string; description: string }[] = [
-  { value: "demo", icon: Globe, title: "See a demo site", description: "An instant preview built for your business." },
-  { value: "website", icon: Package, title: "A new website", description: "Designed and built for you." },
-  { value: "ai", icon: Bot, title: "AI phone answering", description: "Calls answered and leads captured 24/7." },
-  { value: "existing", icon: Wrench, title: "Help with my current site", description: "Fixes, updates, or a refresh." },
-  { value: "other", icon: MessageSquare, title: "Something else", description: "Tell us what you have in mind." },
+const SERVICE_OPTIONS: { value: ServiceType; title: string }[] = [
+  { value: "demo", title: "See a demo site" },
+  { value: "website", title: "A new website" },
+  { value: "ai", title: "AI phone answering" },
+  { value: "existing", title: "Help with my current site" },
+  { value: "other", title: "Something else" },
 ];
 
 /** These request types need a location so we can build the preview */
@@ -126,8 +125,10 @@ const GetDemo = () => {
   useEffect(() => {
     if (serviceParam && SERVICE_PARAM_MAP[serviceParam]) {
       setServiceType(SERVICE_PARAM_MAP[serviceParam]);
+      setInquiryOpen(true);
     } else if (productParam === "pilot") {
       setServiceType("ai");
+      setInquiryOpen(true);
     }
   }, [serviceParam, productParam]);
 
@@ -331,33 +332,20 @@ const GetDemo = () => {
                 >
                   {/* Service picker: shown for deep links, otherwise optional */}
                   {hasDeepLink ? (
-                    <div className="space-y-3">
-                      <Label>What are you after? *</Label>
-                      <div className="grid gap-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="serviceSelect">What is this about?</Label>
+                      <select
+                        id="serviceSelect"
+                        value={serviceType}
+                        onChange={(e) => setServiceType(e.target.value as ServiceType)}
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                      >
                         {SERVICE_OPTIONS.map((option) => {
-                          const Icon = option.icon;
-                          const selected = serviceType === option.value;
                           return (
-                            <button
-                              key={option.value}
-                              type="button"
-                              onClick={() => setServiceType(option.value)}
-                              className={cn(
-                                "flex items-start gap-3 p-3 rounded-xl border-2 text-left transition-all duration-200 hover:border-primary/50",
-                                selected ? "border-primary bg-primary/5" : "border-border bg-card"
-                              )}
-                            >
-                              <div className="w-9 h-9 rounded-lg bg-secondary/50 flex items-center justify-center shrink-0">
-                                <Icon className="w-4 h-4 text-primary" />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="font-medium text-sm">{option.title}</p>
-                                <p className="text-xs text-muted-foreground">{option.description}</p>
-                              </div>
-                            </button>
+                            <option key={option.value} value={option.value}>{option.title}</option>
                           );
                         })}
-                      </div>
+                      </select>
                     </div>
                   ) : null}
 
