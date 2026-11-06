@@ -40,7 +40,7 @@ function WorkflowIllustration() {
         <div className="border border-primary rounded-lg bg-background p-4"><CalendarCheck className="h-5 w-5 text-primary mb-3" aria-hidden="true" /><p className="font-semibold text-sm">Inquiry / booking</p><p className="text-sm mt-2">A clear next step</p></div>
         <div className="border border-primary rounded-lg bg-background p-4"><FolderOpen className="h-5 w-5 text-primary mb-3" aria-hidden="true" /><p className="font-semibold text-sm">Client workspace</p><p className="text-sm mt-2">A place to collaborate</p></div>
       </div>
-      <p className="mt-4 text-xs leading-relaxed">An example of possible connections, not a client result or a configured system.</p>
+      <p className="mt-4 text-xs leading-relaxed">An example of how your website and business tools can work together.</p>
     </figure>
   );
 }
@@ -71,7 +71,7 @@ const WhatWeBuild = () => (
       <section className="border-t border-border bg-background py-10 md:py-12">
         <div className="max-w-6xl mx-auto px-5 sm:px-6">
           <p className="text-sm font-semibold mb-3">Three ways to start</p>
-          <h2 className="font-serif text-2xl md:text-3xl font-bold mb-8">Build. Improve. Keep it cared for.</h2>
+          <h2 className="font-serif text-2xl md:text-3xl font-bold mb-8">Find the right starting point.</h2>
           <article className="grid md:grid-cols-[3rem_1fr_20rem] gap-4 md:gap-7 py-7 border-t border-border">
             <span className="font-serif text-2xl text-primary" aria-hidden="true">01</span>
             <div><Globe className="h-5 w-5 text-primary mb-3" aria-hidden="true" /><h3 className="font-serif text-2xl font-bold mb-3">Build a website</h3><p className="leading-relaxed max-w-xl">A straightforward first website or a tailored home for your services, work, and customer inquiries.</p></div>
