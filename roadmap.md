@@ -1,4 +1,7 @@
 # Site-wide consistency pass
+- [x] Follow-up: restore desktop primary free-review CTA with secondary portal link; align homepage care intent with Services/Pricing.
+- [x] Ben independently confirms production build/TypeScript pass and initial entry JS is 46% smaller.
+- [ ] Hosted preview delivery/logo verification: fresh localhost renders current full navigation/footer without runtime errors; both hosted preview addresses redirect sandbox Chromium to Lovable login. Do not bypass protection, change settings, or publish; hosted freshness and logo remain unverified.
 - [x] Consolidate public and compact brand shells, stable accessible navigation, legal/contact conventions, and sample-only wrapper.
 - [x] Ground AI/article copy, preserve shared pricing, remove hidden FAQ claims, and retain route schema/indexability.
 - [x] Lazy-load heavy operator/static samples, minimally repair existing dependency lock metadata.

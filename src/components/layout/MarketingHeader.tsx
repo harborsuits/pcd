@@ -60,8 +60,11 @@ export function MarketingHeader({ activePage }: MarketingHeaderProps) {
               <Link to={item.href} aria-current={isCurrent(item) ? "page" : undefined}>{item.label}</Link>
             </Button>
           ))}
-          <Button asChild size="sm" variant="outline" className="whitespace-nowrap">
+          <Button asChild size="sm" variant="ghost" className="whitespace-nowrap text-muted-foreground hover:text-foreground">
             <Link to="/portal">Client Portal</Link>
+          </Button>
+          <Button asChild size="sm" className="whitespace-nowrap">
+            <Link to={CTA_HREF}>{CTA_LABEL}</Link>
           </Button>
         </nav>
 
