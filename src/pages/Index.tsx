@@ -1,7 +1,6 @@
 import { MarketingFooter } from "@/components/layout/MarketingFooter";
 import { Link } from "react-router-dom";
-import { useEffect, useState } from "react";
-import { ArrowRight, ArrowUpRight, Globe, Wrench, ShieldCheck, Phone, Mail, Pause, Play } from "lucide-react";
+import { ArrowRight, ArrowUpRight, Globe, Wrench, ShieldCheck, Phone, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 import { SEOHead } from "@/components/SEOHead";
@@ -18,8 +17,8 @@ import gallery from "@/assets/gallery/harbor-quiet.jpg";
 import boutique from "@/assets/boutique/store-interior.jpg";
 
 const smallerJobIds = ["content_refresh", "website_cleanup", "booking_integration", "forms_routing"];
-const smallerJobs = smallerJobIds.flatMap(id => {
-  const service = ALACARTE_SERVICES.find(item => item.id === id);
+const smallerJobs = smallerJobIds.flatMap((id) => {
+  const service = ALACARTE_SERVICES.find((item) => item.id === id);
   return service ? [service] : [];
 });
 const concepts = [
@@ -30,57 +29,59 @@ const concepts = [
   { name: "Boutique", image: boutique, path: "/demos/boutique" },
 ];
 
-function useReducedMotion() {
-  const [reduced, setReduced] = useState(() => typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches);
-  useEffect(() => {
-    const mq = window.matchMedia?.("(prefers-reduced-motion: reduce)");
-    if (!mq) return;
-    const update = () => setReduced(mq.matches);
-    update();
-    mq.addEventListener("change", update);
-    return () => mq.removeEventListener("change", update);
-  }, []);
-  return reduced;
-}
-
 function HomeHero() {
-  const reduced = useReducedMotion();
-  const [paused, setPaused] = useState(false);
-  const moving = !reduced && !paused;
   return (
     <section className="pcd-home-hero" aria-labelledby="home-hero-title">
       <div className="pcd-home-hero__inner">
         <div className="pcd-home-hero__copy">
           <p className="pcd-home-hero__eyebrow">Websites for Midcoast Maine small businesses</p>
-          <h1 id="home-hero-title" data-speakable className="font-serif text-4xl md:text-5xl lg:text-6xl font-bold leading-tight">
-            A better website.<br className="hidden sm:block" /> One less thing to manage.
+          <h1
+            id="home-hero-title"
+            data-speakable
+            className="font-serif text-4xl md:text-5xl lg:text-6xl font-bold leading-tight"
+          >
+            A better website.
+            <br className="hidden sm:block" /> One less thing to manage.
           </h1>
           <p data-speakable className="pcd-home-hero__lede text-lg md:text-xl leading-relaxed mt-6">
-            I build, improve, and maintain websites for Maine small businesses. A new site, a focused fix, or someone to keep it running.
+            I build, improve, and maintain websites for Maine small businesses. A new site, a focused fix, or someone to
+            keep it running.
           </p>
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mt-8">
-            <a href="#work" className="pcd-home-hero__btn pcd-home-hero__btn--primary">See Our Work <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" /></a>
-            <Link to="/get-demo?service=review" className="pcd-home-hero__btn pcd-home-hero__btn--secondary">Get a Free Website Review</Link>
+            <a href="#work" className="pcd-home-hero__btn pcd-home-hero__btn--primary">
+              See Our Work <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" />
+            </a>
+            <Link to="/get-demo?service=review" className="pcd-home-hero__btn pcd-home-hero__btn--secondary">
+              Get a Free Website Review
+            </Link>
           </div>
-          <p className="pcd-home-hero__note text-sm mt-5">Have a quick question? <a className="underline underline-offset-4" href={`tel:${NAP.phoneE164}`}>{NAP.phone}</a></p>
+          <p className="pcd-home-hero__note text-sm mt-5">
+            Have a quick question?{" "}
+            <a className="underline underline-offset-4" href={`tel:${NAP.phoneE164}`}>
+              {NAP.phone}
+            </a>
+          </p>
         </div>
         <div className="pcd-home-hero__art">
           <div className="pcd-home-hero__boatwrap">
-            <img src={pcdLogo} alt="Pleasant Cove Design sailboat mark" width={360} height={360} className={`pcd-home-hero__boat${moving ? "" : " is-paused"}`} />
+            <img
+              src={pcdLogo}
+              alt="Pleasant Cove Design sailboat mark"
+              width={360}
+              height={360}
+              className="pcd-home-hero__boat"
+            />
           </div>
           <p className="pcd-home-hero__caption font-serif">A clear course for your website.</p>
-          <button
-            type="button"
-            className="pcd-home-hero__toggle"
-            onClick={() => setPaused(p => !p)}
-            disabled={reduced}
-            aria-pressed={reduced ? undefined : paused}
-          >
-            {reduced ? "Motion off (reduced motion setting)" : paused ? <><Play className="h-3.5 w-3.5" aria-hidden="true" /> Resume boat motion</> : <><Pause className="h-3.5 w-3.5" aria-hidden="true" /> Pause boat motion</>}
-          </button>
         </div>
       </div>
-      <svg className="pcd-home-hero__wake" aria-hidden="true" focusable="false" viewBox="0 0 1440 80" preserveAspectRatio="none">
+      <svg
+        className="pcd-home-hero__wake"
+        aria-hidden="true"
+        focusable="false"
+        viewBox="0 0 1440 80"
+        preserveAspectRatio="none"
+      >
         <path d="M0 58 C 240 40, 480 70, 760 52 S 1200 34, 1440 50" />
         <path d="M0 70 C 300 56, 560 78, 860 64 S 1260 50, 1440 62" />
       </svg>
@@ -90,12 +91,12 @@ function HomeHero() {
 
 const Index = () => (
   <div className="homepage pcd-shell min-h-screen flex flex-col bg-page-bg text-foreground">
-      <SEOHead
-        title="Midcoast Maine Web Design | Pleasant Cove Design"
-        description="Web design, website improvements, and ongoing care for small businesses in Midcoast Maine. Work with Ben Dickinson at Pleasant Cove Design."
-        path="/"
-        localBusiness
-      />
+    <SEOHead
+      title="Midcoast Maine Web Design | Pleasant Cove Design"
+      description="Web design, website improvements, and ongoing care for small businesses in Midcoast Maine. Work with Ben Dickinson at Pleasant Cove Design."
+      path="/"
+      localBusiness
+    />
     <MarketingHeader activePage="home" />
     <main className="flex-1">
       <HomeHero />
@@ -108,25 +109,70 @@ const Index = () => (
             <article className="border border-border bg-card rounded-xl p-6 flex flex-col shadow-sm transition-shadow hover:shadow-md border-t-2 border-t-accent/60">
               <Globe className="h-6 w-6 text-accent mb-5" aria-hidden="true" />
               <h3 className="font-serif text-2xl font-bold mb-3">Build a website</h3>
-              <p className="text-muted-foreground leading-relaxed mb-5">A professional first website or a more complete home for your business.</p>
-              <div className="space-y-4 mb-6">{PROJECT_OFFERINGS.slice(0, 2).map(offer => <div key={offer.id}><p className="font-semibold">{offer.label} · {offer.price}</p><p className="text-sm text-muted-foreground mt-1 leading-relaxed">{offer.scopeNote}</p></div>)}</div>
-              <Button asChild variant="outline" className="mt-auto justify-between"><Link to="/get-demo?service=website">Discuss a new website <ArrowRight className="h-4 w-4" /></Link></Button>
+              <p className="text-muted-foreground leading-relaxed mb-5">
+                A professional first website or a more complete home for your business.
+              </p>
+              <div className="space-y-4 mb-6">
+                {PROJECT_OFFERINGS.slice(0, 2).map((offer) => (
+                  <div key={offer.id}>
+                    <p className="font-semibold">
+                      {offer.label} · {offer.price}
+                    </p>
+                    <p className="text-sm text-muted-foreground mt-1 leading-relaxed">{offer.scopeNote}</p>
+                  </div>
+                ))}
+              </div>
+              <Button asChild variant="outline" className="mt-auto justify-between">
+                <Link to="/get-demo?service=website">
+                  Discuss a new website <ArrowRight className="h-4 w-4" />
+                </Link>
+              </Button>
             </article>
             <article className="border border-border bg-card rounded-xl p-6 flex flex-col shadow-sm transition-shadow hover:shadow-md border-t-2 border-t-accent/60">
               <Wrench className="h-6 w-6 text-accent mb-5" aria-hidden="true" />
               <h3 className="font-serif text-2xl font-bold mb-3">Improve an existing site</h3>
-              <p className="text-muted-foreground leading-relaxed mb-5">Keep what works. Fix what doesn’t. Content updates, contact forms, booking connections, and mobile layout improvements.</p>
+              <p className="text-muted-foreground leading-relaxed mb-5">
+                Keep what works. Fix what doesn’t. Content updates, contact forms, booking connections, and mobile
+                layout improvements.
+              </p>
               <p className="font-semibold mb-2">Focused work, agreed scope</p>
-              <p className="text-sm text-muted-foreground leading-relaxed mb-6">Start with the issue you want solved. I’ll review the site and confirm the work and price before you commit.</p>
-              <Button asChild variant="outline" className="mt-auto justify-between"><Link to="/get-demo?service=existing">Discuss an improvement <ArrowRight className="h-4 w-4" /></Link></Button>
+              <p className="text-sm text-muted-foreground leading-relaxed mb-6">
+                Start with the issue you want solved. I’ll review the site and confirm the work and price before you
+                commit.
+              </p>
+              <Button asChild variant="outline" className="mt-auto justify-between">
+                <Link to="/get-demo?service=existing">
+                  Discuss an improvement <ArrowRight className="h-4 w-4" />
+                </Link>
+              </Button>
             </article>
             <article className="border border-border bg-card rounded-xl p-6 flex flex-col shadow-sm transition-shadow hover:shadow-md border-t-2 border-t-accent/60">
               <ShieldCheck className="h-6 w-6 text-accent mb-5" aria-hidden="true" />
               <h3 className="font-serif text-2xl font-bold mb-3">Ongoing website care</h3>
-              <p className="text-muted-foreground leading-relaxed mb-5">Hosting, maintenance, backups, and a reliable place to turn when your website needs attention.</p>
-              <div className="space-y-4 mb-4">{CARE_PLANS.map(plan => <div key={plan.id}><p className="font-semibold">{plan.label} · {plan.price}</p><p className="text-sm text-muted-foreground mt-1">{plan.features.find(feature => feature.startsWith("Up to"))}</p></div>)}</div>
-              <p className="text-sm text-muted-foreground mb-6">No editing-time rollover. Larger work is separately scoped; allowances and terms are set in your proposal.</p>
-              <Button asChild variant="outline" className="mt-auto justify-between"><Link to="/get-demo?product=care_plan&tier=care_website">Discuss website care <ArrowRight className="h-4 w-4" /></Link></Button>
+              <p className="text-muted-foreground leading-relaxed mb-5">
+                Hosting, maintenance, backups, and a reliable place to turn when your website needs attention.
+              </p>
+              <div className="space-y-4 mb-4">
+                {CARE_PLANS.map((plan) => (
+                  <div key={plan.id}>
+                    <p className="font-semibold">
+                      {plan.label} · {plan.price}
+                    </p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {plan.features.find((feature) => feature.startsWith("Up to"))}
+                    </p>
+                  </div>
+                ))}
+              </div>
+              <p className="text-sm text-muted-foreground mb-6">
+                No editing-time rollover. Larger work is separately scoped; allowances and terms are set in your
+                proposal.
+              </p>
+              <Button asChild variant="outline" className="mt-auto justify-between">
+                <Link to="/get-demo?product=care_plan&tier=care_website">
+                  Discuss website care <ArrowRight className="h-4 w-4" />
+                </Link>
+              </Button>
             </article>
           </div>
         </div>
@@ -134,8 +180,34 @@ const Index = () => (
 
       <section className="border-t border-border bg-background py-12 md:py-16">
         <div className="max-w-6xl mx-auto px-6">
-          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8"><div><p className="text-sm text-accent font-semibold mb-3">Smaller jobs welcome</p><h2 className="font-serif text-3xl md:text-4xl font-bold">You don’t always need a new website.</h2></div><Button asChild variant="ghost"><Link to="/pricing">Full pricing & scope <ArrowRight className="ml-2 h-4 w-4" /></Link></Button></div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">{smallerJobs.map(service => <article key={service.id} className="border border-border rounded-xl p-5 flex flex-col bg-card shadow-sm transition-shadow hover:shadow-md"><h3 className="font-semibold text-lg mb-2">{service.label}</h3><p className="font-serif text-2xl font-bold mb-4">{service.price}</p><p className="text-sm text-muted-foreground leading-relaxed mb-5">{service.description}</p><Button asChild variant="link" className="mt-auto self-start p-0 h-auto"><Link to="/pricing">View scope <ArrowRight className="ml-2 h-4 w-4" /></Link></Button></article>)}</div>
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
+            <div>
+              <p className="text-sm text-accent font-semibold mb-3">Smaller jobs welcome</p>
+              <h2 className="font-serif text-3xl md:text-4xl font-bold">You don’t always need a new website.</h2>
+            </div>
+            <Button asChild variant="ghost">
+              <Link to="/pricing">
+                Full pricing & scope <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
+            </Button>
+          </div>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            {smallerJobs.map((service) => (
+              <article
+                key={service.id}
+                className="border border-border rounded-xl p-5 flex flex-col bg-card shadow-sm transition-shadow hover:shadow-md"
+              >
+                <h3 className="font-semibold text-lg mb-2">{service.label}</h3>
+                <p className="font-serif text-2xl font-bold mb-4">{service.price}</p>
+                <p className="text-sm text-muted-foreground leading-relaxed mb-5">{service.description}</p>
+                <Button asChild variant="link" className="mt-auto self-start p-0 h-auto">
+                  <Link to="/pricing">
+                    View scope <ArrowRight className="ml-2 h-4 w-4" />
+                  </Link>
+                </Button>
+              </article>
+            ))}
+          </div>
           <p className="text-muted-foreground text-sm leading-relaxed mt-7 max-w-3xl">{ALACARTE_NOTE}</p>
         </div>
       </section>
@@ -146,67 +218,208 @@ const Index = () => (
           <h2 className="font-serif text-2xl md:text-3xl font-bold mb-6">Recent work</h2>
           <div className="grid md:grid-cols-2 gap-6 max-w-4xl">
             {[
-              { name: "Pier 1 Pizza", image: pierWebsite.url, href: "https://pier1pizza207.com/", alt: "The live Pier 1 Pizza homepage", description: "A clear home for Pier 1’s menu, weekly events, and visitor information. Direct online-ordering links, contact details, and directions help guests find their next step." },
-              { name: "Raven Rock Construction", image: ravenWebsite.url, href: "https://www.ravenrockconstruction.com/", alt: "The current live Raven Rock Construction homepage, showing Built strong. Built for Maine. and a stone-and-timber building", description: "A construction website with clear service pages, project photos, and a direct quote-inquiry path." },
-            ].map(project => <article key={project.name} className="border border-border rounded-xl overflow-hidden bg-card flex flex-col shadow-sm transition-shadow hover:shadow-md">
-              <a href={project.href} target="_blank" rel="noopener noreferrer" aria-label={`Visit the live ${project.name} website`} className="block focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-4">
-                <img src={project.image} alt={project.alt} width="1440" height="810" loading="lazy" className="w-full aspect-video max-h-[180px] md:max-h-none object-cover object-top" />
-              </a>
-              <div className="p-5 flex flex-col flex-1">
-                <h3 className="font-serif text-xl font-bold mb-3">{project.name}</h3>
-                <p className="text-sm text-muted-foreground leading-relaxed mb-5">{project.description}</p>
-                <Button asChild variant="link" className="mt-auto self-start p-0 h-auto"><a href={project.href} target="_blank" rel="noopener noreferrer">Visit live website <ArrowUpRight className="ml-2 h-4 w-4" /></a></Button>
-              </div>
-            </article>)}
+              {
+                name: "Pier 1 Pizza",
+                image: pierWebsite.url,
+                href: "https://pier1pizza207.com/",
+                alt: "The live Pier 1 Pizza homepage",
+                description:
+                  "A clear home for Pier 1’s menu, weekly events, and visitor information. Direct online-ordering links, contact details, and directions help guests find their next step.",
+              },
+              {
+                name: "Raven Rock Construction",
+                image: ravenWebsite.url,
+                href: "https://www.ravenrockconstruction.com/",
+                alt: "The current live Raven Rock Construction homepage, showing Built strong. Built for Maine. and a stone-and-timber building",
+                description:
+                  "A construction website with clear service pages, project photos, and a direct quote-inquiry path.",
+              },
+            ].map((project) => (
+              <article
+                key={project.name}
+                className="border border-border rounded-xl overflow-hidden bg-card flex flex-col shadow-sm transition-shadow hover:shadow-md"
+              >
+                <a
+                  href={project.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={`Visit the live ${project.name} website`}
+                  className="block focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-4"
+                >
+                  <img
+                    src={project.image}
+                    alt={project.alt}
+                    width="1440"
+                    height="810"
+                    loading="lazy"
+                    className="w-full aspect-video max-h-[180px] md:max-h-none object-cover object-top"
+                  />
+                </a>
+                <div className="p-5 flex flex-col flex-1">
+                  <h3 className="font-serif text-xl font-bold mb-3">{project.name}</h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed mb-5">{project.description}</p>
+                  <Button asChild variant="link" className="mt-auto self-start p-0 h-auto">
+                    <a href={project.href} target="_blank" rel="noopener noreferrer">
+                      Visit live website <ArrowUpRight className="ml-2 h-4 w-4" />
+                    </a>
+                  </Button>
+                </div>
+              </article>
+            ))}
           </div>
         </div>
       </section>
 
       <section id="demos" className="border-t border-border py-10 scroll-mt-28">
         <div className="max-w-6xl mx-auto px-6">
-          <details className="group"><summary className="cursor-pointer py-3 text-xl font-serif font-bold focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring">Sample industry concepts</summary>
-            <p className="text-sm text-muted-foreground mt-2 mb-6">Sample designs, not completed client projects. Explore an example for your industry.</p>
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">{concepts.map(concept => <article key={concept.name} className="rounded-lg overflow-hidden border border-border bg-card"><img src={concept.image} alt={`${concept.name} sample concept imagery`} loading="lazy" width="400" height="300" className="aspect-[4/3] w-full object-cover" /><div className="p-3"><h3 className="font-semibold">{concept.name}</h3><Button asChild variant="link" className="p-0 h-auto mt-2 text-sm"><Link to={concept.path}>Explore sample <ArrowUpRight className="ml-1 h-3 w-3" /></Link></Button></div></article>)}</div>
+          <details className="group">
+            <summary className="cursor-pointer py-3 text-xl font-serif font-bold focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring">
+              Sample industry concepts
+            </summary>
+            <p className="text-sm text-muted-foreground mt-2 mb-6">
+              Sample designs, not completed client projects. Explore an example for your industry.
+            </p>
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+              {concepts.map((concept) => (
+                <article key={concept.name} className="rounded-lg overflow-hidden border border-border bg-card">
+                  <img
+                    src={concept.image}
+                    alt={`${concept.name} sample concept imagery`}
+                    loading="lazy"
+                    width="400"
+                    height="300"
+                    className="aspect-[4/3] w-full object-cover"
+                  />
+                  <div className="p-3">
+                    <h3 className="font-semibold">{concept.name}</h3>
+                    <Button asChild variant="link" className="p-0 h-auto mt-2 text-sm">
+                      <Link to={concept.path}>
+                        Explore sample <ArrowUpRight className="ml-1 h-3 w-3" />
+                      </Link>
+                    </Button>
+                  </div>
+                </article>
+              ))}
+            </div>
           </details>
         </div>
       </section>
 
       <section className="py-12 md:py-16 border-t border-border">
-        <div className="max-w-6xl mx-auto px-6"><h2 className="font-serif text-3xl md:text-4xl font-bold mb-9">A straightforward way forward.</h2>
-          <ol className="grid md:grid-cols-3 gap-8">{[
-            { title: "Talk & review", description: "Tell me what you need, or start with a free website review. We’ll identify the right next step." },
-            { title: "Agree on scope", description: "You receive a written proposal outlining the work, price, and payment terms. Projects begin with the existing deposit process once the scope is agreed." },
-            { title: "Build, check & launch", description: "Review the work together, check the website on phones and desktop, and approve the launch." },
-          ].map((step, i) => <li key={step.title} className="border-t-2 border-t-accent/50 pt-5"><span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-accent/10 text-accent font-semibold text-sm">0{i + 1}</span><h3 className="text-xl font-semibold mt-3 mb-3">{step.title}</h3><p className="text-muted-foreground leading-relaxed">{step.description}</p></li>)}</ol>
+        <div className="max-w-6xl mx-auto px-6">
+          <h2 className="font-serif text-3xl md:text-4xl font-bold mb-9">A straightforward way forward.</h2>
+          <ol className="grid md:grid-cols-3 gap-8">
+            {[
+              {
+                title: "Talk & review",
+                description:
+                  "Tell me what you need, or start with a free website review. We’ll identify the right next step.",
+              },
+              {
+                title: "Agree on scope",
+                description:
+                  "You receive a written proposal outlining the work, price, and payment terms. Projects begin with the existing deposit process once the scope is agreed.",
+              },
+              {
+                title: "Build, check & launch",
+                description:
+                  "Review the work together, check the website on phones and desktop, and approve the launch.",
+              },
+            ].map((step, i) => (
+              <li key={step.title} className="border-t-2 border-t-accent/50 pt-5">
+                <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-accent/10 text-accent font-semibold text-sm">
+                  0{i + 1}
+                </span>
+                <h3 className="text-xl font-semibold mt-3 mb-3">{step.title}</h3>
+                <p className="text-muted-foreground leading-relaxed">{step.description}</p>
+              </li>
+            ))}
+          </ol>
         </div>
       </section>
 
       <section aria-labelledby="about-ben" className="border-t border-border bg-background py-10 md:py-12">
         <div className="max-w-3xl mx-auto px-6">
           <div className="flex items-center gap-3 mb-5">
-            <img src={pcdLogo} alt="Pleasant Cove Design sailboat mark" width={40} height={40} loading="lazy" className="h-10 w-10 shrink-0 rounded" />
+            <img
+              src={pcdLogo}
+              alt="Pleasant Cove Design sailboat mark"
+              width={40}
+              height={40}
+              loading="lazy"
+              className="h-10 w-10 shrink-0 rounded"
+            />
             <div className="min-w-0">
               <p className="text-xs font-semibold uppercase tracking-wider text-accent">About Pleasant Cove Design</p>
-              <h2 id="about-ben" className="font-serif text-2xl md:text-3xl font-bold">Hi, I’m Ben.</h2>
+              <h2 id="about-ben" className="font-serif text-2xl md:text-3xl font-bold">
+                Hi, I’m Ben.
+              </h2>
             </div>
           </div>
           <div className="space-y-4 text-base md:text-lg leading-relaxed">
-            <p>I’m Ben Dickinson, and I run Pleasant Cove Design in Midcoast Maine. I work with small-business owners who need a website they can feel confident sending customers to.</p>
-            <p>My approach is straightforward: understand your business, explain the options in plain language, and agree on the work and price before we begin. Whether you need a new website or a focused improvement, you’ll know what’s included and what comes next.</p>
+            <p>
+              I’m Ben Dickinson, and I run Pleasant Cove Design in Midcoast Maine. I work with small-business owners who
+              need a website they can feel confident sending customers to.
+            </p>
+            <p>
+              My approach is straightforward: understand your business, explain the options in plain language, and agree
+              on the work and price before we begin. Whether you need a new website or a focused improvement, you’ll
+              know what’s included and what comes next.
+            </p>
           </div>
-          <Link to="/get-demo" className="mt-5 inline-flex items-center gap-1 font-semibold text-accent underline-offset-4 hover:underline">Tell me about your website <ArrowRight className="h-4 w-4" aria-hidden="true" /></Link>
+          <Link
+            to="/get-demo"
+            className="mt-5 inline-flex items-center gap-1 font-semibold text-accent underline-offset-4 hover:underline"
+          >
+            Tell me about your website <ArrowRight className="h-4 w-4" aria-hidden="true" />
+          </Link>
         </div>
       </section>
 
       <section className="bg-primary text-primary-foreground border-t border-border py-12 md:py-16">
-        <div className="max-w-3xl mx-auto px-6 text-center"><h2 className="font-serif text-3xl md:text-4xl font-bold mb-5">What would make your website work better?</h2><p className="text-lg leading-relaxed mb-7">A new website, a small fix, or ongoing help. Tell me what’s on your mind.</p>
-          <div className="flex flex-col sm:flex-row justify-center gap-3"><Button asChild size="lg" variant="secondary"><Link to="/get-demo">Discuss your project <ArrowRight className="ml-2 h-4 w-4" /></Link></Button><Button asChild size="lg" variant="secondary"><Link to="/get-demo?service=review">Get a Free Website Review</Link></Button></div>
-          <div className="flex flex-col sm:flex-row justify-center gap-4 sm:gap-7 mt-7 text-sm"><a href={`tel:${NAP.phoneE164}`} className="inline-flex items-center justify-center gap-2 underline underline-offset-4"><Phone className="h-4 w-4" />{NAP.phone}</a><a href={`mailto:${NAP.email}`} className="inline-flex items-center justify-center gap-2 underline underline-offset-4 break-all"><Mail className="h-4 w-4 shrink-0" />{NAP.email}</a></div>
+        <div className="max-w-3xl mx-auto px-6 text-center">
+          <h2 className="font-serif text-3xl md:text-4xl font-bold mb-5">What would make your website work better?</h2>
+          <p className="text-lg leading-relaxed mb-7">
+            A new website, a small fix, or ongoing help. Tell me what’s on your mind.
+          </p>
+          <div className="flex flex-col sm:flex-row justify-center gap-3">
+            <Button asChild size="lg" variant="secondary">
+              <Link to="/get-demo">
+                Discuss your project <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
+            </Button>
+            <Button asChild size="lg" variant="secondary">
+              <Link to="/get-demo?service=review">Get a Free Website Review</Link>
+            </Button>
+          </div>
+          <div className="flex flex-col sm:flex-row justify-center gap-4 sm:gap-7 mt-7 text-sm">
+            <a
+              href={`tel:${NAP.phoneE164}`}
+              className="inline-flex items-center justify-center gap-2 underline underline-offset-4"
+            >
+              <Phone className="h-4 w-4" />
+              {NAP.phone}
+            </a>
+            <a
+              href={`mailto:${NAP.email}`}
+              className="inline-flex items-center justify-center gap-2 underline underline-offset-4 break-all"
+            >
+              <Mail className="h-4 w-4 shrink-0" />
+              {NAP.email}
+            </a>
+          </div>
         </div>
       </section>
-      <section className="py-7 px-6 text-center"><p className="text-sm text-muted-foreground">Already a client? <Link to="/portal" className="underline underline-offset-4 hover:text-foreground">Open your client portal</Link></p></section>
+      <section className="py-7 px-6 text-center">
+        <p className="text-sm text-muted-foreground">
+          Already a client?{" "}
+          <Link to="/portal" className="underline underline-offset-4 hover:text-foreground">
+            Open your client portal
+          </Link>
+        </p>
+      </section>
     </main>
     <MarketingFooter />
-</div>
+  </div>
 );
 export default Index;
