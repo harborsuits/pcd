@@ -71,6 +71,19 @@ function HomeHero() {
               height={360}
               className="pcd-home-hero__boat"
             />
+            <svg className="pcd-home-hero__wind" aria-hidden="true" focusable="false" viewBox="0 0 200 120">
+              <path d="M0 30 Q 40 24 80 30" />
+              <path d="M10 55 Q 50 49 95 55" />
+              <path d="M0 80 Q 35 75 70 80" />
+            </svg>
+            <svg className="pcd-home-hero__water" aria-hidden="true" focusable="false" viewBox="0 0 400 60" preserveAspectRatio="none">
+              <g className="pcd-home-hero__waves pcd-home-hero__waves--back">
+                <path d="M0 22 Q 25 12 50 22 T 100 22 T 150 22 T 200 22 T 250 22 T 300 22 T 350 22 T 400 22 T 450 22 T 500 22 T 550 22 T 600 22 T 650 22 T 700 22 T 750 22 T 800 22 V60 H0 Z" />
+              </g>
+              <g className="pcd-home-hero__waves pcd-home-hero__waves--front">
+                <path d="M0 32 Q 20 24 40 32 T 80 32 T 120 32 T 160 32 T 200 32 T 240 32 T 280 32 T 320 32 T 360 32 T 400 32 T 440 32 T 480 32 T 520 32 T 560 32 T 600 32 T 640 32 T 680 32 T 720 32 T 760 32 T 800 32 V60 H0 Z" />
+              </g>
+            </svg>
           </div>
           <p className="pcd-home-hero__caption font-serif">A clear course for your website.</p>
         </div>
