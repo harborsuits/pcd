@@ -33,5 +33,6 @@ Raven Rock recapture: waited 12 seconds for the real public homepage reveal, the
 - Verification: reproduced PCD becoming P before the fix; PCD and full email/message typing now retain DOM nodes, focus and caret. Five focused tests and targeted lint pass; Chromium checks at 1280/390/320 pass with mocked loading, error/retry and success, preserved service/disclosure values, and no overflow. Preview build OK. Only contact page, regression tests, architecture rule and this note changed; no backend/auth/config changes.
 
 # Streamlined service deep links (Nov 6)
-- [ ] Replace large service cards with a compact preselected native selector; preserve auto-open, contextual town and service/tier/product/trial payloads.
-- [ ] Run contact regressions and desktop/phone deep-link checks with mocked submissions only; leave assets/server unchanged and do not publish.
+- [x] Replace large service cards with a compact preselected native selector; preserve auto-open, contextual town and service/tier/product/trial payloads.
+- [x] Run contact regressions and desktop/phone deep-link checks with mocked submissions only; leave assets/server unchanged and do not publish.
+- Verification: 13 contact tests and targeted lint pass; build OK. Chromium checked all eight supported service/pilot intent mappings at 1280/390/320, including automatic opening, 40px selector, natural typing/focus, service changes, required town and no overflow. Mocked payload assertions preserve service, tier, product and trial. No real submissions or publishing.
