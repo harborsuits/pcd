@@ -43,6 +43,35 @@ const mapServiceType = (type: ServiceType): string => {
   return type || "other";
 };
 
+// Keep this component outside GetDemo so field updates never remount its children.
+const Shell = ({ children }: { children: React.ReactNode }) => (
+  <div className="min-h-screen flex flex-col bg-page-bg text-foreground">
+    <header className="border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-50">
+      <div className="container mx-auto px-6 py-4 flex items-center justify-between">
+        <Link to="/" className="font-serif text-xl font-bold tracking-tight text-foreground">
+          Pleasant Cove Design
+        </Link>
+        <Button asChild variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
+          <Link to="/">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back
+          </Link>
+        </Button>
+      </div>
+    </header>
+    {children}
+    <footer className="border-t border-border py-6">
+      <div className="container mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4">
+        <p className="text-sm text-muted-foreground">© {new Date().getFullYear()} Pleasant Cove Design</p>
+        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+          <Link to="/privacy" className="hover:text-foreground transition-colors">Privacy</Link>
+          <Link to="/terms" className="hover:text-foreground transition-colors">Terms</Link>
+        </div>
+      </div>
+    </footer>
+  </div>
+);
+
 const GetDemo = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -76,6 +105,7 @@ const GetDemo = () => {
 
   // Controlled so React re-renders (typing) never collapse the form
   const [inquiryOpen, setInquiryOpen] = useState(hasDeepLink);
+  const [optionalDetailsOpen, setOptionalDetailsOpen] = useState(false);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -172,34 +202,6 @@ const GetDemo = () => {
     }
   };
 
-  const Shell = ({ children }: { children: React.ReactNode }) => (
-    <div className="min-h-screen flex flex-col bg-page-bg text-foreground">
-      <header className="border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-50">
-        <div className="container mx-auto px-6 py-4 flex items-center justify-between">
-          <Link to="/" className="font-serif text-xl font-bold tracking-tight text-foreground">
-            Pleasant Cove Design
-          </Link>
-          <Button asChild variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
-            <Link to="/">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back
-            </Link>
-          </Button>
-        </div>
-      </header>
-      {children}
-      <footer className="border-t border-border py-6">
-        <div className="container mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4">
-          <p className="text-sm text-muted-foreground">© {new Date().getFullYear()} Pleasant Cove Design</p>
-          <div className="flex items-center gap-4 text-sm text-muted-foreground">
-            <Link to="/privacy" className="hover:text-foreground transition-colors">Privacy</Link>
-            <Link to="/terms" className="hover:text-foreground transition-colors">Terms</Link>
-          </div>
-        </div>
-      </footer>
-    </div>
-  );
-
   if (isReviewMode) {
     return (
       <Shell>
@@ -279,7 +281,8 @@ const GetDemo = () => {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold">Email Ben</p>
-                    <p className="text-sm text-muted-foreground break-all">{NAP.email} — opens your own email app.</p>
+                    <p className="text-sm text-muted-foreground [overflow-wrap:anywhere]">{NAP.email}</p>
+                    <p className="text-sm text-muted-foreground">Opens your email app</p>
                   </div>
                 </a>
 
@@ -363,6 +366,9 @@ const GetDemo = () => {
                     <Label htmlFor="businessName">Business name *</Label>
                     <Input
                       id="businessName"
+                      required
+                      aria-invalid={!!touched.businessName && businessName.trim().length < 2}
+                      aria-describedby={touched.businessName && businessName.trim().length < 2 ? "businessName-error" : undefined}
                       value={businessName}
                       onChange={(e) => setBusinessName(e.target.value)}
                       onBlur={() => setTouched((t) => ({ ...t, businessName: true }))}
@@ -370,7 +376,7 @@ const GetDemo = () => {
                       autoComplete="organization"
                     />
                     {touched.businessName && businessName.trim().length < 2 && (
-                      <p className="text-xs text-destructive">Please enter your business name.</p>
+                      <p id="businessName-error" className="text-xs text-destructive">Please enter your business name.</p>
                     )}
                   </div>
 
@@ -378,6 +384,9 @@ const GetDemo = () => {
                     <Label htmlFor="email">Email *</Label>
                     <Input
                       id="email"
+                      required
+                      aria-invalid={!!touched.email && !isValidEmail(email)}
+                      aria-describedby={touched.email && !isValidEmail(email) ? "email-error" : undefined}
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
@@ -386,7 +395,7 @@ const GetDemo = () => {
                       autoComplete="email"
                     />
                     {touched.email && !isValidEmail(email) && (
-                      <p className="text-xs text-destructive">Please enter a valid email address.</p>
+                      <p id="email-error" className="text-xs text-destructive">Please enter a valid email address.</p>
                     )}
                   </div>
 
@@ -394,6 +403,9 @@ const GetDemo = () => {
                     <Label htmlFor="notes">Message *</Label>
                     <Textarea
                       id="notes"
+                      required
+                      aria-invalid={!!touched.notes && notes.trim().length < 2}
+                      aria-describedby={touched.notes && notes.trim().length < 2 ? "notes-error" : undefined}
                       value={notes}
                       onChange={(e) => setNotes(e.target.value)}
                       onBlur={() => setTouched((t) => ({ ...t, notes: true }))}
@@ -401,7 +413,7 @@ const GetDemo = () => {
                       rows={3}
                     />
                     {touched.notes && notes.trim().length < 2 && (
-                      <p className="text-xs text-destructive">Please add a short message.</p>
+                      <p id="notes-error" className="text-xs text-destructive">Please add a short message.</p>
                     )}
                   </div>
 
@@ -411,19 +423,26 @@ const GetDemo = () => {
                       <Label htmlFor="serviceArea">Where do you serve customers? *</Label>
                       <Input
                         id="serviceArea"
+                        required
+                        aria-invalid={!!touched.serviceArea && serviceArea.trim().length < 2}
+                        aria-describedby={touched.serviceArea && serviceArea.trim().length < 2 ? "serviceArea-error" : undefined}
                         value={serviceArea}
                         onChange={(e) => setServiceArea(e.target.value)}
                         onBlur={() => setTouched((t) => ({ ...t, serviceArea: true }))}
                         placeholder="e.g. Damariscotta, ME"
                       />
                       {touched.serviceArea && serviceArea.trim().length < 2 && (
-                        <p className="text-xs text-destructive">We need a town or area to build your preview.</p>
+                        <p id="serviceArea-error" className="text-xs text-destructive">We need a town or area to build your preview.</p>
                       )}
                     </div>
                   )}
 
                   {/* Optional details */}
-                  <details className="group/inner rounded-xl border border-border bg-background/50">
+                  <details
+                    className="group/inner rounded-xl border border-border bg-background/50"
+                    open={optionalDetailsOpen}
+                    onToggle={(e) => setOptionalDetailsOpen(e.currentTarget.open)}
+                  >
                     <summary className="cursor-pointer list-none flex items-center justify-between gap-3 px-4 py-3 text-sm font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring rounded-xl">
                       <span>More details (optional)</span>
                       <ArrowRight className="h-3.5 w-3.5 shrink-0 transition-transform group-open/inner:rotate-90" aria-hidden="true" />
