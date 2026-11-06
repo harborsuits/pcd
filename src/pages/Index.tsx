@@ -31,37 +31,10 @@ const concepts = [
 const Index = () => (
   <div className="homepage min-h-screen flex flex-col bg-page-bg text-foreground">
       <SEOHead
-        title="Small Business Web Design & Website Fixes | Pleasant Cove Design"
-        description="We fix outdated websites, broken contact forms, and weak mobile layouts so small businesses stop losing customers. Free website review. Midcoast Maine."
+        title="Midcoast Maine Web Design | Pleasant Cove Design"
+        description="Web design, website improvements, and ongoing care for small businesses in Midcoast Maine. Work with Ben Dickinson at Pleasant Cove Design."
         path="/"
         localBusiness
-        faq={[
-          {
-            question: "What does Pleasant Cove Design do?",
-            answer:
-              "Pleasant Cove Design is a Midcoast Maine web design studio that fixes small-business websites which are quietly losing customers — outdated design, broken contact forms, weak mobile layouts, and missing booking flows. Most projects start with a free website review that names the specific issues to fix.",
-          },
-          {
-            question: "Where are you based and who do you work with?",
-            answer:
-              "Pleasant Cove Design is based in Midcoast Maine and works primarily with owner-operated small businesses in Newcastle, Damariscotta, Wiscasset, Boothbay Harbor, Camden, Rockland, Brunswick, and Bath. We also take on remote clients across the United States.",
-          },
-          {
-            question: "How does pricing work?",
-            answer:
-              "Pricing is two parts: a one-time build fee to design and launch the site, then a month-to-month website care plan from $150 for hosting, maintenance, backups, and small content changes. A simple one-page online brochure starts at $1,500 and a custom business website starts at $3,500, with the final price set in a written proposal. AI receptionist services are billed as setup, monthly management, and actual usage. Most clients begin with a free website review before committing.",
-          },
-          {
-            question: "How long does a website take?",
-            answer:
-              "Most small-business websites launch in two to four weeks once content and photos are in hand. Single-page sites and targeted fixes — like a broken contact form or a mobile layout repair — can ship in a few days.",
-          },
-          {
-            question: "Do you offer an AI receptionist or online booking?",
-            answer:
-              "Yes. Pleasant Cove Design can add a 24/7 AI receptionist that answers calls and texts, captures lead details, and emails you a clean summary, plus online booking that syncs with Google Calendar, Calendly, or Acuity.",
-          },
-        ]}
       />
     <MarketingHeader activePage="home" />
     <main className="flex-1">
@@ -154,8 +127,21 @@ const Index = () => (
         </div>
       </section>
 
-      <section className="border-t border-border bg-background py-12 md:py-16">
-        <div className="max-w-6xl mx-auto px-6 grid md:grid-cols-[1fr_2fr] gap-6 md:gap-16"><h2 className="font-serif text-3xl md:text-4xl font-bold">Meet Ben</h2><p className="text-xl md:text-2xl leading-relaxed">I’m Ben Dickinson, the person behind Pleasant Cove Design. I build, improve, and maintain websites for small businesses in Midcoast Maine.</p></div>
+      <section aria-labelledby="about-ben" className="border-t border-border bg-background py-10 md:py-12">
+        <div className="max-w-3xl mx-auto px-6">
+          <div className="flex items-center gap-3 mb-5">
+            <img src={pcdLogo} alt="Pleasant Cove Design sailboat mark" width={40} height={40} loading="lazy" className="h-10 w-10 shrink-0 rounded" />
+            <div className="min-w-0">
+              <p className="text-xs font-semibold uppercase tracking-wider text-accent">About Pleasant Cove Design</p>
+              <h2 id="about-ben" className="font-serif text-2xl md:text-3xl font-bold">Hi, I’m Ben.</h2>
+            </div>
+          </div>
+          <div className="space-y-4 text-base md:text-lg leading-relaxed">
+            <p>I’m Ben Dickinson, and I run Pleasant Cove Design in Midcoast Maine. I work with small-business owners who need a website they can feel confident sending customers to.</p>
+            <p>My approach is straightforward: understand your business, explain the options in plain language, and agree on the work and price before we begin. Whether you need a new website or a focused improvement, you’ll know what’s included and what comes next.</p>
+          </div>
+          <Link to="/get-demo" className="mt-5 inline-flex items-center gap-1 font-semibold text-accent underline-offset-4 hover:underline">Tell me about your website <ArrowRight className="h-4 w-4" aria-hidden="true" /></Link>
+        </div>
       </section>
 
       <section id="demos" className="border-t border-border py-10 scroll-mt-28">
