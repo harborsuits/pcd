@@ -68,7 +68,7 @@ function HomeHero() {
           <div className="pcd-home-hero__boatwrap">
             <img src={pcdLogo} alt="Pleasant Cove Design sailboat mark" width={360} height={360} className={`pcd-home-hero__boat${moving ? "" : " is-paused"}`} />
           </div>
-          <p className="pcd-home-hero__caption">A clear course for your website.</p>
+          <p className="pcd-home-hero__caption font-serif">A clear course for your website.</p>
           <button
             type="button"
             className="pcd-home-hero__toggle"

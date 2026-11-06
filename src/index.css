@@ -556,7 +556,7 @@ All colors MUST be HSL.
   75% { transform: translateY(3px) rotate(-.6deg); }
 }
 @media (prefers-reduced-motion: reduce) { .pcd-home-hero__boat { animation: none; } }
-.pcd-home-hero__caption { font-family: var(--font-serif, Georgia, serif); font-style: italic; font-size: 1.05rem; color: hsl(var(--hh-navy)); text-align: center; }
+.pcd-home-hero__caption { font-style: italic; font-size: 1.05rem; color: hsl(var(--hh-navy)); text-align: center; }
 .pcd-home-hero__toggle { position: relative; z-index: 1; display: inline-flex; align-items: center; gap: .375rem; font-size: .8125rem; color: hsl(var(--hh-navy)); background: hsl(var(--hh-paper)); border: 1px solid hsl(var(--hh-navy) / .45); border-radius: 9999px; padding: .375rem .875rem; min-height: 2.25rem; }
 .pcd-home-hero__toggle:focus-visible { outline: 3px solid hsl(var(--hh-teal)); outline-offset: 2px; }
 .pcd-home-hero__toggle:disabled { cursor: default; }
