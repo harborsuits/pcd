@@ -120,6 +120,17 @@ All colors MUST be HSL.
   }
 }
 
+/* Accessible text accents scoped to the homepage; other routes keep their palette. */
+.homepage {
+  --homepage-text-accent: 175 35% 30%;
+}
+.dark .homepage {
+  --homepage-text-accent: 175 40% 65%;
+}
+.homepage .text-accent:not(svg) {
+  color: hsl(var(--homepage-text-accent));
+}
+
 /* Read receipt animation */
 @keyframes receiptPop {
   0% { opacity: 0; transform: translateY(2px); }

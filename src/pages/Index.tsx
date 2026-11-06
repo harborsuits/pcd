@@ -8,6 +8,7 @@ import { NAP } from "@/lib/localPages";
 import { PROJECT_OFFERINGS, CARE_PLANS, ALACARTE_SERVICES, ALACARTE_NOTE } from "@/lib/pricingMenu";
 import pcdLogo from "@/assets/pcd-logo.jpeg";
 import pierWebsite from "@/assets/pier-1-website.jpg.asset.json";
+import ravenWebsite from "@/assets/raven-rock-homepage.jpg.asset.json";
 import roofer from "@/assets/demos/roofer-hero.jpeg";
 import restaurant from "@/assets/restaurant/lobster-thermidor-hero.webp";
 import salon from "@/assets/salon/salon-hero-model.png";
@@ -28,7 +29,7 @@ const concepts = [
 ];
 
 const Index = () => (
-  <div className="min-h-screen flex flex-col bg-page-bg text-foreground">
+  <div className="homepage min-h-screen flex flex-col bg-page-bg text-foreground">
       <SEOHead
         title="Small Business Web Design & Website Fixes | Pleasant Cove Design"
         description="We fix outdated websites, broken contact forms, and weak mobile layouts so small businesses stop losing customers. Free website review. Midcoast Maine."
@@ -81,22 +82,6 @@ const Index = () => (
         </div>
       </section>
 
-      <section id="work" className="border-t border-border bg-background scroll-mt-28 py-12 md:py-16">
-        <div className="max-w-6xl mx-auto px-6">
-          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-7">
-            <div><p className="text-sm text-accent font-semibold mb-2">Featured client work · Live website</p><h2 className="font-serif text-3xl md:text-4xl font-bold">Pier 1 Pizza</h2></div>
-            <p className="text-sm text-muted-foreground">Sports pub & pizzeria · Boothbay Harbor, Maine</p>
-          </div>
-          <a href="https://pier1pizza207.com/" target="_blank" rel="noopener noreferrer" aria-label="Visit the live Pier 1 Pizza website" className="block rounded-lg overflow-hidden border border-border focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-4">
-            <img src={pierWebsite.url} alt="The live Pier 1 Pizza website, with its real Boothbay Harbor storefront, online ordering link, and phone contact" width="1440" height="1000" className="w-full h-auto" fetchPriority="high" />
-          </a>
-          <div className="grid md:grid-cols-[1.4fr_1fr] gap-6 md:gap-12 mt-7 items-start">
-            <p className="text-lg text-muted-foreground leading-relaxed">A clear home for Pier 1’s menu, weekly events, and visitor information. Direct online-ordering links, contact details, and directions help guests find their next step.</p>
-            <div className="md:text-right"><Button asChild variant="outline"><a href="https://pier1pizza207.com/" target="_blank" rel="noopener noreferrer">Visit live website <ArrowUpRight className="ml-2 h-4 w-4" /></a></Button></div>
-          </div>
-        </div>
-      </section>
-
       <section className="py-12 md:py-16 border-t border-border">
         <div className="max-w-6xl mx-auto px-6">
           <p className="text-sm text-accent font-semibold mb-3">Start where you are</p>
@@ -134,6 +119,28 @@ const Index = () => (
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8"><div><p className="text-sm text-accent font-semibold mb-3">Smaller jobs welcome</p><h2 className="font-serif text-3xl md:text-4xl font-bold">You don’t always need a new website.</h2></div><Button asChild variant="ghost"><Link to="/pricing">Full pricing & scope <ArrowRight className="ml-2 h-4 w-4" /></Link></Button></div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">{smallerJobs.map(service => <article key={service.id} className="border border-border rounded-lg p-5 flex flex-col bg-card"><h3 className="font-semibold text-lg mb-2">{service.label}</h3><p className="font-serif text-2xl font-bold mb-4">{service.price}</p><p className="text-sm text-muted-foreground leading-relaxed mb-5">{service.description}</p><Button asChild variant="link" className="mt-auto self-start p-0 h-auto"><Link to="/pricing">View scope <ArrowRight className="ml-2 h-4 w-4" /></Link></Button></article>)}</div>
           <p className="text-muted-foreground text-sm leading-relaxed mt-7 max-w-3xl">{ALACARTE_NOTE}</p>
+        </div>
+      </section>
+
+      <section id="work" className="border-t border-border bg-background scroll-mt-28 py-10 md:py-12">
+        <div className="max-w-6xl mx-auto px-6">
+          <p className="text-sm text-accent font-semibold mb-2">Live client websites</p>
+          <h2 className="font-serif text-2xl md:text-3xl font-bold mb-6">Recent work</h2>
+          <div className="grid md:grid-cols-2 gap-6 max-w-4xl">
+            {[
+              { name: "Pier 1 Pizza", image: pierWebsite.url, href: "https://pier1pizza207.com/", alt: "The live Pier 1 Pizza homepage", description: "A clear home for Pier 1’s menu, weekly events, and visitor information. Direct online-ordering links, contact details, and directions help guests find their next step." },
+              { name: "Raven Rock Construction", image: ravenWebsite.url, href: "https://www.ravenrockconstruction.com/", alt: "The current live Raven Rock Construction homepage, showing Built strong. Built for Maine. and a stone-and-timber building", description: "A construction website with clear service pages, project photos, and a direct quote-inquiry path." },
+            ].map(project => <article key={project.name} className="border border-border rounded-lg overflow-hidden bg-card flex flex-col">
+              <a href={project.href} target="_blank" rel="noopener noreferrer" aria-label={`Visit the live ${project.name} website`} className="block focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-4">
+                <img src={project.image} alt={project.alt} width="1440" height="810" loading="lazy" className="w-full aspect-video max-h-[180px] md:max-h-none object-cover object-top" />
+              </a>
+              <div className="p-5 flex flex-col flex-1">
+                <h3 className="font-serif text-xl font-bold mb-3">{project.name}</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed mb-5">{project.description}</p>
+                <Button asChild variant="link" className="mt-auto self-start p-0 h-auto"><a href={project.href} target="_blank" rel="noopener noreferrer">Visit live website <ArrowUpRight className="ml-2 h-4 w-4" /></a></Button>
+              </div>
+            </article>)}
+          </div>
         </div>
       </section>
 
