@@ -726,7 +726,8 @@ All colors MUST be HSL.
   height: auto;
   display: block;
   mix-blend-mode: multiply;
-  animation: pcd-hh-bob 12s ease-in-out infinite;
+  animation: pcd-hh-bob 6s ease-in-out infinite;
+  transform-origin: 50% 80%;
   will-change: transform;
 }
 @keyframes pcd-hh-bob {
@@ -735,13 +736,13 @@ All colors MUST be HSL.
     transform: translateY(0) rotate(0deg);
   }
   25% {
-    transform: translateY(-3px) rotate(0.6deg);
+    transform: translateY(-10px) rotate(2deg);
   }
   50% {
     transform: translateY(0) rotate(0deg);
   }
   75% {
-    transform: translateY(3px) rotate(-0.6deg);
+    transform: translateY(6px) rotate(-2deg);
   }
 }
 @media (prefers-reduced-motion: reduce) {
