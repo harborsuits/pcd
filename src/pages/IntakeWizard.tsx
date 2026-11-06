@@ -423,10 +423,10 @@ const GetDemo = () => {
                   )}
 
                   {/* Optional details */}
-                  <details className="rounded-xl border border-border bg-background/50">
+                  <details className="group/inner rounded-xl border border-border bg-background/50">
                     <summary className="cursor-pointer list-none flex items-center justify-between gap-3 px-4 py-3 text-sm font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring rounded-xl">
                       <span>More details (optional)</span>
-                      <ArrowRight className="h-3.5 w-3.5 shrink-0 transition-transform group-open:rotate-90" aria-hidden="true" />
+                      <ArrowRight className="h-3.5 w-3.5 shrink-0 transition-transform group-open/inner:rotate-90" aria-hidden="true" />
                     </summary>
                     <div className="space-y-4 border-t border-border p-4">
                       {!hasDeepLink && (
