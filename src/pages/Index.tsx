@@ -65,9 +65,10 @@ function HomeHero() {
           <p className="pcd-home-hero__note text-sm mt-5">Have a quick question? <a className="underline underline-offset-4" href={`tel:${NAP.phoneE164}`}>{NAP.phone}</a></p>
         </div>
         <div className="pcd-home-hero__art">
-          <div className="pcd-home-hero__frame">
-            <img src={pcdLogo} alt="Pleasant Cove Design sailboat mark" width={320} height={320} className={`pcd-home-hero__boat${moving ? "" : " is-paused"}`} />
+          <div className="pcd-home-hero__boatwrap">
+            <img src={pcdLogo} alt="Pleasant Cove Design sailboat mark" width={360} height={360} className={`pcd-home-hero__boat${moving ? "" : " is-paused"}`} />
           </div>
+          <p className="pcd-home-hero__caption font-serif">A clear course for your website.</p>
           <button
             type="button"
             className="pcd-home-hero__toggle"
@@ -79,6 +80,10 @@ function HomeHero() {
           </button>
         </div>
       </div>
+      <svg className="pcd-home-hero__wake" aria-hidden="true" focusable="false" viewBox="0 0 1440 80" preserveAspectRatio="none">
+        <path d="M0 58 C 240 40, 480 70, 760 52 S 1200 34, 1440 50" />
+        <path d="M0 70 C 300 56, 560 78, 860 64 S 1260 50, 1440 62" />
+      </svg>
     </section>
   );
 }
