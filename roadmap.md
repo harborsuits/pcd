@@ -16,3 +16,5 @@ Raven Rock recapture: waited 12 seconds for the real public homepage reveal, the
 - [x] Compact About section (logo beside eyebrow/H2, two supplied paragraphs, /get-demo link) replaces Meet Ben.
 - [x] Homepage title/description updated; hidden FAQ prop removed.
 - [ ] Preview's in-browser title/canonical/schema tags not applying (pre-existing; live site applies them) — needs follow-up investigation.
+
+- Done: static fallback meta tags managed by SEOHead carry data-rh="true" so Helmet replaces them (no duplicates).
