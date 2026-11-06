@@ -76,28 +76,26 @@ function HomeHero() {
               <path d="M10 55 Q 50 49 95 55" />
               <path d="M0 80 Q 35 75 70 80" />
             </svg>
-            <svg className="pcd-home-hero__water" aria-hidden="true" focusable="false" viewBox="0 0 400 60" preserveAspectRatio="none">
+            <svg className="pcd-home-hero__water" aria-hidden="true" focusable="false" viewBox="0 0 400 80" preserveAspectRatio="none">
               <g className="pcd-home-hero__waves pcd-home-hero__waves--back">
-                <path d="M0 22 Q 25 12 50 22 T 100 22 T 150 22 T 200 22 T 250 22 T 300 22 T 350 22 T 400 22 T 450 22 T 500 22 T 550 22 T 600 22 T 650 22 T 700 22 T 750 22 T 800 22 V60 H0 Z" />
+                <path d="M0 26 Q 25 18 50 26 T 100 26 T 150 26 T 200 26 T 250 26 T 300 26 T 350 26 T 400 26 T 450 26 T 500 26 T 550 26 T 600 26 V80 H0 Z" />
+              </g>
+              <g className="pcd-home-hero__foam">
+                <ellipse cx="200" cy="30" rx="70" ry="4" />
+                <ellipse cx="200" cy="32" rx="95" ry="3" />
               </g>
               <g className="pcd-home-hero__waves pcd-home-hero__waves--front">
-                <path d="M0 32 Q 20 24 40 32 T 80 32 T 120 32 T 160 32 T 200 32 T 240 32 T 280 32 T 320 32 T 360 32 T 400 32 T 440 32 T 480 32 T 520 32 T 560 32 T 600 32 T 640 32 T 680 32 T 720 32 T 760 32 T 800 32 V60 H0 Z" />
+                <path d="M0 36 Q 20 29 40 36 T 80 36 T 120 36 T 160 36 T 200 36 T 240 36 T 280 36 T 320 36 T 360 36 T 400 36 T 440 36 T 480 36 T 520 36 T 560 36 T 600 36 V80 H0 Z" />
+              </g>
+              <g className="pcd-home-hero__ripples">
+                <ellipse cx="200" cy="34" rx="60" ry="3" />
+                <ellipse cx="200" cy="34" rx="60" ry="3" />
               </g>
             </svg>
           </div>
           <p className="pcd-home-hero__caption font-serif">A clear course for your website.</p>
         </div>
       </div>
-      <svg
-        className="pcd-home-hero__wake"
-        aria-hidden="true"
-        focusable="false"
-        viewBox="0 0 1440 80"
-        preserveAspectRatio="none"
-      >
-        <path d="M0 58 C 240 40, 480 70, 760 52 S 1200 34, 1440 50" />
-        <path d="M0 70 C 300 56, 560 78, 860 64 S 1260 50, 1440 62" />
-      </svg>
     </section>
   );
 }
