@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import wordmark from "@/assets/pcd-wave-wordmark.svg.asset.json";
+import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+import { BrandMark } from "./BrandMark";
 
 type ActivePage =
   | "home"
@@ -32,21 +32,23 @@ const CTA_LABEL = "Get a Free Review";
 
 export function MarketingHeader({ activePage }: MarketingHeaderProps) {
   const [open, setOpen] = useState(false);
-  const items = NAV_ITEMS.filter((i) => i.key !== activePage);
+  const items = NAV_ITEMS;
+  const { pathname } = useLocation();
+  const isCurrent = (item: typeof NAV_ITEMS[number]) => item.key === activePage || pathname === item.href || (item.key === "blog" && pathname.startsWith("/blog/"));
 
   return (
-    <header className="border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-50">
-      <div className={`container mx-auto px-6 flex items-center justify-between gap-4 ${activePage === "home" ? "py-1" : "py-4"}`}>
+    <header className="pcd-shell border-b border-border bg-card sticky top-0 z-50">
+      <div className="max-w-7xl mx-auto px-5 sm:px-6 flex items-center justify-between gap-3 py-1">
         <Link
           to="/"
           className="font-serif text-lg md:text-xl font-bold text-foreground shrink-0"
           aria-label="Pleasant Cove Design home"
         >
-          {activePage === "home" ? <img src={wordmark.url} alt="Pleasant Cove Design" width="680" height="280" className="w-44 sm:w-52 h-auto" /> : "Pleasant Cove Design"}
+          <BrandMark />
         </Link>
 
         {/* Desktop nav */}
-        <nav aria-label="Main navigation" className={`hidden ${activePage === "home" ? "xl:flex" : "md:flex"} items-center gap-2 lg:gap-4`}>
+        <nav aria-label="Main navigation" className="hidden xl:flex items-center gap-1">
           {items.map((item) => (
             <Button
               key={item.key}
@@ -55,33 +57,37 @@ export function MarketingHeader({ activePage }: MarketingHeaderProps) {
               size="sm"
               className="text-muted-foreground hover:text-foreground"
             >
-              <Link to={item.href}>{item.label}</Link>
+              <Link to={item.href} aria-current={isCurrent(item) ? "page" : undefined}>{item.label}</Link>
             </Button>
           ))}
-          <Button asChild size="sm" className="whitespace-nowrap">
-            <Link to={CTA_HREF}>{CTA_LABEL}</Link>
+          <Button asChild size="sm" variant="outline" className="whitespace-nowrap">
+            <Link to="/portal">Client Portal</Link>
           </Button>
         </nav>
 
         {/* Mobile nav */}
         <Sheet open={open} onOpenChange={setOpen}>
-          <SheetTrigger asChild className={activePage === "home" ? "xl:hidden" : "md:hidden"}>
+          <SheetTrigger asChild className="xl:hidden">
             <Button variant="ghost" size="icon" aria-label="Open menu">
               <Menu className="h-5 w-5" />
             </Button>
           </SheetTrigger>
-          <SheetContent side="right" className="w-72">
+          <SheetContent side="right" className="pcd-shell w-72 max-w-[90vw] overflow-y-auto">
+            <SheetTitle>Menu</SheetTitle>
+            <SheetDescription className="sr-only">Pleasant Cove Design pages and client portal</SheetDescription>
             <nav aria-label="Mobile navigation" className="flex flex-col gap-4 mt-8">
               {items.map((item) => (
                 <Link
                   key={item.key}
                   to={item.href}
+                  aria-current={isCurrent(item) ? "page" : undefined}
                   className="text-lg font-medium hover:text-accent transition-colors"
                   onClick={() => setOpen(false)}
                 >
                   {item.label}
                 </Link>
               ))}
+              <Link to="/portal" className="text-lg font-medium" onClick={() => setOpen(false)}>Client Portal</Link>
               <Button
                 asChild
                 size="lg"

@@ -1,12 +1,9 @@
 "use client";
 
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Sparkles } from "@/components/ui/sparkles";
-import { TimelineContent } from "@/components/ui/timeline-animation";
-import { cn } from "@/lib/utils";
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { Check, ArrowRight } from "lucide-react";
-import { LiquidButton } from "@/components/ui/liquid-glass-button";
+import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import {
   ALACARTE_SERVICES,
@@ -23,65 +20,32 @@ import {
 import { AlaCarteRequestModal } from "@/components/AlaCarteRequestModal";
 
 export default function PricingSection() {
-  const pricingRef = useRef<HTMLDivElement>(null);
 
   // À la carte request modal state
   const [selectedService, setSelectedService] = useState<AlaCarteService | null>(null);
 
-  const revealVariants = {
-    visible: (i: number) => ({
-      y: 0,
-      opacity: 1,
-      filter: "blur(0px)",
-      transition: { delay: i * 0.18, duration: 0.5 },
-    }),
-    hidden: {
-      filter: "blur(10px)",
-      y: -18,
-      opacity: 0,
-    },
-  };
 
   return (
-    <section ref={pricingRef} className="relative pt-8 pb-20 overflow-hidden">
-      {/* Subtle sparkles only - no grid or glow to avoid color mismatch */}
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <Sparkles
-          className="absolute inset-0"
-          color="hsl(var(--accent))"
-          size={1.2}
-          density={60}
-          speed={0.3}
-          opacity={0.25}
-        />
-      </div>
-
+    <section className="relative pt-8 pb-20 overflow-hidden">
       <div className="container mx-auto px-6 relative z-10">
         {/* Intro */}
         <div className="text-center mb-12">
-          <TimelineContent animationNum={0} timelineRef={pricingRef}>
+          <div>
             <p className="text-sm text-muted-foreground max-w-2xl mx-auto">
               Starting prices reflect the focused scope described below. Your final
               investment depends on the design, content, functionality, integrations, and
               support required. You receive a fixed proposal with clear deliverables
               before work begins.
             </p>
-          </TimelineContent>
+          </div>
         </div>
 
         {/* Project offerings */}
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
           {PROJECT_OFFERINGS.map((offering, index) => (
-            <TimelineContent
-              key={offering.id}
-              animationNum={index + 3}
-              timelineRef={pricingRef}
-              customVariants={revealVariants}
-            >
+            <div key={offering.id}>
               <Card
-                className={cn(
-                  "relative h-full flex flex-col overflow-hidden transition-all duration-300 hover:shadow-xl hover:-translate-y-1"
-                )}
+                className="h-full flex flex-col overflow-hidden"
               >
                 <CardHeader className="pb-4">
                   <div className="space-y-3">
@@ -92,7 +56,7 @@ export default function PricingSection() {
                         {offering.price}
                       </span>
                     </div>
-                    <p className="text-xs text-muted-foreground/70">
+                    <p className="text-xs text-muted-foreground">
                       {offering.quoteOnly
                         ? "Scoped and quoted for your business"
                         : "One-time build — starting price"}
@@ -105,14 +69,9 @@ export default function PricingSection() {
                 </CardHeader>
 
                 <CardContent className="flex-1 flex flex-col">
-                  <Link
-                    to={`/get-demo?service=website&tier=${offering.id}`}
-                    className="block mb-6"
-                  >
-                    <LiquidButton variant="default" size="lg" className="w-full">
+                  <Button asChild variant="default" size="lg" className="w-full"><Link to={`/get-demo?service=website&tier=${offering.id}`}>
                       Discuss your project
-                    </LiquidButton>
-                  </Link>
+                    </Link></Button>
 
                   <div className="space-y-3">
                     <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
@@ -130,19 +89,19 @@ export default function PricingSection() {
                       ))}
                     </ul>
                     {offering.scopeNote && (
-                      <p className="text-xs text-muted-foreground/70 pt-2">
+                      <p className="text-xs text-muted-foreground pt-2">
                         {offering.scopeNote}
                       </p>
                     )}
                   </div>
                 </CardContent>
               </Card>
-            </TimelineContent>
+            </div>
           ))}
         </div>
 
         {/* What determines project pricing */}
-        <TimelineContent animationNum={7} timelineRef={pricingRef}>
+        <div>
           <div className="mt-16 max-w-3xl mx-auto">
             <div className="text-center mb-6">
               <h3 className="font-serif text-2xl font-bold mb-2">
@@ -164,10 +123,10 @@ export default function PricingSection() {
               ))}
             </ul>
           </div>
-        </TimelineContent>
+        </div>
 
         {/* Website Care Plans */}
-        <TimelineContent animationNum={8} timelineRef={pricingRef}>
+        <div>
           <div className="mt-20 max-w-3xl mx-auto">
             <div className="text-center mb-10">
               <h3 className="font-serif text-2xl font-bold mb-2">Website Care</h3>
@@ -199,11 +158,9 @@ export default function PricingSection() {
                         </li>
                       ))}
                     </ul>
-                    <Link to={`/get-demo?product=care_plan&tier=${plan.id}`}>
-                      <LiquidButton variant="default" size="sm" className="w-full">
+                    <Button asChild variant="default" size="sm" className="w-full"><Link to={`/get-demo?product=care_plan&tier=${plan.id}`}>
                         Request a quote
-                      </LiquidButton>
-                    </Link>
+                      </Link></Button>
                   </CardContent>
                 </Card>
               ))}
@@ -211,16 +168,16 @@ export default function PricingSection() {
 
             <ul className="mt-6 space-y-2">
               {CARE_TERMS.map((term, i) => (
-                <li key={i} className="text-xs text-muted-foreground/70">
+                <li key={i} className="text-xs text-muted-foreground">
                   {term}
                 </li>
               ))}
             </ul>
           </div>
-        </TimelineContent>
+        </div>
 
         {/* Focused individual services */}
-        <TimelineContent animationNum={9} timelineRef={pricingRef}>
+        <div>
           <div className="mt-16 max-w-4xl mx-auto">
             <div className="text-center mb-10">
               <h3 className="font-serif text-2xl font-bold mb-2">
@@ -230,7 +187,7 @@ export default function PricingSection() {
                 Need one specific thing handled? Pick the piece you actually need right
                 now. Each price is a starting point for the scope described.
               </p>
-              <p className="text-xs text-muted-foreground/70 mt-2">
+              <p className="text-xs text-muted-foreground mt-2">
                 We work with the tools you already use — Toast, Square, Shopify, ChowNow,
                 Calendly, Google, and more.
               </p>
@@ -240,8 +197,7 @@ export default function PricingSection() {
               {ALACARTE_SERVICES.map((service) => (
                 <Card
                   key={service.id}
-                  className="hover:shadow-md transition-shadow cursor-pointer group"
-                  onClick={() => setSelectedService(service)}
+                  className="group"
                 >
                   <CardContent className="p-5">
                     <h4 className="font-semibold text-foreground mb-1">{service.label}</h4>
@@ -249,15 +205,13 @@ export default function PricingSection() {
                     <p className="text-sm text-muted-foreground mb-3">
                       {service.description}
                     </p>
-                    <p className="text-xs text-primary font-medium opacity-0 group-hover:opacity-100 transition-opacity">
-                      Request a quote →
-                    </p>
+                    <Button variant="outline" size="sm" onClick={() => setSelectedService(service)}>Request a quote <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" /></Button>
                   </CardContent>
                 </Card>
               ))}
             </div>
 
-            <p className="text-xs text-muted-foreground/70 text-center mt-6 max-w-2xl mx-auto">
+            <p className="text-xs text-muted-foreground text-center mt-6 max-w-2xl mx-auto">
               {ALACARTE_NOTE}
             </p>
 
@@ -270,10 +224,10 @@ export default function PricingSection() {
               </Link>
             </div>
           </div>
-        </TimelineContent>
+        </div>
 
         {/* AI receptionist & business automation */}
-        <TimelineContent animationNum={10} timelineRef={pricingRef}>
+        <div>
           <div className="mt-20 max-w-4xl mx-auto">
             <div className="text-center mb-10">
               <h3 className="font-serif text-2xl font-bold mb-2">
@@ -305,42 +259,38 @@ export default function PricingSection() {
 
             <ul className="mt-6 space-y-2">
               {AI_BILLING_NOTES.map((note, i) => (
-                <li key={i} className="text-xs text-muted-foreground/70">
+                <li key={i} className="text-xs text-muted-foreground">
                   {note}
                 </li>
               ))}
             </ul>
 
             <div className="text-center mt-8">
-              <Link to="/get-demo?service=ai">
-                <LiquidButton size="lg">Request a quote</LiquidButton>
-              </Link>
+              <Button asChild size="lg"><Link to="/get-demo?service=ai">Request a quote</Link></Button>
             </div>
           </div>
-        </TimelineContent>
+        </div>
 
         {/* Pilot section */}
-        <TimelineContent animationNum={11} timelineRef={pricingRef}>
-          <div className="text-center mt-16 max-w-xl mx-auto p-8 rounded-xl bg-card/50 border border-border/50 backdrop-blur-sm">
+        <div>
+          <div className="text-center mt-16 max-w-xl mx-auto p-8 rounded-lg bg-card border border-border/50 backdrop-blur-sm">
             <h3 className="font-serif text-2xl font-bold mb-3">7-Day Pilot</h3>
             <p className="text-muted-foreground mb-2">
               A short, defined trial run for selected businesses. The pilot scope and any
               fees are agreed before it starts, so you know exactly what is being tested
               and what it costs.
             </p>
-            <p className="text-sm text-muted-foreground/70 italic mb-6">
+            <p className="text-sm text-muted-foreground italic mb-6">
               Limited availability — select businesses only.
             </p>
-            <Link to="/get-demo?product=pilot">
-              <LiquidButton size="lg">Request a Pilot</LiquidButton>
-            </Link>
+            <Button asChild size="lg"><Link to="/get-demo?product=pilot">Request a Pilot</Link></Button>
           </div>
-        </TimelineContent>
+        </div>
 
         {/* Payment expectations note */}
-        <TimelineContent animationNum={12} timelineRef={pricingRef}>
+        <div>
           <div className="text-center mt-8 max-w-2xl mx-auto space-y-4">
-            <p className="text-sm text-muted-foreground/80 italic">
+            <p className="text-sm text-muted-foreground italic">
               Projects start with a deposit to lock in your build slot. The remainder is
               due when your site is ready to launch.
             </p>
@@ -350,7 +300,7 @@ export default function PricingSection() {
               medical records handling, or enterprise compliance work.
             </p>
           </div>
-        </TimelineContent>
+        </div>
       </div>
 
       {/* À la carte request modal */}

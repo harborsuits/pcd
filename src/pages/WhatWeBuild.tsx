@@ -1,9 +1,9 @@
+import { MarketingFooter } from "@/components/layout/MarketingFooter";
 import { Link } from "react-router-dom";
 import { ArrowRight, CalendarCheck, FolderOpen, Phone, Workflow, Globe, ShieldCheck, Wrench, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SEOHead } from "@/components/SEOHead";
 import { MarketingHeader } from "@/components/layout/MarketingHeader";
-import { NAP } from "@/lib/localPages";
 import { PROJECT_OFFERINGS, CARE_PLANS, CARE_TERMS, ALACARTE_SERVICES, ALACARTE_NOTE, AI_TIERS } from "@/lib/pricingMenu";
 
 const smallerJobs = ["content_refresh", "website_cleanup", "booking_integration", "forms_routing"].flatMap(id => {
@@ -19,7 +19,7 @@ const tools = [
 const focusLink = "inline-flex items-center gap-2 underline underline-offset-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-4";
 
 const WhatWeBuild = () => (
-  <div className="min-h-screen flex flex-col bg-page-bg text-foreground">
+  <div className="pcd-shell min-h-screen flex flex-col bg-page-bg text-foreground">
     <SEOHead
       title="Website Services | Pleasant Cove Design"
       description="Website builds, focused improvements, ongoing care, and optional connected tools for small businesses in Midcoast Maine. Explore scope and starting prices."
@@ -82,14 +82,7 @@ const WhatWeBuild = () => (
         <div className="max-w-6xl mx-auto px-5 sm:px-6"><h2 className="font-serif text-2xl md:text-3xl font-bold mb-4">Start with a conversation.</h2><p className="text-base md:text-lg mb-7 max-w-xl">Tell me what your business needs, or ask for a free review of your existing website.</p><div className="flex flex-col sm:flex-row gap-3"><Button asChild size="lg" variant="secondary"><Link to="/get-demo">Discuss your project <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" /></Link></Button><Button asChild size="lg" variant="secondary"><Link to="/get-demo?service=review">Get a free website review</Link></Button></div></div>
       </section>
     </main>
-    <footer className="border-t border-border py-8 mt-auto">
-      <div className="container mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4">
-        <p className="font-serif text-sm">© {new Date().getFullYear()} Pleasant Cove Design</p>
-        <div className="flex flex-wrap justify-center items-center gap-x-6 gap-y-3 text-sm">
-          <Link to="/midcoast-maine" className={focusLink}>Midcoast Maine</Link><Link to="/privacy" className={focusLink}>Privacy</Link><Link to="/terms" className={focusLink}>Terms</Link><a href={`mailto:${NAP.email}`} className={focusLink}>Contact</a>
-        </div>
-      </div>
-    </footer>
+    <MarketingFooter />
   </div>
 );
 export default WhatWeBuild;

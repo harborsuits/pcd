@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { ArrowLeft, Phone, Mail, MapPin, Star, CheckCircle, Snowflake, Truck, Hammer, Sprout, ArrowRight, Facebook, Instagram } from "lucide-react";
+import { Phone, Mail, MapPin, Star, CheckCircle, Snowflake, Truck, Hammer, Sprout, ArrowRight, Facebook, Instagram } from "lucide-react";
 import { motion } from "framer-motion";
 import landscaperHero from "@/assets/demos/landscaper-hero.jpg";
 import landscaperMowing from "@/assets/demos/landscaper-mowing.jpg";
@@ -85,13 +85,7 @@ const LandscaperDemo = () => {
       <header className="border-b border-stone-300/60 bg-[#f4efe6]/95 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-6">
-            <Link
-              to="/"
-              className="flex items-center gap-1.5 text-stone-500 hover:text-stone-700 transition-colors text-xs"
-            >
-              <ArrowLeft className="h-3 w-3" />
-              <span>Pleasant Cove Design</span>
-            </Link>
+            
             <div className="font-serif text-2xl tracking-tight">
               Stonewall <span className="italic text-stone-500">&amp;</span> Spruce
             </div>

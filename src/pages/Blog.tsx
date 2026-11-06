@@ -1,8 +1,8 @@
+import { MarketingFooter } from "@/components/layout/MarketingFooter";
 import { Link } from "react-router-dom";
 import { SEOHead } from "@/components/SEOHead";
 import { MarketingHeader } from "@/components/layout/MarketingHeader";
-import { Footer } from "@/components/ui/footer";
-import { Button } from "@/components/ui/button";
+
 import { ArrowRight } from "lucide-react";
 import { BLOG_POSTS } from "@/data/blogPosts";
 
@@ -17,7 +17,7 @@ const Blog = () => {
   const posts = [...BLOG_POSTS].sort((a, b) => b.date.localeCompare(a.date));
 
   return (
-    <div className="min-h-screen flex flex-col bg-page-bg text-foreground">
+    <div className="pcd-shell min-h-screen flex flex-col bg-page-bg text-foreground">
       <SEOHead
         title="Blog"
         description="Practical advice on websites, SEO, and AI tools for Maine small businesses. Written by the team at Pleasant Cove Design in Midcoast Maine."
@@ -48,7 +48,7 @@ const Blog = () => {
             {posts.map((post) => (
               <li
                 key={post.slug}
-                className="rounded-lg border border-border bg-card/60 hover:bg-card transition-colors p-6"
+                className="rounded-lg border border-border bg-card hover:bg-card transition-colors p-6"
               >
                 <article>
                   <p className="text-xs uppercase tracking-wider text-accent font-semibold mb-2">
@@ -75,32 +75,7 @@ const Blog = () => {
       </section>
       </main>
 
-      <div className="mt-auto">
-        <Footer
-          logo={<span className="font-serif text-lg font-bold">PCD</span>}
-          brandName="Pleasant Cove Design"
-          socialLinks={[]}
-          mainLinks={[
-            { href: "/what-we-build", label: "What We Build" },
-            { href: "/pricing", label: "Pricing" },
-            { href: "/midcoast-maine", label: "Midcoast Maine" },
-            { href: "/blog", label: "Blog" },
-            { href: "/get-demo", label: "Get a Demo" },
-          ]}
-          legalLinks={[
-            { href: "/privacy", label: "Privacy" },
-            { href: "/terms", label: "Terms" },
-            { href: "mailto:pleasantcovedesign@gmail.com", label: "Contact" },
-          ]}
-          locationLinks={{
-            label: "Service Area",
-            links: [{ href: "/midcoast-maine", label: "Midcoast Maine" }],
-          }}
-          copyright={{
-            text: `© ${new Date().getFullYear()} Pleasant Cove Design. Based in Newcastle, Maine.`,
-          }}
-        />
-      </div>
+      <MarketingFooter />
     </div>
   );
 };

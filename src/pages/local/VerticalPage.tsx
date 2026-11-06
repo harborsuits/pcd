@@ -1,10 +1,9 @@
+import { MarketingFooter } from "@/components/layout/MarketingFooter";
 import { Link, useParams, Navigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { LiquidButton } from "@/components/ui/liquid-glass-button";
 import { SEOHead } from "@/components/SEOHead";
 import { MarketingHeader } from "@/components/layout/MarketingHeader";
-import { VERTICALS, TOWNS, NAP } from "@/lib/localPages";
-import { GlowCard } from "@/components/ui/spotlight-card";
+import { VERTICALS, TOWNS } from "@/lib/localPages";
 import { AlertCircle, ArrowRight } from "lucide-react";
 
 const VerticalPage = () => {
@@ -13,11 +12,11 @@ const VerticalPage = () => {
   if (!v) return <Navigate to="/midcoast-maine" replace />;
 
   const title = `Websites for ${v.name} in Midcoast Maine`;
-  const description = `Web design and website fixes built for ${v.name.toLowerCase()} in Midcoast Maine. Designed to drive ${v.outcome}.`;
-  const serviceDescription = `Pleasant Cove Design builds and fixes websites for ${v.name.toLowerCase()} across Midcoast Maine — designed to drive ${v.outcome}, with mobile-first layouts, clear contact and quote flows, and local SEO included.`;
+  const description = `Website design and focused fixes for ${v.name.toLowerCase()} in Midcoast Maine. Clear services, mobile layouts, and straightforward contact options.`;
+  const serviceDescription = `Pleasant Cove Design builds and improves websites for ${v.name.toLowerCase()} across Midcoast Maine, with mobile layouts, clear service information, contact paths, and basic technical SEO in the agreed scope.`;
 
   return (
-    <div className="min-h-screen flex flex-col bg-page-bg text-foreground">
+    <div className="pcd-shell min-h-screen flex flex-col bg-page-bg text-foreground">
       <SEOHead
         title={title}
         description={description}
@@ -29,24 +28,6 @@ const VerticalPage = () => {
           description: serviceDescription,
           serviceType: `Web design for ${v.name.toLowerCase()}`,
         }}
-        faq={[
-          {
-            question: `Do you build websites specifically for ${v.name.toLowerCase()}?`,
-            answer: `Yes. Pleasant Cove Design builds and rebuilds websites for ${v.name.toLowerCase()} across Midcoast Maine — mobile-first layouts, clear quote and contact flows, photo galleries, and local SEO, all wired to drive ${v.outcome}.`,
-          },
-          {
-            question: `What does a ${v.singular.toLowerCase()} website usually cost?`,
-            answer: `A simple one-page online brochure for a ${v.singular.toLowerCase()} starts at $1,500, a custom ${v.singular.toLowerCase()} website starts at $3,500, and expanded sites with larger galleries or online ordering start at $6,000 — final price depends on content, functionality, and integrations. Website care starts at $150/mo month-to-month, and AI receptionist services are billed as setup, monthly management, and actual usage.`,
-          },
-          {
-            question: `Can you fix problems on my existing ${v.singular.toLowerCase()} website?`,
-            answer: `Yes — most projects start with a free website review where we name the specific issues costing you customers (mobile problems, broken forms, slow load, weak SEO) and give you a clear fix plan before any work begins.`,
-          },
-          {
-            question: `Do you serve ${v.name.toLowerCase()} outside Midcoast Maine?`,
-            answer: `Yes. We work with ${v.name.toLowerCase()} across the entire state of Maine — from Portland and Brunswick to Bangor and Bar Harbor — and remotely with small businesses anywhere in the US.`,
-          },
-        ]}
       />
       <MarketingHeader />
 
@@ -60,18 +41,14 @@ const VerticalPage = () => {
             Websites for {v.name}
           </h1>
           <p data-speakable className="text-lg text-muted-foreground mb-8">
-            Pleasant Cove Design builds {v.name.toLowerCase()} websites in Midcoast Maine that drive {v.outcome} — not just look pretty.
+            Pleasant Cove Design builds {v.name.toLowerCase()} websites in Midcoast Maine with clear services, useful information, and straightforward contact options.
           </p>
           <div className="flex flex-wrap justify-center gap-3">
-            <Link to={`/get-demo?service=${v.service ?? "review"}`}>
-              <LiquidButton size="lg">Get a Free Review</LiquidButton>
-            </Link>
+            <Button asChild size="lg"><Link to={`/get-demo?service=${v.service ?? "review"}`}>Get a Free Review</Link></Button>
             {v.demoPath && (
-              <Link to={v.demoPath}>
-                <Button variant="outline" size="lg">
+              <Button asChild variant="outline" size="lg" className="h-auto min-h-11 whitespace-normal text-center"><Link to={v.demoPath}>
                   See a sample {v.singular.toLowerCase()} site <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </Link>
+                </Link></Button>
             )}
           </div>
         </div>
@@ -84,12 +61,12 @@ const VerticalPage = () => {
           </h2>
           <div className="space-y-3">
             {v.pains.map((p) => (
-              <GlowCard key={p} customSize glowColor="teal" className="bg-card/80 p-4">
+              <article key={p} className="rounded-lg border border-border bg-card p-4">
                 <div className="flex items-start gap-3">
                   <AlertCircle className="h-5 w-5 text-accent mt-0.5 flex-shrink-0" />
                   <span className="text-muted-foreground">{p}</span>
                 </div>
-              </GlowCard>
+              </article>
             ))}
           </div>
         </div>
@@ -105,7 +82,7 @@ const VerticalPage = () => {
               <Link
                 key={t.slug}
                 to={`/web-design/${t.slug}`}
-                className="text-center text-sm text-muted-foreground hover:text-accent border border-border rounded-md py-2 px-3 bg-card/60 transition-colors"
+                className="text-center text-sm text-muted-foreground hover:text-accent border border-border rounded-md py-2 px-3 bg-card transition-colors"
               >
                 {t.name}, ME
               </Link>
@@ -119,22 +96,12 @@ const VerticalPage = () => {
           <h2 className="font-serif text-2xl md:text-3xl font-bold mb-4">
             Ready to see what we'd build for you?
           </h2>
-          <Link to={`/get-demo?service=${v.service ?? "review"}`}>
-            <LiquidButton size="lg">Get My Free Review</LiquidButton>
-          </Link>
+          <Button asChild size="lg"><Link to={`/get-demo?service=${v.service ?? "review"}`}>Get My Free Review</Link></Button>
         </div>
       </section>
       </main>
 
-      <footer className="border-t border-border py-8">
-        <div className="container mx-auto px-6 text-center text-sm text-muted-foreground">
-          <p className="mb-1">{NAP.name} · {NAP.city}, {NAP.region} · <a href={`tel:${NAP.phoneE164}`} className="hover:text-accent">{NAP.phone}</a> · {NAP.email}</p>
-          <p>{NAP.serviceArea}</p>
-          <p className="mt-3">
-            <Link to="/midcoast-maine" className="text-accent hover:underline">All Midcoast services →</Link>
-          </p>
-        </div>
-      </footer>
+      <MarketingFooter />
     </div>
   );
 };

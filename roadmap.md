@@ -1,3 +1,22 @@
+# Site-wide consistency pass
+- [x] Consolidate public and compact brand shells, stable accessible navigation, legal/contact conventions, and sample-only wrapper.
+- [x] Ground AI/article copy, preserve shared pricing, remove hidden FAQ claims, and retain route schema/indexability.
+- [x] Lazy-load heavy operator/static samples, minimally repair existing dependency lock metadata.
+- [x] Verify desktop/390/320/intermediate layout, navigation, local links, contact regressions and lint; no external effects or publish.
+- [ ] Production metadata and bundle-size verification: manual builds are prohibited in this environment; Ben will independently verify locally. Sandbox preview does not apply Helmet metadata or resolve the existing platform wordmark asset pointers; assets and SEO infrastructure remain unchanged.
+
+Verification: automatic compilation reports build OK; targeted public/shell lint and all 13 mocked contact tests passed. Chromium checked 18 page types at 1280/1024/768/390/320, then corrected the sole 320px internal-template overflow and checked all nine industry variants at 390/320. Public local links resolve; no runtime errors. Keyboard menu focus remains trapped, Escape restores trigger focus, navigation closes the menu, and accessible Menu title is present. Sample wrapper is singular on all eight static samples and the real wool-cardigan product route. No sample forms/cart actions, real submissions, accounts, messages, configuration changes or publishing. Natural multi-character business/email/message typing retains focus; pricing modal opens without submission. Website/care amounts and allowances remain shared and unchanged. Opaque text/background checks meet 4.5:1 normal-text contrast; translucent backgrounds were excluded from numeric audit and inspected visually. Existing /__l5e/ wordmark pointers cannot load in localhost Chromium, so actual editor logo rendering remains unverified, not replaced. Route-specific SEO props, article dates/slugs, meaningful business/site/service/breadcrumb schema and account noindex remain intact; hidden FAQ props removed. Fresh production metadata and bundle-size measurements were not run. Lock repair adds 28 missing entries plus two declared root metadata entries, with no existing package-version replacement and no package.json edits; all dependency edges resolve.
+
+Exact changed project files:
+- AGENTS.md; roadmap.md; package-lock.json; src/App.tsx; src/index.css; src/data/blogPosts.ts
+- src/components/layout/BrandMark.tsx; MarketingHeader.tsx; MarketingFooter.tsx; RouteLoading.tsx; SampleConceptLayout.tsx (all under src/components/layout/)
+- src/components/marketing/ReviewsStrip.tsx; src/components/ui/pricing-section.tsx
+- src/components/portal/ClientLayout.tsx; PortalHeader.tsx; TrustFooter.tsx (all under src/components/portal/)
+- src/pages/Index.tsx; WhatWeBuild.tsx; Pricing.tsx; AiReceptionist.tsx; Blog.tsx; BlogPost.tsx; Review.tsx; SayThanks.tsx; PrivacyPolicy.tsx; TermsOfService.tsx; NotFound.tsx; IntakeWizard.tsx (all under src/pages/)
+- src/pages/local/MidcoastPillar.tsx; TownPage.tsx; VerticalPage.tsx (all under src/pages/local/)
+- src/pages/demos/BoutiqueDemo.tsx; ContractorDemo.tsx; LandscaperDemo.tsx; PainterDemo.tsx; RestaurantDemo.tsx; RooferDemo.tsx; SalonDemo.tsx (all under src/pages/demos/; only redundant PCD top badges removed)
+- Project memory updated: public consistency constraints and index; no application assets deleted or replaced.
+
 # Narrow homepage revision
 - [x] Recapture Raven Rock after its reveal and visually verify the saved thumbnail and desktop/phone cards.
 - [x] Put services and the existing four smaller jobs before compact equal Pier 1 + Raven Rock work cards.

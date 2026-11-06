@@ -1,8 +1,8 @@
+import { MarketingFooter } from "@/components/layout/MarketingFooter";
 import { Link } from "react-router-dom";
 import { useState } from "react";
 import { Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { GlowCard } from "@/components/ui/spotlight-card";
 import { SEOHead } from "@/components/SEOHead";
 import { MarketingHeader } from "@/components/layout/MarketingHeader";
 import { REVIEW_URL, REVIEW_URL_IS_LIVE } from "@/lib/reviewLink";
@@ -10,17 +10,24 @@ import { toast } from "@/hooks/use-toast";
 
 const LINK = REVIEW_URL_IS_LIVE ? REVIEW_URL : "https://pleasantcovedesign.com/review";
 
-const SMS_TEMPLATE = `Hi {name} — thanks again for trusting us with the site. If it's been working for you, would you mind dropping a quick Google review? Takes about 30 seconds: ${LINK}`;
+const SMS_TEMPLATE = REVIEW_URL_IS_LIVE ? `Hi {name} — thanks again for trusting us with the site. If it's been working for you, would you mind dropping a quick Google review? Here’s the link: ${LINK}` : `Hi {name} — thanks for working with me. Would you share your honest feedback about the website and the process? ${LINK}`;
 
-const EMAIL_SUBJECT = "Quick favor — would you mind leaving a Google review?";
-const EMAIL_BODY = `Hi {name},
+const EMAIL_SUBJECT = REVIEW_URL_IS_LIVE ? "Would you share an honest Google review?" : "Would you share your feedback?";
+const EMAIL_BODY = REVIEW_URL_IS_LIVE ? `Hi {name},
 
-Hope the site is treating you well. If you've had a good experience working with us, would you be willing to leave a short Google review? It genuinely helps other Maine small businesses find us, and it takes about 30 seconds.
+Hope the site is treating you well. If you've had a good experience working with us, would you be willing to leave a short Google review? It genuinely helps other Maine small businesses find us, and it can be short.
 
 Here's the direct link:
 ${LINK}
 
 If you're not sure what to say, even one or two honest sentences is plenty. Thanks for considering it — and either way, I'm glad we got to work together.
+
+— Ben
+Pleasant Cove Design` : `Hi {name},
+
+Thank you for working with me. I’d welcome your honest thoughts about the website and the process — what went well and what could be better.
+
+You can email me from this page: ${LINK}
 
 — Ben
 Pleasant Cove Design`;
@@ -44,26 +51,26 @@ function TemplateCard({ title, description, value }: TemplateCardProps) {
     }
   };
   return (
-    <GlowCard customSize glowColor="emerald" className="bg-card/80 p-6">
+    <article className="min-w-0 rounded-lg border border-border bg-card p-6">
       <h2 className="font-serif text-xl font-bold mb-1">{title}</h2>
       <p className="text-sm text-muted-foreground mb-4">{description}</p>
-      <pre className="bg-card border border-border rounded-md p-3 text-xs whitespace-pre-wrap font-mono text-muted-foreground mb-3 overflow-x-auto">
+      <pre className="bg-card border border-border rounded-md p-3 text-xs whitespace-pre-wrap break-words font-mono text-muted-foreground mb-3 overflow-x-auto">
 {value}
       </pre>
       <Button onClick={handleCopy} variant="secondary" className="w-full">
         <Copy className="h-4 w-4 mr-2" />
         {copied ? "Copied" : "Copy"}
       </Button>
-    </GlowCard>
+    </article>
   );
 }
 
 const SayThanks = () => {
   return (
-    <div className="min-h-screen flex flex-col bg-page-bg text-foreground">
+    <div className="pcd-shell min-h-screen flex flex-col bg-page-bg text-foreground">
       <SEOHead
         title="Review request templates"
-        description="Internal templates for asking clients to leave a Google review."
+        description="Internal templates for requesting honest client feedback."
         path="/say-thanks"
         noindex
       />
@@ -107,6 +114,7 @@ const SayThanks = () => {
           </div>
         </section>
       </main>
+      <MarketingFooter />
     </div>
   );
 };

@@ -1,7 +1,8 @@
+import { MarketingFooter } from "@/components/layout/MarketingFooter";
 import { Link } from "react-router-dom";
 import { ArrowRight, ArrowUpRight, Globe, Wrench, ShieldCheck, Phone, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Footer } from "@/components/ui/footer";
+
 import { SEOHead } from "@/components/SEOHead";
 import { MarketingHeader } from "@/components/layout/MarketingHeader";
 import { NAP } from "@/lib/localPages";
@@ -29,7 +30,7 @@ const concepts = [
 ];
 
 const Index = () => (
-  <div className="homepage min-h-screen flex flex-col bg-page-bg text-foreground">
+  <div className="homepage pcd-shell min-h-screen flex flex-col bg-page-bg text-foreground">
       <SEOHead
         title="Midcoast Maine Web Design | Pleasant Cove Design"
         description="Web design, website improvements, and ongoing care for small businesses in Midcoast Maine. Work with Ben Dickinson at Pleasant Cove Design."
@@ -163,9 +164,7 @@ const Index = () => (
       </section>
       <section className="py-7 px-6 text-center"><p className="text-sm text-muted-foreground">Already a client? <Link to="/portal" className="underline underline-offset-4 hover:text-foreground">Open your client portal</Link></p></section>
     </main>
-    <Footer logo={<img src={pcdLogo} alt="Pleasant Cove Design sailboat" className="h-12 w-12 rounded" />} brandName="Pleasant Cove Design" socialLinks={[]} mainLinks={[
-      { href: "/what-we-build", label: "Services" }, { href: "/pricing", label: "Pricing" }, { href: "/portal", label: "Client Portal" }, { href: `mailto:${NAP.email}`, label: "Contact" }, { href: "/blog", label: "Blog" }, { href: "/ai-receptionist", label: "AI Receptionist" }, { href: "/operator", label: "Operator" },
-    ]} legalLinks={[{ href: "/privacy", label: "Privacy" }, { href: "/terms", label: "Terms" }]} locationLinks={{ label: "Service Area", links: [{ href: "/midcoast-maine", label: "Midcoast Maine" }] }} copyright={{ text: `© ${new Date().getFullYear()} Pleasant Cove Design`, license: "All rights reserved" }} />
-  </div>
+    <MarketingFooter />
+</div>
 );
 export default Index;

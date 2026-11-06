@@ -1,10 +1,10 @@
+import { Button } from "@/components/ui/button";
+import { MarketingFooter } from "@/components/layout/MarketingFooter";
 import { Link, useParams, Navigate } from "react-router-dom";
 
-import { LiquidButton } from "@/components/ui/liquid-glass-button";
 import { SEOHead } from "@/components/SEOHead";
 import { MarketingHeader } from "@/components/layout/MarketingHeader";
-import { TOWNS, VERTICALS, NAP, TOWN_NEIGHBORS } from "@/lib/localPages";
-import { GlowCard } from "@/components/ui/spotlight-card";
+import { TOWNS, VERTICALS, TOWN_NEIGHBORS } from "@/lib/localPages";
 import { ReviewsStrip } from "@/components/marketing/ReviewsStrip";
 import { MapPin, CheckCircle } from "lucide-react";
 
@@ -17,31 +17,13 @@ const TownPage = () => {
   const description = `Website design, fixes, and local SEO for small businesses in ${town.name}, Maine. Free website review with a clear fix plan.`;
 
   return (
-    <div className="min-h-screen flex flex-col bg-page-bg text-foreground">
+    <div className="pcd-shell min-h-screen flex flex-col bg-page-bg text-foreground">
       <SEOHead
         title={title}
         description={description}
         path={`/web-design/${town.slug}`}
         localBusiness
         areaServed={[`${town.name}, ME`]}
-        faq={[
-          {
-            question: `Do you work with small businesses in ${town.name}, Maine?`,
-            answer: `Yes. Pleasant Cove Design is a Midcoast Maine web studio that works directly with small, owner-operated businesses in ${town.name} — building new sites, fixing outdated ones, and adding clear booking and contact flows. Most projects start with a free website review.`,
-          },
-          {
-            question: `How much does a small business website cost in ${town.name}?`,
-            answer: `For ${town.name} small businesses, a simple one-page online brochure starts at $1,500, a custom business website starts at $3,500, and expanded sites or online stores start at $6,000. Larger projects are quoted individually. After launch, website care starts at $150/mo month-to-month, and AI services are billed as setup, monthly management, and actual usage.`,
-          },
-          {
-            question: `Do you handle local SEO for ${town.name}?`,
-            answer: `Yes. Every site we build ships with semantic HTML, schema markup, fast Core Web Vitals, and local-business signals tuned for ${town.name} and the surrounding Midcoast Maine area — so you show up when nearby customers search.`,
-          },
-          {
-            question: "Do I have to be in this town to work with you?",
-            answer: `No. Pleasant Cove Design is based in Newcastle, Maine and works on-site or remotely with businesses across ${town.name} and the rest of Maine — and remotely with small businesses anywhere in the US.`,
-          },
-        ]}
       />
       <MarketingHeader />
 
@@ -56,11 +38,9 @@ const TownPage = () => {
           </h1>
           <p data-speakable className="text-lg text-muted-foreground mb-2">{town.blurb}</p>
           <p className="text-base text-muted-foreground mb-8">
-            Pleasant Cove Design helps {town.name} small businesses fix outdated websites, broken contact forms, and confusing customer journeys — so the visitors you already have actually become customers.
+            Pleasant Cove Design helps {town.name} small businesses fix outdated websites, broken contact forms, and confusing customer journeys — so visitors can find what they need and contact you.
           </p>
-          <Link to={`/get-demo?service=review&town=${town.slug}`}>
-            <LiquidButton size="lg">Get a Free Website Review</LiquidButton>
-          </Link>
+          <Button asChild size="lg"><Link to={`/get-demo?service=review&town=${town.slug}`}>Get a Free Website Review</Link></Button>
         </div>
       </section>
 
@@ -73,7 +53,7 @@ const TownPage = () => {
             {[
               "Fix outdated, mobile-broken websites",
               "Add clear booking, contact, and quote flows",
-              "Set up local SEO so you show up for nearby searches",
+              "Improve technical SEO and accurate local business information",
               "Keep it maintained — backups, updates, small changes",
             ].map((line) => (
               <li key={line} className="flex items-start gap-3">
@@ -93,11 +73,11 @@ const TownPage = () => {
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 max-w-4xl mx-auto">
             {VERTICALS.map((v) => (
               <Link key={v.slug} to={v.demoPath ?? `/websites-for/${v.slug}`}>
-                <GlowCard customSize glowColor="emerald" className="bg-card/80 p-4 hover:bg-card transition-all h-full">
+                <article className="rounded-lg border border-border bg-card p-4 hover:bg-card transition-all h-full">
                   <h3 className="font-semibold text-foreground">{v.name}</h3>
                   <p className="text-xs text-muted-foreground mt-1">{v.outcome}</p>
                   {v.demoPath && <p className="text-xs text-accent mt-2">View demo →</p>}
-                </GlowCard>
+                </article>
               </Link>
             ))}
           </div>
@@ -120,7 +100,7 @@ const TownPage = () => {
                   <Link
                     key={slug}
                     to={`/web-design/${slug}`}
-                    className="text-sm border border-border rounded-md py-2 px-4 bg-card/60 text-muted-foreground hover:text-accent hover:bg-card transition-colors"
+                    className="text-sm border border-border rounded-md py-2 px-4 bg-card text-muted-foreground hover:text-accent hover:bg-card transition-colors"
                   >
                     {n.name}, ME
                   </Link>
@@ -153,24 +133,14 @@ const TownPage = () => {
       <section className="py-12 border-t border-border text-center">
         <div className="container mx-auto px-6">
           <h2 className="font-serif text-2xl md:text-3xl font-bold mb-4">
-            Find out what your {town.name} website is costing you.
+            Review your {town.name} website’s next steps.
           </h2>
-          <Link to={`/get-demo?service=review&town=${town.slug}`}>
-            <LiquidButton size="lg">Get My Free Review</LiquidButton>
-          </Link>
+          <Button asChild size="lg"><Link to={`/get-demo?service=review&town=${town.slug}`}>Get My Free Review</Link></Button>
         </div>
       </section>
       </main>
 
-      <footer className="border-t border-border py-8">
-        <div className="container mx-auto px-6 text-center text-sm text-muted-foreground">
-          <p className="mb-1">{NAP.name} · {NAP.city}, {NAP.region} · <a href={`tel:${NAP.phoneE164}`} className="hover:text-accent">{NAP.phone}</a> · {NAP.email}</p>
-          <p>Serving {town.name} and surrounding Midcoast Maine</p>
-          <p className="mt-3">
-            <Link to="/midcoast-maine" className="text-accent hover:underline">All Midcoast towns →</Link>
-          </p>
-        </div>
-      </footer>
+      <MarketingFooter />
     </div>
   );
 };

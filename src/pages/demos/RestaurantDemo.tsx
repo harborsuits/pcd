@@ -91,13 +91,6 @@ const RestaurantDemo = () => {
     <div className="min-h-screen bg-stone-950 text-stone-100 overflow-x-hidden relative">
       {/* SEO: visually hidden h1 (visual title is rendered inside ScrollExpandMedia as styled text). */}
       <h1 className="sr-only">The Golden Fork — Fine Dining Restaurant</h1>
-      {/* Pleasant Cove Design badge - fixed top left */}
-      <Link 
-        to="/" 
-        className="fixed top-4 left-4 z-50 flex items-center gap-1.5 text-xs text-stone-400 hover:text-amber-400 transition-colors bg-stone-950/60 backdrop-blur-sm px-3 py-1.5 rounded-full border border-stone-700/30 hover:border-amber-500/30"
-      >
-        <span className="text-sm">←</span> Pleasant Cove Design
-      </Link>
 
       {/* Fixed background - z-0 */}
       <div className="fixed inset-0 z-0">

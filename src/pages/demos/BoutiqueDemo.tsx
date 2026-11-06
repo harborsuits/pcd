@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { ArrowLeft, Phone, MapPin, Clock, Star, Instagram, ShoppingBag, Heart } from "lucide-react";
+import { Phone, MapPin, Clock, Star, Instagram, ShoppingBag, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { GlowCard } from "@/components/ui/spotlight-card";
 import { AwardBadge } from "@/components/ui/award-badge";
@@ -65,10 +65,7 @@ const BoutiqueDemo = () => {
       <header className="bg-white/80 backdrop-blur-sm border-b border-orange-200/50 sticky top-0 z-50">
         <div className="container mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Link to="/" className="text-orange-600 hover:text-orange-700 transition-colors text-sm font-medium flex items-center gap-1">
-              <ArrowLeft className="h-4 w-4" />
-              Pleasant Cove Design
-            </Link>
+            
           </div>
           <span className="font-serif text-2xl tracking-wide" style={{ color: '#B87333' }}>The Copper Fox</span>
           <nav className="hidden md:flex items-center gap-6 text-sm">

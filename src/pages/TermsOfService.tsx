@@ -1,17 +1,20 @@
+import { MarketingHeader } from "@/components/layout/MarketingHeader";
+import { MarketingFooter } from "@/components/layout/MarketingFooter";
 import { Link } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { SEOHead } from "@/components/SEOHead";
 
 const TermsOfService = () => {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="pcd-shell min-h-screen flex flex-col bg-page-bg text-foreground">
       <SEOHead
         title="Terms of Service"
         description="Terms for Pleasant Cove Design websites, client portal, messaging, and AI receptionist — payment, ownership, warranties, and liability."
         path="/terms"
         noindex
       />
-      <main className="max-w-4xl mx-auto px-4 py-12 sm:px-6 lg:px-8">
+      <MarketingHeader />
+      <main className="max-w-3xl mx-auto px-5 sm:px-6 py-10 md:py-12 w-full flex-1">
         <Link 
           to="/" 
           className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors mb-8"
@@ -20,7 +23,7 @@ const TermsOfService = () => {
           Back to Home
         </Link>
 
-        <article className="prose prose-slate dark:prose-invert max-w-none">
+        <article className="pcd-editorial">
           <h1>Terms of Service</h1>
           <p className="text-lg text-muted-foreground"><strong>Pleasant Cove Design</strong></p>
           <p className="text-sm text-muted-foreground"><em>Last updated: January 2026</em></p>
@@ -199,7 +202,7 @@ const TermsOfService = () => {
           <p>If you have questions about these Terms, contact:</p>
           <p>
             <strong>Pleasant Cove Design</strong><br />
-            📧 <a href="mailto:support@pleasantcovedesign.com">support@pleasantcovedesign.com</a><br />
+            📧 <a href="mailto:pleasantcovedesign@gmail.com">pleasantcovedesign@gmail.com</a><br />
             🌐 <a href="https://pleasantcovedesign.com">https://pleasantcovedesign.com</a>
           </p>
 
@@ -212,6 +215,7 @@ const TermsOfService = () => {
           </div>
         </article>
       </main>
+      <MarketingFooter />
     </div>
   );
 };

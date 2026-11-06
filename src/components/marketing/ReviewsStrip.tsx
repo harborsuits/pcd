@@ -1,6 +1,5 @@
 import { Link } from "react-router-dom";
 import { Star } from "lucide-react";
-import { GlowCard } from "@/components/ui/spotlight-card";
 import { REVIEWS, type Review } from "@/data/reviews";
 
 interface ReviewsStripProps {
@@ -67,11 +66,9 @@ export function ReviewsStrip({
         </div>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 max-w-5xl mx-auto">
           {items.map((r, i) => (
-            <GlowCard
+            <article
               key={`${r.author}-${i}`}
-              customSize
-              glowColor="emerald"
-              className="bg-card/80 p-5 h-full"
+              className="bg-card border border-border rounded-lg p-5 h-full"
             >
               <Stars rating={r.rating} />
               <p className="text-sm text-muted-foreground mt-3 mb-4">
@@ -81,7 +78,7 @@ export function ReviewsStrip({
                 {r.author}
                 <span className="font-normal text-muted-foreground"> · Google</span>
               </p>
-            </GlowCard>
+            </article>
           ))}
         </div>
       </div>
