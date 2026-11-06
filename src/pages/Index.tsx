@@ -84,7 +84,7 @@ const Index = () => (
               <p className="text-muted-foreground leading-relaxed mb-5">Hosting, maintenance, backups, and a reliable place to turn when your website needs attention.</p>
               <div className="space-y-4 mb-4">{CARE_PLANS.map(plan => <div key={plan.id}><p className="font-semibold">{plan.label} · {plan.price}</p><p className="text-sm text-muted-foreground mt-1">{plan.features.find(feature => feature.startsWith("Up to"))}</p></div>)}</div>
               <p className="text-sm text-muted-foreground mb-6">No editing-time rollover. Larger work is separately scoped; allowances and terms are set in your proposal.</p>
-              <Button asChild variant="outline" className="mt-auto justify-between"><Link to="/get-demo?service=existing">Discuss website care <ArrowRight className="h-4 w-4" /></Link></Button>
+              <Button asChild variant="outline" className="mt-auto justify-between"><Link to="/get-demo?product=care_plan&tier=care_website">Discuss website care <ArrowRight className="h-4 w-4" /></Link></Button>
             </article>
           </div>
         </div>
