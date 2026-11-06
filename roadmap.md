@@ -36,3 +36,8 @@ Raven Rock recapture: waited 12 seconds for the real public homepage reveal, the
 - [x] Replace large service cards with a compact preselected native selector; preserve auto-open, contextual town and service/tier/product/trial payloads.
 - [x] Run contact regressions and desktop/phone deep-link checks with mocked submissions only; leave assets/server unchanged and do not publish.
 - Verification: 13 contact tests and targeted lint pass; build OK. Chromium checked all eight supported service/pilot intent mappings at 1280/390/320, including automatic opening, 40px selector, natural typing/focus, service changes, required town and no overflow. Mocked payload assertions preserve service, tier, product and trial. No real submissions or publishing.
+
+# What We Build page refresh (Nov 6)
+- [x] Replace route-only videos, stock cards, carousel and gallery with static branded workflow and editorial service rows.
+- [x] Use shared starting prices, scopes, care limits and four smaller jobs; preserve inquiry destinations and route schema, remove hidden FAQ.
+- [ ] Verify targeted lint, desktop/390/320 layout, keyboard links, contrast, metadata and unchanged homepage/contact sources; no publish or real submissions.
