@@ -18,3 +18,10 @@ Raven Rock recapture: waited 12 seconds for the real public homepage reveal, the
 - [ ] Preview's in-browser title/canonical/schema tags not applying (pre-existing; live site applies them) — needs follow-up investigation.
 
 - Done: static fallback meta tags managed by SEOHead carry data-rh="true" so Helmet replaces them (no duplicates).
+# Contact + style refinement (Nov 6)
+- [ ] /get-demo leads with Email Ben (gmail), Start with an account, returning-client login, secondary Text Ben (sms).
+- [ ] Short inquiry: 3 visible essentials (business, email, message); optional details in disclosure; deep links honored; city required for demo/website/existing.
+- [ ] Guest receipt in place + optional create-password; IntakeWizard session via portalSupabase.
+- [ ] NAP.email -> pleasantcovedesign@gmail.com; replace stale hello@ emails in marketing UI/llms.txt.
+- [ ] Contact as nav route; restrained homepage/contact style refinement.
+- [ ] Verify 1280/390/320, mocked submissions only, no publish.
