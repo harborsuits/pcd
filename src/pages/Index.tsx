@@ -63,6 +63,7 @@ function HomeHero() {
           </p>
         </div>
         <div className="pcd-home-hero__art">
+          <div className="pcd-home-hero__plaque">
           <div className="pcd-home-hero__boatwrap">
             <img
               src={pcdLogo}
@@ -71,29 +72,9 @@ function HomeHero() {
               height={360}
               className="pcd-home-hero__boat"
             />
-            <svg className="pcd-home-hero__wind" aria-hidden="true" focusable="false" viewBox="0 0 200 120">
-              <path d="M0 30 Q 40 24 80 30" />
-              <path d="M10 55 Q 50 49 95 55" />
-              <path d="M0 80 Q 35 75 70 80" />
-            </svg>
-            <svg className="pcd-home-hero__water" aria-hidden="true" focusable="false" viewBox="0 0 400 80" preserveAspectRatio="none">
-              <g className="pcd-home-hero__waves pcd-home-hero__waves--back">
-                <path d="M0 26 Q 25 18 50 26 T 100 26 T 150 26 T 200 26 T 250 26 T 300 26 T 350 26 T 400 26 T 450 26 T 500 26 T 550 26 T 600 26 V80 H0 Z" />
-              </g>
-              <g className="pcd-home-hero__foam">
-                <ellipse cx="200" cy="30" rx="70" ry="4" />
-                <ellipse cx="200" cy="32" rx="95" ry="3" />
-              </g>
-              <g className="pcd-home-hero__waves pcd-home-hero__waves--front">
-                <path d="M0 36 Q 20 29 40 36 T 80 36 T 120 36 T 160 36 T 200 36 T 240 36 T 280 36 T 320 36 T 360 36 T 400 36 T 440 36 T 480 36 T 520 36 T 560 36 T 600 36 V80 H0 Z" />
-              </g>
-              <g className="pcd-home-hero__ripples">
-                <ellipse cx="200" cy="34" rx="60" ry="3" />
-                <ellipse cx="200" cy="34" rx="60" ry="3" />
-              </g>
-            </svg>
           </div>
           <p className="pcd-home-hero__caption font-serif">A clear course for your website.</p>
+          </div>
         </div>
       </div>
     </section>
@@ -117,7 +98,7 @@ const Index = () => (
           <p className="text-sm text-accent font-semibold mb-3">Start where you are</p>
           <h2 className="font-serif text-3xl md:text-4xl font-bold mb-8">What does your website need?</h2>
           <div className="grid md:grid-cols-3 gap-6">
-            <article className="border border-border bg-card rounded-xl p-6 flex flex-col shadow-sm transition-shadow hover:shadow-md border-t-2 border-t-accent/60">
+            <article className="pcd-soft-card rounded-2xl p-7 flex flex-col">
               <Globe className="h-6 w-6 text-accent mb-5" aria-hidden="true" />
               <h3 className="font-serif text-2xl font-bold mb-3">Build a website</h3>
               <p className="text-muted-foreground leading-relaxed mb-5">
@@ -139,7 +120,7 @@ const Index = () => (
                 </Link>
               </Button>
             </article>
-            <article className="border border-border bg-card rounded-xl p-6 flex flex-col shadow-sm transition-shadow hover:shadow-md border-t-2 border-t-accent/60">
+            <article className="pcd-soft-card rounded-2xl p-7 flex flex-col">
               <Wrench className="h-6 w-6 text-accent mb-5" aria-hidden="true" />
               <h3 className="font-serif text-2xl font-bold mb-3">Improve an existing site</h3>
               <p className="text-muted-foreground leading-relaxed mb-5">
@@ -157,7 +138,7 @@ const Index = () => (
                 </Link>
               </Button>
             </article>
-            <article className="border border-border bg-card rounded-xl p-6 flex flex-col shadow-sm transition-shadow hover:shadow-md border-t-2 border-t-accent/60">
+            <article className="pcd-soft-card rounded-2xl p-7 flex flex-col">
               <ShieldCheck className="h-6 w-6 text-accent mb-5" aria-hidden="true" />
               <h3 className="font-serif text-2xl font-bold mb-3">Ongoing website care</h3>
               <p className="text-muted-foreground leading-relaxed mb-5">
@@ -206,7 +187,7 @@ const Index = () => (
             {smallerJobs.map((service) => (
               <article
                 key={service.id}
-                className="border border-border rounded-xl p-5 flex flex-col bg-card shadow-sm transition-shadow hover:shadow-md"
+                className="pcd-soft-card rounded-2xl p-6 flex flex-col"
               >
                 <h3 className="font-semibold text-lg mb-2">{service.label}</h3>
                 <p className="font-serif text-2xl font-bold mb-4">{service.price}</p>

@@ -689,110 +689,48 @@ All colors MUST be HSL.
   outline: 3px solid hsl(var(--hh-mint));
   outline-offset: 3px;
 }
+.pcd-home-hero::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 4rem; pointer-events: none;
+  background: linear-gradient(180deg, transparent, hsl(var(--page-bg, var(--background)) / 0.18));
+}
 .pcd-home-hero__art {
-  position: relative;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  padding: 1.75rem 1.5rem 3rem;
-  min-height: 16rem;
-  background-color: hsl(var(--hh-paper));
+  position: relative; min-width: 0; display: flex; align-items: center; justify-content: center;
+  padding: 0 1.5rem 3.5rem;
+}
+@media (min-width: 1024px) {
+  .pcd-home-hero__art { padding: 3.5rem max(2rem, calc((100vw - 72rem) / 2 + 2rem)) 4.5rem 1rem; }
+}
+.pcd-home-hero__plaque {
+  display: flex; flex-direction: column; align-items: center; gap: 0.75rem;
+  width: 100%; max-width: 26rem; padding: 2rem 1.5rem 1.75rem;
+  border-radius: 1.75rem;
+  background: radial-gradient(120% 90% at 50% 30%, hsl(var(--hh-ivory)), hsl(var(--hh-paper)));
+  border: 1px solid hsl(40 40% 88%);
+  box-shadow: 0 1px 0 hsl(0 0% 100% / 0.6) inset, 0 24px 60px -24px hsl(207 70% 6% / 0.6), 0 0 0 8px hsl(var(--hh-ivory) / 0.04);
   color: hsl(var(--hh-navy));
 }
-@media (min-width: 1024px) {
-  .pcd-home-hero__art {
-    padding: 3rem 2rem 5.5rem;
-  }
-}
-.pcd-home-hero__boatwrap {
-  position: relative;
-  width: clamp(180px, 50vw, 210px);
-  padding: 4px 0;
-}
-@media (min-width: 768px) {
-  .pcd-home-hero__boatwrap {
-    width: 260px;
-  }
-}
-@media (min-width: 1024px) {
-  .pcd-home-hero__boatwrap {
-    width: clamp(300px, 26vw, 360px);
-  }
-}
+.pcd-home-hero__boatwrap { width: clamp(170px, 50vw, 220px); }
+@media (min-width: 1024px) { .pcd-home-hero__boatwrap { width: clamp(240px, 22vw, 300px); } }
 .pcd-home-hero__boat {
-  width: 100%;
-  height: auto;
-  display: block;
-  mix-blend-mode: multiply;
-  animation: pcd-hh-bob 6s ease-in-out infinite;
-  transform-origin: 50% 80%;
-  will-change: transform;
+  width: 100%; height: auto; display: block; mix-blend-mode: multiply;
+  transform-origin: 50% 78%; will-change: transform;
+  animation: pcd-hh-buoy 8s cubic-bezier(0.45, 0, 0.55, 1) infinite;
 }
-@keyframes pcd-hh-bob {
-  0%,
-  100% {
-    transform: translateY(0) rotate(0deg);
-  }
-  25% {
-    transform: translateY(-10px) rotate(2deg);
-  }
-  50% {
-    transform: translateY(0) rotate(0deg);
-  }
-  75% {
-    transform: translateY(6px) rotate(-2deg);
-  }
+@keyframes pcd-hh-buoy {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  25% { transform: translateY(-3px) rotate(0.6deg); }
+  50% { transform: translateY(-4px) rotate(0deg); }
+  75% { transform: translateY(-1px) rotate(-0.6deg); }
 }
-@media (prefers-reduced-motion: reduce) {
-  .pcd-home-hero__boat {
-    animation: none;
-  }
-}
-.pcd-home-hero__caption {
-  font-style: italic;
-  font-size: 1.05rem;
-  color: hsl(var(--hh-navy));
-  text-align: center;
-}
+@media (prefers-reduced-motion: reduce) { .pcd-home-hero__boat { animation: none; } }
+.pcd-home-hero__caption { font-style: italic; font-size: 1.05rem; text-align: center; color: hsl(var(--hh-navy)); }
 
-/* Water around the hull + wind on the sails */
-.pcd-home-hero__water {
-  position: absolute; left: -15%; width: 130%; bottom: 4%; height: 26%;
-  overflow: visible; pointer-events: none;
-  -webkit-mask-image: linear-gradient(90deg, transparent, #000 20%, #000 80%, transparent);
-  mask-image: linear-gradient(90deg, transparent, #000 20%, #000 80%, transparent);
-  animation: pcd-hh-swell 6s ease-in-out infinite;
+/* Soft warm cards on homepage */
+.pcd-soft-card {
+  background: hsl(var(--card));
+  border: 1px solid hsl(35 25% 88%);
+  box-shadow: 0 1px 2px hsl(207 40% 20% / 0.04), 0 12px 32px -18px hsl(207 40% 20% / 0.18);
+  transition: box-shadow 0.25s ease, transform 0.25s ease;
 }
-@keyframes pcd-hh-swell { 0%,100% { transform: translateY(0); } 25% { transform: translateY(-5px); } 75% { transform: translateY(4px); } }
-.pcd-home-hero__waves { animation: pcd-hh-waves 8s linear infinite; }
-.pcd-home-hero__waves--back path { fill: hsl(var(--hh-teal) / 0.35); }
-.pcd-home-hero__waves--front path { fill: hsl(var(--hh-teal) / 0.85); }
-.pcd-home-hero__waves--front { animation-duration: 5s; animation-direction: reverse; }
-@keyframes pcd-hh-waves { from { transform: translateX(0); } to { transform: translateX(-100px); } }
-.pcd-home-hero__foam ellipse { fill: hsl(0 0% 100% / 0.85); transform-box: fill-box; transform-origin: center; animation: pcd-hh-foam 3s ease-in-out infinite; }
-.pcd-home-hero__foam ellipse:nth-child(2) { fill: hsl(0 0% 100% / 0.5); animation-delay: 1.5s; }
-@keyframes pcd-hh-foam { 0%,100% { transform: scaleX(0.9); opacity: 0.6; } 50% { transform: scaleX(1.08); opacity: 1; } }
-.pcd-home-hero__ripples ellipse { fill: none; stroke: hsl(0 0% 100% / 0.8); stroke-width: 1.2; transform-box: fill-box; transform-origin: center; animation: pcd-hh-ripple 4s ease-out infinite; }
-.pcd-home-hero__ripples ellipse:nth-child(2) { animation-delay: 2s; }
-@keyframes pcd-hh-ripple { from { transform: scale(0.9); opacity: 0.9; } to { transform: scale(1.9, 2.4); opacity: 0; } }
-.pcd-home-hero__wind {
-  position: absolute; left: -30%; top: 12%; width: 45%; pointer-events: none;
-  fill: none; stroke: hsl(var(--hh-teal) / 0.55); stroke-width: 2; stroke-linecap: round;
-}
-.pcd-home-hero__wind path { stroke-dasharray: 40 160; animation: pcd-hh-wind 3.2s ease-in-out infinite; }
-.pcd-home-hero__wind path:nth-child(2) { animation-delay: 0.9s; }
-.pcd-home-hero__wind path:nth-child(3) { animation-delay: 1.8s; }
-@keyframes pcd-hh-wind { 0% { stroke-dashoffset: 60; opacity: 0; } 30% { opacity: 1; } 100% { stroke-dashoffset: -140; opacity: 0; } }
-.pcd-home-hero__boat { animation-name: pcd-hh-sail; transform-origin: 50% 85%; }
-@keyframes pcd-hh-sail {
-  0%, 100% { transform: translateY(0) rotate(0deg) skewX(0deg); }
-  25% { transform: translateY(-5px) rotate(1.5deg) skewX(-1.5deg); }
-  50% { transform: translateY(0) rotate(0.5deg) skewX(-2.5deg); }
-  75% { transform: translateY(4px) rotate(-1.5deg) skewX(-0.5deg); }
-}
-@media (prefers-reduced-motion: reduce) {
-  .pcd-home-hero__water, .pcd-home-hero__waves, .pcd-home-hero__foam ellipse, .pcd-home-hero__ripples ellipse, .pcd-home-hero__wind path, .pcd-home-hero__boat { animation: none; }
-}
+.pcd-soft-card:hover { box-shadow: 0 2px 4px hsl(207 40% 20% / 0.05), 0 20px 40px -20px hsl(207 40% 20% / 0.26); transform: translateY(-2px); }
+@media (prefers-reduced-motion: reduce) { .pcd-soft-card:hover { transform: none; } }
