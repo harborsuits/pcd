@@ -28,5 +28,6 @@ Raven Rock recapture: waited 12 seconds for the real public homepage reveal, the
 - Note: wave wordmark SVG asset 404s in sandbox dev server only (SPA fallback); serves 200 image/svg+xml on production. Pre-existing, not from this change.
 
 # Contact typing regression (Nov 6)
-- [ ] Stabilize inquiry DOM identity, preserve both disclosures and values on service changes, expose required fields, and separate mobile email helper.
-- [ ] Verify sequential typing/focus/caret and mocked loading/success/error; no real submissions or publishing.
+- [x] Stabilize inquiry DOM identity, preserve both disclosures and values on service changes, expose required fields, and separate mobile email helper.
+- [x] Verify sequential typing/focus/caret and mocked loading/success/error; no real submissions or publishing.
+- Verification: reproduced PCD becoming P before the fix; PCD and full email/message typing now retain DOM nodes, focus and caret. Five focused tests and targeted lint pass; Chromium checks at 1280/390/320 pass with mocked loading, error/retry and success, preserved service/disclosure values, and no overflow. Preview build OK. Only contact page, regression tests, architecture rule and this note changed; no backend/auth/config changes.
