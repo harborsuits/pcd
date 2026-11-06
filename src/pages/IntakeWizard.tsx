@@ -74,6 +74,9 @@ const GetDemo = () => {
   const serviceParam = searchParams.get("service");
   const hasDeepLink = !!(serviceParam && SERVICE_PARAM_MAP[serviceParam]) || productParam === "pilot";
 
+  // Controlled so React re-renders (typing) never collapse the form
+  const [inquiryOpen, setInquiryOpen] = useState(hasDeepLink);
+
   useEffect(() => {
     const checkAuth = async () => {
       const { data: { session } } = await portalSupabase.auth.getSession();
@@ -306,7 +309,11 @@ const GetDemo = () => {
               </div>
 
               {/* Secondary: short website inquiry */}
-              <details className="group rounded-2xl border border-border bg-card shadow-sm" open={hasDeepLink}>
+              <details
+                className="group rounded-2xl border border-border bg-card shadow-sm"
+                open={inquiryOpen}
+                onToggle={(e) => setInquiryOpen(e.currentTarget.open)}
+              >
                 <summary className="cursor-pointer list-none flex items-center justify-between gap-3 p-4 md:p-5 font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring rounded-2xl">
                   <span>Prefer a short website inquiry?</span>
                   <ArrowRight className="h-4 w-4 shrink-0 transition-transform group-open:rotate-90" aria-hidden="true" />
