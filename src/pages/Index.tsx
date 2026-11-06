@@ -87,20 +87,11 @@ const Index = () => (
         </div>
       </section>
 
-      <section aria-labelledby="about-ben" className="border-t border-border bg-background py-10 md:py-12">
-        <div className="max-w-3xl mx-auto px-6">
-          <div className="flex items-center gap-3 mb-5">
-            <img src={pcdLogo} alt="Pleasant Cove Design sailboat mark" width={40} height={40} loading="lazy" className="h-10 w-10 shrink-0 rounded" />
-            <div className="min-w-0">
-              <p className="text-xs font-semibold uppercase tracking-wider text-accent">About Pleasant Cove Design</p>
-              <h2 id="about-ben" className="font-serif text-2xl md:text-3xl font-bold">Hi, I’m Ben.</h2>
-            </div>
-          </div>
-          <div className="space-y-4 text-base md:text-lg leading-relaxed">
-            <p>I’m Ben Dickinson, and I run Pleasant Cove Design in Midcoast Maine. I work with small-business owners who need a website they can feel confident sending customers to.</p>
-            <p>My approach is straightforward: understand your business, explain the options in plain language, and agree on the work and price before we begin. Whether you need a new website or a focused improvement, you’ll know what’s included and what comes next.</p>
-          </div>
-          <Link to="/get-demo" className="mt-5 inline-flex items-center gap-1 font-semibold text-accent underline-offset-4 hover:underline">Tell me about your website <ArrowRight className="h-4 w-4" aria-hidden="true" /></Link>
+      <section className="border-t border-border bg-background py-12 md:py-16">
+        <div className="max-w-6xl mx-auto px-6">
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8"><div><p className="text-sm text-accent font-semibold mb-3">Smaller jobs welcome</p><h2 className="font-serif text-3xl md:text-4xl font-bold">You don’t always need a new website.</h2></div><Button asChild variant="ghost"><Link to="/pricing">Full pricing & scope <ArrowRight className="ml-2 h-4 w-4" /></Link></Button></div>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">{smallerJobs.map(service => <article key={service.id} className="border border-border rounded-lg p-5 flex flex-col bg-card"><h3 className="font-semibold text-lg mb-2">{service.label}</h3><p className="font-serif text-2xl font-bold mb-4">{service.price}</p><p className="text-sm text-muted-foreground leading-relaxed mb-5">{service.description}</p><Button asChild variant="link" className="mt-auto self-start p-0 h-auto"><Link to="/pricing">View scope <ArrowRight className="ml-2 h-4 w-4" /></Link></Button></article>)}</div>
+          <p className="text-muted-foreground text-sm leading-relaxed mt-7 max-w-3xl">{ALACARTE_NOTE}</p>
         </div>
       </section>
 
@@ -136,8 +127,21 @@ const Index = () => (
         </div>
       </section>
 
-      <section className="border-t border-border bg-background py-12 md:py-16">
-        <div className="max-w-6xl mx-auto px-6 grid md:grid-cols-[1fr_2fr] gap-6 md:gap-16"><h2 className="font-serif text-3xl md:text-4xl font-bold">Meet Ben</h2><p className="text-xl md:text-2xl leading-relaxed">I’m Ben Dickinson, the person behind Pleasant Cove Design. I build, improve, and maintain websites for small businesses in Midcoast Maine.</p></div>
+      <section aria-labelledby="about-ben" className="border-t border-border bg-background py-10 md:py-12">
+        <div className="max-w-3xl mx-auto px-6">
+          <div className="flex items-center gap-3 mb-5">
+            <img src={pcdLogo} alt="Pleasant Cove Design sailboat mark" width={40} height={40} loading="lazy" className="h-10 w-10 shrink-0 rounded" />
+            <div className="min-w-0">
+              <p className="text-xs font-semibold uppercase tracking-wider text-accent">About Pleasant Cove Design</p>
+              <h2 id="about-ben" className="font-serif text-2xl md:text-3xl font-bold">Hi, I’m Ben.</h2>
+            </div>
+          </div>
+          <div className="space-y-4 text-base md:text-lg leading-relaxed">
+            <p>I’m Ben Dickinson, and I run Pleasant Cove Design in Midcoast Maine. I work with small-business owners who need a website they can feel confident sending customers to.</p>
+            <p>My approach is straightforward: understand your business, explain the options in plain language, and agree on the work and price before we begin. Whether you need a new website or a focused improvement, you’ll know what’s included and what comes next.</p>
+          </div>
+          <Link to="/get-demo" className="mt-5 inline-flex items-center gap-1 font-semibold text-accent underline-offset-4 hover:underline">Tell me about your website <ArrowRight className="h-4 w-4" aria-hidden="true" /></Link>
+        </div>
       </section>
 
       <section id="demos" className="border-t border-border py-10 scroll-mt-28">
