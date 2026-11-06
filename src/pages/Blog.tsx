@@ -90,7 +90,7 @@ const Blog = () => {
           legalLinks={[
             { href: "/privacy", label: "Privacy" },
             { href: "/terms", label: "Terms" },
-            { href: "mailto:hello@pleasantcovedesign.com", label: "Contact" },
+            { href: "mailto:pleasantcovedesign@gmail.com", label: "Contact" },
           ]}
           locationLinks={{
             label: "Service Area",

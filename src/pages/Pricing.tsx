@@ -102,7 +102,7 @@ const Pricing = () => {
             <Link to="/terms" className="hover:text-foreground transition-colors">
               Terms
             </Link>
-            <a href="mailto:hello@pleasantcove.design" className="hover:text-foreground transition-colors">
+            <a href="mailto:pleasantcovedesign@gmail.com" className="hover:text-foreground transition-colors">
               Contact
             </a>
           </div>

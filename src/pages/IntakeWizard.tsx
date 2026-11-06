@@ -1,13 +1,13 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, ArrowRight, Loader2, Globe, Bot, Package, Wrench, MessageSquare, Phone } from "lucide-react";
+import { ArrowLeft, ArrowRight, Loader2, Globe, Bot, Package, Wrench, MessageSquare, Mail, UserPlus, LogIn, CheckCircle2 } from "lucide-react";
 import pcdLogo from "@/assets/pcd-logo.jpeg";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { portalSupabase } from "@/integrations/supabase/portalClient";
 import { SEOHead } from "@/components/SEOHead";
 import { cn } from "@/lib/utils";
 import { NAP } from "@/lib/localPages";
@@ -53,13 +53,14 @@ const GetDemo = () => {
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [touched, setTouched] = useState<Record<string, boolean>>({});
 
-  const [serviceType, setServiceType] = useState<ServiceType>("");
+  const [serviceType, setServiceType] = useState<ServiceType>("other");
   const [businessName, setBusinessName] = useState("");
   const [serviceArea, setServiceArea] = useState("");
   const [yourName, setYourName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [notes, setNotes] = useState("");
+  const [receipt, setReceipt] = useState<{ projectToken: string | null; email: string; name: string; business: string } | null>(null);
 
   // ?service=review → the lightweight free-review form
   const isReviewMode = searchParams.get("service") === "review";
@@ -69,15 +70,22 @@ const GetDemo = () => {
   const productParam = searchParams.get("product");
   const isTrial = searchParams.get("trial") === "true";
 
+  // An explicit deep link opens the inquiry with that service preselected
+  const serviceParam = searchParams.get("service");
+  const hasDeepLink = !!(serviceParam && SERVICE_PARAM_MAP[serviceParam]) || productParam === "pilot";
+
+  // Controlled so React re-renders (typing) never collapse the form
+  const [inquiryOpen, setInquiryOpen] = useState(hasDeepLink);
+
   useEffect(() => {
     const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+      const { data: { session } } = await portalSupabase.auth.getSession();
       setIsLoggedIn(!!session);
       setAccessToken(session?.access_token ?? null);
     };
     checkAuth();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
+    const { data: { subscription } } = portalSupabase.auth.onAuthStateChange((_, session) => {
       setIsLoggedIn(!!session);
       setAccessToken(session?.access_token ?? null);
     });
@@ -86,13 +94,12 @@ const GetDemo = () => {
   }, []);
 
   useEffect(() => {
-    const serviceParam = searchParams.get("service");
     if (serviceParam && SERVICE_PARAM_MAP[serviceParam]) {
       setServiceType(SERVICE_PARAM_MAP[serviceParam]);
     } else if (productParam === "pilot") {
       setServiceType("ai");
     }
-  }, [searchParams, productParam]);
+  }, [serviceParam, productParam]);
 
   const isValidEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(value.trim());
 
@@ -102,11 +109,12 @@ const GetDemo = () => {
     !!serviceType &&
     businessName.trim().length > 1 &&
     isValidEmail(email) &&
+    notes.trim().length > 1 &&
     (!locationRequired || serviceArea.trim().length > 1);
 
   const handleSubmit = async () => {
     if (!canSubmit || isLoading) {
-      setTouched({ businessName: true, email: true, serviceArea: true });
+      setTouched({ businessName: true, email: true, serviceArea: true, notes: true });
       return;
     }
 
@@ -115,7 +123,7 @@ const GetDemo = () => {
       const headers: Record<string, string> = {};
       if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
 
-      const { data, error } = await supabase.functions.invoke("leads/request-demo", {
+      const { data, error } = await portalSupabase.functions.invoke("leads/request-demo", {
         headers,
         body: {
           business_name: businessName.trim(),
@@ -145,30 +153,18 @@ const GetDemo = () => {
         return;
       }
 
-      if (data?.project_token && email) {
-        toast({ title: "Got it — thanks!", description: "Let's set up your account so you can follow along." });
-        const params = new URLSearchParams({
-          token: data.project_token,
-          email: email.trim(),
-          name: yourName.trim(),
-          business: businessName.trim(),
-        });
-        navigate(`/create-password?${params.toString()}`);
-        return;
-      }
-
-      if (data?.project_token) {
-        navigate(`/p/${data.project_token}`);
-        return;
-      }
-
-      toast({ title: "Request received", description: "We'll be in touch shortly." });
-      navigate("/");
+      // Guest inquiry: honest in-place receipt, optional account setup
+      setReceipt({
+        projectToken: data?.project_token ?? null,
+        email: email.trim(),
+        name: yourName.trim(),
+        business: businessName.trim(),
+      });
     } catch (err) {
       console.error("Inquiry error:", err);
       toast({
         title: "Something went wrong",
-        description: `Please try again, or call us at ${NAP.phone}.`,
+        description: `Please try again, or email ${NAP.email}.`,
         variant: "destructive",
       });
     } finally {
@@ -221,190 +217,303 @@ const GetDemo = () => {
     );
   }
 
+  const createPasswordHref = receipt?.projectToken
+    ? `/create-password?${new URLSearchParams({
+        token: receipt.projectToken,
+        email: receipt.email,
+        name: receipt.name,
+        business: receipt.business,
+      }).toString()}`
+    : null;
+
   return (
     <Shell>
       <SEOHead
-        title="Get Started"
-        description="Tell us about your business in under a minute. No obligation, no spam — we'll follow up with a clear next step."
+        title="Contact — Pleasant Cove Design"
+        description="Email Ben directly, start with a client account, or send a short website inquiry. Pleasant Cove Design, Midcoast Maine."
         path="/get-demo"
       />
 
-      <main className="flex-1 flex items-start justify-center py-12 px-6">
+      <main className="flex-1 flex items-start justify-center py-10 md:py-14 px-6">
         <div className="w-full max-w-lg">
           <div className="text-center mb-8">
             <img src={pcdLogo} alt="Pleasant Cove Design" className="w-12 h-12 rounded-full mb-4 mx-auto" />
-            <h1 className="font-serif text-3xl md:text-4xl font-bold mb-3">Let's talk about your business</h1>
+            <h1 className="font-serif text-3xl md:text-4xl font-bold mb-3">Get in touch</h1>
             <p className="text-muted-foreground">
-              Takes about a minute. No commitment, and we'll follow up with a clear next step.
+              The fastest way to reach me is email. Prefer to keep everything in one place? Start with a client account.
             </p>
           </div>
 
-          <form
-            className="space-y-6"
-            onSubmit={(e) => {
-              e.preventDefault();
-              handleSubmit();
-            }}
-          >
-            {/* 1. What do you need */}
-            <div className="space-y-3">
-              <Label>What are you after? *</Label>
-              <div className="grid gap-2">
-                {SERVICE_OPTIONS.map((option) => {
-                  const Icon = option.icon;
-                  const selected = serviceType === option.value;
-                  return (
-                    <button
-                      key={option.value}
-                      type="button"
-                      onClick={() => setServiceType(option.value)}
-                      className={cn(
-                        "flex items-start gap-3 p-3 rounded-xl border-2 text-left transition-all duration-200 hover:border-primary/50",
-                        selected ? "border-primary bg-primary/5" : "border-border bg-card"
+          {receipt ? (
+            /* Honest in-place receipt after a guest inquiry */
+            <div className="rounded-2xl border border-border bg-card p-6 md:p-8 text-center shadow-sm">
+              <CheckCircle2 className="w-10 h-10 text-accent mx-auto mb-4" aria-hidden="true" />
+              <h2 className="font-serif text-2xl font-bold mb-3">Your inquiry has been saved.</h2>
+              <p className="text-muted-foreground leading-relaxed mb-6">
+                I’ll review it and follow up using the email you provided.
+              </p>
+              {createPasswordHref && (
+                <div className="border-t border-border pt-5">
+                  <p className="text-sm text-muted-foreground mb-3">
+                    Want to follow along? Create a password to track this project in your client portal — optional.
+                  </p>
+                  <Button asChild className="w-full">
+                    <Link to={createPasswordHref}>Create my account <ArrowRight className="ml-2 h-4 w-4" /></Link>
+                  </Button>
+                </div>
+              )}
+              <Button asChild variant="ghost" className="mt-4">
+                <Link to="/">Back to the homepage</Link>
+              </Button>
+            </div>
+          ) : (
+            <>
+              {/* Primary contact options */}
+              <div className="space-y-3 mb-6">
+                <a
+                  href={`mailto:${NAP.email}`}
+                  className="flex items-start gap-3 p-4 rounded-xl border-2 border-primary bg-primary/5 text-left transition-all hover:bg-primary/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring"
+                >
+                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                    <Mail className="w-5 h-5 text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold">Email Ben</p>
+                    <p className="text-sm text-muted-foreground break-all">{NAP.email} — opens your own email app.</p>
+                  </div>
+                </a>
+
+                <Link
+                  to="/portal?tab=signup"
+                  className="flex items-start gap-3 p-4 rounded-xl border-2 border-border bg-card text-left transition-all hover:border-primary/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring"
+                >
+                  <div className="w-10 h-10 rounded-lg bg-secondary/50 flex items-center justify-center shrink-0">
+                    <UserPlus className="w-5 h-5 text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold">Start with an account</p>
+                    <p className="text-sm text-muted-foreground">Create a client account and tell me about your project from your portal.</p>
+                  </div>
+                </Link>
+
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-2 rounded-xl border border-border bg-card px-4 py-3 text-sm">
+                  <a href={`sms:${NAP.phoneE164}`} className="inline-flex items-center gap-2 font-medium text-foreground hover:text-primary">
+                    <MessageSquare className="w-4 h-4" />
+                    Text Ben — {NAP.phone}
+                  </a>
+                  <Link to="/portal" className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground">
+                    <LogIn className="w-4 h-4" />
+                    Returning client? Log in
+                  </Link>
+                </div>
+              </div>
+
+              {/* Secondary: short website inquiry */}
+              <details
+                className="group rounded-2xl border border-border bg-card shadow-sm"
+                open={inquiryOpen}
+                onToggle={(e) => setInquiryOpen(e.currentTarget.open)}
+              >
+                <summary className="cursor-pointer list-none flex items-center justify-between gap-3 p-4 md:p-5 font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring rounded-2xl">
+                  <span>Prefer a short website inquiry?</span>
+                  <ArrowRight className="h-4 w-4 shrink-0 transition-transform group-open:rotate-90" aria-hidden="true" />
+                </summary>
+
+                <form
+                  className="space-y-5 border-t border-border p-4 md:p-5"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    handleSubmit();
+                  }}
+                >
+                  {/* Service picker: shown for deep links, otherwise optional */}
+                  {hasDeepLink ? (
+                    <div className="space-y-3">
+                      <Label>What are you after? *</Label>
+                      <div className="grid gap-2">
+                        {SERVICE_OPTIONS.map((option) => {
+                          const Icon = option.icon;
+                          const selected = serviceType === option.value;
+                          return (
+                            <button
+                              key={option.value}
+                              type="button"
+                              onClick={() => setServiceType(option.value)}
+                              className={cn(
+                                "flex items-start gap-3 p-3 rounded-xl border-2 text-left transition-all duration-200 hover:border-primary/50",
+                                selected ? "border-primary bg-primary/5" : "border-border bg-card"
+                              )}
+                            >
+                              <div className="w-9 h-9 rounded-lg bg-secondary/50 flex items-center justify-center shrink-0">
+                                <Icon className="w-4 h-4 text-primary" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="font-medium text-sm">{option.title}</p>
+                                <p className="text-xs text-muted-foreground">{option.description}</p>
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {/* Essentials */}
+                  <div className="space-y-2">
+                    <Label htmlFor="businessName">Business name *</Label>
+                    <Input
+                      id="businessName"
+                      value={businessName}
+                      onChange={(e) => setBusinessName(e.target.value)}
+                      onBlur={() => setTouched((t) => ({ ...t, businessName: true }))}
+                      placeholder="e.g. Smith Plumbing"
+                      autoComplete="organization"
+                    />
+                    {touched.businessName && businessName.trim().length < 2 && (
+                      <p className="text-xs text-destructive">Please enter your business name.</p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email *</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      onBlur={() => setTouched((t) => ({ ...t, email: true }))}
+                      placeholder="john@smithplumbing.com"
+                      autoComplete="email"
+                    />
+                    {touched.email && !isValidEmail(email) && (
+                      <p className="text-xs text-destructive">Please enter a valid email address.</p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="notes">Message *</Label>
+                    <Textarea
+                      id="notes"
+                      value={notes}
+                      onChange={(e) => setNotes(e.target.value)}
+                      onBlur={() => setTouched((t) => ({ ...t, notes: true }))}
+                      placeholder="What's not working, what you're hoping for, or when you'd like it done."
+                      rows={3}
+                    />
+                    {touched.notes && notes.trim().length < 2 && (
+                      <p className="text-xs text-destructive">Please add a short message.</p>
+                    )}
+                  </div>
+
+                  {/* City/town: contextual, required for demo/website/existing */}
+                  {locationRequired && (
+                    <div className="space-y-2">
+                      <Label htmlFor="serviceArea">Where do you serve customers? *</Label>
+                      <Input
+                        id="serviceArea"
+                        value={serviceArea}
+                        onChange={(e) => setServiceArea(e.target.value)}
+                        onBlur={() => setTouched((t) => ({ ...t, serviceArea: true }))}
+                        placeholder="e.g. Damariscotta, ME"
+                      />
+                      {touched.serviceArea && serviceArea.trim().length < 2 && (
+                        <p className="text-xs text-destructive">We need a town or area to build your preview.</p>
                       )}
-                    >
-                      <div className="w-9 h-9 rounded-lg bg-secondary/50 flex items-center justify-center shrink-0">
-                        <Icon className="w-4 h-4 text-primary" />
+                    </div>
+                  )}
+
+                  {/* Optional details */}
+                  <details className="group/inner rounded-xl border border-border bg-background/50">
+                    <summary className="cursor-pointer list-none flex items-center justify-between gap-3 px-4 py-3 text-sm font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring rounded-xl">
+                      <span>More details (optional)</span>
+                      <ArrowRight className="h-3.5 w-3.5 shrink-0 transition-transform group-open/inner:rotate-90" aria-hidden="true" />
+                    </summary>
+                    <div className="space-y-4 border-t border-border p-4">
+                      {!hasDeepLink && (
+                        <div className="space-y-2">
+                          <Label htmlFor="serviceSelect">What is this about?</Label>
+                          <select
+                            id="serviceSelect"
+                            value={serviceType}
+                            onChange={(e) => setServiceType(e.target.value as ServiceType)}
+                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                          >
+                            {SERVICE_OPTIONS.map((option) => (
+                              <option key={option.value} value={option.value}>{option.title}</option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <div className="space-y-2">
+                          <Label htmlFor="yourName">Your name</Label>
+                          <Input
+                            id="yourName"
+                            value={yourName}
+                            onChange={(e) => setYourName(e.target.value)}
+                            placeholder="e.g. John Smith"
+                            autoComplete="name"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="phone">Phone</Label>
+                          <Input
+                            id="phone"
+                            type="tel"
+                            value={phone}
+                            onChange={(e) => setPhone(e.target.value)}
+                            placeholder="(207) 555-1234"
+                            autoComplete="tel"
+                          />
+                        </div>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm">{option.title}</p>
-                        <p className="text-xs text-muted-foreground">{option.description}</p>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
+                      {!locationRequired && (
+                        <div className="space-y-2">
+                          <Label htmlFor="serviceAreaOptional">Town or service area</Label>
+                          <Input
+                            id="serviceAreaOptional"
+                            value={serviceArea}
+                            onChange={(e) => setServiceArea(e.target.value)}
+                            placeholder="e.g. Damariscotta, ME"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </details>
 
-            {/* 2. Business name */}
-            <div className="space-y-2">
-              <Label htmlFor="businessName">Business name *</Label>
-              <Input
-                id="businessName"
-                value={businessName}
-                onChange={(e) => setBusinessName(e.target.value)}
-                onBlur={() => setTouched((t) => ({ ...t, businessName: true }))}
-                placeholder="e.g. Smith Plumbing"
-                autoComplete="organization"
-              />
-              {touched.businessName && businessName.trim().length < 2 && (
-                <p className="text-xs text-destructive">Please enter your business name.</p>
-              )}
-            </div>
+                  <Button type="submit" disabled={!canSubmit || isLoading} className="w-full h-12 text-base">
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Sending...
+                      </>
+                    ) : (
+                      <>
+                        {serviceType === "demo" ? "Build my preview" : "Send it"}
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                      </>
+                    )}
+                  </Button>
 
-            {/* 3. Service area */}
-            <div className="space-y-2">
-              <Label htmlFor="serviceArea">
-                Where do you serve customers?{locationRequired ? " *" : " (optional)"}
-              </Label>
-              <Input
-                id="serviceArea"
-                value={serviceArea}
-                onChange={(e) => setServiceArea(e.target.value)}
-                onBlur={() => setTouched((t) => ({ ...t, serviceArea: true }))}
-                placeholder="e.g. Damariscotta, ME"
-              />
-              {touched.serviceArea && locationRequired && serviceArea.trim().length < 2 && (
-                <p className="text-xs text-destructive">We need a town or area to build your preview.</p>
-              )}
-            </div>
+                  <p className="text-center text-xs text-muted-foreground">
+                    By submitting, you agree to receive follow-up communication. We won't share your info or send unwanted messages.
+                  </p>
+                </form>
+              </details>
 
-            {/* 4-6. Contact */}
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="yourName">Your name (optional)</Label>
-                <Input
-                  id="yourName"
-                  value={yourName}
-                  onChange={(e) => setYourName(e.target.value)}
-                  placeholder="e.g. John Smith"
-                  autoComplete="name"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="phone">Phone (optional)</Label>
-                <Input
-                  id="phone"
-                  type="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="(207) 555-1234"
-                  autoComplete="tel"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="email">Email *</Label>
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                onBlur={() => setTouched((t) => ({ ...t, email: true }))}
-                placeholder="john@smithplumbing.com"
-                autoComplete="email"
-              />
-              {touched.email && !isValidEmail(email) && (
-                <p className="text-xs text-destructive">Please enter a valid email address.</p>
-              )}
-            </div>
-
-            {/* 7. Free text */}
-            <div className="space-y-2">
-              <Label htmlFor="notes">Anything you want us to know? (optional)</Label>
-              <Textarea
-                id="notes"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="What's not working, what you're hoping for, or when you'd like it done."
-                rows={3}
-              />
-            </div>
-
-            <Button type="submit" disabled={!canSubmit || isLoading} className="w-full h-12 text-base">
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Sending...
-                </>
-              ) : (
-                <>
-                  {serviceType === "demo" ? "Build my preview" : "Send it"}
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </>
-              )}
-            </Button>
-          </form>
-
-          {/* Rather just talk? */}
-          <div className="mt-6 rounded-xl border border-border bg-card p-4 text-center">
-            <p className="text-sm text-muted-foreground">
-              Rather just talk?{" "}
-              <a href={`tel:${NAP.phoneE164}`} className="font-medium text-foreground hover:text-primary inline-flex items-center gap-1">
-                <Phone className="w-3.5 h-3.5" />
-                {NAP.phone}
-              </a>
-            </p>
-          </div>
-
-          {/* Free review alt path */}
-          <button
-            type="button"
-            onClick={() => navigate("/get-demo?service=review")}
-            className="mt-3 w-full rounded-xl border-2 border-dashed border-border bg-card p-4 text-left transition-all hover:border-primary/50"
-          >
-            <p className="text-sm font-medium">Not ready yet? Get a free review of your current site</p>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Drop your URL — we'll send honest feedback on what's costing you customers. No sales pressure.
-            </p>
-          </button>
-
-          <p className="text-center text-xs text-muted-foreground mt-8">
-            By submitting, you agree to receive follow-up communication.
-            <br />
-            We won't share your info or send unwanted messages.
-          </p>
+              {/* Free review alt path */}
+              <button
+                type="button"
+                onClick={() => navigate("/get-demo?service=review")}
+                className="mt-4 w-full rounded-xl border-2 border-dashed border-border bg-card p-4 text-left transition-all hover:border-primary/50"
+              >
+                <p className="text-sm font-medium">Not ready yet? Get a free review of your current site</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Drop your URL — we'll send honest feedback on what's costing you customers. No sales pressure.
+                </p>
+              </button>
+            </>
+          )}
         </div>
       </main>
     </Shell>

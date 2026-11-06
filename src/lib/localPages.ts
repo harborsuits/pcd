@@ -238,7 +238,7 @@ export const NAP = {
   name: "Pleasant Cove Design",
   city: "Midcoast Maine",
   region: "ME",
-  email: "hello@pleasantcove.design",
+  email: "pleasantcovedesign@gmail.com",
   phone: "(207) 380-5680",
   phoneE164: "+12073805680",
   serviceArea: "Based in Midcoast Maine — serving small businesses statewide, from Portland to Bangor and everywhere in between.",

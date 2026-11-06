@@ -11,7 +11,8 @@ type ActivePage =
   | "pricing"
   | "ai-receptionist"
   | "blog"
-  | "midcoast-maine";
+  | "midcoast-maine"
+  | "contact";
 
 interface MarketingHeaderProps {
   activePage?: ActivePage;
@@ -23,6 +24,7 @@ const NAV_ITEMS: { label: string; href: string; key: ActivePage }[] = [
   { label: "AI Receptionist", href: "/ai-receptionist", key: "ai-receptionist" },
   { label: "Blog", href: "/blog", key: "blog" },
   { label: "Pricing", href: "/pricing", key: "pricing" },
+  { label: "Contact", href: "/get-demo", key: "contact" },
 ];
 
 const CTA_HREF = "/get-demo?service=review";
