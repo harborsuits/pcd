@@ -1,4 +1,5 @@
 # Narrow homepage revision
+- [ ] Recapture Raven Rock after its reveal and visually verify the saved thumbnail and desktop/phone cards.
 - [x] Put services and the existing four smaller jobs before compact equal Pier 1 + Raven Rock work cards.
 - [x] Preserve exact Meet Ben paragraph, shared prices/scopes, #work, and inquiry handlers.
 - [x] Darken homepage small text accents only and verify contrast.
