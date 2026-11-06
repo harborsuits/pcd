@@ -68,20 +68,20 @@ const BlogPost = () => {
               [&_h2]:mt-10 [&_h2]:mb-4 [&_h2]:text-foreground
               [&_p]:text-base [&_p]:md:text-lg [&_p]:leading-relaxed
               [&_p]:text-muted-foreground [&_p]:mb-5
-              [&_a]:text-accent [&_a]:underline-offset-4 hover:[&_a]:underline"
+              [&_a]:text-primary [&_a]:underline [&_a]:underline-offset-4"
             dangerouslySetInnerHTML={{ __html: post.body }}
           />
 
           {/* CTA */}
-          <aside className="mt-14 rounded-lg border border-accent/40 bg-accent/5 p-6 md:p-8 text-center">
+          <aside className="mt-14 border-t border-border pt-8 text-center">
             <h2 className="font-serif text-2xl md:text-3xl font-bold mb-3">
               Want a website that actually works for your Maine business?
             </h2>
             <p className="text-muted-foreground mb-6">
-              Get a free review of your current site — we'll show you exactly what to fix.
+              Start with a free review of your current site and discuss a focused next step with Ben.
             </p>
             <Button asChild size="lg" className="text-base px-8 py-6">
-              <Link to="/get-demo">
+              <Link to="/get-demo?service=review">
                 Get a free review <ArrowRight className="ml-2 h-5 w-5" />
               </Link>
             </Button>
