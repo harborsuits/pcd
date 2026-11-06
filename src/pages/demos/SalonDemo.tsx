@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { ArrowLeft, Phone, MapPin, Clock, Star, Instagram, Scissors, Sparkles } from "lucide-react";
+import { Phone, MapPin, Clock, Star, Instagram, Scissors, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ShaderAnimation } from "@/components/ui/shader-animation";
 import { ImageAutoSlider } from "@/components/ui/image-auto-slider";
@@ -20,10 +20,7 @@ const SalonDemo = () => {
       <header className="bg-white/80 backdrop-blur-sm border-b border-rose-100 sticky top-0 z-50">
         <div className="container mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Link to="/" className="text-rose-400 hover:text-rose-600 transition-colors text-sm font-medium flex items-center gap-1">
-              <ArrowLeft className="h-4 w-4" />
-              Pleasant Cove Design
-            </Link>
+            
           </div>
           <span className="font-serif text-2xl text-rose-900">Blush & Bloom</span>
           <nav className="hidden md:flex items-center gap-6 text-sm">

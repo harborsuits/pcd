@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { ArrowLeft, Phone, Mail, MapPin, Star, CheckCircle, Clock, Shield, Facebook, Instagram, Twitter } from "lucide-react";
+import { Phone, Mail, MapPin, Star, CheckCircle, Clock, Shield, Facebook, Instagram, Twitter } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ShimmerButton } from "@/components/ui/shimmer-button";
 import { FeatureSteps } from "@/components/ui/feature-section";
@@ -38,10 +38,7 @@ const RooferDemo = () => {
       <header className="bg-slate-950/95 backdrop-blur-xl border-b border-slate-800 sticky top-0 z-50">
         <div className="container mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-6">
-            <Link to="/" className="flex items-center gap-1.5 text-slate-500 hover:text-slate-300 transition-colors text-xs opacity-70 hover:opacity-100">
-              <ArrowLeft className="h-3 w-3" />
-              <span>Pleasant Cove Design</span>
-            </Link>
+            
             <span className="font-bold text-xl">Summit Roofing Co.</span>
           </div>
           <nav className="hidden md:flex items-center gap-6 text-sm">

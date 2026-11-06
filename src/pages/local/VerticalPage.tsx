@@ -61,7 +61,7 @@ const VerticalPage = () => {
           </h2>
           <div className="space-y-3">
             {v.pains.map((p) => (
-              <article key={p} className="bg-card p-4">
+              <article key={p} className="rounded-lg border border-border bg-card p-4">
                 <div className="flex items-start gap-3">
                   <AlertCircle className="h-5 w-5 text-accent mt-0.5 flex-shrink-0" />
                   <span className="text-muted-foreground">{p}</span>

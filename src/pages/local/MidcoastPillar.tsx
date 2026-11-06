@@ -48,7 +48,7 @@ const MidcoastPillar = () => {
           </p>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 max-w-5xl mx-auto">
             {REGIONS.map((r) => (
-              <article key={r.slug} className="bg-card p-5 h-full">
+              <article key={r.slug} className="rounded-lg border border-border bg-card p-5 h-full">
                 <h3 className="font-semibold text-foreground mb-1">{r.name}</h3>
                 <p className="text-sm text-muted-foreground">{r.blurb}</p>
               </article>
@@ -68,7 +68,7 @@ const MidcoastPillar = () => {
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 max-w-5xl mx-auto">
             {TOWNS.map((t) => (
               <Link key={t.slug} to={`/web-design/${t.slug}`}>
-                <article className="bg-card p-4 hover:bg-card transition-all h-full">
+                <article className="rounded-lg border border-border bg-card p-4 hover:bg-card transition-all h-full">
                   <h3 className="font-semibold text-foreground">{t.name}, ME</h3>
                   <p className="text-xs text-muted-foreground mt-1">{t.blurb}</p>
                 </article>
@@ -86,7 +86,7 @@ const MidcoastPillar = () => {
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 max-w-4xl mx-auto">
             {VERTICALS.map((v) => (
               <Link key={v.slug} to={v.demoPath ?? `/websites-for/${v.slug}`}>
-                <article className="bg-card p-5 hover:bg-card transition-all h-full">
+                <article className="rounded-lg border border-border bg-card p-5 hover:bg-card transition-all h-full">
                   <h3 className="font-semibold text-foreground mb-1">{v.name}</h3>
                   <p className="text-sm text-muted-foreground">{v.outcome}</p>
                   {v.demoPath && <p className="text-xs text-accent mt-2">View demo →</p>}
