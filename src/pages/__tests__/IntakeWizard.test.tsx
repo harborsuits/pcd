@@ -41,6 +41,38 @@ describe("Contact inquiry regressions", () => {
   beforeEach(() => { invoke.mockReset(); toast.mockReset(); });
   afterEach(cleanup);
 
+  it.each([
+    ["service=demo", "demo", "demo", true],
+    ["service=website", "website", "website", true],
+    ["service=existing", "existing", "website", true],
+    ["service=ai", "ai", "ai_receptionist", false],
+    ["service=ai_receptionist", "ai", "ai_receptionist", false],
+    ["service=both", "website", "website", true],
+    ["service=other", "other", "other", false],
+    ["product=pilot", "ai", "ai_receptionist", false],
+  ])("preselects and opens %s while retaining payload intent", async (query, selected, payloadService, needsTown) => {
+    invoke.mockResolvedValue({ data: { project_token: "mock-project" }, error: null });
+    render(<MemoryRouter initialEntries={[`/get-demo?${query}&tier=custom-business&trial=true`]}><GetDemo /></MemoryRouter>);
+    const disclosure = screen.getByText("Prefer a short website inquiry?").closest("details");
+    expect(disclosure?.open).toBe(true);
+    expect(screen.getByRole("combobox", { name: "What is this about?" })).toHaveValue(selected);
+    const user = await enterEssentials();
+    if (needsTown) {
+      expect(screen.getByLabelText("Where do you serve customers? *")).toBeRequired();
+      await user.type(screen.getByLabelText("Where do you serve customers? *"), "Damariscotta");
+    }
+    await user.click(screen.getByRole("button", { name: /Send it|Build my preview/ }));
+    await waitFor(() => expect(invoke).toHaveBeenCalledWith("leads/request-demo", expect.objectContaining({
+      body: expect.objectContaining({
+        service_type: payloadService,
+        tier: "custom-business",
+        product_type: query === "product=pilot" ? "pilot" : null,
+        is_trial: true,
+        city: needsTown ? "Damariscotta" : null,
+      }),
+    })));
+  });
+
   it("retains the same input nodes, focus and caret through ordinary typing", async () => {
     const disclosure = openInquiry();
     const user = userEvent.setup();
