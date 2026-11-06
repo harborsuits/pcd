@@ -1,7 +1,7 @@
-# Homepage update
-- [x] Preserve supplied brand marks and capture real Pier 1 client work.
-- [x] Implement approved homepage sections and existing inquiry links only.
-- [x] Verify desktop/phone layouts, navigation, and validation without submitting inquiries.
-- [x] Report changed files and remaining issues; do not publish.
-
-Verification: preview builds OK; targeted lint passed; Python Chromium checks passed at 1280, 390, and 615 pixels. Review required-field errors, inquiry invalid-email rejection, valid-field readiness with optional phone blank, all homepage-linked routes, hosted assets, and expanded samples checked. No real inquiry sent. Existing JavaScript smoke runner cannot launch because its bundled browser version is missing; equivalent homepage browser check passed with preinstalled Python Chromium.
+# Narrow homepage revision
+- [ ] Put services and the existing four smaller jobs before compact equal Pier 1 + Raven Rock work cards.
+- [ ] Preserve exact Meet Ben paragraph, shared prices/scopes, #work, and inquiry handlers.
+- [ ] Darken homepage small text accents only and verify contrast.
+- [ ] Check desktop/phone images, links, navigation, required/invalid fields without submitting.
+- [ ] Report protected preview-auth restoration limitation; leave generated auth and types unchanged.
+- [ ] Do not publish, install animation, or alter backend/account/billing/settings.
