@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import wordmark from "@/assets/pcd-wave-wordmark.svg.asset.json";
 
 type ActivePage =
   | "home"
@@ -33,16 +34,17 @@ export function MarketingHeader({ activePage }: MarketingHeaderProps) {
 
   return (
     <header className="border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-50">
-      <div className="container mx-auto px-6 py-4 flex items-center justify-between">
+      <div className={`container mx-auto px-6 flex items-center justify-between gap-4 ${activePage === "home" ? "py-1" : "py-4"}`}>
         <Link
           to="/"
-          className="font-serif text-lg md:text-xl font-bold tracking-tight text-foreground whitespace-nowrap"
+          className="font-serif text-lg md:text-xl font-bold text-foreground shrink-0"
+          aria-label="Pleasant Cove Design home"
         >
-          Pleasant Cove Design
+          {activePage === "home" ? <img src={wordmark.url} alt="Pleasant Cove Design" width="680" height="280" className="w-44 sm:w-52 h-auto" /> : "Pleasant Cove Design"}
         </Link>
 
         {/* Desktop nav */}
-        <nav className="hidden md:flex items-center gap-2 lg:gap-4">
+        <nav aria-label="Main navigation" className={`hidden ${activePage === "home" ? "xl:flex" : "md:flex"} items-center gap-2 lg:gap-4`}>
           {items.map((item) => (
             <Button
               key={item.key}
@@ -61,13 +63,13 @@ export function MarketingHeader({ activePage }: MarketingHeaderProps) {
 
         {/* Mobile nav */}
         <Sheet open={open} onOpenChange={setOpen}>
-          <SheetTrigger asChild className="md:hidden">
+          <SheetTrigger asChild className={activePage === "home" ? "xl:hidden" : "md:hidden"}>
             <Button variant="ghost" size="icon" aria-label="Open menu">
               <Menu className="h-5 w-5" />
             </Button>
           </SheetTrigger>
           <SheetContent side="right" className="w-72">
-            <nav className="flex flex-col gap-4 mt-8">
+            <nav aria-label="Mobile navigation" className="flex flex-col gap-4 mt-8">
               {items.map((item) => (
                 <Link
                   key={item.key}
