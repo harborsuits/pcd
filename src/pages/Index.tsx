@@ -38,9 +38,11 @@ const Index = () => (
       />
     <MarketingHeader activePage="home" />
     <main className="flex-1">
-      <section className="px-6 pt-10 pb-12 md:pt-16 md:pb-16">
-        <div className="max-w-4xl mx-auto text-center">
-          <p className="text-sm font-semibold text-accent mb-5">Websites for Midcoast Maine small businesses</p>
+      <section className="relative px-6 pt-12 pb-14 md:pt-20 md:pb-20 overflow-hidden">
+        <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-accent/40 to-transparent" />
+        <div aria-hidden="true" className="pointer-events-none absolute -top-24 left-1/2 h-64 w-[42rem] -translate-x-1/2 rounded-full bg-accent/10 blur-3xl" />
+        <div className="relative max-w-4xl mx-auto text-center">
+          <p className="inline-flex items-center gap-2 text-sm font-semibold text-accent mb-5 border border-accent/30 rounded-full px-4 py-1.5 bg-accent/5">Websites for Midcoast Maine small businesses</p>
           <h1 data-speakable className="font-serif text-4xl md:text-5xl lg:text-6xl font-bold leading-tight">
             A better website.<br className="hidden sm:block" /> One less thing to manage.
           </h1>
@@ -60,14 +62,14 @@ const Index = () => (
           <p className="text-sm text-accent font-semibold mb-3">Start where you are</p>
           <h2 className="font-serif text-3xl md:text-4xl font-bold mb-8">What does your website need?</h2>
           <div className="grid md:grid-cols-3 gap-6">
-            <article className="border border-border bg-card rounded-lg p-6 flex flex-col">
+            <article className="border border-border bg-card rounded-xl p-6 flex flex-col shadow-sm transition-shadow hover:shadow-md border-t-2 border-t-accent/60">
               <Globe className="h-6 w-6 text-accent mb-5" aria-hidden="true" />
               <h3 className="font-serif text-2xl font-bold mb-3">Build a website</h3>
               <p className="text-muted-foreground leading-relaxed mb-5">A professional first website or a more complete home for your business.</p>
               <div className="space-y-4 mb-6">{PROJECT_OFFERINGS.slice(0, 2).map(offer => <div key={offer.id}><p className="font-semibold">{offer.label} · {offer.price}</p><p className="text-sm text-muted-foreground mt-1 leading-relaxed">{offer.scopeNote}</p></div>)}</div>
               <Button asChild variant="outline" className="mt-auto justify-between"><Link to="/get-demo?service=website">Discuss a new website <ArrowRight className="h-4 w-4" /></Link></Button>
             </article>
-            <article className="border border-border bg-card rounded-lg p-6 flex flex-col">
+            <article className="border border-border bg-card rounded-xl p-6 flex flex-col shadow-sm transition-shadow hover:shadow-md border-t-2 border-t-accent/60">
               <Wrench className="h-6 w-6 text-accent mb-5" aria-hidden="true" />
               <h3 className="font-serif text-2xl font-bold mb-3">Improve an existing site</h3>
               <p className="text-muted-foreground leading-relaxed mb-5">Keep what works. Fix what doesn’t. Content updates, contact forms, booking connections, and mobile layout improvements.</p>
@@ -75,7 +77,7 @@ const Index = () => (
               <p className="text-sm text-muted-foreground leading-relaxed mb-6">Start with the issue you want solved. I’ll review the site and confirm the work and price before you commit.</p>
               <Button asChild variant="outline" className="mt-auto justify-between"><Link to="/get-demo?service=existing">Discuss an improvement <ArrowRight className="h-4 w-4" /></Link></Button>
             </article>
-            <article className="border border-border bg-card rounded-lg p-6 flex flex-col">
+            <article className="border border-border bg-card rounded-xl p-6 flex flex-col shadow-sm transition-shadow hover:shadow-md border-t-2 border-t-accent/60">
               <ShieldCheck className="h-6 w-6 text-accent mb-5" aria-hidden="true" />
               <h3 className="font-serif text-2xl font-bold mb-3">Ongoing website care</h3>
               <p className="text-muted-foreground leading-relaxed mb-5">Hosting, maintenance, backups, and a reliable place to turn when your website needs attention.</p>
@@ -90,7 +92,7 @@ const Index = () => (
       <section className="border-t border-border bg-background py-12 md:py-16">
         <div className="max-w-6xl mx-auto px-6">
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8"><div><p className="text-sm text-accent font-semibold mb-3">Smaller jobs welcome</p><h2 className="font-serif text-3xl md:text-4xl font-bold">You don’t always need a new website.</h2></div><Button asChild variant="ghost"><Link to="/pricing">Full pricing & scope <ArrowRight className="ml-2 h-4 w-4" /></Link></Button></div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">{smallerJobs.map(service => <article key={service.id} className="border border-border rounded-lg p-5 flex flex-col bg-card"><h3 className="font-semibold text-lg mb-2">{service.label}</h3><p className="font-serif text-2xl font-bold mb-4">{service.price}</p><p className="text-sm text-muted-foreground leading-relaxed mb-5">{service.description}</p><Button asChild variant="link" className="mt-auto self-start p-0 h-auto"><Link to="/pricing">View scope <ArrowRight className="ml-2 h-4 w-4" /></Link></Button></article>)}</div>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">{smallerJobs.map(service => <article key={service.id} className="border border-border rounded-xl p-5 flex flex-col bg-card shadow-sm transition-shadow hover:shadow-md"><h3 className="font-semibold text-lg mb-2">{service.label}</h3><p className="font-serif text-2xl font-bold mb-4">{service.price}</p><p className="text-sm text-muted-foreground leading-relaxed mb-5">{service.description}</p><Button asChild variant="link" className="mt-auto self-start p-0 h-auto"><Link to="/pricing">View scope <ArrowRight className="ml-2 h-4 w-4" /></Link></Button></article>)}</div>
           <p className="text-muted-foreground text-sm leading-relaxed mt-7 max-w-3xl">{ALACARTE_NOTE}</p>
         </div>
       </section>
@@ -103,7 +105,7 @@ const Index = () => (
             {[
               { name: "Pier 1 Pizza", image: pierWebsite.url, href: "https://pier1pizza207.com/", alt: "The live Pier 1 Pizza homepage", description: "A clear home for Pier 1’s menu, weekly events, and visitor information. Direct online-ordering links, contact details, and directions help guests find their next step." },
               { name: "Raven Rock Construction", image: ravenWebsite.url, href: "https://www.ravenrockconstruction.com/", alt: "The current live Raven Rock Construction homepage, showing Built strong. Built for Maine. and a stone-and-timber building", description: "A construction website with clear service pages, project photos, and a direct quote-inquiry path." },
-            ].map(project => <article key={project.name} className="border border-border rounded-lg overflow-hidden bg-card flex flex-col">
+            ].map(project => <article key={project.name} className="border border-border rounded-xl overflow-hidden bg-card flex flex-col shadow-sm transition-shadow hover:shadow-md">
               <a href={project.href} target="_blank" rel="noopener noreferrer" aria-label={`Visit the live ${project.name} website`} className="block focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-4">
                 <img src={project.image} alt={project.alt} width="1440" height="810" loading="lazy" className="w-full aspect-video max-h-[180px] md:max-h-none object-cover object-top" />
               </a>
@@ -123,7 +125,7 @@ const Index = () => (
             { title: "Talk & review", description: "Tell me what you need, or start with a free website review. We’ll identify the right next step." },
             { title: "Agree on scope", description: "You receive a written proposal outlining the work, price, and payment terms. Projects begin with the existing deposit process once the scope is agreed." },
             { title: "Build, check & launch", description: "Review the work together, check the website on phones and desktop, and approve the launch." },
-          ].map((step, i) => <li key={step.title} className="border-t border-border pt-5"><span className="text-accent font-semibold">0{i + 1}</span><h3 className="text-xl font-semibold mt-3 mb-3">{step.title}</h3><p className="text-muted-foreground leading-relaxed">{step.description}</p></li>)}</ol>
+          ].map((step, i) => <li key={step.title} className="border-t-2 border-t-accent/50 pt-5"><span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-accent/10 text-accent font-semibold text-sm">0{i + 1}</span><h3 className="text-xl font-semibold mt-3 mb-3">{step.title}</h3><p className="text-muted-foreground leading-relaxed">{step.description}</p></li>)}</ol>
         </div>
       </section>
 
