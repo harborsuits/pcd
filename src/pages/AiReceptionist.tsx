@@ -1,176 +1,31 @@
-import { MarketingFooter } from "@/components/layout/MarketingFooter";
 import { Link } from "react-router-dom";
+import { Phone, CalendarCheck, Bell, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SEOHead } from "@/components/SEOHead";
 import { MarketingHeader } from "@/components/layout/MarketingHeader";
+import { MarketingFooter } from "@/components/layout/MarketingFooter";
+import { AI_TIERS, AI_COMPONENTS, AI_MODEL_INTRO, AI_BILLING_NOTES } from "@/lib/pricingMenu";
 
-import { Phone, CalendarCheck, Bell, Wrench, Smile, Scissors, UtensilsCrossed, Home, Bed, ArrowRight, Clock, Voicemail, TrendingUp } from "lucide-react";
-
-const AiReceptionist = () => {
-  return (
-    <div className="pcd-shell min-h-screen flex flex-col bg-page-bg text-foreground">
-      <SEOHead
-        title="AI Receptionist for Maine Businesses"
-        description="Never miss a customer call again. Pleasant Cove Design installs a 24/7 AI phone receptionist that answers calls, books appointments, and qualifies leads — starting the same week."
-        path="/ai-receptionist"
-        service={{
-          slug: "ai-receptionist",
-          name: "AI Phone Receptionist",
-          description:
-            "A 24/7 AI phone receptionist that answers business calls, handles common questions, books appointments, and routes urgent calls — installed and trained for your Maine small business.",
-          serviceType: "AI Phone Receptionist",
-          areaServed: ["Maine"],
-        }}
-        breadcrumbs={[
-          { name: "Home", path: "/" },
-          { name: "AI Receptionist", path: "/ai-receptionist" },
-        ]}
-
-      />
-
-      <MarketingHeader activePage="ai-receptionist" />
-
-      <main className="flex-1">
-      {/* Hero */}
-      <section className="pt-12 pb-16 md:pt-20 md:pb-24 relative overflow-hidden">
-        <div className="relative container mx-auto px-6 text-center max-w-4xl">
-          <h1
-            data-speakable
-            className="font-serif text-4xl md:text-5xl lg:text-6xl font-bold leading-tight mb-6"
-          >
-            AI Phone Receptionist for Maine Small Businesses
-          </h1>
-          <p
-            data-speakable
-            className="text-xl md:text-2xl text-muted-foreground leading-relaxed mb-8 max-w-2xl mx-auto"
-          >
-            Your customers call. Paige answers.
-          </p>
-          <Button asChild size="lg" className="text-base px-8 py-6">
-            <Link to="/get-demo">
-              Book a Free Demo <ArrowRight className="ml-2 h-5 w-5" />
-            </Link>
-          </Button>
-        </div>
-      </section>
-
-      {/* Problem Section */}
-      <section className="py-16 md:py-20 bg-background border-y border-border">
-        <div className="container mx-auto px-6 max-w-5xl">
-          <h2 data-speakable className="font-serif text-3xl md:text-4xl font-bold text-center mb-12">
-            Every missed call is a missed customer.
-          </h2>
-          <div className="grid md:grid-cols-3 gap-8">
-            <div className="text-center p-6 rounded-lg border border-border bg-card">
-              <Voicemail className="mx-auto h-10 w-10 text-accent mb-4" />
-              <p className="text-4xl font-bold font-serif mb-2">62%</p>
-              <p className="text-muted-foreground">of small-business calls go to voicemail during busy hours</p>
-            </div>
-            <div className="text-center p-6 rounded-lg border border-border bg-card">
-              <Phone className="mx-auto h-10 w-10 text-accent mb-4" />
-              <p className="text-4xl font-bold font-serif mb-2">85%</p>
-              <p className="text-muted-foreground">of people who reach voicemail will not call back</p>
-            </div>
-            <div className="text-center p-6 rounded-lg border border-border bg-card">
-              <TrendingUp className="mx-auto h-10 w-10 text-accent mb-4" />
-              <p className="text-4xl font-bold font-serif mb-2">After hours</p>
-              <p className="text-muted-foreground">calls are often your most motivated leads — and they go unanswered</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* How It Works */}
-      <section className="py-16 md:py-20">
-        <div className="container mx-auto px-6 max-w-5xl">
-          <h2 data-speakable className="font-serif text-3xl md:text-4xl font-bold text-center mb-12">
-            How it works
-          </h2>
-          <div className="grid md:grid-cols-3 gap-8">
-            <div className="relative p-6 rounded-lg border border-border bg-background">
-              <div className="absolute -top-4 left-6 inline-flex items-center justify-center w-8 h-8 rounded-full bg-primary text-primary-foreground font-bold text-sm">
-                1
-              </div>
-              <h3 className="font-serif text-xl font-semibold mt-3 mb-3">We set up your AI receptionist</h3>
-              <p className="text-muted-foreground">
-                We configure your AI phone assistant, connect it to your existing number, and tailor it to your business hours and services.
-              </p>
-            </div>
-            <div className="relative p-6 rounded-lg border border-border bg-background">
-              <div className="absolute -top-4 left-6 inline-flex items-center justify-center w-8 h-8 rounded-full bg-primary text-primary-foreground font-bold text-sm">
-                2
-              </div>
-              <h3 className="font-serif text-xl font-semibold mt-3 mb-3">It learns your business</h3>
-              <p className="text-muted-foreground">
-                We train it on your services, pricing, scheduling policies, and common questions so every caller gets accurate, helpful answers.
-              </p>
-            </div>
-            <div className="relative p-6 rounded-lg border border-border bg-background">
-              <div className="absolute -top-4 left-6 inline-flex items-center justify-center w-8 h-8 rounded-full bg-primary text-primary-foreground font-bold text-sm">
-                3
-              </div>
-              <h3 className="font-serif text-xl font-semibold mt-3 mb-3">It answers, books, and notifies you</h3>
-              <p className="text-muted-foreground">
-                The AI handles calls 24/7, books appointments directly into your calendar, and sends you instant summaries of every conversation.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Who It's For */}
-      <section className="py-16 md:py-20 bg-background border-y border-border">
-        <div className="container mx-auto px-6 max-w-5xl">
-          <h2 data-speakable className="font-serif text-3xl md:text-4xl font-bold text-center mb-12">
-            Who it's for
-          </h2>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
-            {[
-              { icon: Wrench, label: "Contractors" },
-              { icon: Smile, label: "Dental Offices" },
-              { icon: Scissors, label: "Salons" },
-              { icon: UtensilsCrossed, label: "Restaurants" },
-              { icon: Home, label: "Real Estate" },
-              { icon: Bed, label: "Inns & Lodging" },
-            ].map((item) => (
-              <div
-                key={item.label}
-                className="flex flex-col items-center justify-center p-6 rounded-lg border border-border bg-card hover:bg-card transition-colors"
-              >
-                <item.icon className="h-10 w-10 text-accent mb-3" />
-                <span className="font-medium text-foreground">{item.label}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="py-16 md:py-24">
-        <div className="container mx-auto px-6 text-center max-w-3xl">
-          <h2 data-speakable className="font-serif text-3xl md:text-4xl font-bold mb-6">
-            Ready to stop missing calls?
-          </h2>
-          <p className="text-lg text-muted-foreground mb-4">
-            Get your AI receptionist live this week. Book a free demo and see how it works for your business.
-          </p>
-          <p data-speakable className="text-base text-muted-foreground mb-8">
-            Pricing has three parts: a one-time setup and implementation fee, a monthly management fee based on scope, and usage billed at the call-minute rate agreed in your proposal. No flat monthly fee includes unlimited calls — we explain the rates and estimated costs before activation.
-          </p>
-          <Button asChild size="lg" className="text-base px-8 py-6">
-            <Link to="/get-demo?service=ai">
-              Request a Quote <ArrowRight className="ml-2 h-5 w-5" />
-            </Link>
-          </Button>
-        </div>
-      </section>
-      </main>
-
-
-      {/* Footer */}
-      <MarketingFooter />
-    </div>
-  );
-};
-
+const steps = [
+  { title: "Agree on the call flow", body: "Choose when the assistant should answer, what information it can use, and when a request needs human follow-up." },
+  { title: "Configure and test", body: "Review your services, hours, approved answers, and phone-provider options. Test typical calls and unclear requests before activation; timing depends on scope and integrations." },
+  { title: "Review and maintain", body: "Review call handling and the agreed records together. Ongoing monitoring, updates, support, and usage controls are defined in your proposal." },
+];
+const AiReceptionist = () => (
+  <div className="pcd-shell min-h-screen flex flex-col bg-page-bg text-foreground">
+    <SEOHead title="AI Receptionist for Maine Businesses" description="Explore AI call answering for Maine small businesses. Business-specific setup, scoped ongoing management, and measured usage, with human handoff planning." path="/ai-receptionist" service={{ slug: "ai-receptionist", name: "AI Phone Receptionist", description: "Business-specific AI call answering, approved questions, inquiry collection, and scoped connections with human handoff planning.", serviceType: "AI Phone Receptionist", areaServed: ["Maine"] }} breadcrumbs={[{ name: "Home", path: "/" }, { name: "AI Receptionist", path: "/ai-receptionist" }]} />
+    <MarketingHeader activePage="ai-receptionist" />
+    <main className="flex-1">
+      <section className="px-5 sm:px-6 py-10 md:py-16"><div className="max-w-3xl mx-auto text-center"><p className="text-sm font-semibold text-accent mb-4">Optional business tools</p><h1 data-speakable className="font-serif text-3xl md:text-5xl font-bold leading-tight">AI Phone Receptionist for Maine Small Businesses</h1><p data-speakable className="text-base md:text-lg text-muted-foreground leading-relaxed mt-6 max-w-2xl mx-auto">A defined way to answer common questions and collect inquiries when you’re occupied. Start with the calls your business receives and decide where automation is useful — and where a person needs to take over.</p><Button asChild size="lg" className="mt-7"><Link to="/get-demo?service=ai">Discuss AI call answering <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" /></Link></Button></div></section>
+      <section className="border-t border-border bg-background py-10 md:py-12"><div className="max-w-6xl mx-auto px-5 sm:px-6"><h2 className="font-serif text-2xl md:text-3xl font-bold mb-8">Choose the support you actually need.</h2><div className="grid md:grid-cols-3 gap-6">{[
+        { icon: Phone, title: "Common questions", body: "Use approved business information to answer questions about services, hours, and service areas. Unclear or out-of-scope questions need a human follow-up." },
+        { icon: CalendarCheck, title: "Inquiries and scheduling", body: "Collect contact details and appointment requests. Direct calendar booking is an optional, separately scoped connection, subject to your scheduling rules and provider." },
+        { icon: Bell, title: "Handoff and summaries", body: "Agree how collected information reaches your team. Notification and transfer options depend on the configured service; they do not guarantee an immediate human response." },
+      ].map(item => <article key={item.title} className="bg-card border border-border rounded-lg p-6"><item.icon className="h-6 w-6 text-accent mb-4" aria-hidden="true" /><h3 className="font-serif text-xl font-bold mb-3">{item.title}</h3><p className="text-muted-foreground leading-relaxed">{item.body}</p></article>)}</div><p className="text-sm text-muted-foreground leading-relaxed mt-6 max-w-3xl">AI can misunderstand a caller or produce an incorrect answer. It is not an emergency service or a replacement for staff, professional judgment, or medical records handling. Urgent requests need an agreed fallback; callers facing an emergency should contact the appropriate emergency service.</p></div></section>
+      <section className="border-t border-border py-10 md:py-12"><div className="max-w-6xl mx-auto px-5 sm:px-6"><h2 className="font-serif text-2xl md:text-3xl font-bold mb-8">Set it up around your business.</h2><ol className="grid md:grid-cols-3 gap-8">{steps.map((step, i) => <li key={step.title} className="border-t-2 border-accent pt-5"><p className="font-semibold text-accent mb-3">0{i + 1}</p><h3 className="font-serif text-xl font-bold mb-3">{step.title}</h3><p className="text-muted-foreground leading-relaxed">{step.body}</p></li>)}</ol><aside className="border-l-2 border-accent pl-5 mt-8 max-w-3xl"><h3 className="font-semibold mb-2">Example: an after-hours estimate request</h3><p className="text-muted-foreground leading-relaxed">A caller asks whether a contractor serves their town. A configured assistant could answer using the approved service area, collect the project description and contact details, and pass the request to the team. The contractor confirms availability and any appointment personally. This is a hypothetical flow, not a client result.</p></aside></div></section>
+      <section className="border-t border-border bg-background py-10 md:py-12"><div className="max-w-6xl mx-auto px-5 sm:px-6"><h2 className="font-serif text-2xl md:text-3xl font-bold mb-4">{AI_MODEL_INTRO.heading}</h2><p className="text-muted-foreground leading-relaxed max-w-3xl mb-7">{AI_MODEL_INTRO.body}</p><div className="grid md:grid-cols-3 gap-5">{AI_COMPONENTS.map(component => <article key={component.id} className="bg-card border border-border rounded-lg p-5"><h3 className="font-serif text-xl font-bold mb-3">{component.label}</h3><p className="font-semibold text-accent mb-3">{component.price}</p><p className="text-sm text-muted-foreground leading-relaxed">{component.description}</p></article>)}</div><p className="font-semibold mt-6">{AI_TIERS[0]?.scopeNote}</p><ul className="list-disc pl-5 space-y-2 text-sm text-muted-foreground mt-5 max-w-3xl">{AI_BILLING_NOTES.map(note => <li key={note}>{note}</li>)}</ul><p className="text-sm text-muted-foreground mt-5">AI and connected tools are optional, not default website inclusions. <Link to="/pricing" className="underline underline-offset-4">See website pricing and care terms.</Link></p></div></section>
+      <section className="bg-primary text-primary-foreground py-10 md:py-12"><div className="max-w-3xl mx-auto px-5 sm:px-6 text-center"><h2 className="font-serif text-2xl md:text-3xl font-bold mb-4">Start with your call-handling needs.</h2><p className="text-base md:text-lg mb-7">Tell Ben what callers ask and how your team follows up. We’ll discuss the scope, limitations, and costs before you commit.</p><Button asChild size="lg" variant="secondary"><Link to="/get-demo?service=ai">Request a quote <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" /></Link></Button></div></section>
+    </main><MarketingFooter />
+  </div>
+);
 export default AiReceptionist;
