@@ -155,15 +155,6 @@ const Index = () => (
         </div>
       </section>
 
-      <section id="demos" className="border-t border-border py-10 scroll-mt-28">
-        <div className="max-w-6xl mx-auto px-6">
-          <details className="group"><summary className="cursor-pointer py-3 text-xl font-serif font-bold focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring">Sample industry concepts</summary>
-            <p className="text-sm text-muted-foreground mt-2 mb-6">Sample designs, not completed client projects. Explore an example for your industry.</p>
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">{concepts.map(concept => <article key={concept.name} className="rounded-lg overflow-hidden border border-border bg-card"><img src={concept.image} alt={`${concept.name} sample concept imagery`} loading="lazy" width="400" height="300" className="aspect-[4/3] w-full object-cover" /><div className="p-3"><h3 className="font-semibold">{concept.name}</h3><Button asChild variant="link" className="p-0 h-auto mt-2 text-sm"><Link to={concept.path}>Explore sample <ArrowUpRight className="ml-1 h-3 w-3" /></Link></Button></div></article>)}</div>
-          </details>
-        </div>
-      </section>
-
       <section className="bg-primary text-primary-foreground border-t border-border py-12 md:py-16">
         <div className="max-w-3xl mx-auto px-6 text-center"><h2 className="font-serif text-3xl md:text-4xl font-bold mb-5">What would make your website work better?</h2><p className="text-lg leading-relaxed mb-7">A new website, a small fix, or ongoing help. Tell me what’s on your mind.</p>
           <div className="flex flex-col sm:flex-row justify-center gap-3"><Button asChild size="lg" variant="secondary"><Link to="/get-demo">Discuss your project <ArrowRight className="ml-2 h-4 w-4" /></Link></Button><Button asChild size="lg" variant="secondary"><Link to="/get-demo?service=review">Get a Free Website Review</Link></Button></div>
