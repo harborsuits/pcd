@@ -40,4 +40,6 @@ Raven Rock recapture: waited 12 seconds for the real public homepage reveal, the
 # What We Build page refresh (Nov 6)
 - [x] Replace route-only videos, stock cards, carousel and gallery with static branded workflow and editorial service rows.
 - [x] Use shared starting prices, scopes, care limits and four smaller jobs; preserve inquiry destinations and route schema, remove hidden FAQ.
-- [ ] Verify targeted lint, desktop/390/320 layout, keyboard links, contrast, metadata and unchanged homepage/contact sources; no publish or real submissions.
+- [x] Verify targeted lint, desktop/390/320 layout, keyboard links, contrast and unchanged homepage/contact sources; no publish or real submissions.
+- [ ] Production hydration SEO verification: no compiled production output is available, and this environment prohibits manually running project builds. Preview still omits Helmet description/canonical/JSON-LD; no broader SEO changes made.
+- Verification: automatic preview build OK and targeted ESLint passed. Chromium verified all main links have visible keyboard focus, care inquiry navigation, sailboat loading, sensible headings, no videos/autoplay/stock cards, no overflow at 1280/390/320, and all 84 main text elements at 11.52:1 contrast or better. Screenshots saved under /tmp/browser/what-we-build/. Homepage, contact form, pricing catalog and index.html hashes are unchanged. No real submissions, account creation, messages, asset deletion or publishing.
