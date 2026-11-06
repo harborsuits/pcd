@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { ArrowRight, ArrowUpRight, Globe, Wrench, ShieldCheck, Phone, Mail, Check } from "lucide-react";
+import { ArrowRight, ArrowUpRight, Globe, Wrench, ShieldCheck, Phone, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Footer } from "@/components/ui/footer";
 import { SEOHead } from "@/components/SEOHead";
