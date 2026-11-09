@@ -33,8 +33,14 @@ const concepts = [
 function HomeHero() {
   return (
     <section className="pcd-home-hero" aria-labelledby="home-hero-title">
-      <div className="pcd-home-hero__inner">
-        <div className="pcd-home-hero__copy">
+      <img
+        src={lighthouseHero}
+        alt=""
+        aria-hidden="true"
+        className="pcd-home-hero__bg"
+      />
+      <div className="pcd-home-hero__scrim" aria-hidden="true" />
+      <div className="pcd-home-hero__copy">
           <p className="pcd-home-hero__eyebrow">Websites for Midcoast Maine small businesses</p>
           <h1
             id="home-hero-title"
@@ -62,19 +68,7 @@ function HomeHero() {
               {NAP.phone}
             </a>
           </p>
-        </div>
-        <div className="pcd-home-hero__art">
-          <figure className="pcd-home-hero__scene">
-            <img
-              src={lighthouseHero}
-              alt="Illustration of a lighthouse and keeper's cottage on a rocky Maine point, with a sailboat on calm water"
-              width={641}
-              height={1024}
-              className="pcd-home-hero__scene-img"
-            />
-            <figcaption className="pcd-home-hero__caption font-serif">A clear course for your website.</figcaption>
-          </figure>
-        </div>
+          <p className="pcd-home-hero__caption font-serif">A clear course for your website.</p>
       </div>
     </section>
   );
