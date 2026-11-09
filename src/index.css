@@ -610,35 +610,49 @@ All colors MUST be HSL.
   --hh-muted: 200 20% 82%;
   --hh-teal: 180 45% 34%;
   position: relative;
+  display: flex;
+  align-items: center;
+  min-height: min(92svh, 54rem);
   background: hsl(var(--hh-navy));
   color: hsl(var(--hh-ivory));
   overflow: hidden;
 }
-.pcd-home-hero__inner {
-  display: grid;
-  grid-template-columns: 1fr;
+.pcd-home-hero__bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 62% 30%;
 }
-@media (min-width: 1024px) {
-  .pcd-home-hero__inner {
-    grid-template-columns: 58fr 42fr;
-    min-height: 34rem;
+.pcd-home-hero__scrim {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, hsl(var(--hh-navy) / 0.94) 0%, hsl(var(--hh-navy) / 0.8) 34%, hsl(var(--hh-navy) / 0.35) 60%, hsl(var(--hh-navy) / 0.08) 78%),
+    linear-gradient(0deg, hsl(var(--hh-navy) / 0.55), transparent 32%);
+}
+@media (max-width: 1023px) {
+  .pcd-home-hero__bg { object-position: 50% 25%; }
+  .pcd-home-hero__scrim {
+    background:
+      linear-gradient(180deg, hsl(var(--hh-navy) / 0.9) 0%, hsl(var(--hh-navy) / 0.72) 45%, hsl(var(--hh-navy) / 0.4) 100%);
   }
 }
 .pcd-home-hero__copy {
-  min-width: 0;
-  padding: 3rem 1.5rem 3rem;
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: 4.5rem 1.5rem;
   display: flex;
   flex-direction: column;
   justify-content: center;
 }
 @media (min-width: 768px) {
   .pcd-home-hero__copy {
-    padding: 4.5rem 3rem;
-  }
-}
-@media (min-width: 1024px) {
-  .pcd-home-hero__copy {
-    padding: 5rem 3.5rem 6rem max(2rem, calc((100vw - 72rem) / 2 + 2rem));
+    padding: 6rem 3rem;
   }
 }
 .pcd-home-hero__eyebrow {
@@ -693,28 +707,12 @@ All colors MUST be HSL.
   content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 4rem; pointer-events: none;
   background: linear-gradient(180deg, transparent, hsl(var(--page-bg, var(--background)) / 0.18));
 }
-.pcd-home-hero__art {
-  position: relative; min-width: 0; display: flex; align-items: center; justify-content: center;
-  padding: 0 1.5rem 3.5rem;
+.pcd-home-hero__caption {
+  font-style: italic;
+  font-size: 1.05rem;
+  color: hsl(var(--hh-muted));
+  margin-top: 2.5rem;
 }
-@media (min-width: 1024px) {
-  .pcd-home-hero__art { padding: 3.5rem max(2rem, calc((100vw - 72rem) / 2 + 2rem)) 4.5rem 1rem; }
-}
-.pcd-home-hero__scene {
-  display: flex; flex-direction: column; align-items: center; gap: 0.75rem;
-  width: 100%; max-width: 26rem; margin: 0;
-}
-.pcd-home-hero__scene-img {
-  display: block; width: 100%; height: auto;
-  aspect-ratio: 4 / 3; object-fit: cover; object-position: 50% 30%;
-  border-radius: 1.75rem;
-  border: 1px solid hsl(40 40% 88%);
-  box-shadow: 0 1px 0 hsl(0 0% 100% / 0.6) inset, 0 24px 60px -24px hsl(207 70% 6% / 0.6), 0 0 0 8px hsl(var(--hh-ivory) / 0.04);
-}
-@media (min-width: 1024px) {
-  .pcd-home-hero__scene-img { aspect-ratio: 3 / 4; object-position: 50% 25%; }
-}
-.pcd-home-hero__caption { font-style: italic; font-size: 1.05rem; text-align: center; color: hsl(var(--hh-muted)); }
 
 /* Soft warm cards on homepage */
 .pcd-soft-card {
