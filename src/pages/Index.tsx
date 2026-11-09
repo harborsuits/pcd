@@ -8,6 +8,7 @@ import { MarketingHeader } from "@/components/layout/MarketingHeader";
 import { NAP } from "@/lib/localPages";
 import { PROJECT_OFFERINGS, CARE_PLANS, ALACARTE_SERVICES, ALACARTE_NOTE } from "@/lib/pricingMenu";
 import pcdLogo from "@/assets/pcd-logo.jpeg";
+import lighthouseHero from "@/assets/lighthouse-hero.jpg";
 import pierWebsite from "@/assets/pier-1-website.jpg.asset.json";
 import ravenWebsite from "@/assets/raven-rock-homepage.jpg.asset.json";
 import roofer from "@/assets/demos/roofer-hero.jpeg";
@@ -63,18 +64,16 @@ function HomeHero() {
           </p>
         </div>
         <div className="pcd-home-hero__art">
-          <div className="pcd-home-hero__plaque">
-          <div className="pcd-home-hero__boatwrap">
+          <figure className="pcd-home-hero__scene">
             <img
-              src={pcdLogo}
-              alt="Pleasant Cove Design sailboat mark"
-              width={360}
-              height={360}
-              className="pcd-home-hero__boat"
+              src={lighthouseHero}
+              alt="Illustration of a lighthouse and keeper's cottage on a rocky Maine point, with a sailboat on calm water"
+              width={641}
+              height={1024}
+              className="pcd-home-hero__scene-img"
             />
-          </div>
-          <p className="pcd-home-hero__caption font-serif">A clear course for your website.</p>
-          </div>
+            <figcaption className="pcd-home-hero__caption font-serif">A clear course for your website.</figcaption>
+          </figure>
         </div>
       </div>
     </section>

@@ -700,30 +700,21 @@ All colors MUST be HSL.
 @media (min-width: 1024px) {
   .pcd-home-hero__art { padding: 3.5rem max(2rem, calc((100vw - 72rem) / 2 + 2rem)) 4.5rem 1rem; }
 }
-.pcd-home-hero__plaque {
+.pcd-home-hero__scene {
   display: flex; flex-direction: column; align-items: center; gap: 0.75rem;
-  width: 100%; max-width: 26rem; padding: 2rem 1.5rem 1.75rem;
+  width: 100%; max-width: 26rem; margin: 0;
+}
+.pcd-home-hero__scene-img {
+  display: block; width: 100%; height: auto;
+  aspect-ratio: 4 / 3; object-fit: cover; object-position: 50% 30%;
   border-radius: 1.75rem;
-  background: radial-gradient(120% 90% at 50% 30%, hsl(var(--hh-ivory)), hsl(var(--hh-paper)));
   border: 1px solid hsl(40 40% 88%);
   box-shadow: 0 1px 0 hsl(0 0% 100% / 0.6) inset, 0 24px 60px -24px hsl(207 70% 6% / 0.6), 0 0 0 8px hsl(var(--hh-ivory) / 0.04);
-  color: hsl(var(--hh-navy));
 }
-.pcd-home-hero__boatwrap { width: clamp(170px, 50vw, 220px); }
-@media (min-width: 1024px) { .pcd-home-hero__boatwrap { width: clamp(240px, 22vw, 300px); } }
-.pcd-home-hero__boat {
-  width: 100%; height: auto; display: block; mix-blend-mode: multiply;
-  transform-origin: 50% 78%; will-change: transform;
-  animation: pcd-hh-buoy 8s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+@media (min-width: 1024px) {
+  .pcd-home-hero__scene-img { aspect-ratio: 3 / 4; object-position: 50% 25%; }
 }
-@keyframes pcd-hh-buoy {
-  0%, 100% { transform: translateY(0) rotate(0deg); }
-  25% { transform: translateY(-3px) rotate(0.6deg); }
-  50% { transform: translateY(-4px) rotate(0deg); }
-  75% { transform: translateY(-1px) rotate(-0.6deg); }
-}
-@media (prefers-reduced-motion: reduce) { .pcd-home-hero__boat { animation: none; } }
-.pcd-home-hero__caption { font-style: italic; font-size: 1.05rem; text-align: center; color: hsl(var(--hh-navy)); }
+.pcd-home-hero__caption { font-style: italic; font-size: 1.05rem; text-align: center; color: hsl(var(--hh-muted)); }
 
 /* Soft warm cards on homepage */
 .pcd-soft-card {
