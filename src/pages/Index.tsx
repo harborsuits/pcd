@@ -7,6 +7,7 @@ import { SEOHead } from "@/components/SEOHead";
 import { MarketingHeader } from "@/components/layout/MarketingHeader";
 import { NAP } from "@/lib/localPages";
 import { PROJECT_OFFERINGS, CARE_PLANS, ALACARTE_SERVICES, ALACARTE_NOTE } from "@/lib/pricingMenu";
+import pcdLogo from "@/assets/pcd-logo.jpeg";
 import lighthouseHero from "@/assets/lighthouse-hero.jpg";
 import pierWebsite from "@/assets/pier-1-website.jpg.asset.json";
 import ravenWebsite from "@/assets/raven-rock-homepage.jpg.asset.json";
