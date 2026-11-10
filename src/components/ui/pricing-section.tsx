@@ -167,6 +167,8 @@ export default function PricingSection() {
               ))}
             </div>
 
+            <p className="mt-6 text-center text-sm text-foreground font-medium">{OWN_PLATFORM_NOTE}</p>
+
             <ul className="mt-6 space-y-2">
               {CARE_TERMS.map((term, i) => (
                 <li key={i} className="text-xs text-muted-foreground">
