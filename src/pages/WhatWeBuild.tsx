@@ -4,7 +4,7 @@ import { ArrowRight, CalendarCheck, FolderOpen, Phone, Workflow, Globe, ShieldCh
 import { Button } from "@/components/ui/button";
 import { SEOHead } from "@/components/SEOHead";
 import { MarketingHeader } from "@/components/layout/MarketingHeader";
-import { PROJECT_OFFERINGS, CARE_PLANS, CARE_TERMS, ALACARTE_SERVICES, ALACARTE_NOTE, AI_TIERS } from "@/lib/pricingMenu";
+import { PROJECT_OFFERINGS, CARE_PLANS, OWN_PLATFORM_NOTE, ALACARTE_SERVICES, ALACARTE_NOTE, AI_TIERS } from "@/lib/pricingMenu";
 
 const smallerJobs = ["content_refresh", "website_cleanup", "booking_integration", "forms_routing"].flatMap(id => {
   const service = ALACARTE_SERVICES.find(item => item.id === id);
@@ -54,8 +54,8 @@ const WhatWeBuild = () => (
           </article>
           <article className="grid md:grid-cols-[3rem_1fr_20rem] gap-4 md:gap-7 py-7 border-t border-border">
             <span className="font-serif text-2xl text-primary" aria-hidden="true">03</span>
-            <div><ShieldCheck className="h-5 w-5 text-primary mb-3" aria-hidden="true" /><h3 className="font-serif text-2xl font-bold mb-3">Ongoing website care</h3><p className="leading-relaxed max-w-xl">Keep your website maintained, checked, and up to date. Hosting allowances and the maintenance covered are defined in your proposal.</p><p className="text-sm leading-relaxed mt-4">{CARE_TERMS[0]} {CARE_TERMS[2]}</p></div>
-            <div className="space-y-5">{CARE_PLANS.map(plan => <div key={plan.id}><p className="font-semibold">{plan.label}</p><p className="font-serif text-xl font-bold mt-1">{plan.price}</p><p className="text-sm leading-relaxed mt-2">{plan.features.find(feature => feature.startsWith("Up to"))}</p></div>)}<Button asChild variant="outline" className="w-full justify-between"><Link to="/get-demo?product=care_plan&tier=care_website">Discuss website care <ArrowRight className="h-4 w-4" aria-hidden="true" /></Link></Button></div>
+            <div><ShieldCheck className="h-5 w-5 text-primary mb-3" aria-hidden="true" /><h3 className="font-serif text-2xl font-bold mb-3">Ongoing website care</h3><p className="leading-relaxed max-w-xl">Keep your website hosted, checked, and up to date, with minor monthly updates if you need them.</p><p className="text-sm leading-relaxed mt-4">{OWN_PLATFORM_NOTE}</p></div>
+            <div className="space-y-5">{CARE_PLANS.map(plan => <div key={plan.id}><p className="font-semibold">{plan.label}</p><p className="font-serif text-xl font-bold mt-1">{plan.price}</p><p className="text-sm leading-relaxed mt-2">{plan.description}</p></div>)}<Button asChild variant="outline" className="w-full justify-between"><Link to="/get-demo?product=care_plan&tier=care_website">Discuss website care <ArrowRight className="h-4 w-4" aria-hidden="true" /></Link></Button></div>
           </article>
           <Link to="/pricing" className={`${focusLink} mt-4 font-semibold`}>All options, pricing & care terms <ArrowRight className="h-4 w-4" aria-hidden="true" /></Link>
         </div>

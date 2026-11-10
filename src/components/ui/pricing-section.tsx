@@ -10,6 +10,7 @@ import {
   ALACARTE_NOTE,
   CARE_PLANS,
   CARE_TERMS,
+  OWN_PLATFORM_NOTE,
   PROJECT_OFFERINGS,
   PROJECT_PRICING_FACTORS,
   AI_MODEL_INTRO,
@@ -136,10 +137,10 @@ export default function PricingSection() {
               </p>
             </div>
 
-            <div className="grid sm:grid-cols-2 gap-6">
+            <div className="grid md:grid-cols-3 gap-6">
               {CARE_PLANS.map((plan) => (
-                <Card key={plan.id} className="hover:shadow-md transition-shadow">
-                  <CardContent className="p-6">
+                <Card key={plan.id} className="hover:shadow-md transition-shadow flex">
+                  <CardContent className="p-6 flex flex-col w-full">
                     <h4 className="font-semibold text-foreground mb-1">{plan.label}</h4>
                     <div className="flex items-baseline gap-1 mb-2">
                       <span className="text-2xl font-bold text-accent">{plan.price}</span>
@@ -158,13 +159,15 @@ export default function PricingSection() {
                         </li>
                       ))}
                     </ul>
-                    <Button asChild variant="default" size="sm" className="w-full"><Link to={`/get-demo?product=care_plan&tier=${plan.id}`}>
+                    <Button asChild variant="default" size="sm" className="w-full mt-auto"><Link to={`/get-demo?product=care_plan&tier=${plan.id}`}>
                         Request a quote
                       </Link></Button>
                   </CardContent>
                 </Card>
               ))}
             </div>
+
+            <p className="mt-6 text-center text-sm text-foreground font-medium">{OWN_PLATFORM_NOTE}</p>
 
             <ul className="mt-6 space-y-2">
               {CARE_TERMS.map((term, i) => (
