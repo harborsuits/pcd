@@ -58,7 +58,9 @@ These are intentionally out of scope — do not attribute them to Pleasant Cove 
 - Expanded Websites & Online Stores: from $6,000 one-time
 - Custom Business Systems (portals, advanced booking, CRM connections, automation): custom proposal, no advertised ceiling
 - All build prices are starting points; final price depends on design, content, functionality, integrations, and support, and is fixed in a written proposal before work begins
-- Website Care: from $150/month (hosting within allowance, uptime monitoring, backups, routine maintenance, scheduled contact-feature checks, up to 30 minutes of minor content edits per month, business-hours support)
+- Managed Hosting: $70/month (website hosting, domain connection management, site availability checks, help with hosting issues; content edits quoted separately)
+- Website Care: $150/month (everything in Managed Hosting plus up to 30 minutes of minor updates per month such as hours, menus, photos, or text; additional work $125/hour, approved before work begins)
+- Already on your own website platform: keep your subscription and request updates or fixes as needed
 - Managed Website Care: from $275/month (everything in Website Care, up to 90 minutes total of minor content edits per month, priority scheduling, quarterly performance review)
 - Additional work beyond a care allowance: quoted in advance or $125/hour with approval
 - AI receptionist and business automation: one-time setup and implementation fee + monthly management fee based on scope + usage billed at agreed rates (call minutes, messages, or defined workflow runs). There is no flat monthly fee that includes unlimited AI activity.

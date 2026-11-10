@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { SEOHead } from "@/components/SEOHead";
 import { MarketingHeader } from "@/components/layout/MarketingHeader";
 import { NAP } from "@/lib/localPages";
-import { PROJECT_OFFERINGS, CARE_PLANS, ALACARTE_SERVICES, ALACARTE_NOTE } from "@/lib/pricingMenu";
+import { PROJECT_OFFERINGS, CARE_PLANS, ALACARTE_SERVICES, ALACARTE_NOTE, OWN_PLATFORM_NOTE } from "@/lib/pricingMenu";
 import pcdLogo from "@/assets/pcd-logo.jpeg";
 import lighthouseHero from "@/assets/lighthouse-hero.jpg";
 import pierWebsite from "@/assets/pier-1-website.jpg.asset.json";
@@ -144,14 +144,13 @@ const Index = () => (
                       {plan.label} · {plan.price}
                     </p>
                     <p className="text-sm text-muted-foreground mt-1">
-                      {plan.features.find((feature) => feature.startsWith("Up to"))}
+                      {plan.description}
                     </p>
                   </div>
                 ))}
               </div>
               <p className="text-sm text-muted-foreground mb-6">
-                No editing-time rollover. Larger work is separately scoped; allowances and terms are set in your
-                proposal.
+                {OWN_PLATFORM_NOTE}
               </p>
               <Button asChild variant="outline" className="mt-auto justify-between">
                 <Link to="/get-demo?product=care_plan&tier=care_website">

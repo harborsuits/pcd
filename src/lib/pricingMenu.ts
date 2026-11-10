@@ -143,19 +143,31 @@ export interface CarePlan {
 
 export const CARE_PLANS: CarePlan[] = [
   {
+    id: "care_hosting",
+    label: "Managed Hosting",
+    price: "$70/mo",
+    monthlyPrice: 70,
+    isStartingPrice: false,
+    description: "For straightforward small business websites.",
+    features: [
+      "Website hosting",
+      "Management of the domain connection",
+      "Site availability checks",
+      "Help with hosting issues",
+      "Content edits are quoted separately",
+    ],
+  },
+  {
     id: "care_website",
     label: "Website Care",
-    price: "From $150/mo",
+    price: "$150/mo",
     monthlyPrice: 150,
-    isStartingPrice: true,
-    description: "Keep your website maintained, checked, and up to date.",
+    isStartingPrice: false,
+    description: "Everything in Managed Hosting, plus minor monthly updates.",
     features: [
-      "Standard hosting within the allowance stated in your proposal",
-      "Uptime monitoring and recoverable backups",
-      "Routine maintenance appropriate to the website",
-      "Scheduled checks of key contact features",
-      "Up to 30 minutes total of minor content edits per month",
-      "Standard support during business hours",
+      "Everything in Managed Hosting",
+      "Up to 30 minutes of minor website updates each month, such as changes to hours, menus, photos, or text",
+      "Additional work quoted separately at $125/hour and approved before work begins",
     ],
   },
   {
@@ -174,6 +186,9 @@ export const CARE_PLANS: CarePlan[] = [
     ],
   },
 ];
+
+export const OWN_PLATFORM_NOTE =
+  "Already pay for your own website platform? You can keep your subscription and request updates or fixes as needed.";
 
 export const CARE_TERMS: string[] = [
   "Included editing time does not roll over.",
