@@ -1,3 +1,4 @@
+import * as React from "react";
 import { MarketingFooter } from "@/components/layout/MarketingFooter";
 import { Link } from "react-router-dom";
 import { ArrowRight, ArrowUpRight, Globe, Wrench, ShieldCheck, Phone, Mail } from "lucide-react";
@@ -30,15 +31,56 @@ const concepts = [
   { name: "Boutique", image: boutique, path: "/demos/boutique" },
 ];
 
+const LANTERN = { x: 1435, y: 276, w: 1920, h: 1088 };
+
+/** Keeps the beam pinned to the lamp for whatever crop object-fit: cover produces. */
+function useLanternPosition(ref: React.RefObject<HTMLElement>) {
+  const [pos, setPos] = React.useState<{ x: number; y: number; scale: number } | null>(null);
+  React.useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const update = () => {
+      const r = el.getBoundingClientRect();
+      const img = el.querySelector<HTMLImageElement>(".pcd-home-hero__bg");
+      if (!img || !r.width) return;
+      const op = getComputedStyle(img).objectPosition.split(" ").map((v) => parseFloat(v) / 100);
+      const scale = Math.max(r.width / LANTERN.w, r.height / LANTERN.h);
+      const dw = LANTERN.w * scale, dh = LANTERN.h * scale;
+      const x = (r.width - dw) * (op[0] ?? 0.5) + LANTERN.x * scale;
+      const y = (r.height - dh) * (op[1] ?? 0.5) + LANTERN.y * scale;
+      const visible = x > 8 && x < r.width - 8 && y > 8 && y < r.height - 8;
+      setPos(visible ? { x, y, scale } : null);
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [ref]);
+  return pos;
+}
+
 function HomeHero() {
+  const ref = React.useRef<HTMLElement>(null);
+  const lantern = useLanternPosition(ref);
   return (
-    <section className="pcd-home-hero" aria-labelledby="home-hero-title">
+    <section ref={ref} className="pcd-home-hero" aria-labelledby="home-hero-title">
       <img
         src={lighthouseHero}
         alt=""
         aria-hidden="true"
         className="pcd-home-hero__bg"
       />
+      {lantern && (
+        <div
+          className="pcd-home-hero__light"
+          aria-hidden="true"
+          style={{ left: lantern.x, top: lantern.y, ["--hh-s" as string]: lantern.scale } as React.CSSProperties}
+        >
+          <span className="pcd-home-hero__reflect" />
+          <span className="pcd-home-hero__beam" />
+          <span className="pcd-home-hero__flare" />
+        </div>
+      )}
       <div className="pcd-home-hero__scrim" aria-hidden="true" />
       <div className="pcd-home-hero__copy">
           <p className="pcd-home-hero__eyebrow">Websites for Midcoast Maine small businesses</p>
