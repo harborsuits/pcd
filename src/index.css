@@ -705,13 +705,17 @@ All colors MUST be HSL.
   70%, 80% { opacity: 0.2;  transform: translate(-50%, -50%) scale(0.7); }
 }
 @keyframes pcd-hh-glint {
-  0%, 14%, 40%, 100% { opacity: calc(var(--peak) * 0.15); }
+  0%, 19%, 32%, 100% { opacity: 0; }
+  21% { opacity: calc(var(--peak) * 0.3); }
+  23% { opacity: calc(var(--peak) * 0.7); }
   25% { opacity: var(--peak); }
+  27% { opacity: calc(var(--peak) * 0.7); }
+  29% { opacity: calc(var(--peak) * 0.3); }
 }
 @media (prefers-reduced-motion: reduce) {
   .pcd-home-hero__beam { animation: none; opacity: 0; }
   .pcd-home-hero__flare { animation: none; opacity: 0.55; }
-  .pcd-hh-glint { animation: none; opacity: calc(var(--peak) * 0.4); }
+  .pcd-hh-glint { animation: none; opacity: 0; }
 }
 .pcd-home-hero__copy {
   position: relative;
