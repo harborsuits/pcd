@@ -76,7 +76,7 @@ function HomeHero() {
           aria-hidden="true"
           style={{ left: lantern.x, top: lantern.y, ["--hh-s" as string]: lantern.scale } as React.CSSProperties}
         >
-          <span className="pcd-home-hero__reflect" />
+          <span className="pcd-home-hero__reflect" aria-hidden="true">{[0,1,2,3,4,5].map((i)=>(<i key={i} className={`pcd-hh-glint pcd-hh-glint--${i}`} />))}</span>
           <span className="pcd-home-hero__beam" />
           <span className="pcd-home-hero__flare" />
         </div>
