@@ -682,11 +682,11 @@ All colors MUST be HSL.
 }
 /* uneven: strong + narrow near island, wider/dimmer/gappier toward foreground, each a beat later */
 .pcd-hh-glint--0 { left: 46%; top: 3%;  width: 8%;  height: 3%;   --peak: 0.4;  animation-delay: 0s; }
-.pcd-hh-glint--1 { left: 50%; top: 10%; width: 12%; height: 2.6%; --peak: 0.32; animation-delay: -9.95s; }
-.pcd-hh-glint--2 { left: 41%; top: 21%; width: 15%; height: 3%;   --peak: 0.24; animation-delay: -9.85s; }
-.pcd-hh-glint--3 { left: 52%; top: 36%; width: 20%; height: 3.4%; --peak: 0.17; animation-delay: -9.75s; }
-.pcd-hh-glint--4 { left: 33%; top: 52%; width: 26%; height: 3.8%; --peak: 0.12; animation-delay: -9.65s; }
-.pcd-hh-glint--5 { left: 49%; top: 66%; width: 32%; height: 4%;   --peak: 0.08; animation-delay: -9.55s; }
+.pcd-hh-glint--1 { left: 50%; top: 10%; width: 12%; height: 2.6%; --peak: 0.32; animation-delay: animation-delay: -9.7s; }
+.pcd-hh-glint--2 { left: 41%; top: 21%; width: 15%; height: 3%;   --peak: 0.24; animation-delay: animation-delay: -9.7s; }
+.pcd-hh-glint--3 { left: 52%; top: 36%; width: 20%; height: 3.4%; --peak: 0.17; animation-delay: -9.5s; }
+.pcd-hh-glint--4 { left: 33%; top: 52%; width: 26%; height: 3.8%; --peak: 0.12; animation-delay: -9.3s; }
+.pcd-hh-glint--5 { left: 49%; top: 66%; width: 32%; height: 4%;   --peak: 0.08; animation-delay: -9.1s; }
 /* 0% points right, 25% toward us, 50% left (toward copy, kept faint), 75% away */
 @keyframes pcd-hh-beam {
   0%   { transform: scaleX(1);     opacity: 0.45; }
@@ -707,7 +707,6 @@ All colors MUST be HSL.
 @keyframes pcd-hh-glint {
   0%, 14%, 40%, 100% { opacity: calc(var(--peak) * 0.15); }
   25% { opacity: var(--peak); }
-}
 }
 @media (prefers-reduced-motion: reduce) {
   .pcd-home-hero__beam { animation: none; opacity: 0; }
