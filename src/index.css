@@ -639,6 +639,65 @@ All colors MUST be HSL.
       linear-gradient(180deg, hsl(var(--hh-navy) / 0.9) 0%, hsl(var(--hh-navy) / 0.72) 45%, hsl(var(--hh-navy) / 0.4) 100%);
   }
 }
+/* Rotating lighthouse beam, anchored to the lamp by JS */
+.pcd-home-hero__light {
+  position: absolute; width: 0; height: 0; pointer-events: none; z-index: 0;
+  --hh-s: 1;
+}
+.pcd-home-hero__beam {
+  position: absolute; left: 0; top: 0;
+  width: calc(900px * var(--hh-s)); height: calc(110px * var(--hh-s));
+  margin-top: calc(-55px * var(--hh-s));
+  transform-origin: 0 50%;
+  background: radial-gradient(ellipse at 0% 50%, hsl(45 100% 88% / 0.55), hsl(45 100% 80% / 0.18) 38%, transparent 70%);
+  clip-path: polygon(0 46%, 100% 0, 100% 100%, 0 54%);
+  mix-blend-mode: screen; filter: blur(2px);
+  animation: pcd-hh-beam 10s linear infinite;
+}
+.pcd-home-hero__flare {
+  position: absolute; left: 0; top: 0;
+  width: calc(80px * var(--hh-s)); height: calc(80px * var(--hh-s));
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: radial-gradient(circle, hsl(48 100% 92% / 0.95), hsl(45 100% 75% / 0.35) 35%, transparent 70%);
+  mix-blend-mode: screen;
+  animation: pcd-hh-flare 10s linear infinite;
+}
+.pcd-home-hero__reflect {
+  position: absolute; left: 0;
+  top: calc(250px * var(--hh-s));
+  width: calc(26px * var(--hh-s)); height: calc(300px * var(--hh-s));
+  transform: translateX(-50%);
+  background: linear-gradient(180deg, transparent, hsl(45 100% 85% / 0.28) 30%, hsl(45 100% 85% / 0.12) 70%, transparent);
+  filter: blur(4px); mix-blend-mode: screen;
+  animation: pcd-hh-reflect 10s linear infinite;
+}
+/* 0% points right, 25% toward us, 50% left (toward copy, kept faint), 75% away */
+@keyframes pcd-hh-beam {
+  0%   { transform: scaleX(1);     opacity: 0.45; }
+  20%  { transform: scaleX(0.3);   opacity: 0.85; }
+  25%  { transform: scaleX(0.02);  opacity: 0; }
+  30%  { transform: scaleX(-0.3);  opacity: 0.6; }
+  50%  { transform: scaleX(-0.55); opacity: 0.18; }
+  70%  { transform: scaleX(-0.1);  opacity: 0; }
+  80%  { transform: scaleX(0.1);   opacity: 0; }
+  100% { transform: scaleX(1);     opacity: 0.45; }
+}
+@keyframes pcd-hh-flare {
+  0%, 15%  { opacity: 0.35; transform: translate(-50%, -50%) scale(0.8); }
+  25%      { opacity: 1;    transform: translate(-50%, -50%) scale(1.6); }
+  35%, 100%{ opacity: 0.35; transform: translate(-50%, -50%) scale(0.8); }
+  70%, 80% { opacity: 0.2;  transform: translate(-50%, -50%) scale(0.7); }
+}
+@keyframes pcd-hh-reflect {
+  0%, 15%, 35%, 100% { opacity: 0.25; }
+  25% { opacity: 0.8; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pcd-home-hero__beam { animation: none; opacity: 0; }
+  .pcd-home-hero__flare { animation: none; opacity: 0.55; }
+  .pcd-home-hero__reflect { animation: none; opacity: 0.3; }
+}
 .pcd-home-hero__copy {
   position: relative;
   z-index: 1;
