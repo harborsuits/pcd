@@ -784,5 +784,5 @@ All colors MUST be HSL.
 @media (prefers-reduced-motion: reduce) { .pcd-soft-card:hover { transform: none; } }
 /* On phones the lamp sits behind the headline: keep the beam, but softer */
 @media (max-width: 1023px) {
-  .pcd-home-hero__light { opacity: 0.75; }
+  .pcd-home-hero__light { z-index: 1; opacity: 0.6; }
 }
