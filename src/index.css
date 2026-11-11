@@ -782,3 +782,7 @@ All colors MUST be HSL.
 }
 .pcd-soft-card:hover { box-shadow: 0 2px 4px hsl(207 40% 20% / 0.05), 0 20px 40px -20px hsl(207 40% 20% / 0.26); transform: translateY(-2px); }
 @media (prefers-reduced-motion: reduce) { .pcd-soft-card:hover { transform: none; } }
+/* On phones/tablets the lamp sits behind the headline, so keep the glow off */
+@media (max-width: 1023px) {
+  .pcd-home-hero__light { display: none; }
+}
