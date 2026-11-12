@@ -37,6 +37,7 @@ export function MarketingFooter({ compact = false }: { compact?: boolean }) {
           <Link to="/privacy" className="hover:underline underline-offset-4">Privacy</Link>
           <Link to="/terms" className="hover:underline underline-offset-4">Terms</Link>
           <a href={`sms:${NAP.phoneE164}`} className="hover:underline underline-offset-4">Text Ben</a>
+          <Link to="/operator" className="hover:underline underline-offset-4">Operator Sign In</Link>
           {compact && <Link to="/get-demo" className="hover:underline underline-offset-4">Contact</Link>}
         </nav>
 
