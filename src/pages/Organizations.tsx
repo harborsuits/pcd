@@ -26,7 +26,7 @@ const steps = [
 ];
 
 const work = [
-  { name: "Raven Rock Construction", href: "https://www.ravenrockconstruction.com/", image: ravenWebsite.url, alt: "The live Raven Rock Construction homepage", role: "Built and actively managed by Pleasant Cove Design.", text: "A multi-service construction website with dedicated service pages, project photography, and a quote-request workflow that gives visitors a clear next step." },
+  { name: "Raven Rock Construction", href: "https://www.ravenrockconstruction.com/", image: ravenWebsite.url, alt: "The live Raven Rock Construction homepage", role: "Built and actively managed by Pleasant Cove Design.", text: "Dedicated service pages, project galleries, and quote intake that give visitors a clear next step." },
   { name: "Pier 1 Pizza", href: "https://pier1pizza207.com/", image: pierWebsite.url, alt: "The live Pier 1 Pizza homepage", role: "Website build and ongoing hosting by Pleasant Cove Design.", text: "A restaurant website with menu and online ordering links, events, and visitor information." },
 ];
 
