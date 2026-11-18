@@ -8,6 +8,7 @@ const FOOTER_NAV: [string, string][] = [
   ["/ai-receptionist", "AI Receptionist"],
   ["/blog", "Blog"],
   ["/midcoast-maine", "Midcoast Maine"],
+  ["/organizations", "Organizations"],
   ["/get-demo", "Contact"],
   ["/portal", "Client Portal"],
 ];
