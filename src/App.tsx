@@ -11,6 +11,7 @@ import Index from "./pages/Index";
 import IntakeWizard from "./pages/IntakeWizard";
 import Pricing from "./pages/Pricing";
 import WhatWeBuild from "./pages/WhatWeBuild";
+import Organizations from "./pages/Organizations";
 import NotFound from "./pages/NotFound";
 import DemoPage from "./pages/demo/DemoPage";
 import PortalPage from "./pages/portal/PortalPage";
@@ -56,6 +57,7 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/pricing" element={<Pricing />} />
           <Route path="/what-we-build" element={<WhatWeBuild />} />
+          <Route path="/organizations" element={<Organizations />} />
           <Route path="/ai-receptionist" element={<AiReceptionist />} />
           <Route path="/blog" element={<Blog />} />
           <Route path="/blog/:slug" element={<BlogPost />} />
