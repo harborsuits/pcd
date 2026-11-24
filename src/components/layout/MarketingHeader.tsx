@@ -5,14 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { BrandMark } from "./BrandMark";
 
-type ActivePage =
-  | "home"
-  | "what-we-build"
-  | "pricing"
-  | "ai-receptionist"
-  | "blog"
-  | "midcoast-maine"
-  | "contact";
+type ActivePage = "home" | "what-we-build" | "pricing" | "ai-receptionist" | "blog" | "midcoast-maine" | "contact";
 
 interface MarketingHeaderProps {
   activePage?: ActivePage;
@@ -32,9 +25,13 @@ const CTA_LABEL = "Get a Free Review";
 
 export function MarketingHeader({ activePage }: MarketingHeaderProps) {
   const [open, setOpen] = useState(false);
-  const items = NAV_ITEMS;
+  const isHome = activePage === "home";
+  const items = isHome ? NAV_ITEMS.filter((item) => item.key !== "contact") : NAV_ITEMS;
+  const ctaHref = isHome ? "/get-demo" : CTA_HREF;
+  const ctaLabel = isHome ? "Contact Ben" : CTA_LABEL;
   const { pathname } = useLocation();
-  const isCurrent = (item: typeof NAV_ITEMS[number]) => item.key === activePage || pathname === item.href || (item.key === "blog" && pathname.startsWith("/blog/"));
+  const isCurrent = (item: (typeof NAV_ITEMS)[number]) =>
+    item.key === activePage || pathname === item.href || (item.key === "blog" && pathname.startsWith("/blog/"));
 
   return (
     <header className="pcd-shell border-b border-border bg-card sticky top-0 z-50">
@@ -57,51 +54,62 @@ export function MarketingHeader({ activePage }: MarketingHeaderProps) {
               size="sm"
               className="text-muted-foreground hover:text-foreground"
             >
-              <Link to={item.href} aria-current={isCurrent(item) ? "page" : undefined}>{item.label}</Link>
+              <Link to={item.href} aria-current={isCurrent(item) ? "page" : undefined}>
+                {item.label}
+              </Link>
             </Button>
           ))}
-          <Button asChild size="sm" variant="ghost" className="whitespace-nowrap text-muted-foreground hover:text-foreground">
+          <Button
+            asChild
+            size="sm"
+            variant="ghost"
+            className="whitespace-nowrap text-muted-foreground hover:text-foreground"
+          >
             <Link to="/portal">Client Portal</Link>
           </Button>
           <Button asChild size="sm" className="whitespace-nowrap">
-            <Link to={CTA_HREF}>{CTA_LABEL}</Link>
+            <Link to={ctaHref}>{ctaLabel}</Link>
           </Button>
         </nav>
 
         {/* Mobile nav */}
-        <Sheet open={open} onOpenChange={setOpen}>
-          <SheetTrigger asChild className="xl:hidden">
-            <Button variant="ghost" size="icon" aria-label="Open menu">
-              <Menu className="h-5 w-5" />
+        <div className="flex shrink-0 items-center gap-1.5 xl:hidden">
+          {isHome && (
+            <Button asChild size="sm" className="h-11 whitespace-nowrap px-3">
+              <Link to={ctaHref}>{ctaLabel}</Link>
             </Button>
-          </SheetTrigger>
-          <SheetContent side="right" className="pcd-shell w-72 max-w-[90vw] overflow-y-auto">
-            <SheetTitle>Menu</SheetTitle>
-            <SheetDescription className="sr-only">Pleasant Cove Design pages and client portal</SheetDescription>
-            <nav aria-label="Mobile navigation" className="flex flex-col gap-4 mt-8">
-              {items.map((item) => (
-                <Link
-                  key={item.key}
-                  to={item.href}
-                  aria-current={isCurrent(item) ? "page" : undefined}
-                  className="text-lg font-medium hover:text-accent transition-colors"
-                  onClick={() => setOpen(false)}
-                >
-                  {item.label}
-                </Link>
-              ))}
-              <Link to="/portal" className="text-lg font-medium" onClick={() => setOpen(false)}>Client Portal</Link>
-              <Button
-                asChild
-                size="lg"
-                className="mt-4"
-                onClick={() => setOpen(false)}
-              >
-                <Link to={CTA_HREF}>{CTA_LABEL}</Link>
+          )}
+          <Sheet open={open} onOpenChange={setOpen}>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon" aria-label="Open menu">
+                <Menu className="h-5 w-5" />
               </Button>
-            </nav>
-          </SheetContent>
-        </Sheet>
+            </SheetTrigger>
+            <SheetContent side="right" className="pcd-shell w-72 max-w-[90vw] overflow-y-auto">
+              <SheetTitle>Menu</SheetTitle>
+              <SheetDescription className="sr-only">Pleasant Cove Design pages and client portal</SheetDescription>
+              <nav aria-label="Mobile navigation" className="flex flex-col gap-4 mt-8">
+                {items.map((item) => (
+                  <Link
+                    key={item.key}
+                    to={item.href}
+                    aria-current={isCurrent(item) ? "page" : undefined}
+                    className="text-lg font-medium hover:text-accent transition-colors"
+                    onClick={() => setOpen(false)}
+                  >
+                    {item.label}
+                  </Link>
+                ))}
+                <Link to="/portal" className="text-lg font-medium" onClick={() => setOpen(false)}>
+                  Client Portal
+                </Link>
+                <Button asChild size="lg" className="mt-4" onClick={() => setOpen(false)}>
+                  <Link to={ctaHref}>{ctaLabel}</Link>
+                </Button>
+              </nav>
+            </SheetContent>
+          </Sheet>
+        </div>
       </div>
     </header>
   );

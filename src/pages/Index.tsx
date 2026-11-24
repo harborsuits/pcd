@@ -1,7 +1,7 @@
 import * as React from "react";
 import { MarketingFooter } from "@/components/layout/MarketingFooter";
 import { Link } from "react-router-dom";
-import { ArrowRight, ArrowUpRight, Globe, Wrench, ShieldCheck, Phone, Mail } from "lucide-react";
+import { ArrowRight, ArrowUpRight, Globe, Wrench, ShieldCheck, Phone, MessageSquare, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 import { SEOHead } from "@/components/SEOHead";
@@ -43,9 +43,12 @@ function useLanternPosition(ref: React.RefObject<HTMLElement>) {
       const r = el.getBoundingClientRect();
       const img = el.querySelector<HTMLImageElement>(".pcd-home-hero__bg");
       if (!img || !r.width) return;
-      const op = getComputedStyle(img).objectPosition.split(" ").map((v) => parseFloat(v) / 100);
+      const op = getComputedStyle(img)
+        .objectPosition.split(" ")
+        .map((v) => parseFloat(v) / 100);
       const scale = Math.max(r.width / LANTERN.w, r.height / LANTERN.h);
-      const dw = LANTERN.w * scale, dh = LANTERN.h * scale;
+      const dw = LANTERN.w * scale,
+        dh = LANTERN.h * scale;
       const x = (r.width - dw) * (op[0] ?? 0.5) + LANTERN.x * scale;
       const y = (r.height - dh) * (op[1] ?? 0.5) + LANTERN.y * scale;
       const visible = x > 8 && x < r.width - 8 && y > 8 && y < r.height - 8;
@@ -59,58 +62,78 @@ function useLanternPosition(ref: React.RefObject<HTMLElement>) {
   return pos;
 }
 
+const homeContactOptions = [
+  { label: "Call Ben", href: `tel:${NAP.phoneE164}`, Icon: Phone, detail: NAP.phone },
+  { label: "Text Ben", href: `sms:${NAP.phoneE164}`, Icon: MessageSquare },
+  { label: "Email Ben", href: `mailto:${NAP.email}`, Icon: Mail, detail: NAP.email },
+];
+
+function HomeContactLinks({ className, showDetails = false }: { className: string; showDetails?: boolean }) {
+  return (
+    <ul aria-label="Contact Ben directly" className={`flex flex-wrap text-sm ${className}`}>
+      {homeContactOptions.map(({ label, href, Icon, detail }) => (
+        <li key={href} className="min-w-0">
+          <a
+            href={href}
+            className="inline-flex min-h-11 items-center gap-1.5 font-medium underline underline-offset-4 hover:no-underline"
+          >
+            <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
+            <span className="break-all">{showDetails && detail ? detail : label}</span>
+          </a>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 function HomeHero() {
   const ref = React.useRef<HTMLElement>(null);
   const lantern = useLanternPosition(ref);
   return (
     <section ref={ref} className="pcd-home-hero" aria-labelledby="home-hero-title">
-      <img
-        src={lighthouseHero}
-        alt=""
-        aria-hidden="true"
-        className="pcd-home-hero__bg"
-      />
+      <img src={lighthouseHero} alt="" aria-hidden="true" className="pcd-home-hero__bg" />
       {lantern && (
         <div
           className="pcd-home-hero__light"
           aria-hidden="true"
           style={{ left: lantern.x, top: lantern.y, ["--hh-s" as string]: lantern.scale } as React.CSSProperties}
         >
-          <span className="pcd-home-hero__reflect" aria-hidden="true"><span className="pcd-hh-sweep">{[0,1,2,3,4,5].map((i)=>(<i key={i} className={`pcd-hh-glint pcd-hh-glint--${i}`} />))}</span></span>
+          <span className="pcd-home-hero__reflect" aria-hidden="true">
+            <span className="pcd-hh-sweep">
+              {[0, 1, 2, 3, 4, 5].map((i) => (
+                <i key={i} className={`pcd-hh-glint pcd-hh-glint--${i}`} />
+              ))}
+            </span>
+          </span>
           <span className="pcd-home-hero__beam" />
           <span className="pcd-home-hero__flare" />
         </div>
       )}
       <div className="pcd-home-hero__scrim" aria-hidden="true" />
       <div className="pcd-home-hero__copy">
-          <p className="pcd-home-hero__eyebrow">Websites for Midcoast Maine small businesses</p>
-          <h1
-            id="home-hero-title"
-            data-speakable
-            className="font-serif text-4xl md:text-5xl lg:text-6xl font-bold leading-tight"
-          >
-            A better website.
-            <br className="hidden sm:block" /> One less thing to manage.
-          </h1>
-          <p data-speakable className="pcd-home-hero__lede text-lg md:text-xl leading-relaxed mt-6">
-            I build, improve, and maintain websites for Maine small businesses. A new site, a focused fix, or someone to
-            keep it running.
-          </p>
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mt-8">
-            <a href="#work" className="pcd-home-hero__btn pcd-home-hero__btn--primary">
-              See Our Work <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" />
-            </a>
-            <Link to="/get-demo?service=review" className="pcd-home-hero__btn pcd-home-hero__btn--secondary">
-              Get a Free Website Review
-            </Link>
-          </div>
-          <p className="pcd-home-hero__note text-sm mt-5">
-            Have a quick question?{" "}
-            <a className="underline underline-offset-4" href={`tel:${NAP.phoneE164}`}>
-              {NAP.phone}
-            </a>
-          </p>
-          <p className="pcd-home-hero__caption font-serif">A clear course for your website.</p>
+        <p className="pcd-home-hero__eyebrow">Websites for Midcoast Maine small businesses</p>
+        <h1
+          id="home-hero-title"
+          data-speakable
+          className="font-serif text-4xl md:text-5xl lg:text-6xl font-bold leading-tight"
+        >
+          A better website.
+          <br className="hidden sm:block" /> One less thing to manage.
+        </h1>
+        <p data-speakable className="pcd-home-hero__lede text-lg md:text-xl leading-relaxed mt-6">
+          I build, improve, and maintain websites for Maine small businesses. A new site, a focused fix, or someone to
+          keep it running.
+        </p>
+        <div className="mt-6 flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:mt-8">
+          <Link to="/get-demo" className="pcd-home-hero__btn pcd-home-hero__btn--primary">
+            Tell me about your project <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" />
+          </Link>
+          <a href="#work" className="pcd-home-hero__btn pcd-home-hero__btn--secondary">
+            See Our Work
+          </a>
+        </div>
+        <HomeContactLinks className="pcd-home-hero__note mt-2 gap-x-5" />
+        <p className="pcd-home-hero__caption font-serif">A clear course for your website.</p>
       </div>
     </section>
   );
@@ -185,15 +208,11 @@ const Index = () => (
                     <p className="font-semibold">
                       {plan.label} · {plan.price}
                     </p>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {plan.description}
-                    </p>
+                    <p className="text-sm text-muted-foreground mt-1">{plan.description}</p>
                   </div>
                 ))}
               </div>
-              <p className="text-sm text-muted-foreground mb-6">
-                {OWN_PLATFORM_NOTE}
-              </p>
+              <p className="text-sm text-muted-foreground mb-6">{OWN_PLATFORM_NOTE}</p>
               <Button asChild variant="outline" className="mt-auto justify-between">
                 <Link to="/get-demo?product=care_plan&tier=care_website">
                   Discuss website care <ArrowRight className="h-4 w-4" />
@@ -219,10 +238,7 @@ const Index = () => (
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
             {smallerJobs.map((service) => (
-              <article
-                key={service.id}
-                className="pcd-soft-card rounded-2xl p-6 flex flex-col"
-              >
+              <article key={service.id} className="pcd-soft-card rounded-2xl p-6 flex flex-col">
                 <h3 className="font-semibold text-lg mb-2">{service.label}</h3>
                 <p className="font-serif text-2xl font-bold mb-4">{service.price}</p>
                 <p className="text-sm text-muted-foreground leading-relaxed mb-5">{service.description}</p>
@@ -402,38 +418,29 @@ const Index = () => (
         </div>
       </section>
 
-      <section className="bg-primary text-primary-foreground border-t border-border py-12 md:py-16">
-        <div className="max-w-3xl mx-auto px-6 text-center">
-          <h2 className="font-serif text-3xl md:text-4xl font-bold mb-5">What would make your website work better?</h2>
-          <p className="text-lg leading-relaxed mb-7">
-            A new website, a small fix, or ongoing help. Tell me what’s on your mind.
+      <section
+        aria-labelledby="home-contact"
+        className="border-t border-border bg-primary py-12 text-primary-foreground md:py-16"
+      >
+        <div className="mx-auto max-w-3xl px-6 text-center">
+          <h2 id="home-contact" className="mb-4 font-serif text-3xl font-bold md:text-4xl">
+            Let’s talk about your website.
+          </h2>
+          <p className="mb-6 text-lg leading-relaxed">
+            Need a new site, a small fix, or help keeping it up to date? Tell me what you have in mind.
           </p>
-          <div className="flex flex-col sm:flex-row justify-center gap-3">
-            <Button asChild size="lg" variant="secondary">
-              <Link to="/get-demo">
-                Discuss your project <ArrowRight className="ml-2 h-4 w-4" />
-              </Link>
-            </Button>
-            <Button asChild size="lg" variant="secondary">
-              <Link to="/get-demo?service=review">Get a Free Website Review</Link>
-            </Button>
-          </div>
-          <div className="flex flex-col sm:flex-row justify-center gap-4 sm:gap-7 mt-7 text-sm">
-            <a
-              href={`tel:${NAP.phoneE164}`}
-              className="inline-flex items-center justify-center gap-2 underline underline-offset-4"
-            >
-              <Phone className="h-4 w-4" />
-              {NAP.phone}
-            </a>
-            <a
-              href={`mailto:${NAP.email}`}
-              className="inline-flex items-center justify-center gap-2 underline underline-offset-4 break-all"
-            >
-              <Mail className="h-4 w-4 shrink-0" />
-              {NAP.email}
-            </a>
-          </div>
+          <Button asChild size="lg" variant="secondary" className="w-full sm:w-auto">
+            <Link to="/get-demo">
+              Send a project inquiry <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" />
+            </Link>
+          </Button>
+          <HomeContactLinks className="mt-3 justify-center gap-x-5 sm:gap-x-7" showDetails />
+          <p className="mt-4 border-t border-primary-foreground/25 pt-4 text-sm leading-relaxed">
+            Want feedback on your current site?{" "}
+            <Link to="/get-demo?service=review" className="font-semibold underline underline-offset-4">
+              Get a Free Website Review
+            </Link>
+          </p>
         </div>
       </section>
       <section className="py-7 px-6 text-center">
