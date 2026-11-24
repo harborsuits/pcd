@@ -38,7 +38,7 @@ export function MarketingHeader({ activePage }: MarketingHeaderProps) {
       <div className="max-w-7xl mx-auto px-5 sm:px-6 flex items-center justify-between gap-3 py-1">
         <Link
           to="/"
-          className="font-serif text-lg md:text-xl font-bold text-foreground shrink-0"
+          className={`font-serif text-lg md:text-xl font-bold text-foreground shrink-0 ${isHome ? "max-[359px]:[&_img]:w-32" : ""}`}
           aria-label="Pleasant Cove Design home"
         >
           <BrandMark />
