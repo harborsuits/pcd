@@ -1,6 +1,7 @@
 import { BrandMark } from "@/components/layout/BrandMark";
 import { MarketingFooter } from "@/components/layout/MarketingFooter";
 import { useState, useEffect } from "react";
+import { z } from "zod";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowLeft, ArrowRight, Loader2, MessageSquare, Mail, UserPlus, LogIn, CheckCircle2 } from "lucide-react";
 import pcdLogo from "@/assets/pcd-logo.jpeg";
@@ -45,25 +46,238 @@ const mapServiceType = (type: ServiceType): string => {
 };
 
 // Keep this component outside GetDemo so field updates never remount its children.
-const Shell = ({ children }: { children: React.ReactNode }) => (
+const Shell = ({ children, clientLogin = false }: { children: React.ReactNode; clientLogin?: boolean }) => (
   <div className="pcd-shell min-h-screen flex flex-col bg-page-bg text-foreground">
     <header className="border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-50">
       <div className="max-w-6xl mx-auto px-5 sm:px-6 py-2 flex items-center justify-between gap-3">
-        <Link to="/" className="font-serif text-xl font-bold tracking-tight text-foreground">
+        <Link to="/" className="font-serif text-xl font-bold tracking-tight text-foreground" aria-label="Pleasant Cove Design home">
           <BrandMark compact />
         </Link>
-        <Button asChild variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
-          <Link to="/">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back
+        {clientLogin ? (
+          <Link to="/portal" className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground">
+            <LogIn className="h-4 w-4" aria-hidden="true" />
+            Client login
           </Link>
-        </Button>
+        ) : (
+          <Button asChild variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
+            <Link to="/">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back
+            </Link>
+          </Button>
+        )}
       </div>
     </header>
     {children}
     <MarketingFooter compact />
   </div>
 );
+
+const normalizeExistingWebsite = (value: string): string | null => {
+  const trimmed = value.trim();
+  if (!trimmed || trimmed.length > 500 || /\s/.test(trimmed)) return null;
+  try {
+    const url = new URL(/^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`);
+    const validHostname = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$/i.test(url.hostname);
+    if (!["http:", "https:"].includes(url.protocol) || !validHostname || url.username || url.password) return null;
+    return url.toString();
+  } catch {
+    return null;
+  }
+};
+
+const existingWebsiteSchema = z.object({
+  website: z.string().trim().min(3, "Enter your current website.").max(500, "Keep the website address under 500 characters.").refine(
+    (value) => normalizeExistingWebsite(value) !== null,
+    "Enter a valid domain or full URL, such as yourbusiness.com.",
+  ),
+  email: z.string().trim().email("Enter a valid email address.").max(255, "Keep your email under 255 characters."),
+  message: z.string().trim().min(2, "Tell me a little about what you’d like to change.").max(2000, "Keep your message under 2,000 characters."),
+});
+
+type ExistingWebsiteField = keyof z.infer<typeof existingWebsiteSchema>;
+
+const ExistingWebsiteInquiry = ({
+  accessToken,
+  tier,
+  product,
+  isTrial,
+}: {
+  accessToken: string | null;
+  tier: string | null;
+  product: string | null;
+  isTrial: boolean;
+}) => {
+  const [website, setWebsite] = useState("");
+  const [email, setEmail] = useState("");
+  const [message, setMessage] = useState("");
+  const [touched, setTouched] = useState<Record<ExistingWebsiteField, boolean>>({ website: false, email: false, message: false });
+  const [isLoading, setIsLoading] = useState(false);
+  const [submitError, setSubmitError] = useState("");
+  const [submitted, setSubmitted] = useState(false);
+
+  const parsed = existingWebsiteSchema.safeParse({ website, email, message });
+  const fieldError = (field: ExistingWebsiteField) => {
+    if (parsed.success || !touched[field]) return undefined;
+    return parsed.error.flatten().fieldErrors[field]?.[0];
+  };
+  const websiteError = fieldError("website");
+  const emailError = fieldError("email");
+  const messageError = fieldError("message");
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setTouched({ website: true, email: true, message: true });
+    setSubmitError("");
+    if (!parsed.success || isLoading) return;
+
+    setIsLoading(true);
+    try {
+      const normalizedWebsite = normalizeExistingWebsite(parsed.data.website);
+      if (!normalizedWebsite) throw new Error("Invalid website");
+      const headers: Record<string, string> = {};
+      if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
+      const { data, error } = await portalSupabase.functions.invoke("leads/request-demo", {
+        headers,
+        body: {
+          city: null,
+          phone: "",
+          email: parsed.data.email,
+          your_name: null,
+          service_type: "website",
+          inquiry_type: "existing",
+          website: normalizedWebsite,
+          existing_site_url: normalizedWebsite,
+          custom_request: parsed.data.message,
+          tier,
+          product_type: product,
+          is_trial: isTrial,
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(typeof data.error === "string" ? data.error : "Submission failed");
+      setSubmitted(true);
+    } catch {
+      setSubmitError(`We couldn’t send your inquiry. Your entries are still here — please try again, or email ${NAP.email}.`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <Shell clientLogin>
+      <SEOHead
+        title="Help With Your Website — Pleasant Cove Design"
+        description="Send Ben your current website and a short note about what you’d like to fix or improve. Pleasant Cove Design, Midcoast Maine."
+        path="/get-demo"
+      />
+      <main className="flex-1 px-5 sm:px-6 py-10 md:py-14 lg:py-20">
+        <div className="max-w-5xl mx-auto grid gap-8 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:gap-x-14 lg:gap-y-6">
+          <div className="lg:col-start-1 lg:row-start-1 lg:pt-8">
+            <h1 className="font-serif text-3xl md:text-4xl font-bold leading-tight mb-4">Get help with your website</h1>
+            <p className="text-muted-foreground text-base md:text-lg leading-relaxed max-w-lg">
+              Send me your site and tell me what you’d like to change. I’ll take a look and follow up by email about next steps.
+            </p>
+          </div>
+
+          <div className="lg:col-start-2 lg:row-start-1 lg:row-span-2 rounded-2xl border border-border bg-card p-6 md:p-8 shadow-sm">
+            {submitted ? (
+              <div className="py-6 text-center" role="status">
+                <CheckCircle2 className="w-10 h-10 text-accent mx-auto mb-4" aria-hidden="true" />
+                <h2 className="font-serif text-2xl font-bold mb-3">Thank you</h2>
+                <p className="text-muted-foreground leading-relaxed">
+                  Thanks, I got your inquiry. I’ll take a look at your site and follow up by email.
+                </p>
+              </div>
+            ) : (
+              <>
+                <h2 className="font-serif text-2xl font-bold mb-6">Tell me about your site</h2>
+                <form className="space-y-5" onSubmit={handleSubmit} noValidate>
+                  <div className="space-y-2">
+                    <Label htmlFor="existingWebsite">Current website</Label>
+                    <Input
+                      id="existingWebsite"
+                      required
+                      aria-required="true"
+                      aria-invalid={!!websiteError}
+                      aria-describedby={websiteError ? "existingWebsite-error" : undefined}
+                      value={website}
+                      onChange={(event) => setWebsite(event.target.value)}
+                      onBlur={() => setTouched((current) => ({ ...current, website: true }))}
+                      placeholder="yourbusiness.com"
+                      autoComplete="url"
+                      inputMode="url"
+                      maxLength={500}
+                    />
+                    {websiteError && <p id="existingWebsite-error" className="text-sm text-destructive">{websiteError}</p>}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="existingEmail">Your email</Label>
+                    <Input
+                      id="existingEmail"
+                      required
+                      aria-required="true"
+                      aria-invalid={!!emailError}
+                      aria-describedby={emailError ? "existingEmail-error" : undefined}
+                      type="email"
+                      value={email}
+                      onChange={(event) => setEmail(event.target.value)}
+                      onBlur={() => setTouched((current) => ({ ...current, email: true }))}
+                      placeholder="you@yourbusiness.com"
+                      autoComplete="email"
+                      maxLength={255}
+                    />
+                    {emailError && <p id="existingEmail-error" className="text-sm text-destructive">{emailError}</p>}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="existingMessage">What would you like to fix or improve?</Label>
+                    <Textarea
+                      id="existingMessage"
+                      required
+                      aria-required="true"
+                      aria-invalid={!!messageError}
+                      aria-describedby={`existingMessage-help${messageError ? " existingMessage-error" : ""}`}
+                      value={message}
+                      onChange={(event) => setMessage(event.target.value)}
+                      onBlur={() => setTouched((current) => ({ ...current, message: true }))}
+                      rows={5}
+                      maxLength={2000}
+                    />
+                    <p id="existingMessage-help" className="text-sm text-muted-foreground leading-relaxed">
+                      A sentence or two is plenty. Think contact forms, adding pages, or making the site easier to use.
+                    </p>
+                    {messageError && <p id="existingMessage-error" className="text-sm text-destructive">{messageError}</p>}
+                  </div>
+
+                  <Button type="submit" disabled={isLoading} className="w-full h-12 text-base">
+                    {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Sending…</> : "Send website inquiry"}
+                  </Button>
+                  {submitError && <p role="alert" className="text-sm text-destructive leading-relaxed">{submitError}</p>}
+                </form>
+              </>
+            )}
+          </div>
+
+          <div className="lg:col-start-1 lg:row-start-2 space-y-5 text-sm">
+            <p className="text-muted-foreground leading-relaxed">
+              Unsure what needs fixing? <Link to="/get-demo?service=review" className="font-medium text-foreground underline underline-offset-4">Get a free website review.</Link>
+            </p>
+            <div className="flex flex-wrap gap-x-5 gap-y-3">
+              <a href={`mailto:${NAP.email}`} className="inline-flex items-center gap-2 font-medium text-muted-foreground hover:text-foreground">
+                <Mail className="h-4 w-4" aria-hidden="true" />Email Ben
+              </a>
+              <a href={`sms:${NAP.phoneE164}`} className="inline-flex items-center gap-2 font-medium text-muted-foreground hover:text-foreground">
+                <MessageSquare className="h-4 w-4" aria-hidden="true" />Text Ben
+              </a>
+            </div>
+          </div>
+        </div>
+      </main>
+    </Shell>
+  );
+};
 
 const GetDemo = () => {
   const navigate = useNavigate();
@@ -211,6 +425,17 @@ const GetDemo = () => {
           </div>
         </main>
       </Shell>
+    );
+  }
+
+  if (serviceParam === "existing") {
+    return (
+      <ExistingWebsiteInquiry
+        accessToken={accessToken}
+        tier={tierParam}
+        product={productParam}
+        isTrial={isTrial}
+      />
     );
   }
 

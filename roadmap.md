@@ -1,3 +1,11 @@
+# Existing-website inquiry
+- [x] Scope the approved three-field coastal layout to `/get-demo?service=existing`, with responsive intro/form/secondary ordering and header Client login.
+- [x] Accept bare domains and full URLs; make business name and service area optional only for this inquiry type.
+- [x] Save website, email and message through `leads/request-demo` and include all three in the owner lead notification.
+- [x] Test validation, failed-submission retention, both URL formats, desktop/mobile layouts, real lead storage and notification; remove only test records afterward.
+
+Verification: 16 inquiry tests, targeted lint, TypeScript and preview compilation pass. Chromium verified desktop and 390/320px layouts, inline errors and failed-send retention/retry. Real full-URL and bare-domain inquiries reached the existing lead/project/intake destination with all three fields; the owner Telegram alert returned success. Only the marked test lead, project and intake records were removed afterward. No email-sending domain is configured; no email notification was added.
+
 # Site-wide consistency pass
 - [x] Follow-up: restore desktop primary free-review CTA with secondary portal link; align homepage care intent with Services/Pricing.
 - [x] Ben independently confirms production build/TypeScript pass and initial entry JS is 46% smaller.

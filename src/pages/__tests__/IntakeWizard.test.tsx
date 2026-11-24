@@ -44,7 +44,6 @@ describe("Contact inquiry regressions", () => {
   it.each([
     ["service=demo", "demo", "demo", true],
     ["service=website", "website", "website", true],
-    ["service=existing", "existing", "website", true],
     ["service=ai", "ai", "ai_receptionist", false],
     ["service=ai_receptionist", "ai", "ai_receptionist", false],
     ["service=both", "website", "website", true],
@@ -71,6 +70,79 @@ describe("Contact inquiry regressions", () => {
         city: needsTown ? "Damariscotta" : null,
       }),
     })));
+  });
+
+  it("shows exactly three required existing-website fields and accepts a bare domain", async () => {
+    invoke.mockResolvedValue({ data: { ok: true, project_token: "existing-project" }, error: null });
+    render(<MemoryRouter initialEntries={["/get-demo?service=existing"]}><GetDemo /></MemoryRouter>);
+    expect(screen.getByRole("heading", { name: "Get help with your website", level: 1 })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Client login" })).toHaveAttribute("href", "/portal");
+    const website = screen.getByLabelText("Current website");
+    const email = screen.getByLabelText("Your email");
+    const message = screen.getByLabelText("What would you like to fix or improve?");
+    for (const field of [website, email, message]) expect(field).toBeRequired();
+    expect(screen.queryByLabelText(/Business name/)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/Where do you serve/)).not.toBeInTheDocument();
+    const user = userEvent.setup();
+    await user.type(website, "example.com");
+    await user.type(email, "owner@example.com");
+    await user.type(message, "Please fix our contact form.");
+    await user.click(screen.getByRole("button", { name: "Send website inquiry" }));
+    await waitFor(() => expect(invoke).toHaveBeenCalledTimes(1));
+    const body = invoke.mock.calls[0][1].body;
+    expect(body).toEqual(expect.objectContaining({
+      service_type: "website",
+      inquiry_type: "existing",
+      website: "https://example.com/",
+      existing_site_url: "https://example.com/",
+      email: "owner@example.com",
+      custom_request: "Please fix our contact form.",
+      city: null,
+    }));
+    expect(body).not.toHaveProperty("business_name");
+    expect(await screen.findByText("Thanks, I got your inquiry. I’ll take a look at your site and follow up by email.")).toBeInTheDocument();
+  });
+
+  it("accepts a full existing-website URL without adding business or service-area fields", async () => {
+    invoke.mockResolvedValue({ data: { ok: true }, error: null });
+    render(<MemoryRouter initialEntries={["/get-demo?service=existing"]}><GetDemo /></MemoryRouter>);
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText("Current website"), "https://example.com/services");
+    await user.type(screen.getByLabelText("Your email"), "owner@example.com");
+    await user.type(screen.getByLabelText("What would you like to fix or improve?"), "Add a services page.");
+    await user.click(screen.getByRole("button", { name: "Send website inquiry" }));
+    await waitFor(() => expect(invoke).toHaveBeenCalledWith("leads/request-demo", expect.objectContaining({
+      body: expect.objectContaining({ website: "https://example.com/services", existing_site_url: "https://example.com/services" }),
+    })));
+  });
+
+  it("shows inline existing-website validation without calling the lead endpoint", async () => {
+    render(<MemoryRouter initialEntries={["/get-demo?service=existing"]}><GetDemo /></MemoryRouter>);
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText("Current website"), "not a url");
+    await user.type(screen.getByLabelText("Your email"), "not-an-email");
+    await user.click(screen.getByRole("button", { name: "Send website inquiry" }));
+    expect(screen.getByText("Enter a valid domain or full URL, such as yourbusiness.com.")).toBeInTheDocument();
+    expect(screen.getByText("Enter a valid email address.")).toBeInTheDocument();
+    expect(screen.getByText("Tell me a little about what you’d like to change.")).toBeInTheDocument();
+    expect(invoke).not.toHaveBeenCalled();
+  });
+
+  it("preserves existing-website entries and allows retry after a failed send", async () => {
+    invoke.mockResolvedValueOnce({ data: null, error: new Error("Mocked failure") }).mockResolvedValueOnce({ data: { ok: true }, error: null });
+    render(<MemoryRouter initialEntries={["/get-demo?service=existing"]}><GetDemo /></MemoryRouter>);
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText("Current website"), "example.com");
+    await user.type(screen.getByLabelText("Your email"), "owner@example.com");
+    await user.type(screen.getByLabelText("What would you like to fix or improve?"), "Make the site easier to use.");
+    await user.click(screen.getByRole("button", { name: "Send website inquiry" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Your entries are still here");
+    expect(screen.getByLabelText("Current website")).toHaveValue("example.com");
+    expect(screen.getByLabelText("Your email")).toHaveValue("owner@example.com");
+    expect(screen.getByLabelText("What would you like to fix or improve?")).toHaveValue("Make the site easier to use.");
+    await user.click(screen.getByRole("button", { name: "Send website inquiry" }));
+    expect(await screen.findByText("Thanks, I got your inquiry. I’ll take a look at your site and follow up by email.")).toBeInTheDocument();
+    expect(invoke).toHaveBeenCalledTimes(2);
   });
 
   it("retains the same input nodes, focus and caret through ordinary typing", async () => {

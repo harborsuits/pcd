@@ -1362,6 +1362,60 @@ async function handleGenerateDemo(req: Request, leadId: string): Promise<Respons
   }
 }
 
+function normalizeExistingWebsiteUrl(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  if (!trimmed || trimmed.length > 500 || /\s/.test(trimmed)) return null;
+  try {
+    const url = new URL(/^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`);
+    const validHostname = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$/i.test(url.hostname);
+    if (!["http:", "https:"].includes(url.protocol) || !validHostname || url.username || url.password) return null;
+    return url.toString();
+  } catch {
+    return null;
+  }
+}
+
+function businessNameFromWebsite(website: string): string {
+  const hostname = new URL(website).hostname.replace(/^www\./i, "");
+  const base = hostname.split(".")[0] || hostname;
+  return (base.charAt(0).toUpperCase() + base.slice(1)).slice(0, 120);
+}
+
+function escapeTelegramHtml(value: string): string {
+  return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+async function notifyExistingWebsiteInquiry(website: string, email: string, message: string): Promise<boolean> {
+  const token = Deno.env.get("TELEGRAM_BOT_TOKEN");
+  const chatId = Deno.env.get("TELEGRAM_CHAT_ID");
+  if (!token || !chatId) {
+    console.log("Existing website inquiry notification skipped: Telegram is not configured");
+    return false;
+  }
+  try {
+    const response = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        chat_id: chatId,
+        text: `🛠️ <b>Existing Website Inquiry</b>\n\n<b>Website:</b> ${escapeTelegramHtml(website)}\n<b>Email:</b> ${escapeTelegramHtml(email)}\n<b>Requested changes:</b>\n${escapeTelegramHtml(message)}`,
+        parse_mode: "HTML",
+        disable_web_page_preview: true,
+      }),
+    });
+    if (!response.ok) {
+      console.error(`Existing website inquiry notification failed with status ${response.status}`);
+      return false;
+    }
+    console.log("Existing website inquiry lead notification sent");
+    return true;
+  } catch (error) {
+    console.error("Existing website inquiry notification error:", error instanceof Error ? error.message : "Unknown error");
+    return false;
+  }
+}
+
 // POST /leads/request-demo - Public endpoint for lead capture + auto demo generation
 async function handleRequestDemo(req: Request): Promise<Response> {
   // Check if user is authenticated (for immediate owner_user_id assignment)
@@ -1394,8 +1448,8 @@ async function handleRequestDemo(req: Request): Promise<Response> {
     // Define body type with all fields including new intake_details structure
     let body: { 
       business_name?: string; 
-      city?: string; 
-      phone?: string; 
+      city?: string | null;
+      phone?: string;
       email?: string;
       your_name?: string;
       website?: string;
@@ -1405,6 +1459,7 @@ async function handleRequestDemo(req: Request): Promise<Response> {
       website_style?: string;
       receptionist_focus?: string;
       service_type?: string;
+      inquiry_type?: string;
       // 7-day AI trial flag
       is_trial?: boolean;
       // Tier and product type (NEW)
@@ -1502,8 +1557,8 @@ async function handleRequestDemo(req: Request): Promise<Response> {
       );
     }
 
-    const { 
-      business_name, 
+    let {
+      business_name,
       city, 
       phone,
       email,
@@ -1515,6 +1570,7 @@ async function handleRequestDemo(req: Request): Promise<Response> {
       website_style,
       receptionist_focus,
       service_type,
+      inquiry_type,
       // 7-day AI trial flag
       is_trial,
       // Tier and product type (NEW)
@@ -1688,6 +1744,7 @@ async function handleRequestDemo(req: Request): Promise<Response> {
       website_style: website_style || null,
       receptionist_focus: receptionist_focus || null,
       service_type: service_type || null,
+      inquiry_type: inquiry_type || null,
       your_name: your_name || null,
       email: email || null,
       // Website fields
@@ -1730,12 +1787,48 @@ async function handleRequestDemo(req: Request): Promise<Response> {
       requested_at: new Date().toISOString(),
     };
 
+    // The streamlined existing-website inquiry needs only a website, email and message.
+    // Other inquiry types retain their original validation and payload behavior.
+    const isExistingWebsiteInquiry = service_type === "website" && inquiry_type === "existing";
+    if (isExistingWebsiteInquiry) {
+      const normalizedWebsite = normalizeExistingWebsiteUrl(existing_site_url || website);
+      if (!normalizedWebsite) {
+        return new Response(
+          JSON.stringify({ error: "A valid current website URL is required" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      email = typeof email === "string" ? email.trim() : "";
+      custom_request = typeof custom_request === "string" ? custom_request.trim() : "";
+      if (!email || email.length > 255 || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
+        return new Response(
+          JSON.stringify({ error: "A valid email is required" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      if (custom_request.length < 2 || custom_request.length > 2000) {
+        return new Response(
+          JSON.stringify({ error: "A message between 2 and 2000 characters is required" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      website = normalizedWebsite;
+      existing_site_url = normalizedWebsite;
+      if (intakeDetails.existing_site) intakeDetails.existing_site.url = normalizedWebsite;
+      requestMeta.email = email;
+      requestMeta.custom_request = custom_request;
+      business_name = typeof business_name === "string" && business_name.trim()
+        ? business_name.trim().slice(0, 120)
+        : businessNameFromWebsite(normalizedWebsite);
+      city = typeof city === "string" && city.trim() ? city.trim() : null;
+    }
+
     // Log incoming request for debugging
     console.log(`Request demo received - business_name: "${business_name}", city: "${city}", service_type: "${service_type}", email: "${email}"`);
     
-    // business_name is always required
-    // city is required for demo, website, both; optional for ai, ai_receptionist, and other
-    const cityRequired = !service_type || service_type === "demo" || service_type === "website" || service_type === "both";
+    // Business name and city remain required for the original inquiry types.
+    // Existing-website inquiries derive an internal name from the supplied domain.
+    const cityRequired = !isExistingWebsiteInquiry && (!service_type || service_type === "demo" || service_type === "website" || service_type === "both");
     
     if (!business_name) {
       console.log("Validation failed: business_name is required");
@@ -1779,7 +1872,7 @@ async function handleRequestDemo(req: Request): Promise<Response> {
     let leadId: string | null = null;
     let enrichedData: Record<string, unknown> = {};
 
-    if (apiKey) {
+    if (apiKey && !isExistingWebsiteInquiry) {
       // Search for business in Google Places
       const searchQuery = `${business_name} ${city}`;
       const searchUrl = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(searchQuery)}&key=${apiKey}`;
@@ -1927,6 +2020,7 @@ async function handleRequestDemo(req: Request): Promise<Response> {
     const notesLines = [];
     if (your_name) notesLines.push(`Contact: ${your_name}`);
     if (email) notesLines.push(`Email: ${email}`);
+    if (isExistingWebsiteInquiry && website) notesLines.push(`Website: ${website}`);
     if (service_type) notesLines.push(`Service: ${service_type}`);
     if (timeline) notesLines.push(`Timeline: ${timeline}`);
     if (budget_range) notesLines.push(`Budget range: ${budget_range}`);
@@ -2032,6 +2126,7 @@ async function handleRequestDemo(req: Request): Promise<Response> {
       intake_details: intakeDetails,
       // Legacy flat fields for backwards compatibility
       service_type: service_type || "demo",
+      inquiry_type: inquiry_type || null,
       business_name,
       city,
       phone: bestPhone,
@@ -2093,7 +2188,7 @@ async function handleRequestDemo(req: Request): Promise<Response> {
     }
 
     // Create client portal identity record (for AI and Full Package submissions)
-    if (email && (service_type === "ai_receptionist" || service_type === "both" || service_type === "website")) {
+    if (!isExistingWebsiteInquiry && email && (service_type === "ai_receptionist" || service_type === "both" || service_type === "website")) {
       const { error: clientError } = await supabase
         .from("project_clients")
         .insert({
@@ -2133,6 +2228,11 @@ async function handleRequestDemo(req: Request): Promise<Response> {
         console.error("Failed to create notification event:", notifError);
         // Non-fatal
       }
+    }
+
+    let existingInquiryNotificationSent: boolean | null = null;
+    if (isExistingWebsiteInquiry && website && email && custom_request) {
+      existingInquiryNotificationSent = await notifyExistingWebsiteInquiry(website, email, custom_request);
     }
 
     // For "demo" service type ONLY, generate an actual demo site
@@ -2218,6 +2318,7 @@ async function handleRequestDemo(req: Request): Promise<Response> {
         project_token: projectToken,
         claim_code: claimCode, // Include claim code in response
         message: "Your request has been submitted. We'll be in touch soon!",
+        ...(isExistingWebsiteInquiry ? { lead_notification_sent: existingInquiryNotificationSent } : {}),
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
