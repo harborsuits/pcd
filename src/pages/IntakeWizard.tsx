@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { z } from "zod";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowRight, Loader2, CheckCircle2 } from "lucide-react";
+import { ArrowRight, Loader2, CheckCircle2, LogIn, Smartphone } from "lucide-react";
 import { InquiryContactLinks, InquiryLayout } from "@/components/intake/InquiryLayout";
 import { ALACARTE_SERVICES } from "@/lib/pricingMenu";
 import { TOWNS, VERTICALS } from "@/lib/localPages";
@@ -13,6 +13,9 @@ import { useToast } from "@/hooks/use-toast";
 import { portalSupabase } from "@/integrations/supabase/portalClient";
 import { NAP } from "@/lib/localPages";
 import { ReviewRequestForm } from "@/components/intake/ReviewRequestForm";
+import { SEOHead } from "@/components/SEOHead";
+import { BrandMark } from "@/components/layout/BrandMark";
+import { MarketingFooter } from "@/components/layout/MarketingFooter";
 
 type ServiceType = "demo" | "website" | "ai" | "existing" | "other" | "";
 
@@ -49,7 +52,9 @@ const normalizeExistingWebsite = (value: string): string | null => {
   if (!trimmed || trimmed.length > 500 || /\s/.test(trimmed)) return null;
   try {
     const url = new URL(/^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`);
-    const validHostname = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$/i.test(url.hostname);
+    const validHostname = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$/i.test(
+      url.hostname,
+    );
     if (!["http:", "https:"].includes(url.protocol) || !validHostname || url.username || url.password) return null;
     return url.toString();
   } catch {
@@ -58,12 +63,21 @@ const normalizeExistingWebsite = (value: string): string | null => {
 };
 
 const existingWebsiteSchema = z.object({
-  website: z.string().trim().min(3, "Enter your current website.").max(500, "Keep the website address under 500 characters.").refine(
-    (value) => normalizeExistingWebsite(value) !== null,
-    "Enter a valid domain or full URL, such as yourbusiness.com.",
-  ),
+  website: z
+    .string()
+    .trim()
+    .min(3, "Enter your current website.")
+    .max(500, "Keep the website address under 500 characters.")
+    .refine(
+      (value) => normalizeExistingWebsite(value) !== null,
+      "Enter a valid domain or full URL, such as yourbusiness.com.",
+    ),
   email: z.string().trim().email("Enter a valid email address.").max(255, "Keep your email under 255 characters."),
-  message: z.string().trim().min(2, "Tell me a little about what you’d like to change.").max(2000, "Keep your message under 2,000 characters."),
+  message: z
+    .string()
+    .trim()
+    .min(2, "Tell me a little about what you’d like to change.")
+    .max(2000, "Keep your message under 2,000 characters."),
 });
 
 type ExistingWebsiteField = keyof z.infer<typeof existingWebsiteSchema>;
@@ -82,7 +96,11 @@ const ExistingWebsiteInquiry = ({
   const [website, setWebsite] = useState("");
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
-  const [touched, setTouched] = useState<Record<ExistingWebsiteField, boolean>>({ website: false, email: false, message: false });
+  const [touched, setTouched] = useState<Record<ExistingWebsiteField, boolean>>({
+    website: false,
+    email: false,
+    message: false,
+  });
   const [isLoading, setIsLoading] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [submitted, setSubmitted] = useState(false);
@@ -129,7 +147,9 @@ const ExistingWebsiteInquiry = ({
       if (data?.error) throw new Error(typeof data.error === "string" ? data.error : "Submission failed");
       setSubmitted(true);
     } catch {
-      setSubmitError(`We couldn’t send your inquiry. Your entries are still here — please try again, or email ${NAP.email}.`);
+      setSubmitError(
+        `We couldn’t send your inquiry. Your entries are still here — please try again, or email ${NAP.email}.`,
+      );
     } finally {
       setIsLoading(false);
     }
@@ -145,7 +165,10 @@ const ExistingWebsiteInquiry = ({
       secondary={
         <>
           <p className="text-muted-foreground leading-relaxed">
-            Unsure what needs fixing? <Link to="/get-demo?service=review" className="font-medium text-foreground underline underline-offset-4">Get a free website review.</Link>
+            Unsure what needs fixing?{" "}
+            <Link to="/get-demo?service=review" className="font-medium text-foreground underline underline-offset-4">
+              Get a free website review.
+            </Link>
           </p>
           <InquiryContactLinks />
         </>
@@ -177,7 +200,11 @@ const ExistingWebsiteInquiry = ({
               inputMode="url"
               maxLength={500}
             />
-            {websiteError && <p id="existingWebsite-error" className="text-sm text-destructive">{websiteError}</p>}
+            {websiteError && (
+              <p id="existingWebsite-error" className="text-sm text-destructive">
+                {websiteError}
+              </p>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -196,7 +223,11 @@ const ExistingWebsiteInquiry = ({
               autoComplete="email"
               maxLength={255}
             />
-            {emailError && <p id="existingEmail-error" className="text-sm text-destructive">{emailError}</p>}
+            {emailError && (
+              <p id="existingEmail-error" className="text-sm text-destructive">
+                {emailError}
+              </p>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -216,18 +247,117 @@ const ExistingWebsiteInquiry = ({
             <p id="existingMessage-help" className="text-sm text-muted-foreground leading-relaxed">
               A sentence or two is plenty. Think contact forms, adding pages, or making the site easier to use.
             </p>
-            {messageError && <p id="existingMessage-error" className="text-sm text-destructive">{messageError}</p>}
+            {messageError && (
+              <p id="existingMessage-error" className="text-sm text-destructive">
+                {messageError}
+              </p>
+            )}
           </div>
 
           <Button type="submit" disabled={isLoading} className="w-full h-12 text-base">
-            {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Sending…</> : "Send website inquiry"}
+            {isLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Sending…
+              </>
+            ) : (
+              "Send website inquiry"
+            )}
           </Button>
-          {submitError && <p role="alert" className="text-sm text-destructive leading-relaxed">{submitError}</p>}
+          {submitError && (
+            <p role="alert" className="text-sm text-destructive leading-relaxed">
+              {submitError}
+            </p>
+          )}
         </form>
       )}
     </InquiryLayout>
   );
 };
+
+function WebsiteReviewPage({ contextNote }: { contextNote?: string }) {
+  return (
+    <div className="pcd-shell flex min-h-screen flex-col bg-[#fbfaf6] text-[#172f37]">
+      <SEOHead
+        title="Free Website Review — Pleasant Cove Design"
+        description="Get a personal website review from Ben at Pleasant Cove Design, with a short video and practical recommendations for what to fix first."
+        path="/get-demo"
+      />
+      <header className="border-b border-[#d8e3df] bg-[#fffcf7]">
+        <nav
+          aria-label="Main navigation"
+          className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-1 sm:px-8"
+        >
+          <Link to="/" aria-label="Pleasant Cove Design home">
+            <BrandMark compact />
+          </Link>
+          <Link
+            to="/portal"
+            className="inline-flex min-h-11 items-center gap-1.5 text-sm font-medium text-[#455f65] hover:text-[#172f37]"
+          >
+            <LogIn className="h-4 w-4" aria-hidden="true" />
+            Client login
+          </Link>
+        </nav>
+      </header>
+
+      <main className="flex-1 bg-[radial-gradient(ellipse_at_top_left,_#dfede8,_transparent_66%)]">
+        <div className="mx-auto grid max-w-6xl items-start gap-6 px-5 pb-8 pt-7 sm:gap-8 sm:px-8 sm:pt-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.93fr)] lg:gap-x-16 lg:gap-y-8 lg:pb-11 lg:pt-14">
+          <div className="lg:col-start-1 lg:row-start-1 lg:pt-2">
+            <p className="mb-3 inline-flex items-center gap-2 text-sm font-semibold text-[#25564e] sm:mb-4">
+              <span className="h-2 w-2 rounded-full bg-[#3a7569]" aria-hidden="true" />
+              Free website review
+            </p>
+            <h1 className="max-w-[13ch] text-balance font-serif text-[clamp(2.35rem,7.5vw,4.1rem)] font-medium leading-[1.03] tracking-[-0.047em]">
+              Find out what to fix on your website.
+            </h1>
+            <p className="mt-3 max-w-[43ch] text-base leading-relaxed text-[#3e5960] sm:mt-5 sm:text-lg">
+              I’ll check how your site works on a phone and how easily customers can reach you. You’ll get a short video
+              walkthrough and written notes on what I’d fix first.
+            </p>
+          </div>
+
+          <section
+            aria-labelledby="review-heading"
+            className="rounded-2xl border border-[#d8e3df] bg-white p-5 shadow-[0_16px_45px_-26px_#193c3b55] sm:p-8 lg:col-start-2 lg:row-span-2 lg:row-start-1"
+          >
+            <ReviewRequestForm contextNote={contextNote} />
+          </section>
+
+          <aside
+            aria-labelledby="sample-review-heading"
+            className="rounded-2xl bg-[#17383a] px-5 py-5 text-[#f2f9f5] sm:px-6 lg:col-start-1 lg:row-start-2"
+          >
+            <h2 id="sample-review-heading" className="flex items-center gap-3 text-sm font-semibold text-[#c9e5da]">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[#5e837a] bg-[#264c4c]">
+                <Smartphone className="h-4 w-4" aria-hidden="true" />
+              </span>
+              What a review finding looks like
+            </h2>
+            <p className="mt-3 font-serif text-xl font-medium leading-snug sm:text-2xl">
+              “Your quote link is hard to find on a phone.”
+            </p>
+            <p className="mt-2 max-w-[40ch] text-sm leading-relaxed text-[#c9dfd8] sm:text-base">
+              Put a “Request a quote” button beside your phone number near the top of the page.
+            </p>
+          </aside>
+
+          <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 border-t border-[#d8e3df] pt-4 text-sm text-[#455f65] lg:col-span-2">
+            <p>
+              Need something else?{" "}
+              <Link to="/get-demo" className="font-semibold text-[#25564e] underline underline-offset-4">
+                Send a general inquiry
+              </Link>
+              .
+            </p>
+            <InquiryContactLinks />
+          </div>
+        </div>
+      </main>
+      <MarketingFooter compact />
+    </div>
+  );
+}
 
 const GetDemo = () => {
   const navigate = useNavigate();
@@ -247,7 +377,12 @@ const GetDemo = () => {
   const [phone, setPhone] = useState("");
   const [notes, setNotes] = useState("");
   const [submitError, setSubmitError] = useState("");
-  const [receipt, setReceipt] = useState<{ projectToken: string | null; email: string; name: string; business: string } | null>(null);
+  const [receipt, setReceipt] = useState<{
+    projectToken: string | null;
+    email: string;
+    name: string;
+    business: string;
+  } | null>(null);
 
   // ?service=review → the lightweight free-review form
   const isReviewMode = searchParams.get("service") === "review";
@@ -260,22 +395,26 @@ const GetDemo = () => {
   const requestedService = ALACARTE_SERVICES.find((service) => service.id === searchParams.get("request"));
   const reviewTown = TOWNS.find((town) => town.slug === searchParams.get("town"));
   const reviewVertical = VERTICALS.find((vertical) => vertical.slug === searchParams.get("industry"));
-  const reviewContext = [
-    reviewTown ? `Town: ${reviewTown.name}, ME` : "",
-    reviewVertical ? `Industry: ${reviewVertical.name}` : "",
-  ].filter(Boolean).join("\n") || undefined;
+  const reviewContext =
+    [reviewTown ? `Town: ${reviewTown.name}, ME` : "", reviewVertical ? `Industry: ${reviewVertical.name}` : ""]
+      .filter(Boolean)
+      .join("\n") || undefined;
 
   const [optionalDetailsOpen, setOptionalDetailsOpen] = useState(false);
 
   useEffect(() => {
     const checkAuth = async () => {
-      const { data: { session } } = await portalSupabase.auth.getSession();
+      const {
+        data: { session },
+      } = await portalSupabase.auth.getSession();
       setIsLoggedIn(!!session);
       setAccessToken(session?.access_token ?? null);
     };
     checkAuth();
 
-    const { data: { subscription } } = portalSupabase.auth.onAuthStateChange((_, session) => {
+    const {
+      data: { subscription },
+    } = portalSupabase.auth.onAuthStateChange((_, session) => {
       setIsLoggedIn(!!session);
       setAccessToken(session?.access_token ?? null);
     });
@@ -358,42 +497,21 @@ const GetDemo = () => {
         business: businessName.trim(),
       });
     } catch {
-      setSubmitError(`We couldn’t send your inquiry. Your entries are still here — please try again, or email ${NAP.email}.`);
+      setSubmitError(
+        `We couldn’t send your inquiry. Your entries are still here — please try again, or email ${NAP.email}.`,
+      );
     } finally {
       setIsLoading(false);
     }
   };
 
   if (isReviewMode) {
-    return (
-      <InquiryLayout
-        title="Get a free website review"
-        introduction="Send me your website and what feels off. I’ll follow up by email with specific, practical feedback about what to fix first."
-        seoTitle="Free Website Review — Pleasant Cove Design"
-        seoDescription="Send Ben your website for honest, specific feedback on what to fix first. Free, no sales pressure, from Pleasant Cove Design in Midcoast Maine."
-        formTitle="Request your free review"
-        secondary={
-          <>
-            <p className="text-muted-foreground leading-relaxed">
-              Need something else? <Link to="/get-demo" className="font-medium text-foreground underline underline-offset-4">Send a general inquiry.</Link>
-            </p>
-            <InquiryContactLinks />
-          </>
-        }
-      >
-        <ReviewRequestForm contextNote={reviewContext} />
-      </InquiryLayout>
-    );
+    return <WebsiteReviewPage contextNote={reviewContext} />;
   }
 
   if (serviceParam === "existing") {
     return (
-      <ExistingWebsiteInquiry
-        accessToken={accessToken}
-        tier={tierParam}
-        product={productParam}
-        isTrial={isTrial}
-      />
+      <ExistingWebsiteInquiry accessToken={accessToken} tier={tierParam} product={productParam} isTrial={isTrial} />
     );
   }
 
@@ -416,11 +534,17 @@ const GetDemo = () => {
       secondary={
         <>
           <p className="text-muted-foreground leading-relaxed">
-            Unsure what needs fixing? <Link to="/get-demo?service=review" className="font-medium text-foreground underline underline-offset-4">Get a free website review.</Link>
+            Unsure what needs fixing?{" "}
+            <Link to="/get-demo?service=review" className="font-medium text-foreground underline underline-offset-4">
+              Get a free website review.
+            </Link>
           </p>
           <InquiryContactLinks />
           <p className="text-muted-foreground leading-relaxed">
-            Prefer to keep everything in one place? <Link to="/portal?tab=signup" className="font-medium text-foreground underline underline-offset-4">Start with a client account.</Link>
+            Prefer to keep everything in one place?{" "}
+            <Link to="/portal?tab=signup" className="font-medium text-foreground underline underline-offset-4">
+              Start with a client account.
+            </Link>
           </p>
         </>
       }
@@ -438,7 +562,9 @@ const GetDemo = () => {
                 Want to follow along? Create a password to track this project in your client portal — optional.
               </p>
               <Button asChild className="w-full">
-                <Link to={createPasswordHref}>Create my account <ArrowRight className="ml-2 h-4 w-4" /></Link>
+                <Link to={createPasswordHref}>
+                  Create my account <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
               </Button>
             </div>
           )}
@@ -464,7 +590,9 @@ const GetDemo = () => {
               className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             >
               {SERVICE_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>{option.title}</option>
+                <option key={option.value} value={option.value}>
+                  {option.title}
+                </option>
               ))}
             </select>
           </div>
@@ -476,7 +604,9 @@ const GetDemo = () => {
               required
               aria-required="true"
               aria-invalid={!!touched.businessName && businessName.trim().length < 2}
-              aria-describedby={touched.businessName && businessName.trim().length < 2 ? "businessName-error" : undefined}
+              aria-describedby={
+                touched.businessName && businessName.trim().length < 2 ? "businessName-error" : undefined
+              }
               value={businessName}
               onChange={(event) => setBusinessName(event.target.value)}
               onBlur={() => setTouched((current) => ({ ...current, businessName: true }))}
@@ -485,7 +615,9 @@ const GetDemo = () => {
               maxLength={120}
             />
             {touched.businessName && businessName.trim().length < 2 && (
-              <p id="businessName-error" className="text-sm text-destructive">Please enter your business name.</p>
+              <p id="businessName-error" className="text-sm text-destructive">
+                Please enter your business name.
+              </p>
             )}
           </div>
 
@@ -506,7 +638,9 @@ const GetDemo = () => {
               maxLength={255}
             />
             {touched.email && !isValidEmail(email) && (
-              <p id="email-error" className="text-sm text-destructive">Please enter a valid email address.</p>
+              <p id="email-error" className="text-sm text-destructive">
+                Please enter a valid email address.
+              </p>
             )}
           </div>
 
@@ -526,7 +660,9 @@ const GetDemo = () => {
               maxLength={2000}
             />
             {touched.notes && notes.trim().length < 2 && (
-              <p id="notes-error" className="text-sm text-destructive">Please add a short message.</p>
+              <p id="notes-error" className="text-sm text-destructive">
+                Please add a short message.
+              </p>
             )}
           </div>
 
@@ -538,7 +674,9 @@ const GetDemo = () => {
                 required
                 aria-required="true"
                 aria-invalid={!!touched.serviceArea && serviceArea.trim().length < 2}
-                aria-describedby={touched.serviceArea && serviceArea.trim().length < 2 ? "serviceArea-error" : undefined}
+                aria-describedby={
+                  touched.serviceArea && serviceArea.trim().length < 2 ? "serviceArea-error" : undefined
+                }
                 value={serviceArea}
                 onChange={(event) => setServiceArea(event.target.value)}
                 onBlur={() => setTouched((current) => ({ ...current, serviceArea: true }))}
@@ -546,7 +684,9 @@ const GetDemo = () => {
                 maxLength={120}
               />
               {touched.serviceArea && serviceArea.trim().length < 2 && (
-                <p id="serviceArea-error" className="text-sm text-destructive">We need a town or area to build your preview.</p>
+                <p id="serviceArea-error" className="text-sm text-destructive">
+                  We need a town or area to build your preview.
+                </p>
               )}
             </div>
           )}
@@ -558,7 +698,10 @@ const GetDemo = () => {
           >
             <summary className="cursor-pointer list-none flex items-center justify-between gap-3 px-4 py-3 text-sm font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring rounded-xl">
               <span>More details (optional)</span>
-              <ArrowRight className="h-3.5 w-3.5 shrink-0 transition-transform group-open:rotate-90" aria-hidden="true" />
+              <ArrowRight
+                className="h-3.5 w-3.5 shrink-0 transition-transform group-open:rotate-90"
+                aria-hidden="true"
+              />
             </summary>
             <div className="space-y-4 border-t border-border p-4">
               <div className="grid gap-4 sm:grid-cols-2">
@@ -614,9 +757,14 @@ const GetDemo = () => {
               </>
             )}
           </Button>
-          {submitError && <p role="alert" className="text-sm text-destructive leading-relaxed">{submitError}</p>}
+          {submitError && (
+            <p role="alert" className="text-sm text-destructive leading-relaxed">
+              {submitError}
+            </p>
+          )}
           <p className="text-center text-xs text-muted-foreground">
-            By submitting, you agree to receive follow-up communication. We won’t share your info or send unwanted messages.
+            By submitting, you agree to receive follow-up communication. We won’t share your info or send unwanted
+            messages.
           </p>
         </form>
       )}

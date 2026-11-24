@@ -1,7 +1,7 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
+import { ArrowRight, Check, CheckCircle2, ChevronDown, Loader2 } from "lucide-react";
 import { z } from "zod";
-import { Loader2, CheckCircle2, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,51 +19,76 @@ const BUSINESS_TYPES = [
 ];
 
 const Schema = z.object({
-  name: z.string().trim().min(1, "Name is required").max(100, "Keep your name under 100 characters"),
-  email: z.string().trim().email("Enter a valid email").max(255, "Keep your email under 255 characters"),
   website_url: z
     .string()
     .trim()
-    .min(3, "Enter your website URL")
-    .max(500, "Keep the website address under 500 characters")
-    .refine((value) => !/\s/.test(value) && /\.[a-z]{2,}/i.test(value), "That doesn't look like a website URL"),
+    .min(3, "Enter your website address.")
+    .max(500, "Keep the website address under 500 characters.")
+    .refine(
+      (value) => !/\s/.test(value) && /\.[a-z]{2,}/i.test(value),
+      "Enter a website address like yourbusiness.com.",
+    ),
+  email: z
+    .string()
+    .trim()
+    .email("Enter the email address where I should send your review.")
+    .max(255, "Keep your email under 255 characters."),
+  name: z.string().trim().min(1, "Enter your name.").max(100, "Keep your name under 100 characters."),
   business_type: z.string().optional(),
-  note: z.string().max(500, "Keep it under 500 characters").optional(),
+  note: z.string().trim().max(500, "Keep your note under 500 characters.").optional(),
 });
 
 type FormState = z.infer<typeof Schema>;
 
+const requiredFields = [
+  {
+    key: "website_url",
+    label: "Website address",
+    placeholder: "yourbusiness.com",
+    autoComplete: "url",
+    inputMode: "url",
+  },
+  { key: "email", label: "Email address", placeholder: "you@yourbusiness.com", autoComplete: "email", type: "email" },
+  { key: "name", label: "Your name", placeholder: "Alex Smith", autoComplete: "name" },
+] as const;
+
+const fieldStyle =
+  "min-h-11 rounded-lg border-[#879899] bg-[#f8faf9] px-3.5 text-base text-[#172f37] placeholder:text-[#596d71] focus-visible:ring-[#2c645d] aria-invalid:border-destructive";
+
 export function ReviewRequestForm({ contextNote }: { contextNote?: string }) {
-  const navigate = useNavigate();
-  const [form, setForm] = useState<FormState>({
-    name: "",
-    email: "",
-    website_url: "",
-    business_type: "",
-    note: "",
-  });
+  const [form, setForm] = useState<FormState>({ name: "", email: "", website_url: "", business_type: "", note: "" });
   const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>({});
   const [submitting, setSubmitting] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
+  const [receipt, setReceipt] = useState<{ name: string; email: string } | null>(null);
   const [submitError, setSubmitError] = useState("");
+  const confirmationHeading = useRef<HTMLHeadingElement>(null);
+
+  useEffect(() => {
+    if (receipt) confirmationHeading.current?.focus();
+  }, [receipt]);
 
   const update = <K extends keyof FormState>(key: K, value: FormState[K]) => {
     setForm((current) => ({ ...current, [key]: value }));
     if (errors[key]) setErrors((current) => ({ ...current, [key]: undefined }));
   };
 
-  const onSubmit = async (event: React.FormEvent) => {
+  const onSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (submitting) return;
+
     setSubmitError("");
     const parsed = Schema.safeParse(form);
     if (!parsed.success) {
       const fieldErrors = parsed.error.flatten().fieldErrors;
       setErrors({
-        name: fieldErrors.name?.[0],
-        email: fieldErrors.email?.[0],
         website_url: fieldErrors.website_url?.[0],
+        email: fieldErrors.email?.[0],
+        name: fieldErrors.name?.[0],
         note: fieldErrors.note?.[0],
       });
+      const firstError = requiredFields.find(({ key }) => fieldErrors[key]?.length);
+      const field = event.currentTarget.elements.namedItem(firstError?.key ?? "note");
+      if (field instanceof HTMLElement) field.focus();
       return;
     }
 
@@ -81,152 +106,153 @@ export function ReviewRequestForm({ contextNote }: { contextNote?: string }) {
       });
       if (error) throw error;
       if (data?.error) throw new Error(typeof data.error === "string" ? data.error : "Submission failed");
-      setSubmitted(true);
+      setReceipt({ name: parsed.data.name, email: parsed.data.email });
     } catch {
-      setSubmitError("We couldn’t send your review request. Your entries are still here — please try again.");
+      setSubmitError("I couldn’t receive your request. Your entries are still here, so you can try again.");
     } finally {
       setSubmitting(false);
     }
   };
 
-  if (submitted) {
+  if (receipt) {
     return (
-      <div className="space-y-6" role="status">
-        <div className="text-center">
-          <CheckCircle2 className="h-10 w-10 text-accent mx-auto mb-4" aria-hidden="true" />
-          <h2 className="font-serif text-2xl font-bold mb-2">
-            Thanks {form.name.split(" ")[0]} — your review is on the way.
-          </h2>
-          <p className="text-muted-foreground">
-            We'll email you a short Loom walkthrough and written notes showing what may be hurting trust,
-            clarity, or conversions — plus the highest-impact fixes first. Usually within 2 business days.
-          </p>
-        </div>
-
-        <div className="rounded-xl border border-primary/20 bg-primary/5 p-5 space-y-3">
-          <h3 className="font-serif text-lg font-semibold">Want a full rebuild plan + live demo?</h3>
-          <p className="text-sm text-muted-foreground">
-            Tell us a bit more about your business and we'll build a working demo you can click through —
-            free, no deposit.
-          </p>
-          <div className="flex flex-col gap-2 pt-1">
-            <Button onClick={() => navigate("/get-demo?service=website")} className="w-full">
-              Discuss a new website
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
-            <button
-              type="button"
-              onClick={() => navigate("/")}
-              className="text-xs text-muted-foreground hover:text-foreground underline-offset-4 hover:underline"
-            >
-              No thanks, just the review is fine
-            </button>
-          </div>
-        </div>
+      <div className="space-y-4 py-4">
+        <CheckCircle2 className="h-10 w-10 text-[#2c645d]" aria-hidden="true" />
+        <h2
+          id="review-heading"
+          ref={confirmationHeading}
+          tabIndex={-1}
+          className="font-serif text-3xl font-medium tracking-tight"
+        >
+          Your request is in.
+        </h2>
+        <p className="break-words leading-relaxed text-[#455f65]">
+          Thanks, {receipt.name.split(/\s+/)[0]}. I’ll send your video walkthrough and written notes to{" "}
+          <strong className="font-semibold text-[#172f37]">{receipt.email}</strong>, usually within two business days.
+        </p>
+        <Link
+          to="/"
+          className="inline-flex min-h-11 items-center text-sm font-semibold text-[#25564e] underline underline-offset-4"
+        >
+          Back to Pleasant Cove Design
+        </Link>
       </div>
     );
   }
 
   return (
-    <form onSubmit={onSubmit} className="space-y-5" noValidate>
-      <div className="space-y-2">
-        <Label htmlFor="rv-name">Your name *</Label>
-        <Input
-          id="rv-name"
-          required
-          aria-required="true"
-          aria-invalid={!!errors.name}
-          aria-describedby={errors.name ? "rv-name-error" : undefined}
-          value={form.name}
-          onChange={(event) => update("name", event.target.value)}
-          placeholder="Alex Smith"
-          autoComplete="name"
-          maxLength={100}
-        />
-        {errors.name && <p id="rv-name-error" className="text-sm text-destructive">{errors.name}</p>}
-      </div>
+    <>
+      <h2 id="review-heading" className="font-serif text-[1.8rem] font-medium leading-tight tracking-tight sm:text-3xl">
+        Request your review
+      </h2>
+      <p className="mt-1.5 text-sm leading-relaxed text-[#455f65]">Usually emailed within two business days.</p>
 
-      <div className="space-y-2">
-        <Label htmlFor="rv-email">Email *</Label>
-        <Input
-          id="rv-email"
-          required
-          aria-required="true"
-          aria-invalid={!!errors.email}
-          aria-describedby={errors.email ? "rv-email-error" : undefined}
-          type="email"
-          value={form.email}
-          onChange={(event) => update("email", event.target.value)}
-          placeholder="you@business.com"
-          autoComplete="email"
-          maxLength={255}
-        />
-        {errors.email && <p id="rv-email-error" className="text-sm text-destructive">{errors.email}</p>}
-      </div>
+      <form onSubmit={onSubmit} className="mt-5 space-y-3.5 sm:space-y-4" noValidate>
+        {requiredFields.map(({ key, label, placeholder, autoComplete, ...inputProps }) => (
+          <div key={key} className="space-y-1.5">
+            <Label htmlFor={`rv-${key}`} className="font-semibold">
+              {label} <span aria-hidden="true">*</span>
+            </Label>
+            <Input
+              id={`rv-${key}`}
+              name={key}
+              className={fieldStyle}
+              required
+              aria-invalid={!!errors[key]}
+              aria-describedby={errors[key] ? `rv-${key}-error` : undefined}
+              value={form[key]}
+              onChange={(event) => update(key, event.target.value)}
+              placeholder={placeholder}
+              autoComplete={autoComplete}
+              maxLength={key === "website_url" ? 500 : key === "email" ? 255 : 100}
+              {...inputProps}
+            />
+            {errors[key] && (
+              <p id={`rv-${key}-error`} className="text-sm text-destructive">
+                {errors[key]}
+              </p>
+            )}
+          </div>
+        ))}
 
-      <div className="space-y-2">
-        <Label htmlFor="rv-url">Current website *</Label>
-        <Input
-          id="rv-url"
-          required
-          aria-required="true"
-          aria-invalid={!!errors.website_url}
-          aria-describedby={errors.website_url ? "rv-url-error" : undefined}
-          value={form.website_url}
-          onChange={(event) => update("website_url", event.target.value)}
-          placeholder="yourbusiness.com"
-          autoComplete="url"
-          inputMode="url"
-          maxLength={500}
-        />
-        {errors.website_url && <p id="rv-url-error" className="text-sm text-destructive">{errors.website_url}</p>}
-      </div>
+        <details className="group rounded-lg border border-[#d8e3df]">
+          <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-2 rounded-lg px-3.5 text-sm font-semibold text-[#25564e] hover:bg-[#f1f7f3] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#2c645d] [&::-webkit-details-marker]:hidden">
+            <span>
+              Add details <span className="font-normal text-[#455f65]">(optional)</span>
+            </span>
+            <ChevronDown
+              className="h-4 w-4 shrink-0 transition-transform group-open:rotate-180 motion-reduce:transition-none"
+              aria-hidden="true"
+            />
+          </summary>
+          <div className="space-y-3.5 border-t border-[#d8e3df] p-3.5">
+            <div className="space-y-1.5">
+              <Label htmlFor="rv-note">
+                Anything you want me to look at? <span className="text-[#455f65]">(optional)</span>
+              </Label>
+              <Textarea
+                id="rv-note"
+                name="note"
+                className={fieldStyle}
+                aria-invalid={!!errors.note}
+                aria-describedby={errors.note ? "rv-note-error" : undefined}
+                value={form.note}
+                onChange={(event) => update("note", event.target.value)}
+                placeholder="For example, customers have trouble finding my hours."
+                rows={3}
+                maxLength={500}
+              />
+              {errors.note && (
+                <p id="rv-note-error" className="text-sm text-destructive">
+                  {errors.note}
+                </p>
+              )}
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="rv-type">
+                Business type <span className="text-[#455f65]">(optional)</span>
+              </Label>
+              <Select value={form.business_type} onValueChange={(value) => update("business_type", value)}>
+                <SelectTrigger id="rv-type" className={fieldStyle}>
+                  <SelectValue placeholder="Choose a business type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {BUSINESS_TYPES.map(({ value, label }) => (
+                    <SelectItem key={value} value={value}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </details>
 
-      <div className="space-y-2">
-        <Label htmlFor="rv-type">What kind of business is this? <span className="text-muted-foreground font-normal">(optional)</span></Label>
-        <Select value={form.business_type} onValueChange={(value) => update("business_type", value)}>
-          <SelectTrigger id="rv-type">
-            <SelectValue placeholder="Select one" />
-          </SelectTrigger>
-          <SelectContent>
-            {BUSINESS_TYPES.map((type) => (
-              <SelectItem key={type.value} value={type.value}>{type.label}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="rv-note">What feels off? <span className="text-muted-foreground font-normal">(optional)</span></Label>
-        <Textarea
-          id="rv-note"
-          aria-invalid={!!errors.note}
-          aria-describedby={errors.note ? "rv-note-error" : undefined}
-          value={form.note}
-          onChange={(event) => update("note", event.target.value)}
-          placeholder="e.g. slow on mobile, no one calls, looks dated…"
-          rows={3}
-          maxLength={500}
-        />
-        {errors.note && <p id="rv-note-error" className="text-sm text-destructive">{errors.note}</p>}
-      </div>
-
-      <div className="pt-1">
-        <Button type="submit" disabled={submitting} className="w-full h-12 text-base">
+        <Button
+          type="submit"
+          disabled={submitting}
+          className="h-12 w-full gap-2 rounded-lg bg-[#22534a] text-base font-semibold text-white hover:bg-[#173e37] focus-visible:ring-[#22534a]"
+        >
           {submitting ? (
             <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Sending…
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> Sending…
             </>
           ) : (
-            "Send me my free review"
+            <>
+              Get my free review <ArrowRight className="h-4 w-4" aria-hidden="true" />
+            </>
           )}
         </Button>
-        {submitError && <p role="alert" className="mt-3 text-sm text-destructive leading-relaxed">{submitError}</p>}
-        <p className="mt-2 text-center text-xs text-muted-foreground">
-          No spam. No sales pressure. Just honest feedback.
+        {submitError && (
+          <p role="alert" className="text-sm leading-relaxed text-destructive">
+            {submitError}
+          </p>
+        )}
+        <p className="flex items-start justify-center gap-1.5 text-center text-xs leading-relaxed text-[#455f65]">
+          <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#25564e]" aria-hidden="true" />
+          Reviewed by Ben Dickinson in Midcoast Maine. No sales call required.
         </p>
-      </div>
-    </form>
+      </form>
+    </>
   );
 }
