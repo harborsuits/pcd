@@ -359,6 +359,12 @@ function WebsiteReviewPage({ contextNote }: { contextNote?: string }) {
   );
 }
 
+const HOMEPAGE_INQUIRY_PLACEMENTS = new Map<string, string>([
+  ["homepage-hero", "Hero project button"],
+  ["homepage-about", "About section"],
+  ["homepage-contact", "Bottom contact section"],
+]);
+
 const GetDemo = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -453,6 +459,10 @@ const GetDemo = () => {
       return;
     }
 
+    const note = notes.trim();
+    const placement = HOMEPAGE_INQUIRY_PLACEMENTS.get(searchParams.get("from") ?? "");
+    const attributedNote = placement ? `${note}\n\nHomepage inquiry: ${placement}` : note;
+
     setSubmitError("");
     setIsLoading(true);
     try {
@@ -471,7 +481,7 @@ const GetDemo = () => {
           tier: tierParam || null,
           product_type: productParam || null,
           is_trial: isTrial,
-          custom_request: notes.trim() || null,
+          custom_request: attributedNote.length <= 2000 ? attributedNote : note,
         },
       });
 
