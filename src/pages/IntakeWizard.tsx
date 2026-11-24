@@ -1,17 +1,16 @@
-import { BrandMark } from "@/components/layout/BrandMark";
-import { MarketingFooter } from "@/components/layout/MarketingFooter";
 import { useState, useEffect } from "react";
 import { z } from "zod";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, ArrowRight, Loader2, MessageSquare, Mail, UserPlus, LogIn, CheckCircle2 } from "lucide-react";
-import pcdLogo from "@/assets/pcd-logo.jpeg";
+import { ArrowRight, Loader2, CheckCircle2 } from "lucide-react";
+import { InquiryContactLinks, InquiryLayout } from "@/components/intake/InquiryLayout";
+import { ALACARTE_SERVICES } from "@/lib/pricingMenu";
+import { TOWNS, VERTICALS } from "@/lib/localPages";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { portalSupabase } from "@/integrations/supabase/portalClient";
-import { SEOHead } from "@/components/SEOHead";
 import { NAP } from "@/lib/localPages";
 import { ReviewRequestForm } from "@/components/intake/ReviewRequestForm";
 
@@ -44,34 +43,6 @@ const mapServiceType = (type: ServiceType): string => {
   if (type === "existing") return "website";
   return type || "other";
 };
-
-// Keep this component outside GetDemo so field updates never remount its children.
-const Shell = ({ children, clientLogin = false }: { children: React.ReactNode; clientLogin?: boolean }) => (
-  <div className="pcd-shell min-h-screen flex flex-col bg-page-bg text-foreground">
-    <header className="border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-50">
-      <div className="max-w-6xl mx-auto px-5 sm:px-6 py-2 flex items-center justify-between gap-3">
-        <Link to="/" className="font-serif text-xl font-bold tracking-tight text-foreground" aria-label="Pleasant Cove Design home">
-          <BrandMark compact />
-        </Link>
-        {clientLogin ? (
-          <Link to="/portal" className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground">
-            <LogIn className="h-4 w-4" aria-hidden="true" />
-            Client login
-          </Link>
-        ) : (
-          <Button asChild variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
-            <Link to="/">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back
-            </Link>
-          </Button>
-        )}
-      </div>
-    </header>
-    {children}
-    <MarketingFooter compact />
-  </div>
-);
 
 const normalizeExistingWebsite = (value: string): string | null => {
   const trimmed = value.trim();
@@ -165,117 +136,96 @@ const ExistingWebsiteInquiry = ({
   };
 
   return (
-    <Shell clientLogin>
-      <SEOHead
-        title="Help With Your Website — Pleasant Cove Design"
-        description="Send Ben your current website and a short note about what you’d like to fix or improve. Pleasant Cove Design, Midcoast Maine."
-        path="/get-demo"
-      />
-      <main className="flex-1 px-5 sm:px-6 py-10 md:py-14 lg:py-20">
-        <div className="max-w-5xl mx-auto grid gap-8 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:gap-x-14 lg:gap-y-6">
-          <div className="lg:col-start-1 lg:row-start-1 lg:pt-8">
-            <h1 className="font-serif text-3xl md:text-4xl font-bold leading-tight mb-4">Get help with your website</h1>
-            <p className="text-muted-foreground text-base md:text-lg leading-relaxed max-w-lg">
-              Send me your site and tell me what you’d like to change. I’ll take a look and follow up by email about next steps.
-            </p>
-          </div>
-
-          <div className="lg:col-start-2 lg:row-start-1 lg:row-span-2 rounded-2xl border border-border bg-card p-6 md:p-8 shadow-sm">
-            {submitted ? (
-              <div className="py-6 text-center" role="status">
-                <CheckCircle2 className="w-10 h-10 text-accent mx-auto mb-4" aria-hidden="true" />
-                <h2 className="font-serif text-2xl font-bold mb-3">Thank you</h2>
-                <p className="text-muted-foreground leading-relaxed">
-                  Thanks, I got your inquiry. I’ll take a look at your site and follow up by email.
-                </p>
-              </div>
-            ) : (
-              <>
-                <h2 className="font-serif text-2xl font-bold mb-6">Tell me about your site</h2>
-                <form className="space-y-5" onSubmit={handleSubmit} noValidate>
-                  <div className="space-y-2">
-                    <Label htmlFor="existingWebsite">Current website</Label>
-                    <Input
-                      id="existingWebsite"
-                      required
-                      aria-required="true"
-                      aria-invalid={!!websiteError}
-                      aria-describedby={websiteError ? "existingWebsite-error" : undefined}
-                      value={website}
-                      onChange={(event) => setWebsite(event.target.value)}
-                      onBlur={() => setTouched((current) => ({ ...current, website: true }))}
-                      placeholder="yourbusiness.com"
-                      autoComplete="url"
-                      inputMode="url"
-                      maxLength={500}
-                    />
-                    {websiteError && <p id="existingWebsite-error" className="text-sm text-destructive">{websiteError}</p>}
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="existingEmail">Your email</Label>
-                    <Input
-                      id="existingEmail"
-                      required
-                      aria-required="true"
-                      aria-invalid={!!emailError}
-                      aria-describedby={emailError ? "existingEmail-error" : undefined}
-                      type="email"
-                      value={email}
-                      onChange={(event) => setEmail(event.target.value)}
-                      onBlur={() => setTouched((current) => ({ ...current, email: true }))}
-                      placeholder="you@yourbusiness.com"
-                      autoComplete="email"
-                      maxLength={255}
-                    />
-                    {emailError && <p id="existingEmail-error" className="text-sm text-destructive">{emailError}</p>}
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="existingMessage">What would you like to fix or improve?</Label>
-                    <Textarea
-                      id="existingMessage"
-                      required
-                      aria-required="true"
-                      aria-invalid={!!messageError}
-                      aria-describedby={`existingMessage-help${messageError ? " existingMessage-error" : ""}`}
-                      value={message}
-                      onChange={(event) => setMessage(event.target.value)}
-                      onBlur={() => setTouched((current) => ({ ...current, message: true }))}
-                      rows={5}
-                      maxLength={2000}
-                    />
-                    <p id="existingMessage-help" className="text-sm text-muted-foreground leading-relaxed">
-                      A sentence or two is plenty. Think contact forms, adding pages, or making the site easier to use.
-                    </p>
-                    {messageError && <p id="existingMessage-error" className="text-sm text-destructive">{messageError}</p>}
-                  </div>
-
-                  <Button type="submit" disabled={isLoading} className="w-full h-12 text-base">
-                    {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Sending…</> : "Send website inquiry"}
-                  </Button>
-                  {submitError && <p role="alert" className="text-sm text-destructive leading-relaxed">{submitError}</p>}
-                </form>
-              </>
-            )}
-          </div>
-
-          <div className="lg:col-start-1 lg:row-start-2 space-y-5 text-sm">
-            <p className="text-muted-foreground leading-relaxed">
-              Unsure what needs fixing? <Link to="/get-demo?service=review" className="font-medium text-foreground underline underline-offset-4">Get a free website review.</Link>
-            </p>
-            <div className="flex flex-wrap gap-x-5 gap-y-3">
-              <a href={`mailto:${NAP.email}`} className="inline-flex items-center gap-2 font-medium text-muted-foreground hover:text-foreground">
-                <Mail className="h-4 w-4" aria-hidden="true" />Email Ben
-              </a>
-              <a href={`sms:${NAP.phoneE164}`} className="inline-flex items-center gap-2 font-medium text-muted-foreground hover:text-foreground">
-                <MessageSquare className="h-4 w-4" aria-hidden="true" />Text Ben
-              </a>
-            </div>
-          </div>
+    <InquiryLayout
+      title="Get help with your website"
+      introduction="Send me your site and tell me what you’d like to change. I’ll take a look and follow up by email about next steps."
+      seoTitle="Help With Your Website — Pleasant Cove Design"
+      seoDescription="Send Ben your current website and a short note about what you’d like to fix or improve. Pleasant Cove Design, Midcoast Maine."
+      formTitle={submitted ? undefined : "Tell me about your site"}
+      secondary={
+        <>
+          <p className="text-muted-foreground leading-relaxed">
+            Unsure what needs fixing? <Link to="/get-demo?service=review" className="font-medium text-foreground underline underline-offset-4">Get a free website review.</Link>
+          </p>
+          <InquiryContactLinks />
+        </>
+      }
+    >
+      {submitted ? (
+        <div className="py-6 text-center" role="status">
+          <CheckCircle2 className="w-10 h-10 text-accent mx-auto mb-4" aria-hidden="true" />
+          <h2 className="font-serif text-2xl font-bold mb-3">Thank you</h2>
+          <p className="text-muted-foreground leading-relaxed">
+            Thanks, I got your inquiry. I’ll take a look at your site and follow up by email.
+          </p>
         </div>
-      </main>
-    </Shell>
+      ) : (
+        <form className="space-y-5" onSubmit={handleSubmit} noValidate>
+          <div className="space-y-2">
+            <Label htmlFor="existingWebsite">Current website</Label>
+            <Input
+              id="existingWebsite"
+              required
+              aria-required="true"
+              aria-invalid={!!websiteError}
+              aria-describedby={websiteError ? "existingWebsite-error" : undefined}
+              value={website}
+              onChange={(event) => setWebsite(event.target.value)}
+              onBlur={() => setTouched((current) => ({ ...current, website: true }))}
+              placeholder="yourbusiness.com"
+              autoComplete="url"
+              inputMode="url"
+              maxLength={500}
+            />
+            {websiteError && <p id="existingWebsite-error" className="text-sm text-destructive">{websiteError}</p>}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="existingEmail">Your email</Label>
+            <Input
+              id="existingEmail"
+              required
+              aria-required="true"
+              aria-invalid={!!emailError}
+              aria-describedby={emailError ? "existingEmail-error" : undefined}
+              type="email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              onBlur={() => setTouched((current) => ({ ...current, email: true }))}
+              placeholder="you@yourbusiness.com"
+              autoComplete="email"
+              maxLength={255}
+            />
+            {emailError && <p id="existingEmail-error" className="text-sm text-destructive">{emailError}</p>}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="existingMessage">What would you like to fix or improve?</Label>
+            <Textarea
+              id="existingMessage"
+              required
+              aria-required="true"
+              aria-invalid={!!messageError}
+              aria-describedby={`existingMessage-help${messageError ? " existingMessage-error" : ""}`}
+              value={message}
+              onChange={(event) => setMessage(event.target.value)}
+              onBlur={() => setTouched((current) => ({ ...current, message: true }))}
+              rows={5}
+              maxLength={2000}
+            />
+            <p id="existingMessage-help" className="text-sm text-muted-foreground leading-relaxed">
+              A sentence or two is plenty. Think contact forms, adding pages, or making the site easier to use.
+            </p>
+            {messageError && <p id="existingMessage-error" className="text-sm text-destructive">{messageError}</p>}
+          </div>
+
+          <Button type="submit" disabled={isLoading} className="w-full h-12 text-base">
+            {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Sending…</> : "Send website inquiry"}
+          </Button>
+          {submitError && <p role="alert" className="text-sm text-destructive leading-relaxed">{submitError}</p>}
+        </form>
+      )}
+    </InquiryLayout>
   );
 };
 
@@ -296,6 +246,7 @@ const GetDemo = () => {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [notes, setNotes] = useState("");
+  const [submitError, setSubmitError] = useState("");
   const [receipt, setReceipt] = useState<{ projectToken: string | null; email: string; name: string; business: string } | null>(null);
 
   // ?service=review → the lightweight free-review form
@@ -305,13 +256,15 @@ const GetDemo = () => {
   const tierParam = searchParams.get("tier");
   const productParam = searchParams.get("product");
   const isTrial = searchParams.get("trial") === "true";
-
-  // An explicit deep link opens the inquiry with that service preselected
   const serviceParam = searchParams.get("service");
-  const hasDeepLink = !!(serviceParam && SERVICE_PARAM_MAP[serviceParam]) || productParam === "pilot";
+  const requestedService = ALACARTE_SERVICES.find((service) => service.id === searchParams.get("request"));
+  const reviewTown = TOWNS.find((town) => town.slug === searchParams.get("town"));
+  const reviewVertical = VERTICALS.find((vertical) => vertical.slug === searchParams.get("industry"));
+  const reviewContext = [
+    reviewTown ? `Town: ${reviewTown.name}, ME` : "",
+    reviewVertical ? `Industry: ${reviewVertical.name}` : "",
+  ].filter(Boolean).join("\n") || undefined;
 
-  // Controlled so React re-renders (typing) never collapse the form
-  const [inquiryOpen, setInquiryOpen] = useState(hasDeepLink);
   const [optionalDetailsOpen, setOptionalDetailsOpen] = useState(false);
 
   useEffect(() => {
@@ -333,12 +286,16 @@ const GetDemo = () => {
   useEffect(() => {
     if (serviceParam && SERVICE_PARAM_MAP[serviceParam]) {
       setServiceType(SERVICE_PARAM_MAP[serviceParam]);
-      setInquiryOpen(true);
     } else if (productParam === "pilot") {
       setServiceType("ai");
-      setInquiryOpen(true);
     }
   }, [serviceParam, productParam]);
+
+  useEffect(() => {
+    if (!requestedService) return;
+    setServiceType("other");
+    setNotes((current) => current || `I’m interested in ${requestedService.label}.`);
+  }, [requestedService]);
 
   const isValidEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(value.trim());
 
@@ -357,6 +314,7 @@ const GetDemo = () => {
       return;
     }
 
+    setSubmitError("");
     setIsLoading(true);
     try {
       const headers: Record<string, string> = {};
@@ -399,13 +357,8 @@ const GetDemo = () => {
         name: yourName.trim(),
         business: businessName.trim(),
       });
-    } catch (err) {
-      console.error("Inquiry error:", err);
-      toast({
-        title: "Something went wrong",
-        description: `Please try again, or email ${NAP.email}.`,
-        variant: "destructive",
-      });
+    } catch {
+      setSubmitError(`We couldn’t send your inquiry. Your entries are still here — please try again, or email ${NAP.email}.`);
     } finally {
       setIsLoading(false);
     }
@@ -413,18 +366,23 @@ const GetDemo = () => {
 
   if (isReviewMode) {
     return (
-      <Shell>
-        <SEOHead
-          title="Free Website Review — Pleasant Cove Design"
-          description="Drop your website URL and we'll send back honest, specific feedback on what may be costing you conversions — free, no sales pressure."
-          path="/get-demo"
-        />
-        <main className="flex-1 container mx-auto px-6 py-10 md:py-14">
-          <div className="max-w-xl mx-auto bg-card border border-border rounded-2xl shadow-sm p-6 md:p-8">
-            <ReviewRequestForm />
-          </div>
-        </main>
-      </Shell>
+      <InquiryLayout
+        title="Get a free website review"
+        introduction="Send me your website and what feels off. I’ll follow up by email with specific, practical feedback about what to fix first."
+        seoTitle="Free Website Review — Pleasant Cove Design"
+        seoDescription="Send Ben your website for honest, specific feedback on what to fix first. Free, no sales pressure, from Pleasant Cove Design in Midcoast Maine."
+        formTitle="Request your free review"
+        secondary={
+          <>
+            <p className="text-muted-foreground leading-relaxed">
+              Need something else? <Link to="/get-demo" className="font-medium text-foreground underline underline-offset-4">Send a general inquiry.</Link>
+            </p>
+            <InquiryContactLinks />
+          </>
+        }
+      >
+        <ReviewRequestForm contextNote={reviewContext} />
+      </InquiryLayout>
     );
   }
 
@@ -449,300 +407,220 @@ const GetDemo = () => {
     : null;
 
   return (
-    <Shell>
-      <SEOHead
-        title="Contact — Pleasant Cove Design"
-        description="Email Ben directly, start with a client account, or send a short website inquiry. Pleasant Cove Design, Midcoast Maine."
-        path="/get-demo"
-      />
-
-      <main className="flex-1 flex items-start justify-center py-10 md:py-14 px-6">
-        <div className="w-full max-w-lg">
-          <div className="text-center mb-8">
-            <img src={pcdLogo} alt="Pleasant Cove Design" className="w-12 h-12 rounded-full mb-4 mx-auto" />
-            <h1 className="font-serif text-3xl md:text-4xl font-bold mb-3">Get in touch</h1>
-            <p className="text-muted-foreground">
-              The fastest way to reach me is email. Prefer to keep everything in one place? Start with a client account.
-            </p>
-          </div>
-
-          {receipt ? (
-            /* Honest in-place receipt after a guest inquiry */
-            <div className="rounded-2xl border border-border bg-card p-6 md:p-8 text-center shadow-sm">
-              <CheckCircle2 className="w-10 h-10 text-accent mx-auto mb-4" aria-hidden="true" />
-              <h2 className="font-serif text-2xl font-bold mb-3">Your inquiry has been saved.</h2>
-              <p className="text-muted-foreground leading-relaxed mb-6">
-                I’ll review it and follow up using the email you provided.
+    <InquiryLayout
+      title={requestedService ? `Ask about ${requestedService.label}` : "How can I help?"}
+      introduction="Tell me what your business needs. A few details are enough to start, and I’ll follow up by email about next steps."
+      seoTitle="Contact — Pleasant Cove Design"
+      seoDescription="Send Ben a short inquiry about your website, business tools, or ongoing care. Pleasant Cove Design, Midcoast Maine."
+      formTitle={receipt ? undefined : "Start with a short inquiry"}
+      secondary={
+        <>
+          <p className="text-muted-foreground leading-relaxed">
+            Unsure what needs fixing? <Link to="/get-demo?service=review" className="font-medium text-foreground underline underline-offset-4">Get a free website review.</Link>
+          </p>
+          <InquiryContactLinks />
+          <p className="text-muted-foreground leading-relaxed">
+            Prefer to keep everything in one place? <Link to="/portal?tab=signup" className="font-medium text-foreground underline underline-offset-4">Start with a client account.</Link>
+          </p>
+        </>
+      }
+    >
+      {receipt ? (
+        <div className="py-6 text-center" role="status">
+          <CheckCircle2 className="w-10 h-10 text-accent mx-auto mb-4" aria-hidden="true" />
+          <h2 className="font-serif text-2xl font-bold mb-3">Your inquiry has been saved.</h2>
+          <p className="text-muted-foreground leading-relaxed mb-6">
+            I’ll review it and follow up using the email you provided.
+          </p>
+          {createPasswordHref && (
+            <div className="border-t border-border pt-5">
+              <p className="text-sm text-muted-foreground mb-3">
+                Want to follow along? Create a password to track this project in your client portal — optional.
               </p>
-              {createPasswordHref && (
-                <div className="border-t border-border pt-5">
-                  <p className="text-sm text-muted-foreground mb-3">
-                    Want to follow along? Create a password to track this project in your client portal — optional.
-                  </p>
-                  <Button asChild className="w-full">
-                    <Link to={createPasswordHref}>Create my account <ArrowRight className="ml-2 h-4 w-4" /></Link>
-                  </Button>
-                </div>
-              )}
-              <Button asChild variant="ghost" className="mt-4">
-                <Link to="/">Back to the homepage</Link>
+              <Button asChild className="w-full">
+                <Link to={createPasswordHref}>Create my account <ArrowRight className="ml-2 h-4 w-4" /></Link>
               </Button>
             </div>
-          ) : (
-            <>
-              {/* Primary contact options */}
-              <div className="space-y-3 mb-6">
-                <a
-                  href={`mailto:${NAP.email}`}
-                  className="flex items-start gap-3 p-4 rounded-xl border-2 border-primary bg-primary/5 text-left transition-all hover:bg-primary/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring"
-                >
-                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                    <Mail className="w-5 h-5 text-primary" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold">Email Ben</p>
-                    <p className="text-sm text-muted-foreground [overflow-wrap:anywhere]">{NAP.email}</p>
-                    <p className="text-sm text-muted-foreground">Opens your email app</p>
-                  </div>
-                </a>
+          )}
+          <Button asChild variant="ghost" className="mt-4">
+            <Link to="/">Back to the homepage</Link>
+          </Button>
+        </div>
+      ) : (
+        <form
+          className="space-y-5"
+          onSubmit={(event) => {
+            event.preventDefault();
+            handleSubmit();
+          }}
+          noValidate
+        >
+          <div className="space-y-2">
+            <Label htmlFor="serviceSelect">What is this about?</Label>
+            <select
+              id="serviceSelect"
+              value={serviceType}
+              onChange={(event) => setServiceType(event.target.value as ServiceType)}
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              {SERVICE_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>{option.title}</option>
+              ))}
+            </select>
+          </div>
 
-                <Link
-                  to="/portal?tab=signup"
-                  className="flex items-start gap-3 p-4 rounded-xl border-2 border-border bg-card text-left transition-all hover:border-primary/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring"
-                >
-                  <div className="w-10 h-10 rounded-lg bg-secondary/50 flex items-center justify-center shrink-0">
-                    <UserPlus className="w-5 h-5 text-primary" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold">Start with an account</p>
-                    <p className="text-sm text-muted-foreground">Create a client account and tell me about your project from your portal.</p>
-                  </div>
-                </Link>
+          <div className="space-y-2">
+            <Label htmlFor="businessName">Business name *</Label>
+            <Input
+              id="businessName"
+              required
+              aria-required="true"
+              aria-invalid={!!touched.businessName && businessName.trim().length < 2}
+              aria-describedby={touched.businessName && businessName.trim().length < 2 ? "businessName-error" : undefined}
+              value={businessName}
+              onChange={(event) => setBusinessName(event.target.value)}
+              onBlur={() => setTouched((current) => ({ ...current, businessName: true }))}
+              placeholder="e.g. Smith Plumbing"
+              autoComplete="organization"
+              maxLength={120}
+            />
+            {touched.businessName && businessName.trim().length < 2 && (
+              <p id="businessName-error" className="text-sm text-destructive">Please enter your business name.</p>
+            )}
+          </div>
 
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-2 rounded-xl border border-border bg-card px-4 py-3 text-sm">
-                  <a href={`sms:${NAP.phoneE164}`} className="inline-flex items-center gap-2 font-medium text-foreground hover:text-primary">
-                    <MessageSquare className="w-4 h-4" />
-                    Text Ben — {NAP.phone}
-                  </a>
-                  <Link to="/portal" className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground">
-                    <LogIn className="w-4 h-4" />
-                    Returning client? Log in
-                  </Link>
+          <div className="space-y-2">
+            <Label htmlFor="email">Email *</Label>
+            <Input
+              id="email"
+              required
+              aria-required="true"
+              aria-invalid={!!touched.email && !isValidEmail(email)}
+              aria-describedby={touched.email && !isValidEmail(email) ? "email-error" : undefined}
+              type="email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              onBlur={() => setTouched((current) => ({ ...current, email: true }))}
+              placeholder="john@smithplumbing.com"
+              autoComplete="email"
+              maxLength={255}
+            />
+            {touched.email && !isValidEmail(email) && (
+              <p id="email-error" className="text-sm text-destructive">Please enter a valid email address.</p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="notes">Message *</Label>
+            <Textarea
+              id="notes"
+              required
+              aria-required="true"
+              aria-invalid={!!touched.notes && notes.trim().length < 2}
+              aria-describedby={touched.notes && notes.trim().length < 2 ? "notes-error" : undefined}
+              value={notes}
+              onChange={(event) => setNotes(event.target.value)}
+              onBlur={() => setTouched((current) => ({ ...current, notes: true }))}
+              placeholder="What’s not working, what you’re hoping for, or when you’d like it done."
+              rows={4}
+              maxLength={2000}
+            />
+            {touched.notes && notes.trim().length < 2 && (
+              <p id="notes-error" className="text-sm text-destructive">Please add a short message.</p>
+            )}
+          </div>
+
+          {locationRequired && (
+            <div className="space-y-2">
+              <Label htmlFor="serviceArea">Where do you serve customers? *</Label>
+              <Input
+                id="serviceArea"
+                required
+                aria-required="true"
+                aria-invalid={!!touched.serviceArea && serviceArea.trim().length < 2}
+                aria-describedby={touched.serviceArea && serviceArea.trim().length < 2 ? "serviceArea-error" : undefined}
+                value={serviceArea}
+                onChange={(event) => setServiceArea(event.target.value)}
+                onBlur={() => setTouched((current) => ({ ...current, serviceArea: true }))}
+                placeholder="e.g. Damariscotta, ME"
+                maxLength={120}
+              />
+              {touched.serviceArea && serviceArea.trim().length < 2 && (
+                <p id="serviceArea-error" className="text-sm text-destructive">We need a town or area to build your preview.</p>
+              )}
+            </div>
+          )}
+
+          <details
+            className="group rounded-xl border border-border bg-background/50"
+            open={optionalDetailsOpen}
+            onToggle={(event) => setOptionalDetailsOpen(event.currentTarget.open)}
+          >
+            <summary className="cursor-pointer list-none flex items-center justify-between gap-3 px-4 py-3 text-sm font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring rounded-xl">
+              <span>More details (optional)</span>
+              <ArrowRight className="h-3.5 w-3.5 shrink-0 transition-transform group-open:rotate-90" aria-hidden="true" />
+            </summary>
+            <div className="space-y-4 border-t border-border p-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="yourName">Your name</Label>
+                  <Input
+                    id="yourName"
+                    value={yourName}
+                    onChange={(event) => setYourName(event.target.value)}
+                    placeholder="e.g. John Smith"
+                    autoComplete="name"
+                    maxLength={100}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="phone">Phone</Label>
+                  <Input
+                    id="phone"
+                    type="tel"
+                    value={phone}
+                    onChange={(event) => setPhone(event.target.value)}
+                    placeholder="(207) 555-1234"
+                    autoComplete="tel"
+                    maxLength={50}
+                  />
                 </div>
               </div>
+              {!locationRequired && (
+                <div className="space-y-2">
+                  <Label htmlFor="serviceAreaOptional">Town or service area</Label>
+                  <Input
+                    id="serviceAreaOptional"
+                    value={serviceArea}
+                    onChange={(event) => setServiceArea(event.target.value)}
+                    placeholder="e.g. Damariscotta, ME"
+                    maxLength={120}
+                  />
+                </div>
+              )}
+            </div>
+          </details>
 
-              {/* Secondary: short website inquiry */}
-              <details
-                className="group rounded-2xl border border-border bg-card shadow-sm"
-                open={inquiryOpen}
-                onToggle={(e) => setInquiryOpen(e.currentTarget.open)}
-              >
-                <summary className="cursor-pointer list-none flex items-center justify-between gap-3 p-4 md:p-5 font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring rounded-2xl">
-                  <span>Prefer a short website inquiry?</span>
-                  <ArrowRight className="h-4 w-4 shrink-0 transition-transform group-open:rotate-90" aria-hidden="true" />
-                </summary>
-
-                <form
-                  className="space-y-5 border-t border-border p-4 md:p-5"
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    handleSubmit();
-                  }}
-                >
-                  {/* Service picker: shown for deep links, otherwise optional */}
-                  {hasDeepLink ? (
-                    <div className="space-y-2">
-                      <Label htmlFor="serviceSelect">What is this about?</Label>
-                      <select
-                        id="serviceSelect"
-                        value={serviceType}
-                        onChange={(e) => setServiceType(e.target.value as ServiceType)}
-                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                      >
-                        {SERVICE_OPTIONS.map((option) => {
-                          return (
-                            <option key={option.value} value={option.value}>{option.title}</option>
-                          );
-                        })}
-                      </select>
-                    </div>
-                  ) : null}
-
-                  {/* Essentials */}
-                  <div className="space-y-2">
-                    <Label htmlFor="businessName">Business name *</Label>
-                    <Input
-                      id="businessName"
-                      required
-                      aria-invalid={!!touched.businessName && businessName.trim().length < 2}
-                      aria-describedby={touched.businessName && businessName.trim().length < 2 ? "businessName-error" : undefined}
-                      value={businessName}
-                      onChange={(e) => setBusinessName(e.target.value)}
-                      onBlur={() => setTouched((t) => ({ ...t, businessName: true }))}
-                      placeholder="e.g. Smith Plumbing"
-                      autoComplete="organization"
-                    />
-                    {touched.businessName && businessName.trim().length < 2 && (
-                      <p id="businessName-error" className="text-xs text-destructive">Please enter your business name.</p>
-                    )}
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email *</Label>
-                    <Input
-                      id="email"
-                      required
-                      aria-invalid={!!touched.email && !isValidEmail(email)}
-                      aria-describedby={touched.email && !isValidEmail(email) ? "email-error" : undefined}
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      onBlur={() => setTouched((t) => ({ ...t, email: true }))}
-                      placeholder="john@smithplumbing.com"
-                      autoComplete="email"
-                    />
-                    {touched.email && !isValidEmail(email) && (
-                      <p id="email-error" className="text-xs text-destructive">Please enter a valid email address.</p>
-                    )}
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="notes">Message *</Label>
-                    <Textarea
-                      id="notes"
-                      required
-                      aria-invalid={!!touched.notes && notes.trim().length < 2}
-                      aria-describedby={touched.notes && notes.trim().length < 2 ? "notes-error" : undefined}
-                      value={notes}
-                      onChange={(e) => setNotes(e.target.value)}
-                      onBlur={() => setTouched((t) => ({ ...t, notes: true }))}
-                      placeholder="What's not working, what you're hoping for, or when you'd like it done."
-                      rows={3}
-                    />
-                    {touched.notes && notes.trim().length < 2 && (
-                      <p id="notes-error" className="text-xs text-destructive">Please add a short message.</p>
-                    )}
-                  </div>
-
-                  {/* City/town: contextual, required for demo/website/existing */}
-                  {locationRequired && (
-                    <div className="space-y-2">
-                      <Label htmlFor="serviceArea">Where do you serve customers? *</Label>
-                      <Input
-                        id="serviceArea"
-                        required
-                        aria-invalid={!!touched.serviceArea && serviceArea.trim().length < 2}
-                        aria-describedby={touched.serviceArea && serviceArea.trim().length < 2 ? "serviceArea-error" : undefined}
-                        value={serviceArea}
-                        onChange={(e) => setServiceArea(e.target.value)}
-                        onBlur={() => setTouched((t) => ({ ...t, serviceArea: true }))}
-                        placeholder="e.g. Damariscotta, ME"
-                      />
-                      {touched.serviceArea && serviceArea.trim().length < 2 && (
-                        <p id="serviceArea-error" className="text-xs text-destructive">We need a town or area to build your preview.</p>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Optional details */}
-                  <details
-                    className="group/inner rounded-xl border border-border bg-background/50"
-                    open={optionalDetailsOpen}
-                    onToggle={(e) => setOptionalDetailsOpen(e.currentTarget.open)}
-                  >
-                    <summary className="cursor-pointer list-none flex items-center justify-between gap-3 px-4 py-3 text-sm font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring rounded-xl">
-                      <span>More details (optional)</span>
-                      <ArrowRight className="h-3.5 w-3.5 shrink-0 transition-transform group-open/inner:rotate-90" aria-hidden="true" />
-                    </summary>
-                    <div className="space-y-4 border-t border-border p-4">
-                      {!hasDeepLink && (
-                        <div className="space-y-2">
-                          <Label htmlFor="serviceSelect">What is this about?</Label>
-                          <select
-                            id="serviceSelect"
-                            value={serviceType}
-                            onChange={(e) => setServiceType(e.target.value as ServiceType)}
-                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                          >
-                            {SERVICE_OPTIONS.map((option) => (
-                              <option key={option.value} value={option.value}>{option.title}</option>
-                            ))}
-                          </select>
-                        </div>
-                      )}
-                      <div className="grid gap-4 sm:grid-cols-2">
-                        <div className="space-y-2">
-                          <Label htmlFor="yourName">Your name</Label>
-                          <Input
-                            id="yourName"
-                            value={yourName}
-                            onChange={(e) => setYourName(e.target.value)}
-                            placeholder="e.g. John Smith"
-                            autoComplete="name"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="phone">Phone</Label>
-                          <Input
-                            id="phone"
-                            type="tel"
-                            value={phone}
-                            onChange={(e) => setPhone(e.target.value)}
-                            placeholder="(207) 555-1234"
-                            autoComplete="tel"
-                          />
-                        </div>
-                      </div>
-                      {!locationRequired && (
-                        <div className="space-y-2">
-                          <Label htmlFor="serviceAreaOptional">Town or service area</Label>
-                          <Input
-                            id="serviceAreaOptional"
-                            value={serviceArea}
-                            onChange={(e) => setServiceArea(e.target.value)}
-                            placeholder="e.g. Damariscotta, ME"
-                          />
-                        </div>
-                      )}
-                    </div>
-                  </details>
-
-                  <Button type="submit" disabled={!canSubmit || isLoading} className="w-full h-12 text-base">
-                    {isLoading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Sending...
-                      </>
-                    ) : (
-                      <>
-                        {serviceType === "demo" ? "Build my preview" : "Send it"}
-                        <ArrowRight className="ml-2 h-4 w-4" />
-                      </>
-                    )}
-                  </Button>
-
-                  <p className="text-center text-xs text-muted-foreground">
-                    By submitting, you agree to receive follow-up communication. We won't share your info or send unwanted messages.
-                  </p>
-                </form>
-              </details>
-
-              {/* Free review alt path */}
-              <button
-                type="button"
-                onClick={() => navigate("/get-demo?service=review")}
-                className="mt-4 w-full rounded-xl border-2 border-dashed border-border bg-card p-4 text-left transition-all hover:border-primary/50"
-              >
-                <p className="text-sm font-medium">Not ready yet? Get a free review of your current site</p>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Drop your URL — we'll send honest feedback on what's costing you customers. No sales pressure.
-                </p>
-              </button>
-            </>
-          )}
-        </div>
-      </main>
-    </Shell>
+          <Button type="submit" disabled={!canSubmit || isLoading} className="w-full h-12 text-base">
+            {isLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Sending...
+              </>
+            ) : (
+              <>
+                {serviceType === "demo" ? "Build my preview" : "Send inquiry"}
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </>
+            )}
+          </Button>
+          {submitError && <p role="alert" className="text-sm text-destructive leading-relaxed">{submitError}</p>}
+          <p className="text-center text-xs text-muted-foreground">
+            By submitting, you agree to receive follow-up communication. We won’t share your info or send unwanted messages.
+          </p>
+        </form>
+      )}
+    </InquiryLayout>
   );
 };
 

@@ -1,7 +1,6 @@
 "use client";
 
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { useState } from "react";
 import { Check, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
@@ -16,16 +15,9 @@ import {
   AI_MODEL_INTRO,
   AI_COMPONENTS,
   AI_BILLING_NOTES,
-  AlaCarteService,
 } from "@/lib/pricingMenu";
-import { AlaCarteRequestModal } from "@/components/AlaCarteRequestModal";
 
 export default function PricingSection() {
-
-  // À la carte request modal state
-  const [selectedService, setSelectedService] = useState<AlaCarteService | null>(null);
-
-
   return (
     <section className="relative pt-8 pb-20 overflow-hidden">
       <div className="container mx-auto px-6 relative z-10">
@@ -208,7 +200,7 @@ export default function PricingSection() {
                     <p className="text-sm text-muted-foreground mb-3">
                       {service.description}
                     </p>
-                    <Button variant="outline" size="sm" onClick={() => setSelectedService(service)}>Request a quote <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" /></Button>
+                    <Button asChild variant="outline" size="sm"><Link to={`/get-demo?service=other&request=${service.id}`}>Request a quote <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" /></Link></Button>
                   </CardContent>
                 </Card>
               ))}
@@ -306,13 +298,6 @@ export default function PricingSection() {
         </div>
       </div>
 
-      {/* À la carte request modal */}
-      <AlaCarteRequestModal
-        open={!!selectedService}
-        onOpenChange={(open) => !open && setSelectedService(null)}
-        serviceKey={selectedService?.id ?? ""}
-        serviceLabel={selectedService?.label ?? ""}
-      />
     </section>
   );
 }

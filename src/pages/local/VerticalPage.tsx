@@ -44,7 +44,7 @@ const VerticalPage = () => {
             Pleasant Cove Design builds {v.name.toLowerCase()} websites in Midcoast Maine with clear services, useful information, and straightforward contact options.
           </p>
           <div className="flex flex-wrap justify-center gap-3">
-            <Button asChild size="lg"><Link to={`/get-demo?service=${v.service ?? "review"}`}>Get a Free Review</Link></Button>
+            <Button asChild size="lg"><Link to={`/get-demo?service=review&industry=${v.slug}`}>Get a Free Review</Link></Button>
             {v.demoPath && (
               <Button asChild variant="outline" size="lg" className="h-auto min-h-11 whitespace-normal text-center"><Link to={v.demoPath}>
                   See a sample {v.singular.toLowerCase()} site <ArrowRight className="ml-2 h-4 w-4" />
@@ -96,7 +96,7 @@ const VerticalPage = () => {
           <h2 className="font-serif text-2xl md:text-3xl font-bold mb-4">
             Ready to see what we'd build for you?
           </h2>
-          <Button asChild size="lg"><Link to={`/get-demo?service=${v.service ?? "review"}`}>Get My Free Review</Link></Button>
+          <Button asChild size="lg"><Link to={`/get-demo?service=review&industry=${v.slug}`}>Get My Free Review</Link></Button>
         </div>
       </section>
       </main>

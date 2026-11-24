@@ -1,3 +1,12 @@
+# Unified contact experience
+- [x] Use the recently approved existing-website inquiry as the reference for unifying the older contact screens.
+- [x] Inventory every public inquiry link, direct-contact option, account entry, and specialized request flow; direct email/text/phone and client authentication remain intentional alternatives.
+- [x] Give general, review, and existing-website inquiries one consistent responsive shell while preserving contextual fields and deep-link payloads.
+- [x] Replace the ten individual-service quote popups with the shared inquiry, preserve each selected service, and correct trade/town review context.
+- [x] Check all public contact destinations, keyboard/mobile behavior, validation, and existing submission tests without changing billing or unrelated backend flows.
+
+Verification: 23 focused tests, targeted lint, TypeScript, diff checks and preview compilation pass. Chromium exercised general, review, existing-site, website-tier, care, pilot, AI, demo, town and trade-review variants; all ten individual-service destinations are covered by tests. Desktop/390/320 layouts have no horizontal overflow or page errors. Real key typing retains focus; general, trade-review and individual-service payloads retain their context. Mocked failed-send retention and successful retry pass on mobile. No real submissions, backend changes or publishing.
+
 # Existing-website inquiry
 - [x] Scope the approved three-field coastal layout to `/get-demo?service=existing`, with responsive intro/form/secondary ordering and header Client login.
 - [x] Accept bare domains and full URLs; make business name and service area optional only for this inquiry type.

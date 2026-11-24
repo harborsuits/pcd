@@ -21,12 +21,6 @@ import GetDemo from "../IntakeWizard";
 
 const openInquiry = () => {
   render(<MemoryRouter initialEntries={["/get-demo"]}><GetDemo /></MemoryRouter>);
-  const summary = screen.getByText("Prefer a short website inquiry?");
-  const disclosure = summary.closest("details");
-  if (!disclosure) throw new Error("Inquiry disclosure missing");
-  disclosure.open = true;
-  fireEvent(disclosure, new Event("toggle"));
-  return disclosure;
 };
 
 async function enterEssentials() {
@@ -52,15 +46,14 @@ describe("Contact inquiry regressions", () => {
   ])("preselects and opens %s while retaining payload intent", async (query, selected, payloadService, needsTown) => {
     invoke.mockResolvedValue({ data: { project_token: "mock-project" }, error: null });
     render(<MemoryRouter initialEntries={[`/get-demo?${query}&tier=custom-business&trial=true`]}><GetDemo /></MemoryRouter>);
-    const disclosure = screen.getByText("Prefer a short website inquiry?").closest("details");
-    expect(disclosure?.open).toBe(true);
+    expect(screen.getByRole("heading", { name: "How can I help?", level: 1 })).toBeInTheDocument();
     expect(screen.getByRole("combobox", { name: "What is this about?" })).toHaveValue(selected);
     const user = await enterEssentials();
     if (needsTown) {
       expect(screen.getByLabelText("Where do you serve customers? *")).toBeRequired();
       await user.type(screen.getByLabelText("Where do you serve customers? *"), "Damariscotta");
     }
-    await user.click(screen.getByRole("button", { name: /Send it|Build my preview/ }));
+    await user.click(screen.getByRole("button", { name: /Send inquiry|Build my preview/ }));
     await waitFor(() => expect(invoke).toHaveBeenCalledWith("leads/request-demo", expect.objectContaining({
       body: expect.objectContaining({
         service_type: payloadService,
@@ -70,6 +63,29 @@ describe("Contact inquiry regressions", () => {
         city: needsTown ? "Damariscotta" : null,
       }),
     })));
+  });
+
+  it("opens the same short inquiry with an individual service preselected", async () => {
+    invoke.mockResolvedValue({ data: { project_token: "mock-project" }, error: null });
+    render(<MemoryRouter initialEntries={["/get-demo?service=other&request=forms_routing"]}><GetDemo /></MemoryRouter>);
+    expect(screen.getByRole("heading", { name: "Ask about Forms & Lead Routing", level: 1 })).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "What is this about?" })).toHaveValue("other");
+    expect(screen.getByLabelText("Message *")).toHaveValue("I’m interested in Forms & Lead Routing.");
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText("Business name *"), "PCD");
+    await user.type(screen.getByLabelText("Email *"), "qa@example.com");
+    await user.click(screen.getByRole("button", { name: "Send inquiry" }));
+    await waitFor(() => expect(invoke).toHaveBeenCalledWith("leads/request-demo", expect.objectContaining({
+      body: expect.objectContaining({ service_type: "other", custom_request: "I’m interested in Forms & Lead Routing." }),
+    })));
+  });
+
+  it("uses the shared shell for review requests", () => {
+    render(<MemoryRouter initialEntries={["/get-demo?service=review&town=newcastle&industry=contractor"]}><GetDemo /></MemoryRouter>);
+    expect(screen.getByRole("heading", { name: "Get a free website review", level: 1 })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Client login" })).toHaveAttribute("href", "/portal");
+    expect(screen.getByRole("link", { name: "Send a general inquiry." })).toHaveAttribute("href", "/get-demo");
+    expect(screen.getByRole("link", { name: "Email Ben" })).toHaveAttribute("href", "mailto:pleasantcovedesign@gmail.com");
   });
 
   it("shows exactly three required existing-website fields and accepts a bare domain", async () => {
@@ -146,7 +162,7 @@ describe("Contact inquiry regressions", () => {
   });
 
   it("retains the same input nodes, focus and caret through ordinary typing", async () => {
-    const disclosure = openInquiry();
+    openInquiry();
     const user = userEvent.setup();
     for (const [label, value] of [["Business name *", "PCD"], ["Email *", "qa@example.com"], ["Message *", "Please improve my website."]]) {
       const field = screen.getByLabelText(label) as HTMLInputElement;
@@ -156,7 +172,6 @@ describe("Contact inquiry regressions", () => {
       expect(field).toHaveFocus();
       if (field.type !== "email") expect(field.selectionStart).toBe(value.length);
     }
-    expect(disclosure.open).toBe(true);
   });
 
   it("preserves optional disclosure and values when service changes", async () => {
@@ -185,7 +200,7 @@ describe("Contact inquiry regressions", () => {
     for (const service of ["demo", "website", "existing"]) {
       await user.selectOptions(screen.getByLabelText("What is this about?"), service);
       expect(screen.getByLabelText("Where do you serve customers? *")).toBeRequired();
-      expect(screen.getByRole("button", { name: /Send it|Build my preview/ })).toBeDisabled();
+      expect(screen.getByRole("button", { name: /Send inquiry|Build my preview/ })).toBeDisabled();
     }
     expect(invoke).not.toHaveBeenCalled();
   });
@@ -195,7 +210,7 @@ describe("Contact inquiry regressions", () => {
     invoke.mockImplementation(() => new Promise(resolve => { finish = resolve; }));
     openInquiry();
     const user = await enterEssentials();
-    await user.click(screen.getByRole("button", { name: "Send it" }));
+    await user.click(screen.getByRole("button", { name: "Send inquiry" }));
     expect(screen.getByRole("button", { name: "Sending..." })).toBeDisabled();
     expect(invoke).toHaveBeenCalledTimes(1);
     finish({ data: { project_token: "mock-project" }, error: null });
@@ -204,15 +219,11 @@ describe("Contact inquiry regressions", () => {
 
   it("preserves typed values and allows retry after a mocked submission error", async () => {
     invoke.mockResolvedValue({ data: null, error: new Error("Mocked failure") });
-    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
-    try {
-      const disclosure = openInquiry();
-      const user = await enterEssentials();
-      await user.click(screen.getByRole("button", { name: "Send it" }));
-      await waitFor(() => expect(toast).toHaveBeenCalledWith(expect.objectContaining({ variant: "destructive" })));
-      expect(screen.getByRole("button", { name: "Send it" })).toBeEnabled();
-      expect(screen.getByLabelText("Message *")).toHaveValue("Please improve my website.");
-      expect(disclosure.open).toBe(true);
-    } finally { consoleError.mockRestore(); }
+    openInquiry();
+    const user = await enterEssentials();
+    await user.click(screen.getByRole("button", { name: "Send inquiry" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Your entries are still here");
+    expect(screen.getByRole("button", { name: "Send inquiry" })).toBeEnabled();
+    expect(screen.getByLabelText("Message *")).toHaveValue("Please improve my website.");
   });
 });
