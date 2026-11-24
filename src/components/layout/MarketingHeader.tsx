@@ -28,7 +28,7 @@ export function MarketingHeader({ activePage }: MarketingHeaderProps) {
   const isHome = activePage === "home";
   const items = isHome ? NAV_ITEMS.filter((item) => item.key !== "contact") : NAV_ITEMS;
   const ctaHref = isHome ? "/get-demo" : CTA_HREF;
-  const ctaLabel = isHome ? "Contact Ben" : CTA_LABEL;
+  const ctaLabel = isHome ? "Get in touch" : CTA_LABEL;
   const { pathname } = useLocation();
   const isCurrent = (item: (typeof NAV_ITEMS)[number]) =>
     item.key === activePage || pathname === item.href || (item.key === "blog" && pathname.startsWith("/blog/"));

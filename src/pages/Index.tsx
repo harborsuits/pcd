@@ -117,13 +117,13 @@ function HomeHero() {
           <br className="hidden sm:block" /> One less thing to manage.
         </h1>
         <p data-speakable className="pcd-home-hero__lede text-lg md:text-xl leading-relaxed mt-6">
-          I build, improve, and maintain websites for Maine small businesses. A new site, a focused fix, or someone to
+          We build, improve, and maintain websites for Maine small businesses. A new site, a focused fix, or someone to
           keep it running.
         </p>
         <div className="mt-6 flex w-full flex-col items-center gap-4 sm:mt-8 sm:w-fit sm:self-start">
           <div className="flex w-full flex-col items-stretch gap-3 sm:w-auto sm:flex-row sm:items-center">
             <Link to="/get-demo" className="pcd-home-hero__btn pcd-home-hero__btn--primary">
-              Tell me about your project <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" />
+              Tell us about your project <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" />
             </Link>
             <a href="#work" className="pcd-home-hero__btn pcd-home-hero__btn--secondary">
               See Our Work
@@ -185,7 +185,7 @@ const Index = () => (
               </p>
               <p className="font-semibold mb-2">Focused work, agreed scope</p>
               <p className="text-sm text-muted-foreground leading-relaxed mb-6">
-                Start with the issue you want solved. I’ll review the site and confirm the work and price before you
+                Start with the issue you want solved. We’ll review the site and confirm the work and price before you
                 commit.
               </p>
               <Button asChild variant="outline" className="mt-auto justify-between">
@@ -353,7 +353,7 @@ const Index = () => (
               {
                 title: "Talk & review",
                 description:
-                  "Tell me what you need, or start with a free website review. We’ll identify the right next step.",
+                  "Tell us what you need, or start with a free website review. We’ll identify the right next step.",
               },
               {
                 title: "Agree on scope",
@@ -392,26 +392,26 @@ const Index = () => (
             <div className="min-w-0">
               <p className="text-xs font-semibold uppercase tracking-wider text-accent">About Pleasant Cove Design</p>
               <h2 id="about-ben" className="font-serif text-2xl md:text-3xl font-bold">
-                Hi, I’m Ben.
+                One designer, one point of contact.
               </h2>
             </div>
           </div>
           <div className="space-y-4 text-base md:text-lg leading-relaxed">
             <p>
-              I’m Ben Dickinson, and I run Pleasant Cove Design in Midcoast Maine. I work with small-business owners who
-              need a website they can feel confident sending customers to.
+              Pleasant Cove Design is run by Ben Dickinson in Midcoast Maine — a small-business website studio for
+              owners who need a website they can feel confident sending customers to.
             </p>
             <p>
-              My approach is straightforward: understand your business, explain the options in plain language, and agree
-              on the work and price before we begin. Whether you need a new website or a focused improvement, you’ll
-              know what’s included and what comes next.
+              The approach is straightforward: understand your business, explain the options in plain language, and
+              agree on the work and price before anything begins. Whether you need a new website or a focused
+              improvement, you’ll know what’s included and what comes next.
             </p>
           </div>
           <Link
             to="/get-demo"
             className="mt-5 inline-flex items-center gap-1 font-semibold text-accent underline-offset-4 hover:underline"
           >
-            Tell me about your website <ArrowRight className="h-4 w-4" aria-hidden="true" />
+            Tell us about your website <ArrowRight className="h-4 w-4" aria-hidden="true" />
           </Link>
         </div>
       </section>
@@ -425,7 +425,7 @@ const Index = () => (
             Let’s talk about your website.
           </h2>
           <p className="mb-6 text-lg leading-relaxed">
-            Need a new site, a small fix, or help keeping it up to date? Tell me what you have in mind.
+            Need a new site, a small fix, or help keeping it up to date? Tell us what you have in mind.
           </p>
           <Button asChild size="lg" variant="secondary" className="w-full sm:w-auto">
             <Link to="/get-demo">

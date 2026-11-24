@@ -88,3 +88,5 @@ Raven Rock recapture: waited 12 seconds for the real public homepage reveal, the
 # Homepage contact icons (Nov 24)
 - [x] Remove the "Call Ben / Text Ben / Email Ben" wording from the homepage; replace with icon-only circular contact buttons centered below the CTA buttons (hero and closing contact section), and drop "Ben" from the footer fine-print text link.
 - Verification: measured at 1440/907/390/320 — icon-row center matches the button-row center exactly (398/254/195/160) and the closing-section row sits centered in the viewport; icons 44x44 vs 48px button height; aria-labels Call/Text/Email; no phone number, email text or "Ben" in either homepage contact area; build OK.
+- [x] Homepage voice: drop first-person "I/me/my" for entity voice (we/our/brand) across hero, service cards, process, About and closing section; header CTA "Contact Ben" -> "Get in touch".
+- Verification: live homepage innerText has zero first-person hits at 1440 and 390; header button reads "Get in touch"; About keeps Ben by name in third person.
