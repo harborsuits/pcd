@@ -1,12 +1,12 @@
 import * as React from "react";
 import { MarketingFooter } from "@/components/layout/MarketingFooter";
 import { Link } from "react-router-dom";
-import { ArrowRight, ArrowUpRight, Globe, Wrench, ShieldCheck, Phone, MessageSquare, Mail } from "lucide-react";
+import { ArrowRight, ArrowUpRight, Globe, Wrench, ShieldCheck, Phone, MessageSquare, Mail, Facebook, Instagram, type LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 import { SEOHead } from "@/components/SEOHead";
 import { MarketingHeader } from "@/components/layout/MarketingHeader";
-import { NAP } from "@/lib/localPages";
+import { NAP, SOCIALS } from "@/lib/localPages";
 import { PROJECT_OFFERINGS, CARE_PLANS, ALACARTE_SERVICES, ALACARTE_NOTE, OWN_PLATFORM_NOTE } from "@/lib/pricingMenu";
 import pcdLogo from "@/assets/pcd-logo.jpeg";
 import lighthouseHero from "@/assets/lighthouse-hero.jpg";
@@ -62,18 +62,26 @@ function useLanternPosition(ref: React.RefObject<HTMLElement>) {
   return pos;
 }
 
-const homeContactOptions = [
+type HomeContactOption = { label: string; href: string; Icon: LucideIcon; external?: boolean };
+
+const homeContactOptions: HomeContactOption[] = [
   { label: "Call", href: `tel:${NAP.phoneE164}`, Icon: Phone },
   { label: "Text", href: `sms:${NAP.phoneE164}`, Icon: MessageSquare },
   { label: "Email", href: `mailto:${NAP.email}`, Icon: Mail },
+  ...SOCIALS.map((social): HomeContactOption => ({ ...social, Icon: social.label === "Instagram" ? Instagram : Facebook, external: true })),
 ];
 
 function HomeContactIcons({ className = "" }: { className?: string }) {
   return (
     <ul aria-label="Contact options" className={`pcd-contact-orbs ${className}`}>
-      {homeContactOptions.map(({ label, href, Icon }) => (
+      {homeContactOptions.map(({ label, href, Icon, external }) => (
         <li key={href}>
-          <a href={href} aria-label={label} title={label}>
+          <a
+            href={href}
+            aria-label={label}
+            title={label}
+            {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+          >
             <Icon aria-hidden="true" />
           </a>
         </li>

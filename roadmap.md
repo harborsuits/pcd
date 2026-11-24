@@ -90,3 +90,10 @@ Raven Rock recapture: waited 12 seconds for the real public homepage reveal, the
 - Verification: measured at 1440/907/390/320 — icon-row center matches the button-row center exactly (398/254/195/160) and the closing-section row sits centered in the viewport; icons 44x44 vs 48px button height; aria-labels Call/Text/Email; no phone number, email text or "Ben" in either homepage contact area; build OK.
 - [x] Homepage voice: drop first-person "I/me/my" for entity voice (we/our/brand) across hero, service cards, process, About and closing section; header CTA "Contact Ben" -> "Get in touch".
 - Verification: live homepage innerText has zero first-person hits at 1440 and 390; header button reads "Get in touch"; About keeps Ben by name in third person.
+
+# Social profile links
+- [x] Link the confirmed Facebook and Instagram profiles from the homepage contact icon rows and the site-wide footer.
+- [x] Keep one shared source for both profile URLs so visible links and structured-data `sameAs` stay identical.
+- [x] Verify desktop/390/320 rendering, new-tab safety attributes and no horizontal overflow; no publishing.
+
+Verification: 33 unit tests pass (the pre-existing `e2e/smoke.spec.ts` Playwright file is still collected by Vitest and fails on its own config, unrelated to this change). Targeted lint and TypeScript pass on the changed files. Chromium confirmed five centered contact icons in both homepage rows and two in the footer at 1440/390/320 with zero horizontal overflow; social links carry `target="_blank"` and `rel="noopener noreferrer"`. Nothing published.

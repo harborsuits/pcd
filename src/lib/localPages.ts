@@ -242,3 +242,10 @@ export const NAP = {
   phoneE164: "+12073805680",
   serviceArea: "Based in Cushing, Maine — serving small businesses across Midcoast Maine and statewide.",
 };
+
+// Public social profiles. Kept here so the footer, the homepage contact icons,
+// and the structured-data "sameAs" list all point at the exact same URLs.
+export const SOCIALS: { label: string; href: string }[] = [
+  { label: "Facebook", href: "https://www.facebook.com/pleasantcovedesign" },
+  { label: "Instagram", href: "https://www.instagram.com/pleasantcovedesign" },
+];

@@ -1,6 +1,12 @@
 import { Link } from "react-router-dom";
+import { Facebook, Globe, Instagram, type LucideIcon } from "lucide-react";
 import { BrandMark } from "./BrandMark";
-import { NAP } from "@/lib/localPages";
+import { NAP, SOCIALS } from "@/lib/localPages";
+
+const SOCIAL_ICONS: Record<string, LucideIcon> = {
+  Facebook: Facebook,
+  Instagram: Instagram,
+};
 
 const FOOTER_NAV: [string, string][] = [
   ["/what-we-build", "Services"],
@@ -40,6 +46,27 @@ export function MarketingFooter({ compact = false }: { compact?: boolean }) {
           <a href={`sms:${NAP.phoneE164}`} className="hover:underline underline-offset-4">Text</a>
           <Link to="/operator" className="hover:underline underline-offset-4">Operator Sign In</Link>
           {compact && <Link to="/get-demo" className="hover:underline underline-offset-4">Contact</Link>}
+        </nav>
+
+        <nav
+          aria-label="Social media"
+          className="pcd-contact-orbs pcd-contact-orbs--sm text-muted-foreground"
+        >
+          {SOCIALS.map(({ label, href }) => {
+            const Icon = SOCIAL_ICONS[label] ?? Globe;
+            return (
+              <a
+                key={href}
+                href={href}
+                aria-label={label}
+                title={label}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Icon aria-hidden="true" />
+              </a>
+            );
+          })}
         </nav>
 
         <a

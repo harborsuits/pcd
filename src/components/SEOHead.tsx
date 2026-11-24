@@ -1,5 +1,5 @@
 import { Helmet } from "react-helmet-async";
-import { NAP, VERTICALS } from "@/lib/localPages";
+import { NAP, SOCIALS, VERTICALS } from "@/lib/localPages";
 import ogImageDefault from "@/assets/og-image.jpg";
 
 interface FAQItem {
@@ -176,8 +176,7 @@ export function SEOHead({
   const modified = dateModified ?? BUILD_DATE;
 
   const sameAs = [
-    "https://www.facebook.com/pleasantcovedesign",
-    "https://www.instagram.com/pleasantcovedesign",
+    ...SOCIALS.map((social) => social.href),
     ...(googleBusinessUrl ? [googleBusinessUrl] : []),
     ...socialLinks,
   ];
