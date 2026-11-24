@@ -37,7 +37,7 @@ export function MarketingFooter({ compact = false }: { compact?: boolean }) {
         <nav aria-label="Legal and contact links" className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-sm text-muted-foreground">
           <Link to="/privacy" className="hover:underline underline-offset-4">Privacy</Link>
           <Link to="/terms" className="hover:underline underline-offset-4">Terms</Link>
-          <a href={`sms:${NAP.phoneE164}`} className="hover:underline underline-offset-4">Text Ben</a>
+          <a href={`sms:${NAP.phoneE164}`} className="hover:underline underline-offset-4">Text</a>
           <Link to="/operator" className="hover:underline underline-offset-4">Operator Sign In</Link>
           {compact && <Link to="/get-demo" className="hover:underline underline-offset-4">Contact</Link>}
         </nav>

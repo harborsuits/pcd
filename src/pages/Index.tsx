@@ -63,22 +63,18 @@ function useLanternPosition(ref: React.RefObject<HTMLElement>) {
 }
 
 const homeContactOptions = [
-  { label: "Call Ben", href: `tel:${NAP.phoneE164}`, Icon: Phone, detail: NAP.phone },
-  { label: "Text Ben", href: `sms:${NAP.phoneE164}`, Icon: MessageSquare },
-  { label: "Email Ben", href: `mailto:${NAP.email}`, Icon: Mail, detail: NAP.email },
+  { label: "Call", href: `tel:${NAP.phoneE164}`, Icon: Phone },
+  { label: "Text", href: `sms:${NAP.phoneE164}`, Icon: MessageSquare },
+  { label: "Email", href: `mailto:${NAP.email}`, Icon: Mail },
 ];
 
-function HomeContactLinks({ className, showDetails = false }: { className: string; showDetails?: boolean }) {
+function HomeContactIcons({ className = "" }: { className?: string }) {
   return (
-    <ul aria-label="Contact Ben directly" className={`flex flex-wrap text-sm ${className}`}>
-      {homeContactOptions.map(({ label, href, Icon, detail }) => (
-        <li key={href} className="min-w-0">
-          <a
-            href={href}
-            className="inline-flex min-h-11 items-center gap-1.5 font-medium underline underline-offset-4 hover:no-underline"
-          >
-            <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
-            <span className="break-all">{showDetails && detail ? detail : label}</span>
+    <ul aria-label="Contact options" className={`pcd-contact-orbs ${className}`}>
+      {homeContactOptions.map(({ label, href, Icon }) => (
+        <li key={href}>
+          <a href={href} aria-label={label} title={label}>
+            <Icon aria-hidden="true" />
           </a>
         </li>
       ))}
@@ -124,15 +120,17 @@ function HomeHero() {
           I build, improve, and maintain websites for Maine small businesses. A new site, a focused fix, or someone to
           keep it running.
         </p>
-        <div className="mt-6 flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:mt-8">
-          <Link to="/get-demo" className="pcd-home-hero__btn pcd-home-hero__btn--primary">
-            Tell me about your project <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" />
-          </Link>
-          <a href="#work" className="pcd-home-hero__btn pcd-home-hero__btn--secondary">
-            See Our Work
-          </a>
+        <div className="mt-6 flex w-full flex-col items-center gap-4 sm:mt-8 sm:w-fit sm:self-start">
+          <div className="flex w-full flex-col items-stretch gap-3 sm:w-auto sm:flex-row sm:items-center">
+            <Link to="/get-demo" className="pcd-home-hero__btn pcd-home-hero__btn--primary">
+              Tell me about your project <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" />
+            </Link>
+            <a href="#work" className="pcd-home-hero__btn pcd-home-hero__btn--secondary">
+              See Our Work
+            </a>
+          </div>
+          <HomeContactIcons className="pcd-home-hero__orbs" />
         </div>
-        <HomeContactLinks className="pcd-home-hero__note mt-2 gap-x-5" />
         <p className="pcd-home-hero__caption font-serif">A clear course for your website.</p>
       </div>
     </section>
@@ -434,7 +432,7 @@ const Index = () => (
               Send a project inquiry <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" />
             </Link>
           </Button>
-          <HomeContactLinks className="mt-3 justify-center gap-x-5 sm:gap-x-7" showDetails />
+          <HomeContactIcons className="mt-5" />
           <p className="mt-4 border-t border-primary-foreground/25 pt-4 text-sm leading-relaxed">
             Want feedback on your current site?{" "}
             <Link to="/get-demo?service=review" className="font-semibold underline underline-offset-4">
