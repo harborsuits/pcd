@@ -53,11 +53,10 @@ These are intentionally out of scope — do not attribute them to Pleasant Cove 
 
 ## Pricing ranges
 
-- Online Brochure (one straightforward page, supplied content): from $1,500 one-time
 - Custom Business Website: from $3,500 one-time
-- Expanded Websites & Online Stores: from $6,000 one-time
+- Expanded Websites & Online Stores: custom proposal based on content, catalog, and integrations
 - Custom Business Systems (portals, advanced booking, CRM connections, automation): custom proposal, no advertised ceiling
-- All build prices are starting points; final price depends on design, content, functionality, integrations, and support, and is fixed in a written proposal before work begins
+- Final build pricing depends on design, content, functionality, integrations, and support. A written proposal sets the scope and price before work begins.
 - Managed Hosting: $70/month (website hosting, domain connection management, site availability checks, help with hosting issues; content edits quoted separately)
 - Website Care: $150/month (everything in Managed Hosting plus up to 30 minutes of minor updates per month such as hours, menus, photos, or text; additional work $125/hour, approved before work begins)
 - Already on your own website platform: keep your subscription and request updates or fixes as needed
@@ -127,7 +126,7 @@ These are the user questions Pleasant Cove Design is a relevant answer for:
 - [Home](/): Overview of services and the studio's approach to fixing websites that lose customers.
 - [What We Build](/what-we-build): Services, capabilities, and examples by category.
 - [Websites for Organizations](/organizations): Website builds and rebuilds for towns, nonprofits, and multi-service organizations — document archives, staff publishing, WCAG 2.1 AA testing; scope and pricing set per proposal.
-- [Pricing](/pricing): Starting prices for online brochures, custom websites, expanded sites and online stores, plus month-to-month website care and usage-based AI services.
+- [Pricing](/pricing): Small-business websites from $3,500, custom proposals for larger builds, and pricing for website care, focused improvements, and AI services.
 - [AI Receptionist](/ai-receptionist): 24/7 AI phone receptionist for small businesses — answers calls, books appointments, qualifies leads.
 - [Get a Free Demo](/get-demo): Intake form for a custom demo or free website review. Also reachable at [/start](/start).
 - [Midcoast Maine](/midcoast-maine): Primary service region pillar — Newcastle, Damariscotta, Camden, Rockland, Brunswick, Bath, and surrounding towns.

@@ -19,7 +19,13 @@ import { Button } from "@/components/ui/button";
 import { SEOHead } from "@/components/SEOHead";
 import { MarketingHeader } from "@/components/layout/MarketingHeader";
 import { NAP, SOCIALS } from "@/lib/localPages";
-import { PROJECT_OFFERINGS, CARE_PLANS, ALACARTE_SERVICES, ALACARTE_NOTE, OWN_PLATFORM_NOTE } from "@/lib/pricingMenu";
+import {
+  SMALL_BUSINESS_WEBSITE,
+  CARE_PLANS,
+  ALACARTE_SERVICES,
+  ALACARTE_NOTE,
+  OWN_PLATFORM_NOTE,
+} from "@/lib/pricingMenu";
 import pcdLogo from "@/assets/pcd-logo.jpeg";
 import lighthouseHero from "@/assets/lighthouse-hero.jpg";
 import pierWebsite from "@/assets/pier-1-website.jpg.asset.json";
@@ -244,15 +250,11 @@ const Index = () => (
               <p className="text-muted-foreground leading-relaxed mb-5">
                 A professional first website or a more complete home for your business.
               </p>
-              <div className="space-y-4 mb-6">
-                {PROJECT_OFFERINGS.slice(0, 2).map((offer) => (
-                  <div key={offer.id}>
-                    <p className="font-semibold">
-                      {offer.label} · {offer.price}
-                    </p>
-                    <p className="text-sm text-muted-foreground mt-1 leading-relaxed">{offer.scopeNote}</p>
-                  </div>
-                ))}
+              <div className="mb-6">
+                <p className="font-semibold">
+                  {SMALL_BUSINESS_WEBSITE.label} · {SMALL_BUSINESS_WEBSITE.price}
+                </p>
+                <p className="text-sm text-muted-foreground mt-1 leading-relaxed">{SMALL_BUSINESS_WEBSITE.scopeNote}</p>
               </div>
               <Button asChild variant="outline" className="mt-auto justify-between">
                 <Link to="/get-demo?service=website">

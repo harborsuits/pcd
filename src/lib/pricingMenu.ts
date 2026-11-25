@@ -42,58 +42,38 @@ export interface RetainerAddon {
 // PROJECT OFFERINGS (One-time build — scope-based, priced by proposal)
 // ─────────────────────────────────────────────────────────────────────────────
 
+export const SMALL_BUSINESS_WEBSITE: PricingTier = {
+  id: "project_custom_website",
+  label: "Custom Business Website",
+  price: "From $3,500",
+  isStartingPrice: true,
+  description:
+    "A custom website for small businesses that need to explain their services, show their work, and make it easy for customers to get in touch.",
+  features: [
+    "Page structure and design tailored to your business",
+    "Refinement of your supplied copy and project information",
+    "Service pages and a project gallery where appropriate",
+    "A mobile-friendly layout and a clear inquiry path",
+    "Basic technical SEO, analytics setup, and launch testing",
+  ],
+  scopeNote: "Your proposal sets the page count, content responsibilities, revisions, functionality, and final price.",
+};
+
 export const PROJECT_OFFERINGS: PricingTier[] = [
+  SMALL_BUSINESS_WEBSITE,
   {
-    id: "project_brochure",
-    label: "Online Brochure",
-    price: "From $1,500",
-    isStartingPrice: true,
-    description:
-      "A simple, professional place for customers to learn what you do and contact you.",
-    features: [
-      "One straightforward page",
-      "Your supplied business information, logo, and photos",
-      "Brief business introduction and service overview",
-      "A small selection of supplied images",
-      "Phone, email, and relevant location information",
-      "Mobile-friendly layout and basic technical SEO",
-    ],
-    scopeNote:
-      "A compact informational website. Extensive copywriting, substantial portfolios, additional pages, booking systems, custom forms, and integrations are quoted separately.",
-  },
-  {
-    id: "project_custom_website",
-    label: "Custom Business Website",
-    price: "From $3,500",
-    isStartingPrice: true,
-    description:
-      "A tailored website that presents your business clearly, showcases your work, and helps customers take the next step.",
-    features: [
-      "Business-specific design and content organization",
-      "Refinement of your supplied business information",
-      "Service and project presentation",
-      "A gallery and standard inquiry form where appropriate",
-      "Basic technical SEO and analytics setup",
-    ],
-    scopeNote:
-      "Your proposal determines the pages, content volume, functionality, revisions, and final price. The starting price does not include every possible feature.",
-  },
-  {
-    id: "project_expanded",
+    id: "project_expanded_custom",
     label: "Expanded Websites & Online Stores",
-    price: "From $6,000",
-    isStartingPrice: true,
-    description:
-      "For businesses needing more extensive content, richer project collections, online selling, or more involved customer journeys.",
+    price: "Custom proposal",
+    quoteOnly: true,
+    description: "For projects that need more content, an online store, or connections to the tools you already use.",
     features: [
-      "Larger portfolios and project case studies",
-      "More extensive service or product content",
-      "Online stores using established commerce platforms",
-      "More involved inquiry and customer workflows",
-      "Connections to existing business tools",
+      "Multi-service websites and larger project portfolios",
+      "Product catalogs and online checkout",
+      "Content migration and organization",
+      "More involved inquiry workflows and integrations",
     ],
-    scopeNote:
-      "These are examples of possible scope, not a promise that every feature is included at this price. Final pricing is project-specific.",
+    scopeNote: "We quote the work after reviewing your content, catalog, and the tools the site needs to connect to.",
   },
   {
     id: "project_business_systems",
@@ -109,8 +89,7 @@ export const PROJECT_OFFERINGS: PricingTier[] = [
       "Business automation",
       "Custom integrations and functionality",
     ],
-    scopeNote:
-      "Implementation and ongoing management quoted separately. AI services also include usage-based charges.",
+    scopeNote: "Implementation and ongoing management quoted separately. AI services also include usage-based charges.",
   },
 ];
 
@@ -176,8 +155,7 @@ export const CARE_PLANS: CarePlan[] = [
     price: "From $275/mo",
     monthlyPrice: 275,
     isStartingPrice: true,
-    description:
-      "For businesses that need more regular website changes and a closer eye on performance.",
+    description: "For businesses that need more regular website changes and a closer eye on performance.",
     features: [
       "Everything in Website Care",
       "Up to 90 minutes total of minor content edits per month (not in addition to the 30)",
@@ -299,8 +277,7 @@ export interface AiComponent {
 
 export const AI_MODEL_INTRO = {
   heading: "AI support that scales with your business.",
-  body:
-    "Your setup fee covers configuration and implementation. Monthly management covers the ongoing support and maintenance defined in your plan. Calls, messages, and AI activity are billed according to your actual usage at the rates agreed in your proposal. Businesses with higher activity pay for the additional capacity they use. We explain the rates and estimated costs before activation.",
+  body: "Your setup fee covers configuration and implementation. Monthly management covers the ongoing support and maintenance defined in your plan. Calls, messages, and AI activity are billed according to your actual usage at the rates agreed in your proposal. Businesses with higher activity pay for the additional capacity they use. We explain the rates and estimated costs before activation.",
 };
 
 export const AI_COMPONENTS: AiComponent[] = [
@@ -406,6 +383,42 @@ export const RETAINER_ADDONS: RetainerAddon[] = [
 
 export const LEGACY_OFFERS: PricingTier[] = [
   {
+    id: "project_brochure",
+    label: "Online Brochure",
+    price: "From $1,500",
+    isStartingPrice: true,
+    legacy: true,
+    description: "A simple, professional place for customers to learn what you do and contact you.",
+    features: [
+      "One straightforward page",
+      "Your supplied business information, logo, and photos",
+      "Brief business introduction and service overview",
+      "A small selection of supplied images",
+      "Phone, email, and relevant location information",
+      "Mobile-friendly layout and basic technical SEO",
+    ],
+    scopeNote:
+      "A compact informational website. Extensive copywriting, substantial portfolios, additional pages, booking systems, custom forms, and integrations are quoted separately.",
+  },
+  {
+    id: "project_expanded",
+    label: "Expanded Websites & Online Stores",
+    price: "From $6,000",
+    isStartingPrice: true,
+    legacy: true,
+    description:
+      "For businesses needing more extensive content, richer project collections, online selling, or more involved customer journeys.",
+    features: [
+      "Larger portfolios and project case studies",
+      "More extensive service or product content",
+      "Online stores using established commerce platforms",
+      "More involved inquiry and customer workflows",
+      "Connections to existing business tools",
+    ],
+    scopeNote:
+      "These are examples of possible scope, not a promise that every feature is included at this price. Final pricing is project-specific.",
+  },
+  {
     id: "website_essential",
     label: "Essential Website",
     price: "Starting at $750",
@@ -488,9 +501,7 @@ export const LEGACY_OFFERS: PricingTier[] = [
  * Retired bundle list. Kept as an alias of LEGACY bundles so any remaining
  * reference resolves to historical data — never shown as a current offer.
  */
-export const BUNDLE_TIERS: PricingTier[] = LEGACY_OFFERS.filter((o) =>
-  o.id.startsWith("bundle_")
-);
+export const BUNDLE_TIERS: PricingTier[] = LEGACY_OFFERS.filter((o) => o.id.startsWith("bundle_"));
 
 // ─────────────────────────────────────────────────────────────────────────────
 // HELPER FUNCTIONS
@@ -530,9 +541,7 @@ export function findTierById(tierId: string | null | undefined): PricingTier | u
 /** Find a care plan by ID, including retired plans. */
 export function findCarePlanById(planId: string | null | undefined) {
   if (!planId) return undefined;
-  return (
-    CARE_PLANS.find((p) => p.id === planId) || LEGACY_OFFERS.find((o) => o.id === planId)
-  );
+  return CARE_PLANS.find((p) => p.id === planId) || LEGACY_OFFERS.find((o) => o.id === planId);
 }
 
 /** True when the offering has no fixed price and requires a proposal. */

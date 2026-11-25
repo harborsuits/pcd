@@ -21,71 +21,44 @@ export default function PricingSection() {
   return (
     <section className="relative pt-8 pb-20 overflow-hidden">
       <div className="container mx-auto px-6 relative z-10">
-        {/* Intro */}
-        <div className="text-center mb-12">
-          <div>
-            <p className="text-sm text-muted-foreground max-w-2xl mx-auto">
-              Starting prices reflect the focused scope described below. Your final
-              investment depends on the design, content, functionality, integrations, and
-              support required. You receive a fixed proposal with clear deliverables
-              before work begins.
-            </p>
-          </div>
-        </div>
-
         {/* Project offerings */}
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
-          {PROJECT_OFFERINGS.map((offering, index) => (
+        <div className="grid md:grid-cols-3 gap-6 max-w-6xl mx-auto">
+          {PROJECT_OFFERINGS.map((offering) => (
             <div key={offering.id}>
-              <Card
-                className="h-full flex flex-col overflow-hidden"
-              >
+              <Card className="h-full flex flex-col overflow-hidden">
                 <CardHeader className="pb-4">
                   <div className="space-y-3">
                     <h3 className="font-serif text-xl font-bold">{offering.label}</h3>
 
                     <div className="flex items-baseline gap-1">
-                      <span className="text-3xl font-bold text-accent">
-                        {offering.price}
-                      </span>
+                      <span className="text-3xl font-bold text-accent">{offering.price}</span>
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      {offering.quoteOnly
-                        ? "Scoped and quoted for your business"
-                        : "One-time build — starting price"}
+                      {offering.quoteOnly ? "Priced for your project" : "One-time build — starting price"}
                     </p>
 
-                    <p className="text-sm text-muted-foreground leading-relaxed mt-2">
-                      {offering.description}
-                    </p>
+                    <p className="text-sm text-muted-foreground leading-relaxed mt-2">{offering.description}</p>
                   </div>
                 </CardHeader>
 
-                <CardContent className="flex-1 flex flex-col">
-                  <Button asChild variant="default" size="lg" className="w-full"><Link to={`/get-demo?service=website&tier=${offering.id}`}>
-                      Discuss your project
-                    </Link></Button>
+                <CardContent className="flex-1 flex flex-col gap-4">
+                  <Button asChild variant="default" size="lg" className="w-full">
+                    <Link to={`/get-demo?service=website&tier=${offering.id}`}>Discuss your project</Link>
+                  </Button>
 
                   <div className="space-y-3">
                     <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                      {offering.quoteOnly ? "Examples:" : "Starting scope:"}
+                      {offering.quoteOnly ? "Project examples" : "Starting scope"}
                     </p>
                     <ul className="space-y-2.5">
                       {offering.features?.map((feature, i) => (
-                        <li
-                          key={i}
-                          className="flex items-start gap-2.5 text-sm text-muted-foreground"
-                        >
+                        <li key={i} className="flex items-start gap-2.5 text-sm text-muted-foreground">
                           <Check className="h-4 w-4 text-accent mt-0.5 flex-shrink-0" />
                           <span>{feature}</span>
                         </li>
                       ))}
                     </ul>
-                    {offering.scopeNote && (
-                      <p className="text-xs text-muted-foreground pt-2">
-                        {offering.scopeNote}
-                      </p>
-                    )}
+                    {offering.scopeNote && <p className="text-xs text-muted-foreground pt-2">{offering.scopeNote}</p>}
                   </div>
                 </CardContent>
               </Card>
@@ -93,28 +66,48 @@ export default function PricingSection() {
           ))}
         </div>
 
+        <div className="mt-8 flex flex-wrap justify-center gap-x-6 gap-y-3 text-sm">
+          <Link to="/#work" className="font-medium text-accent underline underline-offset-4">
+            See recent client work
+          </Link>
+          <Link to="/organizations" className="font-medium text-accent underline underline-offset-4">
+            How we scope websites for towns and organizations
+          </Link>
+        </div>
+
         {/* What determines project pricing */}
         <div>
           <div className="mt-16 max-w-3xl mx-auto">
             <div className="text-center mb-6">
-              <h3 className="font-serif text-2xl font-bold mb-2">
-                What determines your price
-              </h3>
+              <h3 className="font-serif text-2xl font-bold mb-2">What determines your price</h3>
               <p className="text-muted-foreground">
-                We scope the work around what your business needs, then put it in writing.
+                You’ll receive a written proposal with the scope and price before work begins.
               </p>
             </div>
             <ul className="space-y-2.5">
               {PROJECT_PRICING_FACTORS.map((factor, i) => (
-                <li
-                  key={i}
-                  className="flex items-start gap-2.5 text-sm text-muted-foreground"
-                >
+                <li key={i} className="flex items-start gap-2.5 text-sm text-muted-foreground">
                   <Check className="h-4 w-4 text-accent mt-0.5 flex-shrink-0" />
                   <span>{factor}</span>
                 </li>
               ))}
             </ul>
+          </div>
+        </div>
+
+        <div className="mt-10 max-w-3xl mx-auto grid sm:grid-cols-2 gap-4">
+          <div className="rounded-lg border border-border bg-card p-4">
+            <p className="text-sm font-semibold text-accent mb-1">One-time build</p>
+            <p className="text-sm text-muted-foreground">
+              Design, content, and launch of the website or system itself. Paid once, you own it.
+            </p>
+          </div>
+          <div className="rounded-lg border border-border bg-card p-4">
+            <p className="text-sm font-semibold text-accent mb-1">Ongoing monthly</p>
+            <p className="text-sm text-muted-foreground">
+              Website care keeps your site hosted, maintained, and updated. AI services are billed as setup, management,
+              and actual usage.
+            </p>
           </div>
         </div>
 
@@ -124,8 +117,7 @@ export default function PricingSection() {
             <div className="text-center mb-10">
               <h3 className="font-serif text-2xl font-bold mb-2">Website Care</h3>
               <p className="text-muted-foreground">
-                Keep your website maintained, checked, and up to date. Month-to-month, no
-                project required.
+                Keep your website maintained, checked, and up to date. Month-to-month, no project required.
               </p>
             </div>
 
@@ -137,23 +129,18 @@ export default function PricingSection() {
                     <div className="flex items-baseline gap-1 mb-2">
                       <span className="text-2xl font-bold text-accent">{plan.price}</span>
                     </div>
-                    <p className="text-sm text-muted-foreground mb-4">
-                      {plan.description}
-                    </p>
+                    <p className="text-sm text-muted-foreground mb-4">{plan.description}</p>
                     <ul className="space-y-2 mb-4">
                       {plan.features.map((feature, i) => (
-                        <li
-                          key={i}
-                          className="flex items-start gap-2 text-sm text-muted-foreground"
-                        >
+                        <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
                           <Check className="h-4 w-4 text-accent mt-0.5 flex-shrink-0" />
                           <span>{feature}</span>
                         </li>
                       ))}
                     </ul>
-                    <Button asChild variant="default" size="sm" className="w-full mt-auto"><Link to={`/get-demo?product=care_plan&tier=${plan.id}`}>
-                        Request a quote
-                      </Link></Button>
+                    <Button asChild variant="default" size="sm" className="w-full mt-auto">
+                      <Link to={`/get-demo?product=care_plan&tier=${plan.id}`}>Request a quote</Link>
+                    </Button>
                   </CardContent>
                 </Card>
               ))}
@@ -175,40 +162,34 @@ export default function PricingSection() {
         <div>
           <div className="mt-16 max-w-4xl mx-auto">
             <div className="text-center mb-10">
-              <h3 className="font-serif text-2xl font-bold mb-2">
-                Focused Individual Services
-              </h3>
+              <h3 className="font-serif text-2xl font-bold mb-2">Focused Individual Services</h3>
               <p className="text-muted-foreground">
-                Need one specific thing handled? Pick the piece you actually need right
-                now. Each price is a starting point for the scope described.
+                Need one specific thing handled? Pick the piece you actually need right now. Each price is a starting
+                point for the scope described.
               </p>
               <p className="text-xs text-muted-foreground mt-2">
-                We work with the tools you already use — Toast, Square, Shopify, ChowNow,
-                Calendly, Google, and more.
+                We work with the tools you already use — Toast, Square, Shopify, ChowNow, Calendly, Google, and more.
               </p>
             </div>
 
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {ALACARTE_SERVICES.map((service) => (
-                <Card
-                  key={service.id}
-                  className="group"
-                >
+                <Card key={service.id} className="group">
                   <CardContent className="p-5">
                     <h4 className="font-semibold text-foreground mb-1">{service.label}</h4>
                     <p className="text-sm text-accent font-medium mb-2">{service.price}</p>
-                    <p className="text-sm text-muted-foreground mb-3">
-                      {service.description}
-                    </p>
-                    <Button asChild variant="outline" size="sm"><Link to={`/get-demo?service=other&request=${service.id}`}>Request a quote <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" /></Link></Button>
+                    <p className="text-sm text-muted-foreground mb-3">{service.description}</p>
+                    <Button asChild variant="outline" size="sm">
+                      <Link to={`/get-demo?service=other&request=${service.id}`}>
+                        Request a quote <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" />
+                      </Link>
+                    </Button>
                   </CardContent>
                 </Card>
               ))}
             </div>
 
-            <p className="text-xs text-muted-foreground text-center mt-6 max-w-2xl mx-auto">
-              {ALACARTE_NOTE}
-            </p>
+            <p className="text-xs text-muted-foreground text-center mt-6 max-w-2xl mx-auto">{ALACARTE_NOTE}</p>
 
             <div className="text-center mt-6">
               <Link
@@ -225,27 +206,17 @@ export default function PricingSection() {
         <div>
           <div className="mt-20 max-w-4xl mx-auto">
             <div className="text-center mb-10">
-              <h3 className="font-serif text-2xl font-bold mb-2">
-                AI Receptionist & Business Automation
-              </h3>
-              <p className="text-muted-foreground font-medium mb-2">
-                {AI_MODEL_INTRO.heading}
-              </p>
-              <p className="text-sm text-muted-foreground max-w-2xl mx-auto">
-                {AI_MODEL_INTRO.body}
-              </p>
+              <h3 className="font-serif text-2xl font-bold mb-2">AI Receptionist & Business Automation</h3>
+              <p className="text-muted-foreground font-medium mb-2">{AI_MODEL_INTRO.heading}</p>
+              <p className="text-sm text-muted-foreground max-w-2xl mx-auto">{AI_MODEL_INTRO.body}</p>
             </div>
 
             <div className="grid sm:grid-cols-3 gap-4">
               {AI_COMPONENTS.map((component) => (
                 <Card key={component.id} className="hover:shadow-md transition-shadow">
                   <CardContent className="p-5">
-                    <h4 className="font-semibold text-foreground mb-1">
-                      {component.label}
-                    </h4>
-                    <p className="text-sm text-accent font-medium mb-2">
-                      {component.price}
-                    </p>
+                    <h4 className="font-semibold text-foreground mb-1">{component.label}</h4>
+                    <p className="text-sm text-accent font-medium mb-2">{component.price}</p>
                     <p className="text-sm text-muted-foreground">{component.description}</p>
                   </CardContent>
                 </Card>
@@ -261,7 +232,9 @@ export default function PricingSection() {
             </ul>
 
             <div className="text-center mt-8">
-              <Button asChild size="lg"><Link to="/get-demo?service=ai">Request a quote</Link></Button>
+              <Button asChild size="lg">
+                <Link to="/get-demo?service=ai">Request a quote</Link>
+              </Button>
             </div>
           </div>
         </div>
@@ -271,14 +244,13 @@ export default function PricingSection() {
           <div className="text-center mt-16 max-w-xl mx-auto p-8 rounded-lg bg-card border border-border/50 backdrop-blur-sm">
             <h3 className="font-serif text-2xl font-bold mb-3">7-Day Pilot</h3>
             <p className="text-muted-foreground mb-2">
-              A short, defined trial run for selected businesses. The pilot scope and any
-              fees are agreed before it starts, so you know exactly what is being tested
-              and what it costs.
+              A short, defined trial run for selected businesses. The pilot scope and any fees are agreed before it
+              starts, so you know exactly what is being tested and what it costs.
             </p>
-            <p className="text-sm text-muted-foreground italic mb-6">
-              Limited availability — select businesses only.
-            </p>
-            <Button asChild size="lg"><Link to="/get-demo?product=pilot">Request a Pilot</Link></Button>
+            <p className="text-sm text-muted-foreground italic mb-6">Limited availability — select businesses only.</p>
+            <Button asChild size="lg">
+              <Link to="/get-demo?product=pilot">Request a Pilot</Link>
+            </Button>
           </div>
         </div>
 
@@ -286,18 +258,16 @@ export default function PricingSection() {
         <div>
           <div className="text-center mt-8 max-w-2xl mx-auto space-y-4">
             <p className="text-sm text-muted-foreground italic">
-              Projects start with a deposit to lock in your build slot. The remainder is
-              due when your site is ready to launch.
+              Projects start with a deposit to lock in your build slot. The remainder is due when your site is ready to
+              launch.
             </p>
             <p className="text-sm text-muted-foreground">
-              <span className="font-medium">What we don't do:</span> we add coverage,
-              responsiveness, and ongoing care — we're not a replacement for staff,
-              medical records handling, or enterprise compliance work.
+              <span className="font-medium">What we don't do:</span> we add coverage, responsiveness, and ongoing care —
+              we're not a replacement for staff, medical records handling, or enterprise compliance work.
             </p>
           </div>
         </div>
       </div>
-
     </section>
   );
 }
