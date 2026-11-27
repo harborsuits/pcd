@@ -1,3 +1,8 @@
+# Marketing & Ads editorial preview (Nov 27)
+- [x] Replace long copy with the supplied split opening, real demo specimen, equal channel rows, honest Raven Rock website proof, compact FAQs and campaign close.
+- [x] Verify word reduction, assets, keyboard access, desktop/390/320 layout, metadata, inquiry click and existing tests; leave unpublished.
+- Verification: 163 visible words with questions collapsed, 232 expanded (65.5% shorter). All 34 existing tests, targeted lint and automatic preview compilation pass; manual build/typecheck prohibited by environment. Desktop/390/320 have no overflow or runtime errors; specimen loads, FAQ keyboard disclosures match schema, canonical is unchanged and campaign buttons preserve Marketing & Ads selection. Exact Raven Rock CDN asset verified on live portfolio at 1440×810; local CDN is blocked and hosted preview redirects to login, so editor delivery still requires Ben’s visual review. No publishing, submissions, pricing/backend/settings changes or new assets.
+
 # Unified contact experience
 - Current request: Marketing & Ads expansion (preview only).
   - [x] Give Google Search and Facebook/Instagram equal prominence; align supporting work, process, FAQ and shared copy without changing prices or inquiry payloads.
