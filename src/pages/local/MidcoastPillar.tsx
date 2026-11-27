@@ -118,7 +118,7 @@ const MidcoastPillar = () => {
               to="/marketing-and-ads"
               className="text-muted-foreground hover:text-accent underline-offset-4 hover:underline"
             >
-              Marketing & Google Ads
+              Marketing & Ads
             </Link>
           </div>
         </div>

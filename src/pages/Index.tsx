@@ -151,7 +151,7 @@ function HomeHero() {
           data-speakable
           className="pcd-home-hero__lede mt-4 !max-w-[44ch] text-[1.0625rem] leading-relaxed md:mt-5 md:text-xl"
         >
-          We build new websites, improve the one you have, keep it running, and help local customers find you through search and Google Ads. You work directly with a local designer.
+          We build new websites, improve the one you have, keep it running, and help local customers find you through search, Google Search ads, and Facebook and Instagram ads. You work directly with a local designer.
         </p>
         <div className="mt-5 flex w-full flex-col items-center gap-3 sm:mt-7 sm:w-fit sm:self-start">
           <div className="flex w-full flex-col items-stretch gap-3 sm:w-auto sm:flex-row sm:items-center">
@@ -305,9 +305,9 @@ const Index = () => (
             </article>
           </div>
           <p className="mt-6 text-muted-foreground leading-relaxed">
-            Want more calls once the site is in shape? We also plan and manage local Google Ads campaigns.{" "}
+            Want to promote your business once the site is in shape? We also plan and manage Google Search, Facebook and Instagram ad campaigns.{" "}
             <Link to="/marketing-and-ads" className="font-medium text-foreground underline underline-offset-4">
-              See marketing and Google Ads services
+              See Marketing & Ads services
             </Link>
             .
           </p>

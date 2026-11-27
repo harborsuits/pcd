@@ -1,4 +1,8 @@
 # Unified contact experience
+- Current request: Marketing & Ads expansion (preview only).
+  - [x] Give Google Search and Facebook/Instagram equal prominence; align supporting work, process, FAQ and shared copy without changing prices or inquiry payloads.
+  - [x] Verify desktop/mobile, inquiry deep link, canonical and existing tests; report saved revision without publishing.
+  - Verification: all 34 tests across six existing unit-test files pass. Automatic preview compilation reports build OK. Chromium checks at 1280/584/390/320 confirm equal desktop cards, stacked phone cards, no overflow or page errors, one unchanged canonical, updated Service schema and Marketing & Ads preselection; filled inquiry remains ready without submission. Manual typecheck and production build are prohibited by the environment and were not run. Existing logo pointer does not render in sandbox Chromium and was left untouched, as previously confirmed working in the editor.
 - [x] Use the recently approved existing-website inquiry as the reference for unifying the older contact screens.
 - [x] Inventory every public inquiry link, direct-contact option, account entry, and specialized request flow; direct email/text/phone and client authentication remain intentional alternatives.
 - [x] Give general, review, and existing-website inquiries one consistent responsive shell while preserving contextual fields and deep-link payloads.

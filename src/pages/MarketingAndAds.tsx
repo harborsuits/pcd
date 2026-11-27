@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Search, MapPin, LineChart, ArrowRight } from "lucide-react";
+import { Search, Images, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SEOHead } from "@/components/SEOHead";
 import { MarketingHeader } from "@/components/layout/MarketingHeader";
@@ -8,32 +8,48 @@ import { MARKETING_ADS } from "@/lib/pricingMenu";
 
 const CTA_HREF = "/get-demo?service=marketing";
 
-const scope = [
-  { icon: Search, title: "Google Search Ads", body: "Campaign planning, setup, and ongoing management. Ads are built around the services you most want to sell and the towns you actually serve, with keyword targeting, regular search term review, and negative keywords to cut wasted clicks." },
-  { icon: MapPin, title: "Getting found locally", body: "Google Business Profile setup and cleanup, plus on-site local SEO: clear service pages, accurate business details, and page titles that match what local customers search for." },
-  { icon: LineChart, title: "Tracking and reporting", body: "Google Analytics 4 with call and form conversion tracking where your setup supports it, so you can see which actions came from ads. Reports are written in plain English, not dashboards full of jargon." },
+const channels = [
+  {
+    icon: Search,
+    title: "Google Search Ads",
+    body: "Reach people actively looking for a specific service nearby. For example, a homeowner might search for “chimney repair near me” or “deck builder in Damariscotta.” We plan around relevant search terms and the towns you serve.",
+    scope: "We handle campaign planning, keyword and location targeting, ad copy, setup and ongoing management. Regular search term review and negative keywords help keep targeting relevant, with improvements as the campaign runs.",
+  },
+  {
+    icon: Images,
+    title: "Facebook & Instagram Ads",
+    body: "Get in front of local people with a project photo, seasonal offer or event. For example, a deck builder could show a completed project to nearby homeowners. Campaigns can focus on awareness or inquiries through a lead form or your website.",
+    scope: "We handle campaign planning, audience and location targeting, ad copy, preparing ads from your available photos or graphics, setup and ongoing management. We review the response and make improvements as the campaign runs.",
+  },
+];
+
+const support = [
+  { title: "Local visibility", body: "Google Business Profile setup and cleanup, plus local search visibility through clear service pages and accurate business details." },
+  { title: "Landing pages and forms", body: "Focused improvements to the pages and forms your ads lead to, so people can call or request a quote." },
+  { title: "Conversion tracking", body: "Tracking for calls, forms and quote requests where your website and chosen platform support it." },
+  { title: "Plain-English reporting", body: "Clear reporting on ad spend, calls and quote requests, including what can be attributed to campaigns where tracking supports it." },
 ];
 
 const steps = [
-  { title: "Start with your priorities", body: "Tell us which services matter most, where your customers are, and what you’re comfortable spending each month. That shapes everything else." },
-  { title: "Fix the landing spot", body: "Ads only help if the page they lead to makes it easy to call or ask for a quote. We review the landing page and forms and fix what gets in the way." },
-  { title: "Launch, review, adjust", body: "Once the campaign is running, we review search terms, tracked calls and form requests, and adjust targeting and budget with you." },
+  { title: "Choose the right starting point", body: "Tell us what you want to promote, where you serve and your monthly budget. We recommend Google Search or Facebook and Instagram based on those goals, then put the scope and fees in writing." },
+  { title: "Prepare the campaign", body: "We plan targeting, write the ads and prepare any social ads from available photos or graphics. We review the landing page or lead form and agree any focused improvements and supported tracking." },
+  { title: "Launch, review, adjust", body: "Once the agreed campaign is running, we review search terms or audience response, spend and tracked inquiries. We improve ads and targeting and discuss budget adjustments with you." },
 ];
 
 const faq = [
-  { question: "Can you run Google Ads if I already have a website?", answer: "Yes. We review the pages your ads would send people to and recommend focused fixes to the landing page or forms where they would help. A new website is not required." },
-  { question: "How do ad spend and management fees work?", answer: "They are separate. Ad spend is paid to Google directly from your own account. Campaign management is scoped by proposal, and both are agreed in writing before anything goes live." },
-  { question: "Which actions are tracked?", answer: "Where your setup supports it, we track phone calls and form or quote requests using Google Analytics 4 and Google Ads conversion tracking, so reports show which actions came from your campaigns." },
+  { question: "Should we start with Google Search or Facebook and Instagram?", answer: "Google Search is a useful starting point when people already search for your service nearby. Facebook and Instagram can put a project photo, seasonal offer or event in front of local audiences, for awareness or inquiries. We choose a starting channel around your goals, budget and service area; a new business does not need to start with both." },
+  { question: "Can we use our existing website?", answer: "Yes. A new website is not required. We review the pages your ads would send people to and recommend focused landing page or form improvements where useful. Facebook and Instagram campaigns can also use a platform lead form when that fits your goals." },
+  { question: "How do management fees and ad spend work?", answer: "They are separate. Campaign management is priced by proposal. Ad spend is paid to the applicable platform through your own ad account. We agree the scope, management fees and ad budget in writing before anything goes live." },
 ];
 
 const MarketingAndAds = () => (
   <div className="pcd-shell min-h-screen flex flex-col bg-page-bg text-foreground">
     <SEOHead
-      title="Marketing & Google Ads for Maine Small Businesses"
-      description="Google Search Ads, local SEO, and call and form tracking for Maine small businesses. Planned around your services, service area, and budget, scoped by proposal."
+      title="Google & Social Media Ads in Maine | Pleasant Cove Design"
+      description="Google Search, Facebook and Instagram ads for Maine small businesses. Campaign planning and management, with fees by proposal and ad spend separate."
       path="/marketing-and-ads"
       faq={faq}
-      service={{ slug: "marketing-and-ads", name: MARKETING_ADS.label, description: MARKETING_ADS.description, serviceType: "Search engine marketing", areaServed: ["Maine"] }}
+      service={{ slug: "marketing-and-ads", name: MARKETING_ADS.label, description: MARKETING_ADS.description, serviceType: "Search and social media advertising", areaServed: ["Maine"] }}
       breadcrumbs={[{ name: "Home", path: "/" }, { name: "Marketing & Ads", path: "/marketing-and-ads" }]}
     />
     <MarketingHeader activePage="marketing-and-ads" />
@@ -41,11 +57,11 @@ const MarketingAndAds = () => (
       <section className="px-5 sm:px-6 py-10 md:py-16">
         <div className="max-w-3xl mx-auto text-center">
           <h1 data-speakable className="font-serif text-3xl md:text-5xl font-bold leading-tight">
-            Marketing & Google Ads for Maine small businesses
+            Marketing & advertising for Maine small businesses
           </h1>
           <p data-speakable className="text-base md:text-lg text-muted-foreground leading-relaxed mt-6 max-w-2xl mx-auto">
-            Get found by people searching nearby, and get more of the right calls and quote requests. We start with
-            your priority services, your service area, and your budget.
+            Pleasant Cove Design plans and manages Google Search, Facebook and Instagram ads. We start with
+            what you want to promote, your service area and your budget.
           </p>
           <Button asChild size="lg" className="mt-7">
             <Link to={CTA_HREF}>
@@ -57,15 +73,29 @@ const MarketingAndAds = () => (
 
       <section className="border-t border-border bg-background py-10 md:py-12">
         <div className="max-w-6xl mx-auto px-5 sm:px-6">
-          <h2 className="font-serif text-2xl md:text-3xl font-bold mb-8">What’s included.</h2>
-          <div className="grid md:grid-cols-3 gap-6">
-            {scope.map((item) => (
+          <div className="grid md:grid-cols-2 gap-6">
+            {channels.map((item) => (
               <article key={item.title} className="bg-card border border-border rounded-lg p-6">
                 <item.icon className="h-6 w-6 text-accent mb-4" aria-hidden="true" />
-                <h3 className="font-serif text-xl font-bold mb-3">{item.title}</h3>
+                <h2 className="font-serif text-xl font-bold mb-3">{item.title}</h2>
                 <p className="text-muted-foreground leading-relaxed">{item.body}</p>
+                <p className="text-muted-foreground leading-relaxed mt-4">{item.scope}</p>
               </article>
             ))}
+          </div>
+          <div className="mt-8 border-t border-border pt-6">
+            <h2 className="font-serif text-2xl font-bold mb-5">What we handle</h2>
+            <dl className="grid sm:grid-cols-2 gap-x-8 gap-y-5">
+              {support.map((item) => (
+                <div key={item.title}>
+                  <dt className="font-semibold mb-1">{item.title}</dt>
+                  <dd className="text-muted-foreground leading-relaxed">{item.body}</dd>
+                </div>
+              ))}
+            </dl>
+            <p className="text-muted-foreground leading-relaxed mt-5">
+              A new business can start with one channel based on its goals, budget and service area.
+            </p>
           </div>
           <p className="text-sm text-muted-foreground mt-6 max-w-3xl">
             Need a better page for ads to land on?{" "}
@@ -131,7 +161,7 @@ const MarketingAndAds = () => (
         <div className="max-w-3xl mx-auto px-5 sm:px-6 text-center">
           <h2 className="font-serif text-2xl md:text-3xl font-bold mb-4">Start with what you want more of.</h2>
           <p className="text-base md:text-lg mb-7">
-            Tell Ben which services you want more calls for, where you work, and your rough monthly budget. We’ll
+            Tell Ben what you want to promote, where you serve and your rough monthly budget. We’ll
             explain the scope and fees before you commit.
           </p>
           <Button asChild size="lg" variant="secondary">

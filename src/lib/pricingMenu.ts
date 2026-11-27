@@ -564,10 +564,10 @@ export function shouldShowPricing(serviceType: ServiceType): boolean {
 
 export const MARKETING_ADS = {
   id: "marketing_ads",
-  label: "Marketing & Google Ads",
+  label: "Marketing & Ads",
   price: "By proposal",
   description:
-    "Google Search Ads setup and management, local search, landing page and form improvements, and call/form tracking, planned around your priority services, service area, and budget.",
+    "Google Search, Facebook and Instagram ads: campaign planning, setup and ongoing management, with local search, landing page and form improvements, and conversion tracking where supported.",
   scopeNote:
-    "Campaign management fees are separate from ad spend, which you pay to Google directly. Scope and fees are put in writing before work begins.",
+    "Campaign management fees are separate from ad spend, which you pay to the applicable platform through your own ad account. Scope and fees are put in writing before work begins.",
 } as const;

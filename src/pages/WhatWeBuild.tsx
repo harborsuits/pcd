@@ -254,7 +254,7 @@ const WhatWeBuild = () => (
             <h2 className="font-serif text-2xl md:text-3xl font-bold mb-4">Bring more of the right customers to the site.</h2>
             <p className="leading-relaxed mb-4">{MARKETING_ADS.description} {MARKETING_ADS.scopeNote}</p>
             <Link to="/marketing-and-ads" className={focusLink}>
-              Explore marketing and Google Ads services <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+              Explore Marketing & Ads services <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
             </Link>
           </div>
         </div>

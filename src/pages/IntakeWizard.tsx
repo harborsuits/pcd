@@ -36,7 +36,7 @@ const SERVICE_OPTIONS: { value: ServiceType; title: string }[] = [
   { value: "demo", title: "See a demo site" },
   { value: "website", title: "A new website" },
   { value: "ai", title: "AI phone answering" },
-  { value: "marketing", title: "Marketing & Google Ads" },
+  { value: "marketing", title: "Marketing & Ads" },
   { value: "existing", title: "Help with my current site" },
   { value: "other", title: "Something else" },
 ];
@@ -560,7 +560,9 @@ const GetDemo = () => {
             ? "Discuss a marketing campaign"
             : "How can I help?"
       }
-      introduction="Tell me what your business needs. A few details are enough to start, and I’ll follow up by email about next steps."
+      introduction={serviceType === "marketing"
+        ? "Tell us what you want to promote and where you serve. A few details are enough to start, and we’ll follow up by email about next steps."
+        : "Tell me what your business needs. A few details are enough to start, and I’ll follow up by email about next steps."}
       seoTitle="Contact — Pleasant Cove Design"
       seoDescription="Send Ben a short inquiry about your website, business tools, or ongoing care. Pleasant Cove Design, Midcoast Maine."
       formTitle={receipt ? undefined : "Start with a short inquiry"}
@@ -688,7 +690,9 @@ const GetDemo = () => {
               value={notes}
               onChange={(event) => setNotes(event.target.value)}
               onBlur={() => setTouched((current) => ({ ...current, notes: true }))}
-              placeholder="What’s not working, what you’re hoping for, or when you’d like it done."
+              placeholder={serviceType === "marketing"
+                ? "What would you like to promote, and where do you serve customers?"
+                : "What’s not working, what you’re hoping for, or when you’d like it done."}
               rows={4}
               maxLength={2000}
             />

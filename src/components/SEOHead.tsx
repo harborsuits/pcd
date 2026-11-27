@@ -57,7 +57,7 @@ const DEFAULT_AREAS = [
 
 // Stable IDs let nodes cross-reference each other in the @graph.
 const ORG_DESCRIPTION =
-  "Pleasant Cove Design builds, improves, and cares for small-business websites in Maine, and plans and manages local Google Ads campaigns.";
+  "Pleasant Cove Design builds, improves, and cares for small-business websites in Maine, and plans and manages Google Search, Facebook and Instagram ads.";
 
 const ORG_ID = `${DOMAIN}/#organization`;
 const WEBSITE_ID = `${DOMAIN}/#website`;
@@ -117,6 +117,7 @@ function buildBaseGraph(sameAs: string[]) {
         "Booking integrations",
         "AI receptionist",
         "Google Ads management",
+        "Facebook and Instagram ads management",
         "Website redesign",
       ],
       sameAs: sameAs,
