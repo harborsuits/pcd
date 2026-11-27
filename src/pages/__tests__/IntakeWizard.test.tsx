@@ -108,6 +108,34 @@ describe("Contact inquiry regressions", () => {
     );
   });
 
+  it("opens a marketing deep link preselected and saves it as other with a marketing discriminator", async () => {
+    invoke.mockResolvedValue({ data: { project_token: "mock-project" }, error: null });
+    render(
+      <MemoryRouter initialEntries={["/get-demo?service=marketing"]}>
+        <GetDemo />
+      </MemoryRouter>,
+    );
+    expect(screen.getByRole("heading", { name: "Discuss a marketing campaign", level: 1 })).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "What is this about?" })).toHaveValue("marketing");
+    expect(screen.queryByLabelText("Where do you serve customers? *")).not.toBeInTheDocument();
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText("Business name *"), "PCD");
+    await user.type(screen.getByLabelText("Email *"), "qa@example.com");
+    await user.type(screen.getByLabelText("Message *"), "More roofing calls.");
+    await user.click(screen.getByRole("button", { name: "Send inquiry" }));
+    await waitFor(() =>
+      expect(invoke).toHaveBeenCalledWith(
+        "leads/request-demo",
+        expect.objectContaining({
+          body: expect.objectContaining({
+            service_type: "other",
+            custom_request: "More roofing calls.\n\nInquiry type: Marketing & Ads campaign",
+          }),
+        }),
+      ),
+    );
+  });
+
   it("shows the dedicated review page and its contact links", () => {
     render(
       <MemoryRouter initialEntries={["/get-demo?service=review&town=newcastle&industry=contractor"]}>

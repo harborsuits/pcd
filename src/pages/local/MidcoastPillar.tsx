@@ -114,6 +114,12 @@ const MidcoastPillar = () => {
                 Websites for {v.name}
               </Link>
             ))}
+            <Link
+              to="/marketing-and-ads"
+              className="text-muted-foreground hover:text-accent underline-offset-4 hover:underline"
+            >
+              Marketing & Google Ads
+            </Link>
           </div>
         </div>
       </section>

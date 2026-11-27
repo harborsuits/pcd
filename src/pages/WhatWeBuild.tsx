@@ -10,6 +10,7 @@ import {
   ShieldCheck,
   Wrench,
   Check,
+  Search,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SEOHead } from "@/components/SEOHead";
@@ -21,6 +22,7 @@ import {
   ALACARTE_SERVICES,
   ALACARTE_NOTE,
   AI_TIERS,
+  MARKETING_ADS,
 } from "@/lib/pricingMenu";
 
 const smallerJobs = ["content_refresh", "website_cleanup", "booking_integration", "forms_routing"].flatMap((id) => {
@@ -238,6 +240,22 @@ const WhatWeBuild = () => (
             <p className="text-sm leading-relaxed">
               {AI_TIERS[0]?.description} {AI_TIERS[0]?.scopeNote}
             </p>
+          </div>
+        </div>
+      </section>
+
+      <section className="border-t border-border py-10 md:py-12">
+        <div className="max-w-6xl mx-auto px-5 sm:px-6">
+          <div className="border-l-2 border-accent pl-5 max-w-3xl">
+            <p className="text-sm font-semibold mb-3 flex items-center gap-2">
+              <Search className="h-4 w-4 text-primary shrink-0" aria-hidden="true" />
+              Marketing & Ads · {MARKETING_ADS.price}
+            </p>
+            <h2 className="font-serif text-2xl md:text-3xl font-bold mb-4">Bring more of the right customers to the site.</h2>
+            <p className="leading-relaxed mb-4">{MARKETING_ADS.description} {MARKETING_ADS.scopeNote}</p>
+            <Link to="/marketing-and-ads" className={focusLink}>
+              Explore marketing and Google Ads services <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+            </Link>
           </div>
         </div>
       </section>

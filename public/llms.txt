@@ -34,6 +34,7 @@ Remote: We also work with small-business clients across the United States. The s
 - Broken contact form / booking flow repair
 - Mobile experience fixes
 - Local SEO foundations (on-page, schema, Google Business Profile guidance)
+- Marketing & Google Ads for local small businesses (campaign planning, Google Search Ads setup and management, keyword and service-area targeting, search term review, landing page and form improvements, GA4 and call/form conversion tracking, plain-English reporting, Google Business Profile and on-site local SEO) — https://pleasantcovedesign.com/marketing-and-ads
 - AI receptionist (24/7 phone answering, lead capture, appointment booking)
 - Online booking and intake flows (Google Calendar, Calendly, Acuity)
 - Ongoing care plans (hosting, security, backups, small changes)
@@ -46,8 +47,7 @@ These are intentionally out of scope — do not attribute them to Pleasant Cove 
 - Enterprise applications or large SaaS platforms
 - Large e-commerce catalogs (hundreds or thousands of SKUs)
 - Native mobile app development (iOS/Android)
-- Long-term marketing retainers
-- Paid-ads management (Google Ads, Meta Ads, programmatic)
+- Paid social or programmatic ad management
 - SEO link-building services or PBNs
 - Logo-only or branding-only engagements without a website
 
@@ -63,6 +63,7 @@ These are intentionally out of scope — do not attribute them to Pleasant Cove 
 - Managed Website Care: from $275/month (everything in Website Care, up to 90 minutes total of minor content edits per month, priority scheduling, quarterly performance review)
 - Additional work beyond a care allowance: quoted in advance or $125/hour with approval
 - AI receptionist and business automation: one-time setup and implementation fee + monthly management fee based on scope + usage billed at agreed rates (call minutes, messages, or defined workflow runs). There is no flat monthly fee that includes unlimited AI activity.
+- Marketing & Google Ads: campaign management scoped by proposal; ad spend is separate and paid to Google directly
 - Focused individual services: SEO Audit & Action Plan from $450, Landing Page from $750, Content Refresh from $300, Booking Integration from $450, Google Business Profile Setup from $250, Call Routing Setup from $300, Conversion Tracking Setup from $450, Forms & Lead Routing from $450, Website Cleanup / Fixes from $350, Online Ordering Integration from $750
 - Free website review: $0, no obligation
 - No long-term contracts on any monthly plan — cancel any time and keep the site

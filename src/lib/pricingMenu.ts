@@ -557,3 +557,17 @@ export function findAddonsByIds(addonIds: string[]): RetainerAddon[] {
 export function shouldShowPricing(serviceType: ServiceType): boolean {
   return serviceType === "ai" || serviceType === "website" || serviceType === "both";
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MARKETING & ADS (campaign management scoped by proposal; ad spend separate)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const MARKETING_ADS = {
+  id: "marketing_ads",
+  label: "Marketing & Google Ads",
+  price: "By proposal",
+  description:
+    "Google Search Ads setup and management, local search, landing page and form improvements, and call/form tracking, planned around your priority services, service area, and budget.",
+  scopeNote:
+    "Campaign management fees are separate from ad spend, which you pay to Google directly. Scope and fees are put in writing before work begins.",
+} as const;

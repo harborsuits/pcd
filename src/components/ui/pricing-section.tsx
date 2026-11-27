@@ -15,6 +15,7 @@ import {
   AI_MODEL_INTRO,
   AI_COMPONENTS,
   AI_BILLING_NOTES,
+  MARKETING_ADS,
 } from "@/lib/pricingMenu";
 
 export default function PricingSection() {
@@ -235,6 +236,24 @@ export default function PricingSection() {
               <Button asChild size="lg">
                 <Link to="/get-demo?service=ai">Request a quote</Link>
               </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* Marketing & Ads campaigns (by proposal) */}
+        <div>
+          <div className="mt-16 max-w-4xl mx-auto border-l-2 border-accent pl-5">
+            <h3 className="font-serif text-2xl font-bold mb-1">{MARKETING_ADS.label}</h3>
+            <p className="text-accent font-semibold mb-2">{MARKETING_ADS.price}</p>
+            <p className="text-sm text-muted-foreground mb-2">{MARKETING_ADS.description}</p>
+            <p className="text-sm text-muted-foreground mb-4">{MARKETING_ADS.scopeNote}</p>
+            <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
+              <Link to="/marketing-and-ads" className="inline-flex items-center gap-2 text-primary hover:underline">
+                See what campaign management covers <ArrowRight className="h-4 w-4" />
+              </Link>
+              <Link to="/get-demo?service=marketing" className="inline-flex items-center gap-2 text-primary hover:underline">
+                Discuss a campaign <ArrowRight className="h-4 w-4" />
+              </Link>
             </div>
           </div>
         </div>

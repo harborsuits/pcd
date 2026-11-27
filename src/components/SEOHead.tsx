@@ -1,4 +1,4 @@
-import { Helmet } from "react-helmet-async";
+import { useHead } from "@/lib/headManager";
 import { NAP, SOCIALS, VERTICALS } from "@/lib/localPages";
 import ogImageDefault from "@/assets/og-image.jpg";
 
@@ -114,6 +114,7 @@ function buildBaseGraph(sameAs: string[]) {
         "Local SEO",
         "Booking integrations",
         "AI receptionist",
+        "Google Ads management",
         "Website redesign",
       ],
       sameAs: sameAs,
@@ -139,14 +140,6 @@ function buildBaseGraph(sameAs: string[]) {
       name: NAP.name,
       publisher: { "@id": ORG_ID },
       inLanguage: "en-US",
-      potentialAction: {
-        "@type": "SearchAction",
-        target: {
-          "@type": "EntryPoint",
-          urlTemplate: `${DOMAIN}/?q={search_term_string}`,
-        },
-        "query-input": "required name=search_term_string",
-      },
     },
   ];
 }
@@ -171,7 +164,8 @@ export function SEOHead({
   const canonicalUrl = `${DOMAIN}${path}`;
   // Only append brand suffix if combined length stays under 60 chars (SERP truncation limit).
   const withSuffix = `${title} — Pleasant Cove Design`;
-  const fullTitle = path === "/" || withSuffix.length > 60 ? title : withSuffix;
+  const fullTitle =
+    path === "/" || title.includes("Pleasant Cove Design") || withSuffix.length > 60 ? title : withSuffix;
   const ogImage = image ?? DEFAULT_IMAGE;
   const modified = dateModified ?? BUILD_DATE;
 
@@ -264,7 +258,7 @@ export function SEOHead({
     const serviceAreas = service.areaServed ?? DEFAULT_AREAS;
     graph.push({
       "@type": "Service",
-      "@id": `${DOMAIN}/websites-for/${service.slug}#service`,
+      "@id": `${canonicalUrl}#service`,
       name: service.name,
       description: service.description,
       serviceType: service.serviceType ?? "Web design",
@@ -311,33 +305,27 @@ export function SEOHead({
     "@graph": graph,
   };
 
-  return (
-    <Helmet>
-      <title>{fullTitle}</title>
-      <meta name="description" content={description} />
-      <link rel="canonical" href={canonicalUrl} />
-      {noindex && <meta name="robots" content="noindex, nofollow" />}
-
-      {/* Geo signals */}
-      <meta name="geo.region" content="US-ME" />
-      <meta name="geo.placename" content="Midcoast Maine" />
-
-      {/* Open Graph */}
-      <meta property="og:type" content={type} />
-      <meta property="og:title" content={fullTitle} />
-      <meta property="og:description" content={description} />
-      <meta property="og:url" content={canonicalUrl} />
-      <meta property="og:site_name" content={NAP.name} />
-      <meta property="og:image" content={ogImage} />
-      <meta property="og:locale" content="en_US" />
-
-      {/* Twitter */}
-      <meta name="twitter:card" content="summary_large_image" />
-      <meta name="twitter:title" content={fullTitle} />
-      <meta name="twitter:description" content={description} />
-      <meta name="twitter:image" content={ogImage} />
-
-      <script type="application/ld+json">{JSON.stringify(jsonLd)}</script>
-    </Helmet>
+  const robots = noindex ? "noindex, nofollow" : null;
+  const meta = [
+    { name: "description", content: description },
+    { name: "geo.region", content: "US-ME" },
+    { name: "geo.placename", content: "Midcoast Maine" },
+    { property: "og:type", content: type },
+    { property: "og:title", content: fullTitle },
+    { property: "og:description", content: description },
+    { property: "og:url", content: canonicalUrl },
+    { property: "og:site_name", content: NAP.name },
+    { property: "og:image", content: ogImage },
+    { property: "og:locale", content: "en_US" },
+    { name: "twitter:card", content: "summary_large_image" },
+    { name: "twitter:title", content: fullTitle },
+    { name: "twitter:description", content: description },
+    { name: "twitter:image", content: ogImage },
+  ];
+  const jsonLdString = JSON.stringify(jsonLd);
+  useHead(
+    { title: fullTitle, meta, canonical: noindex ? null : canonicalUrl, robots, jsonLd },
+    `${fullTitle}|${description}|${canonicalUrl}|${robots}|${ogImage}|${jsonLdString}`,
   );
+  return null;
 }

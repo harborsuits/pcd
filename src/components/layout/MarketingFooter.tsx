@@ -11,6 +11,7 @@ const SOCIAL_ICONS: Record<string, LucideIcon> = {
 const FOOTER_NAV: [string, string][] = [
   ["/what-we-build", "Services"],
   ["/pricing", "Pricing"],
+  ["/marketing-and-ads", "Marketing & Ads"],
   ["/ai-receptionist", "AI Receptionist"],
   ["/blog", "Blog"],
   ["/midcoast-maine", "Midcoast Maine"],

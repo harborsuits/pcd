@@ -37,6 +37,7 @@ import MidcoastPillar from "./pages/local/MidcoastPillar";
 import TownPage from "./pages/local/TownPage";
 import VerticalPage from "./pages/local/VerticalPage";
 import AiReceptionist from "./pages/AiReceptionist";
+import MarketingAndAds from "./pages/MarketingAndAds";
 import Blog from "./pages/Blog";
 import BlogPost from "./pages/BlogPost";
 import Review from "./pages/Review";
@@ -59,6 +60,7 @@ const App = () => (
           <Route path="/what-we-build" element={<WhatWeBuild />} />
           <Route path="/organizations" element={<Organizations />} />
           <Route path="/ai-receptionist" element={<AiReceptionist />} />
+          <Route path="/marketing-and-ads" element={<MarketingAndAds />} />
           <Route path="/blog" element={<Blog />} />
           <Route path="/blog/:slug" element={<BlogPost />} />
           <Route path="/get-demo" element={<IntakeWizard />} />

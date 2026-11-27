@@ -17,7 +17,7 @@ import { SEOHead } from "@/components/SEOHead";
 import { BrandMark } from "@/components/layout/BrandMark";
 import { MarketingFooter } from "@/components/layout/MarketingFooter";
 
-type ServiceType = "demo" | "website" | "ai" | "existing" | "other" | "";
+type ServiceType = "demo" | "website" | "ai" | "marketing" | "existing" | "other" | "";
 
 /** Map legacy/query param values onto the short form's choices */
 const SERVICE_PARAM_MAP: Record<string, ServiceType> = {
@@ -25,6 +25,8 @@ const SERVICE_PARAM_MAP: Record<string, ServiceType> = {
   website: "website",
   ai_receptionist: "ai",
   ai: "ai",
+  marketing: "marketing",
+  marketing_ads: "marketing",
   both: "website",
   existing: "existing",
   other: "other",
@@ -34,6 +36,7 @@ const SERVICE_OPTIONS: { value: ServiceType; title: string }[] = [
   { value: "demo", title: "See a demo site" },
   { value: "website", title: "A new website" },
   { value: "ai", title: "AI phone answering" },
+  { value: "marketing", title: "Marketing & Google Ads" },
   { value: "existing", title: "Help with my current site" },
   { value: "other", title: "Something else" },
 ];
@@ -41,8 +44,13 @@ const SERVICE_OPTIONS: { value: ServiceType; title: string }[] = [
 /** These request types need a location so we can build the preview */
 const NEEDS_LOCATION: ServiceType[] = ["demo", "website", "existing"];
 
-const mapServiceType = (type: ServiceType): string => {
+/** Discriminator line saved with marketing inquiries, which use the supported "other" service type. */
+export const MARKETING_INQUIRY_LABEL = "Inquiry type: Marketing & Ads campaign";
+
+export const mapServiceType = (type: ServiceType): string => {
   if (type === "ai") return "ai_receptionist";
+  // The backend accepts no marketing enum; record it as "other" plus a request discriminator.
+  if (type === "marketing") return "other";
   if (type === "existing") return "website";
   return type || "other";
 };
@@ -461,7 +469,11 @@ const GetDemo = () => {
 
     const note = notes.trim();
     const placement = HOMEPAGE_INQUIRY_PLACEMENTS.get(searchParams.get("from") ?? "");
-    const attributedNote = placement ? `${note}\n\nHomepage inquiry: ${placement}` : note;
+    const contextLines = [
+      serviceType === "marketing" ? MARKETING_INQUIRY_LABEL : "",
+      placement ? `Homepage inquiry: ${placement}` : "",
+    ].filter(Boolean);
+    const attributedNote = contextLines.length ? `${note}\n\n${contextLines.join("\n")}` : note;
 
     setSubmitError("");
     setIsLoading(true);
@@ -481,7 +493,12 @@ const GetDemo = () => {
           tier: tierParam || null,
           product_type: productParam || null,
           is_trial: isTrial,
-          custom_request: attributedNote.length <= 2000 ? attributedNote : note,
+          custom_request:
+            attributedNote.length <= 2000
+              ? attributedNote
+              : serviceType === "marketing"
+                ? `${note.slice(0, 2000 - MARKETING_INQUIRY_LABEL.length - 2)}\n\n${MARKETING_INQUIRY_LABEL}`
+                : note,
         },
       });
 
@@ -536,7 +553,13 @@ const GetDemo = () => {
 
   return (
     <InquiryLayout
-      title={requestedService ? `Ask about ${requestedService.label}` : "How can I help?"}
+      title={
+        requestedService
+          ? `Ask about ${requestedService.label}`
+          : serviceType === "marketing"
+            ? "Discuss a marketing campaign"
+            : "How can I help?"
+      }
       introduction="Tell me what your business needs. A few details are enough to start, and I’ll follow up by email about next steps."
       seoTitle="Contact — Pleasant Cove Design"
       seoDescription="Send Ben a short inquiry about your website, business tools, or ongoing care. Pleasant Cove Design, Midcoast Maine."

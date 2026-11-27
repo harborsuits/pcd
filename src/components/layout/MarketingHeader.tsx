@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { BrandMark } from "./BrandMark";
 
-type ActivePage = "home" | "what-we-build" | "pricing" | "ai-receptionist" | "blog" | "midcoast-maine" | "contact";
+type ActivePage = "home" | "what-we-build" | "pricing" | "ai-receptionist" | "marketing-and-ads" | "blog" | "midcoast-maine" | "contact";
 
 interface MarketingHeaderProps {
   activePage?: ActivePage;
@@ -14,6 +14,7 @@ interface MarketingHeaderProps {
 const NAV_ITEMS: { label: string; href: string; key: ActivePage }[] = [
   { label: "Midcoast Maine", href: "/midcoast-maine", key: "midcoast-maine" },
   { label: "What We Build", href: "/what-we-build", key: "what-we-build" },
+  { label: "Marketing & Ads", href: "/marketing-and-ads", key: "marketing-and-ads" },
   { label: "AI Receptionist", href: "/ai-receptionist", key: "ai-receptionist" },
   { label: "Blog", href: "/blog", key: "blog" },
   { label: "Pricing", href: "/pricing", key: "pricing" },
