@@ -8,7 +8,7 @@ const Pricing = () => {
     <div className="pcd-shell min-h-screen flex flex-col bg-page-bg text-foreground">
       <SEOHead
         title="Small Business Website Pricing | Pleasant Cove Design"
-        description="Custom small-business websites from $3,500. Expanded websites, online stores, and business systems are scoped by proposal. Explore hosting, website care, and focused improvements."
+        description="Custom small-business websites from $3,500. Larger sites, online stores, and business systems by proposal, plus hosting, website care, and focused fixes."
         path="/pricing"
         breadcrumbs={[
           { name: "Home", path: "/" },

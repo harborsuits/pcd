@@ -38,13 +38,111 @@ const MarketingAndAds = () => (
     />
     <MarketingHeader activePage="marketing-and-ads" />
     <main className="flex-1">
-      <section className="px-5 sm:px-6 py-10 md:py-16"><div className="max-w-3xl mx-auto text-center"><p className="text-sm font-semibold text-accent mb-4">Marketing & Ads</p><h1 data-speakable className="font-serif text-3xl md:text-5xl font-bold leading-tight">Marketing & Google Ads for Maine small businesses</h1><p data-speakable className="text-base md:text-lg text-muted-foreground leading-relaxed mt-6 max-w-2xl mx-auto">Get found by people searching nearby, and get more of the right calls and quote requests. We start with your priority services, your service area, and your budget.</p><Button asChild size="lg" className="mt-7"><Link to={CTA_HREF}>Discuss a campaign <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" /></Link></Button></div></section>
-      <section className="border-t border-border bg-background py-10 md:py-12"><div className="max-w-6xl mx-auto px-5 sm:px-6"><h2 className="font-serif text-2xl md:text-3xl font-bold mb-8">What’s included.</h2><div className="grid md:grid-cols-3 gap-6">{scope.map(item => <article key={item.title} className="bg-card border border-border rounded-lg p-6"><item.icon className="h-6 w-6 text-accent mb-4" aria-hidden="true" /><h3 className="font-serif text-xl font-bold mb-3">{item.title}</h3><p className="text-muted-foreground leading-relaxed">{item.body}</p></article>)}</div><p className="text-sm text-muted-foreground mt-6 max-w-3xl">Need a better page for ads to land on? <Link to="/what-we-build" className="underline underline-offset-4">See website builds and focused improvements.</Link> Want to see the kind of sites we build? <Link to="/#work" className="underline underline-offset-4">View recent client website work.</Link></p></div></section>
-      <section className="border-t border-border py-10 md:py-12"><div className="max-w-6xl mx-auto px-5 sm:px-6"><h2 className="font-serif text-2xl md:text-3xl font-bold mb-8">How a campaign comes together.</h2><ol className="grid md:grid-cols-3 gap-8">{steps.map((step, i) => <li key={step.title} className="border-t-2 border-accent pt-5"><p className="font-semibold text-accent mb-3">0{i + 1}</p><h3 className="font-serif text-xl font-bold mb-3">{step.title}</h3><p className="text-muted-foreground leading-relaxed">{step.body}</p></li>)}</ol></div></section>
-      <section className="border-t border-border bg-background py-10 md:py-12"><div className="max-w-6xl mx-auto px-5 sm:px-6"><h2 className="font-serif text-2xl md:text-3xl font-bold mb-4">Pricing: {MARKETING_ADS.price.toLowerCase()}.</h2><p className="text-muted-foreground leading-relaxed max-w-3xl">{MARKETING_ADS.scopeNote}</p><p className="text-sm text-muted-foreground mt-5">Serving businesses across <Link to="/midcoast-maine" className="underline underline-offset-4">Midcoast Maine and the rest of the state</Link>. <Link to="/pricing" className="underline underline-offset-4">See website pricing and care plans.</Link></p></div></section>
-      <section className="border-t border-border py-10 md:py-12"><div className="max-w-3xl mx-auto px-5 sm:px-6"><h2 className="font-serif text-2xl md:text-3xl font-bold mb-6">Common questions</h2><dl className="space-y-6">{faq.map(item => <div key={item.question}><dt className="font-semibold mb-2">{item.question}</dt><dd className="text-muted-foreground leading-relaxed">{item.answer}</dd></div>)}</dl></div></section>
-      <section className="bg-primary text-primary-foreground py-10 md:py-12"><div className="max-w-3xl mx-auto px-5 sm:px-6 text-center"><h2 className="font-serif text-2xl md:text-3xl font-bold mb-4">Start with what you want more of.</h2><p className="text-base md:text-lg mb-7">Tell Ben which services you want more calls for, where you work, and your rough monthly budget. We’ll explain the scope and fees before you commit.</p><Button asChild size="lg" variant="secondary"><Link to={CTA_HREF}>Discuss a campaign <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" /></Link></Button></div></section>
-    </main><MarketingFooter />
+      <section className="px-5 sm:px-6 py-10 md:py-16">
+        <div className="max-w-3xl mx-auto text-center">
+          <h1 data-speakable className="font-serif text-3xl md:text-5xl font-bold leading-tight">
+            Marketing & Google Ads for Maine small businesses
+          </h1>
+          <p data-speakable className="text-base md:text-lg text-muted-foreground leading-relaxed mt-6 max-w-2xl mx-auto">
+            Get found by people searching nearby, and get more of the right calls and quote requests. We start with
+            your priority services, your service area, and your budget.
+          </p>
+          <Button asChild size="lg" className="mt-7">
+            <Link to={CTA_HREF}>
+              Discuss a campaign <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" />
+            </Link>
+          </Button>
+        </div>
+      </section>
+
+      <section className="border-t border-border bg-background py-10 md:py-12">
+        <div className="max-w-6xl mx-auto px-5 sm:px-6">
+          <h2 className="font-serif text-2xl md:text-3xl font-bold mb-8">What’s included.</h2>
+          <div className="grid md:grid-cols-3 gap-6">
+            {scope.map((item) => (
+              <article key={item.title} className="bg-card border border-border rounded-lg p-6">
+                <item.icon className="h-6 w-6 text-accent mb-4" aria-hidden="true" />
+                <h3 className="font-serif text-xl font-bold mb-3">{item.title}</h3>
+                <p className="text-muted-foreground leading-relaxed">{item.body}</p>
+              </article>
+            ))}
+          </div>
+          <p className="text-sm text-muted-foreground mt-6 max-w-3xl">
+            Need a better page for ads to land on?{" "}
+            <Link to="/what-we-build" className="underline underline-offset-4">
+              See website builds and focused improvements.
+            </Link>{" "}
+            Want to see the kind of sites we build?{" "}
+            <Link to="/#work" className="underline underline-offset-4">
+              View recent client website work.
+            </Link>
+          </p>
+        </div>
+      </section>
+
+      <section className="border-t border-border py-10 md:py-12">
+        <div className="max-w-6xl mx-auto px-5 sm:px-6">
+          <h2 className="font-serif text-2xl md:text-3xl font-bold mb-8">How a campaign comes together.</h2>
+          <ol className="grid md:grid-cols-3 gap-8">
+            {steps.map((step) => (
+              <li key={step.title} className="border-t-2 border-accent pt-5">
+                <h3 className="font-serif text-xl font-bold mb-3">{step.title}</h3>
+                <p className="text-muted-foreground leading-relaxed">{step.body}</p>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </section>
+
+      <section className="border-t border-border bg-background py-10 md:py-12">
+        <div className="max-w-6xl mx-auto px-5 sm:px-6">
+          <h2 className="font-serif text-2xl md:text-3xl font-bold mb-4">Campaign pricing.</h2>
+          <p className="text-muted-foreground leading-relaxed max-w-3xl">
+            {MARKETING_ADS.price}. {MARKETING_ADS.scopeNote}
+          </p>
+          <p className="text-sm text-muted-foreground mt-5">
+            Serving businesses across{" "}
+            <Link to="/midcoast-maine" className="underline underline-offset-4">
+              Midcoast Maine and the rest of the state
+            </Link>
+            .{" "}
+            <Link to="/pricing" className="underline underline-offset-4">
+              See website pricing and care plans.
+            </Link>
+          </p>
+        </div>
+      </section>
+
+      <section className="border-t border-border py-10 md:py-12">
+        <div className="max-w-3xl mx-auto px-5 sm:px-6">
+          <h2 className="font-serif text-2xl md:text-3xl font-bold mb-6">Common questions</h2>
+          <dl className="space-y-6">
+            {faq.map((item) => (
+              <div key={item.question}>
+                <dt className="font-semibold mb-2">{item.question}</dt>
+                <dd className="text-muted-foreground leading-relaxed">{item.answer}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      </section>
+
+      <section className="bg-primary text-primary-foreground py-10 md:py-12">
+        <div className="max-w-3xl mx-auto px-5 sm:px-6 text-center">
+          <h2 className="font-serif text-2xl md:text-3xl font-bold mb-4">Start with what you want more of.</h2>
+          <p className="text-base md:text-lg mb-7">
+            Tell Ben which services you want more calls for, where you work, and your rough monthly budget. We’ll
+            explain the scope and fees before you commit.
+          </p>
+          <Button asChild size="lg" variant="secondary">
+            <Link to={CTA_HREF}>
+              Discuss a campaign <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" />
+            </Link>
+          </Button>
+        </div>
+      </section>
+    </main>
+    <MarketingFooter />
   </div>
 );
 export default MarketingAndAds;

@@ -56,10 +56,12 @@ const DEFAULT_AREAS = [
 ];
 
 // Stable IDs let nodes cross-reference each other in the @graph.
+const ORG_DESCRIPTION =
+  "Pleasant Cove Design builds, improves, and cares for small-business websites in Maine, and plans and manages local Google Ads campaigns.";
+
 const ORG_ID = `${DOMAIN}/#organization`;
 const WEBSITE_ID = `${DOMAIN}/#website`;
 
-const BUILD_DATE = new Date().toISOString().slice(0, 10);
 
 // Cross-reference every vertical Service node (defined per /websites-for/[slug] page).
 // This wires the Organization to its full service catalog at the entity level.
@@ -90,7 +92,7 @@ function buildBaseGraph(sameAs: string[]) {
       },
       image: DEFAULT_IMAGE,
       description:
-        "Midcoast Maine web design studio helping small businesses fix outdated websites, broken contact flows, and weak mobile experiences that cost them customers.",
+        ORG_DESCRIPTION,
       address: {
         "@type": "PostalAddress",
         addressLocality: NAP.city,
@@ -167,7 +169,6 @@ export function SEOHead({
   const fullTitle =
     path === "/" || title.includes("Pleasant Cove Design") || withSuffix.length > 60 ? title : withSuffix;
   const ogImage = image ?? DEFAULT_IMAGE;
-  const modified = dateModified ?? BUILD_DATE;
 
   const sameAs = [
     ...SOCIALS.map((social) => social.href),
@@ -196,7 +197,7 @@ export function SEOHead({
       author: { "@id": ORG_ID },
       publisher: { "@id": ORG_ID },
       ...(datePublished ? { datePublished } : {}),
-      dateModified: modified,
+      ...(dateModified ? { dateModified } : {}),
       speakable: {
         "@type": "SpeakableSpecification",
         cssSelector: ["h1", "[data-speakable]"],
@@ -213,7 +214,7 @@ export function SEOHead({
       about: { "@id": ORG_ID },
       inLanguage: "en-US",
       ...(datePublished ? { datePublished } : {}),
-      dateModified: modified,
+      ...(dateModified ? { dateModified } : {}),
       speakable: {
         "@type": "SpeakableSpecification",
         cssSelector: ["h1", "[data-speakable]"],
@@ -249,7 +250,7 @@ export function SEOHead({
           closes: "23:59",
         },
       ],
-      description,
+      description: ORG_DESCRIPTION,
       parentOrganization: { "@id": ORG_ID },
     });
   }

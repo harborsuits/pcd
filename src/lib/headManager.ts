@@ -46,7 +46,7 @@ export function applyHead(spec: HeadSpec) {
     if (spec.robots) upsertMeta("name", "robots", spec.robots);
   }
   if (spec.jsonLd !== undefined) {
-    document.head.querySelectorAll('script[type="application/ld+json"]').forEach((n) => n.remove());
+    document.head.querySelectorAll(`script[type="application/ld+json"][${MANAGED}]`).forEach((n) => n.remove());
     const script = document.createElement("script");
     script.type = "application/ld+json";
     script.setAttribute(MANAGED, "true");
