@@ -115,9 +115,8 @@ const MarketingAndAds = () => (
             <p className="text-muted-foreground leading-relaxed mt-4 max-w-md">
               We can improve your landing page, forms, and local SEO so people know what to do next.
             </p>
-            <p className="text-sm text-muted-foreground mt-5 leading-relaxed">
+            <p className="flex flex-wrap gap-x-5 gap-y-2 text-sm text-muted-foreground mt-5 leading-relaxed">
               <Link to="/what-we-build" className="underline underline-offset-4">Website services</Link>
-              {" · "}
               <Link to="/#work" className="underline underline-offset-4">Recent work</Link>
             </p>
           </div>
@@ -134,7 +133,7 @@ const MarketingAndAds = () => (
               <a href="https://www.ravenrockconstruction.com/" target="_blank" rel="noopener noreferrer" className="text-foreground underline underline-offset-4">
                 View Raven Rock’s website
               </a>
-              <span className="block mt-1">Redesigned and managed by Pleasant Cove Design. Website work only, not paid advertising.</span>
+              <span className="block mt-1">Redesigned and managed by Pleasant Cove Design.</span>
             </figcaption>
           </figure>
         </div>
@@ -165,9 +164,8 @@ const MarketingAndAds = () => (
               Discuss a campaign <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" />
             </Link>
           </Button>
-          <p className="text-sm mt-6 leading-relaxed">
+          <p className="flex flex-wrap gap-x-5 gap-y-2 text-sm mt-6 leading-relaxed">
             <Link to="/midcoast-maine" className="underline underline-offset-4">Serving Midcoast Maine</Link>
-            {" · "}
             <Link to="/pricing" className="underline underline-offset-4">Website pricing</Link>
           </p>
         </div>
