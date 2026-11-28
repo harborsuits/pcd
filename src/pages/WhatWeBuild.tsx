@@ -66,7 +66,7 @@ const WhatWeBuild = () => (
   <div className="pcd-shell min-h-screen flex flex-col bg-page-bg text-foreground">
     <SEOHead
       title="Website Services | Pleasant Cove Design"
-      description="Website builds, focused improvements, ongoing care, and optional connected tools for small businesses in Midcoast Maine. Explore scope and starting prices."
+      description="Website builds, improvements, and care for Maine small businesses, plus larger town and nonprofit websites by proposal. Explore scope and starting prices."
       path="/what-we-build"
       breadcrumbs={[
         { name: "Home", path: "/" },
@@ -82,8 +82,8 @@ const WhatWeBuild = () => (
             A website that fits your business.
           </h1>
           <p data-speakable className="text-base md:text-lg leading-relaxed mt-6 max-w-xl mx-auto">
-            New websites, focused improvements, and ongoing care for small businesses in Midcoast Maine. Start with what
-            you need; agree on the work and price before we begin.
+            New websites, focused improvements, and ongoing care for small businesses in Midcoast Maine, plus larger
+            websites for towns and nonprofits. Start with what you need; agree on the work and price before we begin.
           </p>
           <Button asChild size="lg" className="mt-7">
             <Link to="/get-demo">
@@ -124,6 +124,13 @@ const WhatWeBuild = () => (
                   Discuss a website <ArrowRight className="h-4 w-4" aria-hidden="true" />
                 </Link>
               </Button>
+              <p className="text-sm leading-relaxed">
+                Town, nonprofit, or larger organization?{" "}
+                <Link to="/organizations" className="font-medium underline underline-offset-4">
+                  See organization websites
+                </Link>
+                . Scoped by proposal.
+              </p>
             </div>
           </article>
           <article className="grid md:grid-cols-[3rem_1fr_20rem] gap-4 md:gap-7 py-7 border-t border-border">

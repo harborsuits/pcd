@@ -44,7 +44,12 @@ const MidcoastPillar = () => {
             <Map className="h-6 w-6 text-accent" /> Where we work
           </h2>
           <p className="text-center text-muted-foreground mb-8 max-w-2xl mx-auto">
-            We work with small businesses anywhere in Maine. Explore the regions where we can work.
+            We work with small businesses anywhere in Maine. Explore the regions where we can work. Towns and
+            nonprofits can see how we approach{" "}
+            <Link to="/organizations" className="font-medium text-foreground underline underline-offset-4">
+              organization websites
+            </Link>
+            .
           </p>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 max-w-5xl mx-auto">
             {REGIONS.map((r) => (

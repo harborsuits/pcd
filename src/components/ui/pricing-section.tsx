@@ -67,7 +67,10 @@ export default function PricingSection() {
           ))}
         </div>
 
-        <div className="mt-8 flex flex-wrap justify-center gap-x-6 gap-y-3 text-sm">
+        <p className="mt-8 text-center text-sm text-muted-foreground">
+          Custom small-business websites start at $3,500. Larger town and nonprofit websites are scoped by proposal.
+        </p>
+        <div className="mt-4 flex flex-wrap justify-center gap-x-6 gap-y-3 text-sm">
           <Link to="/#work" className="font-medium text-accent underline underline-offset-4">
             See recent client work
           </Link>

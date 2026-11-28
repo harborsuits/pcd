@@ -57,7 +57,7 @@ const DEFAULT_AREAS = [
 
 // Stable IDs let nodes cross-reference each other in the @graph.
 const ORG_DESCRIPTION =
-  "Pleasant Cove Design builds, improves, and cares for small-business websites in Maine, and plans and manages Google Search, Facebook and Instagram ads.";
+  "Pleasant Cove Design builds, improves, and cares for websites for Maine small businesses, towns, and nonprofits, and manages Google Search, Facebook and Instagram ads.";
 
 const ORG_ID = `${DOMAIN}/#organization`;
 const WEBSITE_ID = `${DOMAIN}/#website`;

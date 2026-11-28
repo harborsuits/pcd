@@ -8,7 +8,7 @@ import { NAP } from "@/lib/localPages";
 import pierWebsite from "@/assets/pier-1-website.jpg.asset.json";
 import ravenWebsite from "@/assets/raven-rock-homepage.jpg.asset.json";
 
-const INQUIRY = "/get-demo?service=website";
+const INQUIRY = "/get-demo?service=website&audience=organization";
 const focusLink = "inline-flex items-center gap-2 underline underline-offset-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-4";
 
 const capabilities = [
@@ -38,7 +38,7 @@ const Organizations = () => (
       path="/organizations"
       breadcrumbs={[{ name: "Home", path: "/" }, { name: "Organizations", path: "/organizations" }]}
     />
-    <MarketingHeader />
+    <MarketingHeader activePage="organizations" />
     <main className="flex-1">
       <section className="px-5 sm:px-6 py-10 md:py-16">
         <div className="max-w-3xl mx-auto text-center">

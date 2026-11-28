@@ -139,7 +139,7 @@ function HomeHero() {
       )}
       <div className="pcd-home-hero__scrim" aria-hidden="true" />
       <div className="pcd-home-hero__copy !py-10 md:!px-6 md:!py-16 lg:!py-20">
-        <p className="mb-3 text-sm font-semibold text-[#c5e1d6] sm:mb-4">Websites for small businesses</p>
+        <p className="mb-3 text-sm font-semibold text-[#c5e1d6] sm:mb-4">Websites for businesses, towns & nonprofits</p>
         <h1
           id="home-hero-title"
           data-speakable
@@ -173,7 +173,7 @@ const Index = () => (
   <div className="homepage pcd-shell min-h-screen flex flex-col bg-page-bg text-foreground">
     <SEOHead
       title="Midcoast Maine Web Design | Pleasant Cove Design"
-      description="Web design, website improvements, and ongoing care for small businesses in Midcoast Maine. Work with Ben Dickinson at Pleasant Cove Design."
+      description="Web design, website improvements, and ongoing care for Midcoast Maine small businesses, towns, and nonprofits. Larger organization builds by proposal."
       path="/"
       localBusiness
     />
@@ -305,6 +305,12 @@ const Index = () => (
             </article>
           </div>
           <p className="mt-6 text-muted-foreground leading-relaxed">
+            <Link to="/organizations" className="font-medium text-foreground underline underline-offset-4">
+              Websites for towns & nonprofits
+            </Link>
+            : larger builds, document migration, and staff publishing. Scoped by proposal.
+          </p>
+          <p className="mt-3 text-muted-foreground leading-relaxed">
             Want to promote your business once the site is in shape? We also plan and manage Google Search, Facebook and Instagram ad campaigns.{" "}
             <Link to="/marketing-and-ads" className="font-medium text-foreground underline underline-offset-4">
               See Marketing & Ads services
@@ -433,8 +439,8 @@ const Index = () => (
           </div>
           <div className="space-y-4 text-base md:text-lg leading-relaxed">
             <p>
-              Pleasant Cove Design is run by Ben Dickinson in Midcoast Maine — a small-business website studio for
-              owners who need a website they can feel confident sending customers to.
+              Pleasant Cove Design is run by Ben Dickinson in Midcoast Maine — a website studio for small
+              businesses, towns, and nonprofits that need a website they can feel confident sending people to.
             </p>
             <p>
               The approach is straightforward: understand your business, explain the options in plain language, and
