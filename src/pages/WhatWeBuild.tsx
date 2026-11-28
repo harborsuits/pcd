@@ -79,7 +79,7 @@ const WhatWeBuild = () => (
         <div className="max-w-3xl mx-auto text-center">
           <p className="text-sm font-semibold mb-4">Pleasant Cove Design / Services</p>
           <h1 data-speakable className="font-serif font-bold text-3xl md:text-5xl leading-tight">
-            A website that fits your business.
+            Websites for businesses and organizations.
           </h1>
           <p data-speakable className="text-base md:text-lg leading-relaxed mt-6 max-w-xl mx-auto">
             New websites, focused improvements, and ongoing care for small businesses in Midcoast Maine, plus larger
