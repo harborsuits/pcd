@@ -25,8 +25,8 @@ const Pricing = () => {
               Small-business websites and custom projects
             </h1>
             <p data-speakable className="text-lg md:text-xl text-muted-foreground leading-relaxed max-w-2xl mx-auto">
-              Get a website that explains what you do, shows your work, and makes it easy to reach you. We also plan
-              larger sites, stores, and connected systems around what your team needs to manage.
+              Get a website that explains what you do, shows your work, and makes it easy to reach you. Larger sites
+              for towns and nonprofits, online stores, and connected systems are scoped by proposal.
             </p>
           </div>
         </section>

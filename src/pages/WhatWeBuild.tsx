@@ -82,8 +82,8 @@ const WhatWeBuild = () => (
             A website that fits your business.
           </h1>
           <p data-speakable className="text-base md:text-lg leading-relaxed mt-6 max-w-xl mx-auto">
-            New websites, focused improvements, and ongoing care for small businesses in Midcoast Maine. Start with what
-            you need; agree on the work and price before we begin.
+            New websites, focused improvements, and ongoing care for small businesses in Midcoast Maine. We also build
+            larger sites for towns and nonprofits, with scope and pricing agreed up front.
           </p>
           <Button asChild size="lg" className="mt-7">
             <Link to="/get-demo">

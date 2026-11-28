@@ -433,8 +433,8 @@ const Index = () => (
           </div>
           <div className="space-y-4 text-base md:text-lg leading-relaxed">
             <p>
-              Pleasant Cove Design is run by Ben Dickinson in Midcoast Maine — a small-business website studio for
-              owners who need a website they can feel confident sending customers to.
+              Pleasant Cove Design is run by Ben Dickinson in Midcoast Maine. We build websites for small businesses
+              and take on larger website projects for towns and nonprofits.
             </p>
             <p>
               The approach is straightforward: understand your business, explain the options in plain language, and
