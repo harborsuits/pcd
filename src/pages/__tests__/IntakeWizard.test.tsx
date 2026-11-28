@@ -136,45 +136,6 @@ describe("Contact inquiry regressions", () => {
     );
   });
 
-  it("labels an organization website inquiry and tags it without changing the website payload", async () => {
-    invoke.mockResolvedValue({ data: { project_token: "mock-project" }, error: null });
-    render(
-      <MemoryRouter initialEntries={["/get-demo?service=website&audience=organization"]}>
-        <GetDemo />
-      </MemoryRouter>,
-    );
-    expect(screen.getByRole("heading", { name: "Discuss an organization website", level: 1 })).toBeInTheDocument();
-    expect(screen.getByRole("combobox", { name: "What is this about?" })).toHaveValue("website");
-    const user = userEvent.setup();
-    await user.type(screen.getByLabelText("Organization name *"), "Town of Example");
-    await user.type(screen.getByLabelText("Email *"), "qa@example.com");
-    await user.type(screen.getByLabelText("Where do you serve customers? *"), "Newcastle");
-    await user.type(screen.getByLabelText("Message *"), "Rebuild our town site.");
-    await user.click(screen.getByRole("button", { name: "Send inquiry" }));
-    await waitFor(() =>
-      expect(invoke).toHaveBeenCalledWith(
-        "leads/request-demo",
-        expect.objectContaining({
-          body: expect.objectContaining({
-            service_type: "website",
-            business_name: "Town of Example",
-            custom_request: "Rebuild our town site.\n\nInquiry type: Organization website",
-          }),
-        }),
-      ),
-    );
-  });
-
-  it("ignores the organization audience outside the website service", () => {
-    render(
-      <MemoryRouter initialEntries={["/get-demo?service=marketing&audience=organization"]}>
-        <GetDemo />
-      </MemoryRouter>,
-    );
-    expect(screen.getByRole("heading", { name: "Discuss a marketing campaign", level: 1 })).toBeInTheDocument();
-    expect(screen.getByLabelText("Business name *")).toBeInTheDocument();
-  });
-
   it("shows the dedicated review page and its contact links", () => {
     render(
       <MemoryRouter initialEntries={["/get-demo?service=review&town=newcastle&industry=contractor"]}>

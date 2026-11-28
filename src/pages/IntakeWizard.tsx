@@ -46,8 +46,6 @@ const NEEDS_LOCATION: ServiceType[] = ["demo", "website", "existing"];
 
 /** Discriminator line saved with marketing inquiries, which use the supported "other" service type. */
 export const MARKETING_INQUIRY_LABEL = "Inquiry type: Marketing & Ads campaign";
-/** Discriminator line saved with organization website inquiries (?service=website&audience=organization). */
-export const ORGANIZATION_INQUIRY_LABEL = "Inquiry type: Organization website";
 
 export const mapServiceType = (type: ServiceType): string => {
   if (type === "ai") return "ai_receptionist";
@@ -417,8 +415,6 @@ const GetDemo = () => {
       .join("\n") || undefined;
 
   const [optionalDetailsOpen, setOptionalDetailsOpen] = useState(false);
-  const isOrganization =
-    serviceParam === "website" && searchParams.get("audience") === "organization" && serviceType === "website";
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -475,7 +471,6 @@ const GetDemo = () => {
     const placement = HOMEPAGE_INQUIRY_PLACEMENTS.get(searchParams.get("from") ?? "");
     const contextLines = [
       serviceType === "marketing" ? MARKETING_INQUIRY_LABEL : "",
-      isOrganization ? ORGANIZATION_INQUIRY_LABEL : "",
       placement ? `Homepage inquiry: ${placement}` : "",
     ].filter(Boolean);
     const attributedNote = contextLines.length ? `${note}\n\n${contextLines.join("\n")}` : note;
@@ -563,15 +558,11 @@ const GetDemo = () => {
           ? `Ask about ${requestedService.label}`
           : serviceType === "marketing"
             ? "Discuss a marketing campaign"
-            : isOrganization
-              ? "Discuss an organization website"
-              : "How can I help?"
+            : "How can I help?"
       }
       introduction={serviceType === "marketing"
         ? "Tell us what you want to promote and where you serve. A few details are enough to start, and we’ll follow up by email about next steps."
-        : isOrganization
-          ? "Tell us about your organization and current website. If there is an RFP or proposal deadline, include the link or date in your message."
-          : "Tell me what your business needs. A few details are enough to start, and I’ll follow up by email about next steps."}
+        : "Tell me what your business needs. A few details are enough to start, and I’ll follow up by email about next steps."}
       seoTitle="Contact — Pleasant Cove Design"
       seoDescription="Send Ben a short inquiry about your website, business tools, or ongoing care. Pleasant Cove Design, Midcoast Maine."
       formTitle={receipt ? undefined : "Start with a short inquiry"}
@@ -642,7 +633,7 @@ const GetDemo = () => {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="businessName">{isOrganization ? "Organization name *" : "Business name *"}</Label>
+            <Label htmlFor="businessName">Business name *</Label>
             <Input
               id="businessName"
               required
@@ -660,7 +651,7 @@ const GetDemo = () => {
             />
             {touched.businessName && businessName.trim().length < 2 && (
               <p id="businessName-error" className="text-sm text-destructive">
-                {isOrganization ? "Please enter your organization name." : "Please enter your business name."}
+                Please enter your business name.
               </p>
             )}
           </div>
@@ -701,9 +692,7 @@ const GetDemo = () => {
               onBlur={() => setTouched((current) => ({ ...current, notes: true }))}
               placeholder={serviceType === "marketing"
                 ? "What would you like to promote, and where do you serve customers?"
-                : isOrganization
-                  ? "Your current site, what needs to change, and any RFP link or proposal deadline."
-                  : "What’s not working, what you’re hoping for, or when you’d like it done."}
+                : "What’s not working, what you’re hoping for, or when you’d like it done."}
               rows={4}
               maxLength={2000}
             />

@@ -6,4 +6,3 @@
 - Lazy-load OperatorLayout and static samples behind a module-scope branded Suspense fallback; leave auth providers, guards and token workspace routing eager to avoid session behavior changes.
 - Route head metadata (title, description, canonical, robots, JSON-LD) is applied by `src/lib/headManager.ts` via SEOHead, not react-helmet-async, because Helmet 2.x does not update the head under React 19.
 - Marketing & Ads inquiries submit as service_type "other" with a fixed "Inquiry type: Marketing & Ads campaign" line in custom_request, because the leads backend has no marketing enum.
-- Organization website inquiries use `/get-demo?service=website&audience=organization`, keep service_type "website", and add a fixed "Inquiry type: Organization website" line to custom_request, so leads need no new schema field.
